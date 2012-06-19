@@ -133,7 +133,29 @@ class MAC():
         self.logger.info("Queueing Data")
 
     def draw(self):
-        self.sm.state_transitions
+        graph = pydot.Dot(graph_type = 'digraph')
+
+        #create base state nodes (set of destination states)
+        basestyle=''
+        states={}
+        for state in set(zip(*tuple(self.sm.state_transitions.values()))[1]):
+            states[state]=pydot.Node(state,*basestyle)
+            graph.add_node(states[state])
+
+        #create function 'nodes'
+        functions={}
+        for function in  set(zip(*tuple(self.sm.state_transitions.values()))[0]):
+            functions[function.__name__]=pydot.Node(function.__name__,shape="parallelogram")
+            graph.add_node(functions[function.__name__])
+
+        for (signal,state) in self.sm.state_transitions:
+            (function,next_state) = self.sm.state_transitions[(signal,state)]
+            graph.add_edge(pydot.Edge(states[state],functions[function.__name__],label=signal))
+            #differently formatted return edge
+            graph.add_edge(pydot.Edge(functions[function.__name__],states[next_state],style='dotted',shape='onormal'))
+
+        graph.write_png("%s.png"%self.__class__.__name__)
+
 
 
 class ALOHA(MAC):
