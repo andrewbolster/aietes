@@ -4,17 +4,10 @@ import logging
 import pydot
 module_logger=logging.getLogger('AIETES.MAC')
 
-class MACPacket():
-    '''Generic Class for MAC level packet fiddling
-    '''
-    def __init__(self,**args=None):
-        self.__dict__.update(args)
-
 class MAC():
     '''Generic Class for MAC Algorithms
     The only real difference between MAC's are their packet types and State Machines
     '''
-    #TODO break everything apart so that init does very little and a 
     def __init__(self,config=None):
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
@@ -30,8 +23,8 @@ class MAC():
         self.timer_event = Sim.SimEvent("timer_event")                    #SimPy Event for signalling
         Sim.activate(self.timer, self.timer.Lifecycle(self.timer_event))  #Tie the event to lifecycle function
 
-    def packetBuilder(self,config): 
-        '''Generate 'known packets' 
+    def packetBuilder(self,config):
+        '''Generate 'known packets'
         '''
         raise TypeError("Tried to instantiate the base MAC class")
 
@@ -63,8 +56,9 @@ class MAC():
 
     def send(self, FromAbove):
         '''Function Called from upper layers to send a packet
+            Encapsulates the Route layer packet in to a MAC Packet
         '''
-        self.outgoing_queue.append(FromAbove)
+        self.outgoing_queue.append(MACPacket(FromAbove))
         self.sm.process("send_data")
 
     def transmit(self):
@@ -75,7 +69,7 @@ class MAC():
     def onTX_success(self):
         '''When an ACK has been recieved, we can assume it all went well
         '''
-        self.logger.info("Successful TX to "+self.outgoing_queue[0].through) #TODO Packet definition
+        self.logger.info("Successful TX to "+self.outgoing_queue[0].through) 
         self.postTX()
 
     def onTX_fail(self):
@@ -95,9 +89,10 @@ class MAC():
 
     def recv(self, FromBelow):
         '''Function Called from lower layers to recieve a packet
+        Decapsulates the packet from the physical
         '''
-        self.incoming_packet = FromBelow
-        if FromBelow.isFor(self.node.name): #TODO Packet Definition Update
+        self.incoming_packet = FromBelow.decap()
+        if FromBelow.isFor(self.node.name):
             self.sm.process(self.type_to_signal[FromBelow.type])
         else:
             self.overheard()
@@ -107,11 +102,17 @@ class MAC():
 
     def onRX(self):
         '''Recieved a packet
+        Should ack, but can drop ack if routing layer says its ok
         '''
         origin = self.incoming_packet.last_sender()
         self.logger.info("RX-d packet from %s"%origin)
 
-        #TODO handoff to routing layer
+        if self.layercake.net.explicitACK(self.incoming_packet):
+            #TODO Make ACK
+            ack=generateACK(self.incoming_packet)
+            self.transmit(ack)
+
+
 
     def onError(self):
         ''' Called via state machine when unexpected input symbol in a determined state
@@ -196,5 +197,5 @@ class ALOHA(MAC):
         i.e. implicit ACK
         '''
         if self.incoming_packet.type == "DATA" and self.sm.current_state == "WAIT_ACK":
-
-
+            pass
+        #TODO FINISH

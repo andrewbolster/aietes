@@ -1,7 +1,7 @@
 import SimPy.Simulation as Sim
 import logging
 
-from Stack import MAC,PHY,Net,App
+import Layercake
 
 module_logger = logging.getLogger('AIETES')
 
@@ -14,16 +14,22 @@ class Simulation():
     def __init__(self,config_file):
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))o
         self.logger.info('creating instance')
+
+        Sim.initialize()
+
+        if not hasattr(config_file,'channel_event_name'):
+            config_file['channel_event_name']='AcousticEvent'
+
+        self.channel_event = Sim.SimEvent(config_file['channel_event_name'])
+
         try:
             self.config = self.validateConfig(config_file) #TODO JSON Lint?
             self.environment = configureEnvironment()
-            self.layercake = configureLayercake()
             self.nodes = configureNodes()
         except ConfigError as err: #TODO
-            
 
-    def configureEnvironment(self,config=self.config):
-        """
+    def configureEnvironment(self, host, config=self.config):
+        """ Should be called from each node
         Configure the physical environment within which the simulation executed
         Assumes empty unless told otherwise
         """
@@ -42,21 +48,6 @@ class Simulation():
         Fleets are purely logical in this case
         """
         pass
-
-class Layercake():
-    """
-    Defines the Four relevant network layers for a given node
-    PHY,MAC,Network,Application
-    """
-    def __init__(self,simulation)
-        #PHY
-        self.phy = simulation.getPHY(self)
-        #MAC
-        self.mac = simulation.getMAC(self)
-        #Routing
-        self.net = simluation.getNet(self)
-        #Application
-        self.app = simulation.getApp(self)
 
 class Six_vector():
     """
@@ -77,11 +68,11 @@ class Node(Sim.process):
         Sim.Process.__init__(self,name=name)
         self.simulation=simulation
         # Comms Stack
-        self.layers = self.simulation.getLayerCake(self,self.simulation)
+        self.layers = self.simulation.getLayerCake(self)
 
     def lifecycle(self):
         """
-        Called to update internal awareness
+        Called to update internal awareness and motion
         """
         while True:
 

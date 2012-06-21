@@ -2,93 +2,11 @@ from SimPy import Simulation as Sim
 import math
 from defaults import PHYconfig as defaults
 from PHYTools import *
+from Packet import PHYPacket
 import logging
 
 from copy import deepcopy
 module_logger=logging.getLogger('AIETES.PHY')
-
-#####################################################################
-# Physical Packet
-#####################################################################
-class PHYPacket(Sim.Process):
-    '''Generic Physical Layer Packet Class
-    '''
-    def __init__(self,phy, name):
-        Sim.Process.__init__(self, name)
-        self.phy=phy
-        self.doomed=False
-
-    @classmethod
-    def incoming(cls, phy, power, payload):
-        '''Overloaded 'Constructor' for incoming packets, recieved 'from' the transducer
-        '''
-        self.direction = 'in'
-        self.power = power
-        self.payload = payload
-        self.max_interference = 1
-        return cls(phy, "RecieveMessage: "+str(payload))
-
-    @classmethod
-    def outgoing(cls, phy, power, payload):
-        '''Overloaded 'Constructor' for outgoing packets, recieved from the MAC
-        '''
-        self.direction = 'out'
-        self.power = power
-        self.payload = payload
-
-    def send(self):
-        #Lock Modem
-        yield Sim.request, self, self.phy.modem
-
-        #Generate Bandwidth info
-        if self.phy.variable_bandwidth:
-            distance = self.phy.var_power['levelToDistance'][self.packet.p_level] #TODO Packet description
-            bandwidth = distance2Bandwidth(self.power,
-                                           self.phy.frequency,
-                                           distance,
-                                           self.phy.threshold['SNR']
-                                          )
-        else:
-            bandwidth = self.phy.bandwidth
-
-        bitrate = self.phy.bandwidth_to_bit(bandwidth) #TODO Function
-        duration = packet.length/bitrate
-
-        self.phy.transducer.channel_event.signal()
-        #TODO
-
-        #Lock the transducer for duration of TX
-        self.phy.transducer.onTX()
-        yield Sim.hold, self, duration
-        self.phy.transducer.postTX()
-
-        #Release modem
-        yield Sim.release, self, self.phy.modem
-
-        #Update power stats
-        power_w = DB2Linear(AcousticPower(self.power))
-        self.phy.tx_energy += (power_w * duration)
-
-    def recv(self, duration):
-        if self.power >= self.py.threshold['listen']:
-            # Otherwise I will not even notice that there are packets in the network
-            yield Sim.request, self, self.phy.transducer
-            yield Sim.hold, self, duration
-            yield Sim.release, self, self.phy.transducer
-        
-            # Even if a packet is not received properly, we have consumed power
-            self.phy.rx_energy += DB2Linear(self.phy.receive_power) * duration #TODO shouldn't this be listen power?
-
-    def updateInterference(self, interference):
-        '''A simple ratchet of interference based on the transducer _request func
-        '''
-        self.max_interference = max(self.max_interference,interference)
-
-    def getMinSIR(self):
-        return self.power/(self.max_interference-self.power+1) # TODO BODMAS?
-
-    def Doom(self):
-        self.doomed = True
 
 #####################################################################
 # Physical Layer
@@ -140,10 +58,10 @@ class PHY():
 
         self.messages = []
 
-    def send(self,mac_packet):
+    def send(self,FromAbove):
         '''Function called from upper layers to send packet
         '''
-        packet=PHYPacket(mac_packet.decap())
+        packet=PHYPacket(FromAbove)
         if self.IsIdle()==False:
             self.PrintMessage("I should not do this... the channel is not idle!") # The MAC protocol is the one that should check this before transmitting
 
