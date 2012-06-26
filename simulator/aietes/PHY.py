@@ -14,7 +14,7 @@ module_logger=logging.getLogger('AIETES.PHY')
 class PHY():
     '''A Generic Class for Physical interface layers
     '''
-    def __init__(self,name="A_PHY",channel_event):
+    def __init__(self,layercake,channel_event):
         '''Initialise with defaults from PHYconfig
         :Frequency Specifications
             frequency (kHz)
@@ -42,8 +42,8 @@ class PHY():
         #Generic Spec
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
-        self.name=name
         self.__dict__.update(defaults)
+        self.layercake = layercake
 
         #Inferred System Parameters
         self.threshold['recieve'] = DB2Linear(ReceivingThreshold(self.frequency, self.bandwidth, self.threshold['SNR']))
@@ -156,7 +156,7 @@ class Transducer(Sim.Resource):
 
             elif packet.power >= self.phy.receiving['recieve']:
                 # Too much interference but enough power to receive it: it suffered a collision
-                if self.phy.node.name == new_packet.through or self.phy.node.name == new_packet.dest:
+                if self.phy.host.name == new_packet.through or self.phy.host.name == new_packet.dest:
                      self.collision = True
                      self.collisions.append(new_packet)
                      self.physical_layer.PrintMessage("A "+new_packet.type+" packet to "+new_packet.through
@@ -167,7 +167,7 @@ class Transducer(Sim.Resource):
 
         else:
             # This should never appear, and in fact, it doesn't, but just to detect bugs (we cannot have a negative SIR in lineal scale).
-            print new_packet.type, new_packet.source, new_packet.dest., new_packet.through., self.physical_layer.node.name
+            print new_packet.type, new_packet.source, new_packet.dest., new_packet.through., self.physical_layer.host.name
 
 
     def onTX(self):

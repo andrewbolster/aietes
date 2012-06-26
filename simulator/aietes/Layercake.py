@@ -1,5 +1,5 @@
 from SimPy import Simulation as Sim
-import PHY, MAC, Network, Application
+import PHY, MAC, Net, Application
 import logging
 import pydot
 module_logger=logging.getLogger('AIETES.Layercake')
@@ -9,16 +9,18 @@ class Layercake():
     Defines the Four relevant network layers for a given node
     PHY,MAC,Network,Application
     """
-    def __init__(self,config):
-    
+    def __init__(self,host,simulation):
+        self.host=host
+        self.channel_event=simulation.channel_event
+
         #PHY
-        self.phy = simulation.getPHY(self)
+        self.phy = PHY.PHY(self,self.channel_event)
         #MAC
-        self.mac = simulation.getMAC(self)
+        self.mac = MAC.ALOHA(self)
         #Routing
-        self.net = simluation.getNet(self)
+        self.net = Net.RoutingTable(self)
         #Application
-        self.app = simulation.getApp(self)
+        self.app = Application(self)
 
 
 

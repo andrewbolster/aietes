@@ -8,9 +8,10 @@ class MAC():
     '''Generic Class for MAC Algorithms
     The only real difference between MAC's are their packet types and State Machines
     '''
-    def __init__(self,config=None):
+    def __init__(self,layercake,config=None):
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
+        self.layercake = layercake
 
         self.known_packets=self.packetBuilder()
         self.outgoing_queue=[]
