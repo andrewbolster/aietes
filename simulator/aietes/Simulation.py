@@ -17,13 +17,14 @@ class Simulation():
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))o
         self.logger.info('creating instance')
 
-        Sim.initialize()
 
+        #Initialise simulation environment and configure a global channel event
+        Sim.initialize()
         if not hasattr(config_file,'channel_event_name'):
             config_file['channel_event_name']='AcousticEvent'
-
         self.channel_event = Sim.SimEvent(config_file['channel_event_name'])
 
+        #Attempt Validation and construct the simulation from that config.
         try:
             self.config = self.validateConfig(config_file)
             self.environment = configureEnvironment()
@@ -40,7 +41,6 @@ class Simulation():
                                      scale=config.scale,
                                      base_depth=config.base_depth
                                     )
-        pass
 
     def configureLayercake(self,config=self.config):
         """

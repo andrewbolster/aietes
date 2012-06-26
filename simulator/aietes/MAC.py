@@ -104,6 +104,7 @@ class MAC():
     def onRX(self):
         '''Recieved a packet
         Should ack, but can drop ack if routing layer says its ok
+        Sends packet up to higher level
         '''
         origin = self.incoming_packet.last_sender()
         self.logger.info("RX-d packet from %s"%origin)
@@ -112,6 +113,8 @@ class MAC():
             #TODO Make ACK
             ack=generateACK(self.incoming_packet)
             self.transmit(ack)
+        # Send up to next level in stack
+        self.layercake.net.recv(self.incoming_packet)
 
 
 

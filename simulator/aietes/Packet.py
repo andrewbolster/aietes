@@ -49,13 +49,14 @@ class AppPacket(Packet):
     self.destination = None
     self.type = None
     self.data = None
-    self.length = 0
+    self.length = 24 # Default Packet Length
 
-    def __init__(self, source, dest, pkt_type, data=None, route=[]):
+    def __init__(self, id, source, dest, pkt_type, data=None, route=[]):
         self._start_log()
         self.source = node.name
         self.destination = dest
         self.type = pkt_type
+        self.launch_time=Sim.now()
         if data is not None:
             self.data = data
             self.length = len(data)
@@ -76,7 +77,7 @@ class RoutePacket(Packet):
         self.route.append({'name':route_layer.host.name,
                            'position':route_layer.host.current_postion()
                           })
-        self.source_position = None
+        self.source_position = route_layer.host.current_position()
 
 
     def last_sender(self):

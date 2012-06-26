@@ -15,7 +15,7 @@ class RoutingTable():
             packet.set_nexthop(self.table[packet.destination])
         self.layercake.mac.send(packet)
 
-    def onRX(self,FromBelow):
+    def recv(self,FromBelow):
         self.layercake.app.recv(FromBelow.decap())
 
     def explicitACK(self,FromBelow):

@@ -13,5 +13,16 @@ class Environment(numpy.ndarray):
         numpy.ndarray.__init__(self,shape=shape,dtype=numpy.float)
         self.depth=base_depth
         self.sos=1400
+        #TODO Random Surface Generation
+        self.generateSurface()
+        #TODO 'Tidal motion' factor
+
+    def export(self,filename=None):
+        """
+        Export the current environment to a csv
+        """
+        assert filename is not None
+        numpy.savez(filename, self)
+        #TODO finish this
 
 
