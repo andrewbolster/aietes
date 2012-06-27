@@ -42,6 +42,9 @@ class Packet():
     def isFor(self,node_name):
         return self.payload.destination == node_name
 
+#####################################################################
+# Application Packet
+#####################################################################
 class AppPacket(Packet):
     '''Base Packet Class (AKA AppPacket)
     '''
@@ -51,7 +54,7 @@ class AppPacket(Packet):
     self.data = None
     self.length = 24 # Default Packet Length
 
-    def __init__(self, id, source, dest, pkt_type, data=None, route=[]):
+    def __init__(self, source, dest, pkt_type, data=None, route=[]):
         self._start_log()
         self.source = node.name
         self.destination = dest
@@ -60,9 +63,10 @@ class AppPacket(Packet):
         if data is not None:
             self.data = data
             self.length = len(data)
-
-
-
+        self.id=uuid.uuid4() #Hopefully unique id
+#####################################################################
+# Network Packet
+#####################################################################
 class RoutePacket(Packet):
     '''Routing Level Packet
     '''
@@ -88,11 +92,15 @@ class RoutePacket(Packet):
 
     def set_nexthop(self,hop):
         self.next_hop=hop
-
-
+#####################################################################
+# Media Access Control Packet
+#####################################################################
 class MACPacket(Packet):
     '''MAC level packet
     '''
+    def customBehaviour(self):
+        #TODO What does a MAC packet do differently?
+        pass
 
 #####################################################################
 # Physical Packet

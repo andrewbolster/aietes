@@ -30,34 +30,22 @@ class Application(Sim.Process):
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
 
-    def lifecycle(self,period=self.packet_rate,destination==None):
+    def lifecycle(self,period=None,destination==None):
         while True:
             (packet,period)=self.packetGen(period,destination)
             self.layercake.net.send(packet)
             self.stats['packets_sent']+=1
             yield Sim.hold, self, period
 
-    def packetGen(self,period,destination="AnySink"):
-        """
-        Copy of behaviour from AUVNetSim for default class,
-        exhibiting poisson departure behaviour
-        """
-        packet = AppPacket(
-            source=self.layercake.host.name,
-            dest=destination,
-            pkt_type='DATA'
-        )
-        period=numpy.poisson(period)
-        return (packet,period)
-
     def recv(FromBelow):
         """
         Called by RoutingTable on packet reception
         """
         packet = FromBelow.decap()
-        self.log_packet(packet)
+        self.logPacket(packet)
+        self.packetRecv(packet)
 
-    def log_packet(self,packet):
+    def logPacket(self,packet):
         """
         Grab packet statistics
         """
@@ -76,7 +64,48 @@ class Application(Sim.Process):
         self.stats['packets_hops']+=hops
         self.stats['packets_dhops']+=(delay/hops)
 
-        self.logger.info("Packet recieved from %s over %d hops with a delay of %s (d/h=%s)"%(source,hops,str(delay),str(delay/hops))
+        self.logger.info("Packet recieved from %s over %d hops with a delay of %s (d/h=%s)"%(source,hops,str(delay),str(delay/hops)))
 
+    def packetGen(self,period,destination):
+        """
+        Packet Generator with periodicity
+        Called from the lifecycle with defaults None,None
+        """
+        raise TypeError("Tried to instantiate the base Application class")
+
+
+class AnySink(Application):
+    def packetGen(self,period,destination="AnySink"):
+        """
+        Copy of behaviour from AUVNetSim for default class,
+        exhibiting poisson departure behaviour
+        """
+        packet = AppPacket(
+            source=self.layercake.host.name,
+            dest=destination,
+            pkt_type='DATA'
+        )
+        period=numpy.poisson(period)
+        return (packet,period)
+
+    def packetRecv(self,packet):
+        assert isinstance(packet, AppPacket)
+
+class AccessibilityTest(Application):
+    def packetGen(self,period,destination="AnySink"):
+        """
+        Copy of behaviour from AUVNetSim for default class,
+        exhibiting poisson departure behaviour
+        """
+        packet = AppPacket(
+            source=self.layercake.host.name,
+            dest=destination,
+            pkt_type='DATA'
+        )
+        period=numpy.poisson(period)
+        return (packet,period)
+
+    def packetRecv(self,packet):
+        assert isinstance(packet, AppPacket)
 
 

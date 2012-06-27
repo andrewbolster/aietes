@@ -22,5 +22,3 @@ class Layercake():
         #Application
         self.app = Application(self)
 
-
-

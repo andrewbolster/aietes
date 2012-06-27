@@ -14,7 +14,7 @@ module_logger=logging.getLogger('AIETES.PHY')
 class PHY():
     '''A Generic Class for Physical interface layers
     '''
-    def __init__(self,layercake,channel_event):
+    def __init__(self,layercake,channel_event,config=defaults):
         '''Initialise with defaults from PHYconfig
         :Frequency Specifications
             frequency (kHz)
@@ -42,7 +42,7 @@ class PHY():
         #Generic Spec
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
-        self.__dict__.update(defaults)
+        self.__dict__.update(config)
         self.layercake = layercake
 
         #Inferred System Parameters

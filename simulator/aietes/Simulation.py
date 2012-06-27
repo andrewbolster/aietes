@@ -4,6 +4,7 @@ import numpy
 import scipy
 import Layercake
 import environment
+import defaults
 
 module_logger = logging.getLogger('AIETES')
 
@@ -17,20 +18,25 @@ class Simulation():
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))o
         self.logger.info('creating instance')
 
-
-        #Initialise simulation environment and configure a global channel event
-        Sim.initialize()
-        if not hasattr(config_file,'channel_event_name'):
-            config_file['channel_event_name']='AcousticEvent'
-        self.channel_event = Sim.SimEvent(config_file['channel_event_name'])
-
         #Attempt Validation and construct the simulation from that config.
         try:
             self.config = self.validateConfig(config_file)
-            self.environment = configureEnvironment()
-            self.nodes = configureNodes()
         except ConfigError as err:
             self.logger.err("Error in configuration, cannot continue: %s"%err)
+
+        #Initialise simulation environment and configure a global channel event
+        Sim.initialize()
+        self.channel_event = Sim.SimEvent(config_file.sim['channel_event_name'])
+
+        self.environment = configureEnvironment()
+        self.nodes = configureNodes()
+
+    def validateConfig(config_file, defaults=defaults):
+        """
+        Generate valid configuration information by interpolating a given config
+        file with the defaults
+        """
+        
 
     def configureEnvironment(self, host, config=self.config):
         """

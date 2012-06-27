@@ -11,9 +11,10 @@ class MAC():
     def __init__(self,layercake,config=None):
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
+        self.config=config
         self.layercake = layercake
 
-        self.known_packets=self.packetBuilder()
+        self.macBuilder()
         self.outgoing_queue=[]
         self.incoming_packet=None
         self.InitialiseStateEngine()
@@ -24,8 +25,8 @@ class MAC():
         self.timer_event = Sim.SimEvent("timer_event")                    #SimPy Event for signalling
         Sim.activate(self.timer, self.timer.Lifecycle(self.timer_event))  #Tie the event to lifecycle function
 
-    def packetBuilder(self,config):
-        '''Generate 'known packets'
+    def macBuilder(self):
+        '''Generate run-time MAC config
         '''
         raise TypeError("Tried to instantiate the base MAC class")
 
@@ -57,7 +58,7 @@ class MAC():
 
     def send(self, FromAbove):
         '''Function Called from upper layers to send a packet
-            Encapsulates the Route layer packet in to a MAC Packet
+        Encapsulates the Route layer packet in to a MAC Packet
         '''
         self.outgoing_queue.append(MACPacket(FromAbove))
         self.sm.process("send_data")
@@ -70,13 +71,13 @@ class MAC():
     def onTX_success(self):
         '''When an ACK has been recieved, we can assume it all went well
         '''
-        self.logger.info("Successful TX to "+self.outgoing_queue[0].through) 
+        self.logger.info("Successful TX to "+self.outgoing_queue[0].next_hop) 
         self.postTX()
 
     def onTX_fail(self):
         '''When an ACK has timedout, we can assume it is impossible to contact the next hop
         '''
-        self.logger.info("Timed out TX to "+self.outgoing_queue[0].through)
+        self.logger.info("Timed out TX to "+self.outgoing_queue[0].next_hop)
         self.postTX()
 
     def postTX(self):
@@ -113,8 +114,8 @@ class MAC():
             #TODO Make ACK
             ack=generateACK(self.incoming_packet)
             self.transmit(ack)
-        # Send up to next level in stack
-        self.layercake.net.recv(self.incoming_packet)
+            # Send up to next level in stack
+            self.layercake.net.recv(self.incoming_packet)
 
 
 
@@ -124,10 +125,10 @@ class MAC():
         self.logger.err("Unexpected transition by %s from %s because of symbol %s from %s"%
                         (self.node.name, self.sm.current_state, self.sm.input_symbol, self.incoming_packet)
                        )
-    def onTimeout(self):
-        '''When it all goes wrong
-        '''
-        pass
+        def onTimeout(self):
+            '''When it all goes wrong
+            '''
+            pass
 
     def queueData(self):
         '''Log queueing
@@ -158,23 +159,27 @@ class MAC():
 
         graph.write_png("%s.png"%self.__class__.__name__)
 
-
-
 class ALOHA(MAC):
     '''A very simple algorithm
     '''
-    def packetBuilder(self):
-        packets=[]
-        packets.append(Packet(
-                        name="ACK",
-                        length=24,
-                        signal="got_ACK"
-                        ))
-        packets.append(Packet(
-                        name="DATA",
-                        signal="got_DATA"
-                        ))
-        return packets
+    def macBuilder(self):
+        self.packets=[]
+        self.packets.append(Packet(
+            name="ACK",
+            length=self.config.ack_packet_length,
+            signal="got_ACK"
+        ))
+        self.packets.append(Packet(
+            name="DATA",
+            signal="got_DATA"
+        ))
+
+        #Adapted/derived variables
+        self.timeout = 0    # co-adapted with TX pwr
+        self.level = 0      # derived from routing layer
+        self.T = 0
+
+
 
     def InitialiseStateEngine(self):
         '''Set up the state machine for ALOHA
@@ -198,8 +203,13 @@ class ALOHA(MAC):
 
     def overheard(self):
         '''Steal some information from overheard packets
-        i.e. implicit ACK
+        i.e. implicit ACK: Source hears forwarding transmission of its own packet
         '''
         if self.incoming_packet.type == "DATA" and self.sm.current_state == "WAIT_ACK":
-            pass
-        #TODO FINISH
+            last_hop=self.incoming_packet.route[-1][0]
+            if self.outgoing_queue[0].next_hop == last_hop and self.outgoing_queue[0].id == self.incoming_packet.id:
+                self.logger.info("Recieved an implicit ACK from routing node %s"%last_hop)
+                self.sm.process("got_ACK")
+
+
+        #TODO Expand/Duplicate with overhearing position information
