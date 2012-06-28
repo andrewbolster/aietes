@@ -1,27 +1,26 @@
 import SimPy.Simulation as Sim
 import LayerCake
 import logging
+from operator import attrgetter,itemgetter
 
 module_logger = logging.getLogger('AIETES.Node')
 class VectorConfiguration():
     """
-    Class that implements 6-degrees-of-freedom position/orientation tuples and their basic operations
-    Convention is to use X,Y,Z,yaw,pitch,roll
+    Class that implements Node Positional and velocity information
+    Convention is to use X,Y,Z
     Angles in radians and with respect to global positional plane reference
-    Angles denote the orientation of the given vector
     """
     self.position = numpy.array([0,0,0])
-    self.orientation = numpy.array([0,0,0])
-    def __init__(self,seq=[0,0,0,0,0,0])
+    self.velocity = numpy.array([0,0,0])
+    #TODO Expand this to proper 6d vector (yaw,pitch,roll
+    def __init__(self,seq=[0,0,0])
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))o
         self.logger.info('creating instance')
-        assert len(seq) == 6
+        assert len(seq) == 3
         #Extract (X,Y,Z) vector from 6-vector as position
-        self.position=seq[:3]
-        #Extract (A,B,G) vector from 6-vector as orientation
-        self.orientation=seq[3:]
+        self.position=numpy.array(seq)
         #Implied six vector velocity
-        self.velocity=[0,0,0,0,0,0]
+        self.velocity=[0,0,0]
 
         self._lastupdate
 
@@ -29,28 +28,15 @@ class VectorConfiguration():
         assert isinstance(otherVector, VectorConfiguration)
         return scipy.spatial.distance.euclidean(self.position,otherVector.position)
 
-    def angleWith(self, otherVector):
-        #TODO This doesn't work if any vector value is zero!
-        assert isinstance(otherVector, VectorConfiguration)
-        dot = numpy.dot(self.orientation, otherVector.orientation)
-        c = dot / numpy.norm(self.orientation) / numpy.norm(otherVector.orientation)
-        return numpy.arccos(c)
-
     def push(self,forceVector):
-        assert isinstance(forceVector, VectorConfiguration)
-        self.velocity+=forceVector
-
-    def desire(self,desireVector):
-        assert len(desireVector) == 3
-        relative_bearing=desireVector-self.orientation
+        assert len(forceVector==3)
+        self.velocity+=numpy.array(forceVector)
 
     def _update(self):
         """
         Update position
         """
-        self.position +=(self.velocity[:3]*(self._lastupdate-Sim.now()))
-        self.orientation+=(self.velocity[3:]*(self._lastupdate-Sim.now()))
-
+        self.position +=numpy.array(self.velocity*(self._lastupdate-Sim.now()))
 
     def setPos(self,placeVector):
         assert isinstance(placeVector,numpy.array)
@@ -67,23 +53,36 @@ class Behaviour():
         #TODO internal representation of the environment
         self.node
         self.config
-        self.memory=[]
+        self.map={}
+        self.memory={}
         self._init_behaviour()
+
+    class memory_entry():
+        def __init__(self,object_id,position):
+            self.object_id=object_id
+            self.position=position
+            self.time=Sim.now()
 
     def _init_behaviour():
         pass
 
-    def updateMap(information):
+    def addMemory(object_id,position):
         """
         Called by node lifecycle to update the internal representation of the environment
         """
-        pass
+        #TODO expand this to do SLAM?
+        self.memory+=memory_entry(object_id,position)
 
     def responseVector():
         """
         Returns a 6-force-vector indicating the direction / orientation in which to move
         """
         return VectorConfiguration()
+
+    def distance(self,my_position, their_position):
+        return scipy.spatial.distance.euclidean(my_position,their_position)
+
+
 
 
 class Flock(Behaviour):
@@ -96,20 +95,84 @@ class Flock(Behaviour):
     def _init_behaviour():
         self.nearest_neighbours = config.nearest_neighbours
         self.neighbourhood_max_rad = config.neighbourhood_max_rad
+        self.neighbourhood_max_dt= config.neighbourhood_max_dt
+        self.neighbour_min_rad = config.neighbour_min_rad
 
-    def responseVector():
+    def _get_neighbours(self,position):
         """
-        Returns a 6-force-vector indicating the direction / orientation in which to move
+        Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         """
+        #Sort and filter Neighbours by distance
+        neighours=filter(lambda x:x[0]<=self.neighbourhood_max_rad
+        ,sorted(
+            map(
+                None,
+                map(
+                    lambda x: self.distance(position,x.position),
+                    self.map
+                    )
+                ,self.map
+                )
+            ,key=itemgetter(0)
+            )
+        )
+        #Select N neighbours in order
+        return neighbours[:self.nearest_neighbours]
 
-    def clumpingVector():
+    def responseVector(self,position,velocity):
+        """
+        Called on update: Returns desired vector
+        """
+        #TODO Sum Behaviours
+        return position
+
+    def clumpingVector(self,position):
         """
         Represents the Long Range Attraction factor:
             Head towards average fleet point
         """
-        vector = 
+        vector=numpy.array([0,0,0])
+        for neighbour in neighbours:
+            vector+=numpy.array(neighbour.position)
+
+        #This assumes that the map contains one entry for each non-self node
+        neighbourhood_com=vector/min(self.nearest_neighbours,len(self.map))
+
+        return (neighbourhood_com-position)/self.config.clumping_factor
+
+    def replusiveVector(self,position):
+        """
+        Repesents the Short Range Repulsion behaviour:
+            If a node is too close, steer away from it
+        """
+        #TODO Test if this is better as a scalar function rather than a step value
+
+        vector=numpy.array([0,0,0])
+        for neighbour in self._get_neighbours():
+            if distance(position,neighbour.position) > self.neighbour_min_rad:
+                #Too Close, Move away
+                vector-=(position-neighbour.position)
+
+        return vector
+
+    def localHeading(self,velocity):
+        """
+        Represents Local Average Heading
+        """
+        vector=numpy.array([0,0,0])
+        for neighbour in self._get_neighbours():
+            vector += neighbour.p_velocity
+        return vector
 
 
+
+    def _percieved_vector(self,node_id):
+        """
+        Finite Difference Estimation
+        from http://cim.mcgill.ca/~haptic/pub/FS-VH-CSC-TCST-00.pdf
+        """
+        node_history=sorted(filter(lambda x: x.object_id==nodeid, self.memory), key=time)
+        return (node_history[-1].position-node_history[-2].position)/(node_history[-1].time-node_history[-2].time)
 
 class Node(Sim.process,VectorConfiguration):
     """
