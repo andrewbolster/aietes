@@ -20,6 +20,10 @@ class VectorConfiguration():
         self.position=seq[:3]
         #Extract (A,B,G) vector from 6-vector as orientation
         self.orientation=seq[3:]
+        #Implied six vector velocity
+        self.velocity=[0,0,0,0,0,0]
+
+        self._lastupdate
 
     def distanceTo(self,otherVector):
         assert isinstance(otherVector, VectorConfiguration)
@@ -32,10 +36,21 @@ class VectorConfiguration():
         c = dot / numpy.norm(self.orientation) / numpy.norm(otherVector.orientation)
         return numpy.arccos(c)
 
-    def move(self,forceVector):
+    def push(self,forceVector):
         assert isinstance(forceVector, VectorConfiguration)
-        self.position+=forceVector.position
-        self.orientation+=forceVector.orientation
+        self.velocity+=forceVector
+
+    def desire(self,desireVector):
+        assert len(desireVector) == 3
+        relative_bearing=desireVector-self.orientation
+
+    def _update(self):
+        """
+        Update position
+        """
+        self.position +=(self.velocity[:3]*(self._lastupdate-Sim.now()))
+        self.orientation+=(self.velocity[3:]*(self._lastupdate-Sim.now()))
+
 
     def setPos(self,placeVector):
         assert isinstance(placeVector,numpy.array)
@@ -86,9 +101,13 @@ class Flock(Behaviour):
         """
         Returns a 6-force-vector indicating the direction / orientation in which to move
         """
-        cohesionpoint=numpy.average([v.position for v in self.map])
-        #TODO Add Weight based on time last seen
 
+    def clumpingVector():
+        """
+        Represents the Long Range Attraction factor:
+            Head towards average fleet point
+        """
+        vector = 
 
 
 
