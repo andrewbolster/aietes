@@ -1,6 +1,6 @@
 import SimPy.Simulation as Sim
 import Layercake
-import logging
+import logging, numpy
 from operator import attrgetter,itemgetter
 
 module_logger = logging.getLogger('AIETES.Node')
@@ -10,19 +10,17 @@ class VectorConfiguration():
     Convention is to use X,Y,Z
     Angles in radians and with respect to global positional plane reference
     """
-    self.position = numpy.array([0,0,0])
-    self.velocity = numpy.array([0,0,0])
     #TODO Expand this to proper 6d vector (yaw,pitch,roll
-    def __init__(self,seq=[0,0,0])
-        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))o
+    def __init__(self,seq=[0,0,0]):
+        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
         assert len(seq) == 3
         #Extract (X,Y,Z) vector from 6-vector as position
         self.position=numpy.array(seq)
         #Implied six vector velocity
-        self.velocity=[0,0,0]
+        self.velocity=numpy.array([0,0,0])
 
-        self._lastupdate
+        self._lastupdate=Sim.now()
 
     def distanceTo(self,otherVector):
         assert isinstance(otherVector, VectorConfiguration)
@@ -190,7 +188,7 @@ class Flock(Behaviour):
         node_history=sorted(filter(lambda x: x.object_id==nodeid, self.memory), key=time)
         return (node_history[-1].position-node_history[-2].position)/(node_history[-1].time-node_history[-2].time)
 
-class Node(Sim.process,VectorConfiguration):
+class Node(Sim.Process,VectorConfiguration):
     """
     Generic Representation of a network node
     """

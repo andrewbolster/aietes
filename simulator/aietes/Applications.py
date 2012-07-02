@@ -74,23 +74,6 @@ class Application(Sim.Process):
         raise TypeError("Tried to instantiate the base Application class")
 
 
-class AnySink(Application):
-    def packetGen(self,period,destination="AnySink"):
-        """
-        Copy of behaviour from AUVNetSim for default class,
-        exhibiting poisson departure behaviour
-        """
-        packet = AppPacket(
-            source=self.layercake.host.name,
-            dest=destination,
-            pkt_type='DATA'
-        )
-        period=numpy.poisson(period)
-        return (packet,period)
-
-    def packetRecv(self,packet):
-        assert isinstance(packet, AppPacket)
-
 class AccessibilityTest(Application):
     def packetGen(self,period,destination="AnySink"):
         """

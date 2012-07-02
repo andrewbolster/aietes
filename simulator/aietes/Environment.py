@@ -1,20 +1,20 @@
 import numpy
-class Environment(numpy.ndarray):
+class Environment():
     """
     Environment Class representing the physical environment inc any objects
     / activities within that environment that are not controlled by the
     simulated entities i.e. wind, tides, speed of sound at depth, etc
     """
-    def __init__(self,shape=[100,100,100],scale=1,base_depth=-1000,sos_model=None):
+    def __init__(self,shape=[100,100,100],resolution=1,base_depth=-1000,sos_model=None):
         """
         Generate a box with points from 0 to (size) in each dimension, where 
-        each point represents a cube of side scale metres
+        each point represents a cube of side resolution metres
         """
-        numpy.ndarray.__init__(self,shape=shape,dtype=numpy.float)
+        self.volume=numpy.ndarray(shape=shape,dtype=numpy.float)
         self.depth=base_depth
         self.sos=1400
         #TODO Random Surface Generation
-        self.generateSurface()
+        #self.generateSurface()
         #TODO 'Tidal motion' factor
 
     def export(self,filename=None):
