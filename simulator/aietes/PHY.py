@@ -1,6 +1,5 @@
 from SimPy import Simulation as Sim
 import math
-from defaults import PHYconfig as defaults
 from PHYTools import *
 from Packet import PHYPacket
 import logging
@@ -14,7 +13,7 @@ module_logger=logging.getLogger('AIETES.PHY')
 class PHY():
     '''A Generic Class for Physical interface layers
     '''
-    def __init__(self,layercake,channel_event,config=defaults):
+    def __init__(self,layercake,channel_event,config):
         '''Initialise with defaults from PHYconfig
         :Frequency Specifications
             frequency (kHz)
@@ -88,11 +87,12 @@ class PHY():
 class Transducer(Sim.Resource):
     '''Packets request the resource and can interfere
     '''
-    def __init__(self, name="a_transducer",phy, ambient_noise, SIR_threshold,
+    def __init__(self, phy, ambient_noise, SIR_threshold,
                  channel_event,
                  pos_query_func,
-                 success_callback_func):
-        Sim.Resource.__init__(self,name=name, capacity=defaults.transducer_capacity)
+                 success_callback_func,
+                 name="a_transducer"):
+        Sim.Resource.__init__(self,name=name, capacity=transducer_capacity)
 
         self.phy = phy
         self.SIR_threshold = SIR_threshold
@@ -130,7 +130,7 @@ class Transducer(Sim.Resource):
         # "arg[1] is a reference to the Packet instance that just completed
         packet = arg[1]
         assert isinstance(packet, PHYPacket), \
-                "%s is not a PHY Packet", % str(packet)
+                "%s is not a PHY Packet" % str(packet)
         doomed = packet.doomed
         minSIR = packet.GetMinSIR()
         mac_packet = deepcopy(packet.payload)
@@ -147,27 +147,27 @@ class Transducer(Sim.Resource):
 
         # If it isn't doomed due to transmission & it is not interfered
         if minSIR>0:
-            if not doomed
-            and Linear2DB(minSIR) >= self.SIR_thresh
-            and packet.power >= self.phy.threshold['recieve']:
-                # Properly received: enough power, not enough interference
-                self.collision = False
-                self.on_success(new_packet)
+            if not doomed \
+                and Linear2DB(minSIR) >= self.SIR_thresh \
+                and packet.power >= self.phy.threshold['recieve']:
+                    # Properly received: enough power, not enough interference
+                    self.collision = False
+                    self.on_success(new_packet)
 
             elif packet.power >= self.phy.receiving['recieve']:
                 # Too much interference but enough power to receive it: it suffered a collision
                 if self.phy.host.name == new_packet.through or self.phy.host.name == new_packet.dest:
-                     self.collision = True
-                     self.collisions.append(new_packet)
-                     self.physical_layer.PrintMessage("A "+new_packet.type+" packet to "+new_packet.through
-                                                                 +" was discarded due to interference.")
+                    self.collision = True
+                    self.collisions.append(new_packet)
+                    self.physical_layer.PrintMessage("A "+new_packet.type+" packet to "+new_packet.through
+                                                     +" was discarded due to interference.")
             else:
                 # Not enough power to be properly received: just heard.
                 self.phy.logger.debug("This packet was not addressed to me.")
 
         else:
             # This should never appear, and in fact, it doesn't, but just to detect bugs (we cannot have a negative SIR in lineal scale).
-            print new_packet.type, new_packet.source, new_packet.dest., new_packet.through., self.physical_layer.host.name
+            print new_packet.type, new_packet.source, new_packet.dest, new_packet.through, self.physical_layer.host.name
 
 
     def onTX(self):
@@ -217,7 +217,7 @@ class ArrivalScheduler(Sim.Process):
 
         if distance > 0.01:  # I should not receive my own transmissions
             receive_power = params["power"] - Attenuation(params["frequency"], distance)
-            travel_time = distance/defaults.speed_of_sound  # Speed of sound in water = 1482.0 m/s
+            travel_time = distance/speed_of_sound  # Speed of sound in water = 1482.0 m/s
 
             yield Sim.hold, self, travel_time
 

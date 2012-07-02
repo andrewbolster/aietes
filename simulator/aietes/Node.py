@@ -1,5 +1,5 @@
 import SimPy.Simulation as Sim
-import LayerCake
+import Layercake
 import logging
 from operator import attrgetter,itemgetter
 
@@ -37,6 +37,7 @@ class VectorConfiguration():
         Update position
         """
         self.position +=numpy.array(self.velocity*(self._lastupdate-Sim.now()))
+        self._lastupdate = Sim.now()
 
     def setPos(self,placeVector):
         assert isinstance(placeVector,numpy.array)
@@ -51,9 +52,9 @@ class Behaviour():
     """
     def __init__(self,node,config):
         #TODO internal representation of the environment
-        self.node
-        self.config
-        self.map={}
+        self.node=node
+        self.config=config
+        self.map=node.map
         self.memory={}
         self._init_behaviour()
 
@@ -63,7 +64,20 @@ class Behaviour():
             self.position=position
             self.time=Sim.now()
 
+    class map_entry():
+        def __init__(self,node):
+            self.position=node.position
+            self.velocity=node.velocity
+            self.time=Sim.now()
+
     def _init_behaviour():
+        pass
+
+    def update():
+        self.map[self.node.id]=self.map_entry(self.node)
+        pass
+
+    def move():
         pass
 
     def addMemory(object_id,position):
@@ -77,13 +91,11 @@ class Behaviour():
         """
         Returns a 6-force-vector indicating the direction / orientation in which to move
         """
+        forceVector= numpy.array([0,0,0])
         return VectorConfiguration()
 
     def distance(self,my_position, their_position):
         return scipy.spatial.distance.euclidean(my_position,their_position)
-
-
-
 
 class Flock(Behaviour):
     """
@@ -92,7 +104,7 @@ class Flock(Behaviour):
         Local-Average heading
         Long Range Attraction
     """
-    def _init_behaviour():
+    def _init_behaviour(self):
         self.nearest_neighbours = config.nearest_neighbours
         self.neighbourhood_max_rad = config.neighbourhood_max_rad
         self.neighbourhood_max_dt= config.neighbourhood_max_dt
@@ -121,10 +133,14 @@ class Flock(Behaviour):
 
     def responseVector(self,position,velocity):
         """
-        Called on update: Returns desired vector
+        Called on process: Returns desired vector
         """
-        #TODO Sum Behaviours
-        return position
+        forceVector= numpy.array([0,0,0])
+        forceVector+= self.clumpingVector(position)
+        forceVector+= self.replusiveVector(position)
+        forceVector+= self.localHeading(position)
+
+        return forceVector
 
     def clumpingVector(self,position):
         """
@@ -138,6 +154,7 @@ class Flock(Behaviour):
         #This assumes that the map contains one entry for each non-self node
         neighbourhood_com=vector/min(self.nearest_neighbours,len(self.map))
 
+        # Return the fudged, relative vector to the centre of the cluster
         return (neighbourhood_com-position)/self.config.clumping_factor
 
     def replusiveVector(self,position):
@@ -148,11 +165,12 @@ class Flock(Behaviour):
         #TODO Test if this is better as a scalar function rather than a step value
 
         vector=numpy.array([0,0,0])
-        for neighbour in self._get_neighbours():
+        for neighbour in self._get_neighbours(position):
             if distance(position,neighbour.position) > self.neighbour_min_rad:
                 #Too Close, Move away
                 vector-=(position-neighbour.position)
 
+        # Return an inverse vector to the obstacles
         return vector
 
     def localHeading(self,velocity):
@@ -160,11 +178,9 @@ class Flock(Behaviour):
         Represents Local Average Heading
         """
         vector=numpy.array([0,0,0])
-        for neighbour in self._get_neighbours():
+        for neighbour in self._get_neighbours(position):
             vector += neighbour.p_velocity
         return vector
-
-
 
     def _percieved_vector(self,node_id):
         """
@@ -179,8 +195,9 @@ class Node(Sim.process,VectorConfiguration):
     Generic Representation of a network node
     """
     def __init__(self,name,simulation,config):
-        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))o
+        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
+        self.id=uuid.uuid4() #Hopefully unique id
         #TODO Add auto-naming
         Sim.Process.__init__(self,name=name)
         self.simulation=simulation
@@ -188,7 +205,7 @@ class Node(Sim.process,VectorConfiguration):
         # Physical Configuration
         VectorConfiguration.__init__(self,seq=config.initial_vector)
         # Comms Stack
-        self.layers = LayerCake(self,simulation)
+        self.layers = Layercake(self,simulation)
 
         #Propultion Capabilities
         if isinstance(config.max_speed,int):
@@ -206,9 +223,6 @@ class Node(Sim.process,VectorConfiguration):
         assert len(self.max_turn) == 3
 
 
-
-
-
         #Internal Representation of the environment
         behaviour_type=getattr(self.config.behaviour_type)
         self.behaviour=behaviour_type(self.config.behaviour)
@@ -216,12 +230,25 @@ class Node(Sim.process,VectorConfiguration):
 
     def lifecycle(self):
         """
-        Called to update internal awareness and motion
+        Called to update internal awareness and motion:
+            THESE CALLS ARE NOT GUARANTEED TO BE ALIGNED ACROSS NODES
         """
         while(True):
-            self.behaviour.updateMap()
+            #Update Fleet State
+            yield Sim.request, self, self.simulation.update_flag
+            self.behaviour.update()
+            yield Sim.release, self, self.simulation.update_flag
+            yield Sim.waituntil, self, self.simulation.clearToStep()
+            #Update Node State
+            yield Sim.request, self, self.simulation.process_flag
+            self.behaviour.process()
+            yield Sim.release, self, self.simulation.process_flag
+            yield Sim.waituntil, self, self.simulation.clearToStep()
+            #Move Fleet
+            yield Sim.request, self, self.simulation.move_flag
             self.behaviour.move()
-
-            yield
+            yield Sim.release, self, self.simulation.move_flag
+            yield Sim.waituntil, self, self.simulation.clearToStep()
+            yield Sim.hold, self, self.behaviour.update_rate
 
 

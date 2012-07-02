@@ -5,6 +5,10 @@ import math
 #####################################################################
 # 170dB re uPa is the sound intensity created over a sphere of 1m by a radiated acoustic power of 1 Watt with the source in the center
 I_ref = 172.0
+# Speed of sound in water (m/s)
+speed_of_sound= 1482
+#Transducer Capacity (Arbitrary)
+transducer_capacity= 1000
 
 #####################################################################
 # Propagation functions

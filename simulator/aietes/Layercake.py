@@ -1,5 +1,5 @@
 from SimPy import Simulation as Sim
-import PHY, MAC, Net, Application
+import PHY, MAC, Net, Applications
 import logging
 import pydot
 module_logger=logging.getLogger('AIETES.Layercake')
@@ -14,11 +14,11 @@ class Layercake():
         self.channel_event=simulation.channel_event
 
         #PHY
-        self.phy = PHY.PHY(self,self.channel_event)
+        self.phy = PHY.PHY(self,self.channel_event,simulation.config.PHY)
         #MAC
-        self.mac = MAC.ALOHA(self)
+        self.mac = MAC.ALOHA(self,simulation.config.MAC)
         #Routing
-        self.net = Net.RoutingTable(self)
+        self.net = Net.RoutingTable(self,simulation.config.Network)
         #Application
-        self.app = Application(self)
+        self.app = Application(self,simulation.config.Application)
 

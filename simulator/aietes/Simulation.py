@@ -3,10 +3,19 @@ import logging
 import numpy
 import scipy
 import Layercake
-import environment
-import defaults
+import Environment
+
+from configobj import ConfigObj
 
 module_logger = logging.getLogger('AIETES')
+
+naming_convention=['Zeus','Neptune','Jupiter','Hera','Mercury','Faunus','Hestia','Demeter','Poseidon','Diana','Apollo','Pluto','Juno','Vesta','Diana','Hermes','Persephone','Cupid','Ares','Hephaestus']
+
+class SimConfig(dict):
+    def __getattr__(self, attr):
+        return self.get(attr, None)
+    __setattr__= ConfigObj.__setitem__
+    __delattr__= ConfigObj.__delitem__
 
 class Simulation():
     """
@@ -15,7 +24,7 @@ class Simulation():
     nodes=[]
     fleets=[]
     def __init__(self,config_file):
-        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))o
+        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
 
         #Attempt Validation and construct the simulation from that config.
@@ -26,19 +35,46 @@ class Simulation():
 
         #Initialise simulation environment and configure a global channel event
         Sim.initialize()
-        self.channel_event = Sim.SimEvent(config_file.sim['channel_event_name'])
+        self.channel_event = Sim.SimEvent(config.sim['channel_event_name'])
 
         self.environment = configureEnvironment()
         self.nodes = configureNodes()
 
-    def validateConfig(config_file, defaults=defaults):
+        #Configure Resources
+        self.update_flag= Sim.Resource(
+            capacity= len(self.nodes),
+            name= 'Update Flag')
+        self.process_flag= Sim.Resource(
+            capacity= len(self.nodes),
+            name= 'Process Flag')
+        self.move_flag= Sim.Resource(
+            capacity= len(self.nodes),
+            name= 'Move Flag')
+
+    def go(self):
+        Sim.simulate(until=self.config.sim['sim_duration'])
+
+    def clearToStep(self):
+        n_nodes=len(self.nodes)
+        return self.update_flag.n == n_nodes \
+                and self.process_flag.n == n_nodes \
+                and self.move_flag.n == n_nodes
+
+    def validateConfig(self,config_file, configspec):
         """
         Generate valid configuration information by interpolating a given config
         file with the defaults
         """
-        
+        self.config= SimConfig(config_file)
+        assert config.Nodes.count < len(naming_convention), "Not Enough Names!"
+        for n in range(config.Nodes.count):
+            candidate_name= random.choice(naming_convention)
+            while candidate_name in [ x.name for x in self.nodes ]:
+                candidate_name= random.choice(naming_convention)
 
-    def configureEnvironment(self, host, config=self.config):
+
+
+    def configureEnvironment(self, host, config):
         """
         Configure the physical environment within which the simulation executed
         Assumes empty unless told otherwise
@@ -48,20 +84,12 @@ class Simulation():
                                      base_depth=config.base_depth
                                     )
 
-    def configureLayercake(self,config=self.config):
-        """
-        Configure the 5-layer comms model based on the given config file.
-        Assume defaults of stupid ALOHA
-        """
-        pass
-
-    def configureNodes(self,config=self.config,fleet=None):
+    def configureNodes(self,config,fleet=None):
         """
         Configure 'fleets' of nodes for simulation
         Fleets are purely logical in this case
         """
         #Configure specified nodes
-        #TODO config checker should generate node_names set
         for nodeName in config.node_names:
             new_node=Node(
                 nodeName,
@@ -88,10 +116,3 @@ class Simulation():
             #TODO add additional behaviours, eg random within enviroment; distribution around a point, etc
             self.logger.debug("Gave node %s a zero vector"%nodeName)
             return [0,0,0,0,0,0]
-
-
-
-
-
-
-

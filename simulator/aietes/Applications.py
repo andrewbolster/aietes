@@ -30,7 +30,7 @@ class Application(Sim.Process):
         self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
         self.logger.info('creating instance')
 
-    def lifecycle(self,period=None,destination==None):
+    def lifecycle(self,period=None,destination=None):
         while True:
             (packet,period)=self.packetGen(period,destination)
             self.layercake.net.send(packet)

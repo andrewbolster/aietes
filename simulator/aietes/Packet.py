@@ -48,11 +48,11 @@ class Packet():
 class AppPacket(Packet):
     '''Base Packet Class (AKA AppPacket)
     '''
-    self.source = None
-    self.destination = None
-    self.type = None
-    self.data = None
-    self.length = 24 # Default Packet Length
+    source = None
+    destination = None
+    type = None
+    data = None
+    length = 24 # Default Packet Length
 
     def __init__(self, source, dest, pkt_type, data=None, route=[]):
         self._start_log()
@@ -70,11 +70,11 @@ class AppPacket(Packet):
 class RoutePacket(Packet):
     '''Routing Level Packet
     '''
-    self.level = 0.0
-    self.route = []
-    self.next_hop = None #Analogue to packet['through'] in AUVNetSim
-    self.source_position = None
-    self.destination_position = None
+    level = 0.0
+    route = []
+    next_hop = None #Analogue to packet['through'] in AUVNetSim
+    source_position = None
+    destination_position = None
 
     def __init__(self,route_layer,packet,level=0.0):
         Packet.__init__(self,packet)
@@ -156,7 +156,6 @@ class PHYPacket(Sim.Process, Packet):
         duration = packet.length/bitrate
 
         self.phy.transducer.channel_event.signal()
-        #TODO
 
         #Lock the transducer for duration of TX
         self.phy.transducer.onTX()
@@ -171,7 +170,7 @@ class PHYPacket(Sim.Process, Packet):
         self.phy.tx_energy += (power_w * duration)
 
     def recv(self, duration):
-        if self.power >= self.py.threshold['listen']:
+        if self.power >= self.phy.threshold['listen']:
             # Otherwise I will not even notice that there are packets in the network
             yield Sim.request, self, self.phy.transducer
             yield Sim.hold, self, duration
