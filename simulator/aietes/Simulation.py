@@ -6,6 +6,7 @@ import Layercake
 import Environment
 
 from configobj import ConfigObj
+from validate import Validate
 
 module_logger = logging.getLogger('AIETES')
 
@@ -60,12 +61,12 @@ class Simulation():
                 and self.process_flag.n == n_nodes \
                 and self.move_flag.n == n_nodes
 
-    def validateConfig(self,config_file, configspec):
+    def validateConfig(self,config_file, configspec='defaults.conf'):
         """
         Generate valid configuration information by interpolating a given config
         file with the defaults
         """
-        self.config= SimConfig(config_file)
+        self.config= ConfigObj(config_file,configspec=configspec)
         assert config.Nodes.count < len(naming_convention), "Not Enough Names!"
         for n in range(config.Nodes.count):
             candidate_name= random.choice(naming_convention)
