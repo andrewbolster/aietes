@@ -1,15 +1,18 @@
-
+from SimPy import Simulation as Sim
+import logging
+from Tools import dotdict
 
 class Behaviour():
     """
     Generic Represnetation of a Nodes behavioural characteristics
     #TODO should be a state machine?
     """
-    def __init__(self,node,config):
+    def __init__(self,node,bev_config):
         #TODO internal representation of the environment
+        self.logger = logging.getLogger("%s.%s"%(node.logger.name,self.__class__.__name__))
+        self.logger.info('creating instance from bev_config: %s'%bev_config)
         self.node=node
-        self.config=config
-        self.map=node.map
+        self.bev_config=bev_config
         self.memory={}
         self._init_behaviour()
 
@@ -25,17 +28,21 @@ class Behaviour():
             self.velocity=node.velocity
             self.time=Sim.now()
 
-    def _init_behaviour():
+    def _init_behaviour(self):
         pass
 
-    def update():
-        self.map[self.node.id]=self.map_entry(self.node)
+    def update(self):
+        """
+        Update local (and global) knowledge with the current state of the object
+        """
+        self.move(self.responseVector())
+        self.simulation.environment.update(self.node.id,self.position)
         pass
 
-    def move():
+    def move(self):
         pass
 
-    def addMemory(object_id,position):
+    def addMemory(self,object_id,position):
         """
         Called by node lifecycle to update the internal representation of the environment
         """
@@ -47,7 +54,7 @@ class Behaviour():
         Returns a 6-force-vector indicating the direction / orientation in which to move
         """
         forceVector= numpy.array([0,0,0])
-        return VectorConfiguration()
+        return forceVector
 
     def distance(self,my_position, their_position):
         return scipy.spatial.distance.euclidean(my_position,their_position)
@@ -60,10 +67,9 @@ class Flock(Behaviour):
         Long Range Attraction
     """
     def _init_behaviour(self):
-        self.nearest_neighbours = config.nearest_neighbours
-        self.neighbourhood_max_rad = config.neighbourhood_max_rad
-        self.neighbourhood_max_dt= config.neighbourhood_max_dt
-        self.neighbour_min_rad = config.neighbour_min_rad
+        self.nearest_neighbours = self.bev_config.nearest_neighbours
+        self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
+        self.neighbour_min_rad = self.bev_config.neighbour_min_rad
 
     def _get_neighbours(self,position):
         """
