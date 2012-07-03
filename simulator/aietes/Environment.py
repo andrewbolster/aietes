@@ -1,4 +1,7 @@
+import logging
+from Tools import baselogger
 import numpy
+import uuid
 class Environment():
     """
     Environment Class representing the physical environment inc any objects
@@ -10,12 +13,27 @@ class Environment():
         Generate a box with points from 0 to (size) in each dimension, where 
         each point represents a cube of side resolution metres
         """
-        self.volume=numpy.ndarray(shape=shape,dtype=numpy.float)
+        self.logger = logging.getLogger("%s.%s"%(baselogger.name,self.__class__.__name__))
+        self.logger.info('creating instance')
+        self.volume=numpy.ndarray(shape=shape,dtype=uuid.UUID)
         self.depth=base_depth
         self.sos=1400
         #TODO Random Surface Generation
         #self.generateSurface()
         #TODO 'Tidal motion' factor
+
+    def random_position(self,empty=True):
+        """
+        Return a random empty map reference within the environment volume
+        """
+        empty=False
+        while not empty:
+            ran_x = numpy.random.randint(0,self.volume.shape[0])
+            ran_y = numpy.random.randint(0,self.volume.shape[1])
+            ran_z = numpy.random.randint(0,self.volume.shape[2])
+            empty = not bool(self.volume[ran_x, ran_y, ran_z ])
+
+        return [ran_x, ran_y, ran_z ]
 
     def export(self,filename=None):
         """

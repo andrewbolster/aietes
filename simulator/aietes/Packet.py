@@ -17,7 +17,7 @@ module_logger=logging.getLogger('AIETES.PKT')
 class Packet():
     '''Base Packet Class
     '''
-    def __init__(self,packet):
+    def __init__(self,packet,):
         ''' Take the upper level packet and encapsulate it as the payload within the new packet
         while maintaining access to all members.
 

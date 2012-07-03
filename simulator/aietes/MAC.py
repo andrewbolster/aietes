@@ -1,5 +1,7 @@
 from SimPy import Simulation as Sim
 from FSM import FSM
+from Packet import Packet
+from Tools import dotdict
 import logging
 import pydot
 module_logger=logging.getLogger('AIETES.MAC')
@@ -125,10 +127,10 @@ class MAC():
         self.logger.err("Unexpected transition by %s from %s because of symbol %s from %s"%
                         (self.node.name, self.sm.current_state, self.sm.input_symbol, self.incoming_packet)
                        )
-        def onTimeout(self):
-            '''When it all goes wrong
-            '''
-            pass
+    def onTimeout(self):
+        '''When it all goes wrong
+        '''
+        pass
 
     def queueData(self):
         '''Log queueing
@@ -164,15 +166,15 @@ class ALOHA(MAC):
     '''
     def macBuilder(self):
         self.packets=[]
-        self.packets.append(Packet(
-            name="ACK",
-            length=self.config.ack_packet_length,
-            signal="got_ACK"
-        ))
-        self.packets.append(Packet(
-            name="DATA",
-            signal="got_DATA"
-        ))
+        self.packets.append(dotdict({
+            'name':"ACK",
+            'length':self.config.ack_packet_length,
+            'signal':"got_ACK"
+        }))
+        self.packets.append(dotdict({
+            'name':"DATA",
+            'signal':"got_DATA"
+        }))
 
         #Adapted/derived variables
         self.timeout = 0    # co-adapted with TX pwr

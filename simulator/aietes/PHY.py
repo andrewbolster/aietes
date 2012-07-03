@@ -47,14 +47,13 @@ class PHY():
         #Inferred System Parameters
         self.threshold['recieve'] = DB2Linear(ReceivingThreshold(self.frequency, self.bandwidth, self.threshold['SNR']))
         self.threshold['listen'] = DB2Linear(ListeningThreshold(self.frequency, self.bandwidth, self.threshold['LIS']))
-        self.ambient_noise = DB2Linear( Noise(self.freq) + 10*math.log10(self.bandwidth*1e3) ) #In linear scale
-        self.intereference = self.ambient_noise
+        self.ambient_noise = DB2Linear( Noise(self.frequency) + 10*math.log10(self.bandwidth*1e3) ) #In linear scale
+        self.interference = self.ambient_noise
         self.collision = False
 
         #Generate modem/transd etc
         self.modem = Sim.Resource(name='a_modem')
         self.transducer = Transducer(self)
-
         self.messages = []
 
     def send(self,FromAbove):
@@ -87,25 +86,27 @@ class PHY():
 class Transducer(Sim.Resource):
     '''Packets request the resource and can interfere
     '''
-    def __init__(self, phy, ambient_noise, SIR_threshold,
-                 channel_event,
-                 pos_query_func,
-                 success_callback_func,
+    def __init__(self, phy,
                  name="a_transducer"):
+
         Sim.Resource.__init__(self,name=name, capacity=transducer_capacity)
 
         self.phy = phy
-        self.SIR_threshold = SIR_threshold
+        self.layercake = self.phy.layercake
+        self.host = self.layercake.host
+
         self.transmitting = False
         self.collisions = []
-        self.interference = ambient_noise #Noise==Inter as far as this is concerned
-        self.callback = success_callback_func
-        self.channel_event = channel_event
+        self.channel_event = self.layercake.channel_event
+        self.interference = self.phy.interference
 
         #Configure event listener
         self.listener = AcousticEventListener(self)
-        Sim.activate(self.listener,
-                     self.listener.listen(self.channel_event, pos_query_func)
+        Sim.activate(
+                    self.listener,
+                    self.listener.listen(
+                        self.channel_event,
+                        self.host.vector.getPos)
                     )
 
     def updateInterference(self,packet):
@@ -152,7 +153,7 @@ class Transducer(Sim.Resource):
                 and packet.power >= self.phy.threshold['recieve']:
                     # Properly received: enough power, not enough interference
                     self.collision = False
-                    self.on_success(new_packet)
+                    self.layercake.mac.recv(new_packet)
 
             elif packet.power >= self.phy.receiving['recieve']:
                 # Too much interference but enough power to receive it: it suffered a collision

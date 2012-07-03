@@ -20,7 +20,6 @@ class Layercake():
         self.mac = self.config.mac_mod(self,self.config.MAC)
         #Routing
         self.net = self.config.net_mod(self,self.config.Network)
-
         #Application
         self.app = self.config.app_mod(self,self.config.Application)
 

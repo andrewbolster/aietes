@@ -2,8 +2,9 @@
 class RoutingTable():
     '''Routing table generic class
     '''
-    def __init__(self,layercake):
+    def __init__(self,layercake,config=None):
         self.layercake=layercake
+        self.config=config
         self.has_routing_table=False
         self.table={}
 
