@@ -5,48 +5,6 @@ import uuid
 from operator import attrgetter,itemgetter
 
 module_logger = logging.getLogger('AIETES.Node')
-class VectorConfiguration():
-    """
-    Class that implements Node Positional and velocity information
-    Convention is to use X,Y,Z
-    Angles in radians and with respect to global positional plane reference
-    """
-    #TODO Expand this to proper 6d vector (yaw,pitch,roll
-    def __init__(self,seq):
-        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
-        self.logger.info('creating instance')
-        assert len(seq) == 3
-        #Extract (X,Y,Z) vector from 6-vector as position
-        self.position=numpy.array(seq)
-        #Implied six vector velocity
-        self.velocity=numpy.array([0,0,0])
-
-        self._lastupdate=Sim.now()
-
-    def distanceTo(self,otherVector):
-        assert isinstance(otherVector, VectorConfiguration)
-        return scipy.spatial.distance.euclidean(self.position,otherVector.position)
-
-    def push(self,forceVector):
-        assert len(forceVector==3)
-        self.velocity+=numpy.array(forceVector)
-
-    def _update(self):
-        """
-        Update position
-        """
-        self.position +=numpy.array(self.velocity*(self._lastupdate-Sim.now()))
-        self._lastupdate = Sim.now()
-
-    def setPos(self,placeVector):
-        assert isinstance(placeVector,numpy.array)
-        assert len(placeVector) == 3
-        self.logger.info("Vector focibly moved")
-        self.position = placeVector
-
-    def getPos(self):
-        self._update()
-        return self.position
 
 class Node(Sim.Process):
     """
@@ -58,14 +16,23 @@ class Node(Sim.Process):
         self.id=uuid.uuid4() #Hopefully unique id
 
         Sim.Process.__init__(self,name=name)
+
         self.simulation=simulation
         self.config=node_config
 
         # Physical Configuration
-        self.vector = VectorConfiguration(seq=self.config.vector)
+
+        #Extract (X,Y,Z) vector from 6-vector as position
+        assert len(self.config.vector) == 3, "Malformed Vector%s"%self.config.vector
+        self.position=numpy.array(self.config.vector)
+        #Implied six vector velocity
+        self.velocity=numpy.array([0,0,0])
+
+        self._lastupdate=Sim.now()
+
 
         # Comms Stack
-        self.layers = Layercake(self,simulation)
+        self.layercake = Layercake(self,simulation)
 
         #Propultion Capabilities
         if isinstance(self.config.max_speed,int):
@@ -85,7 +52,45 @@ class Node(Sim.Process):
         #Internal Configure Node Behaviour
         self.behaviour=self.config.behave_mod(self,self.config.Behaviour)
 
+        #Simulation Configuration
+        self.internalEvent = Sim.SimEvent(self.name)
+
         self.logger.info('instance created')
+
+    def activate(self):
+        """
+        Fired on Sim Start
+        """
+        Sim.activate(self,self.lifecycle())
+        self.layercake.activate()
+
+
+    def distanceTo(self,otherNode):
+        assert hasattr(otherNode,position), "Other object has no position"
+        assert len(otherNode.position)==3
+        return scipy.spatial.distance.euclidean(self.position,otherVector.position)
+
+    def push(self,forceVector):
+        assert len(forceVector==3)
+        self.velocity+=numpy.array(forceVector)
+
+    def _update(self):
+        """
+        Update node status
+        """
+        #Positional information
+        self.position +=numpy.array(self.velocity*(self._lastupdate-Sim.now()))
+        self._lastupdate = Sim.now()
+
+    def setPos(self,placeVector):
+        assert isinstance(placeVector,numpy.array)
+        assert len(placeVector) == 3
+        self.logger.info("Vector focibly moved")
+        self.position = placeVector
+
+    def getPos(self):
+        self._update()
+        return self.position
 
 
     def lifecycle(self):
@@ -93,6 +98,7 @@ class Node(Sim.Process):
         Called to update internal awareness and motion:
             THESE CALLS ARE NOT GUARANTEED TO BE ALIGNED ACROSS NODES
         """
+        self.logger.info("Initialised Node Lifecycle")
         while(True):
             #Update Fleet State
             yield Sim.request, self, self.simulation.update_flag

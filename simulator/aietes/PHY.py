@@ -1,6 +1,6 @@
 from SimPy import Simulation as Sim
 import math
-from PHYTools import *
+from Tools import *
 from Packet import PHYPacket
 import logging
 
@@ -106,7 +106,7 @@ class Transducer(Sim.Resource):
                     self.listener,
                     self.listener.listen(
                         self.channel_event,
-                        self.host.vector.getPos)
+                        self.host.getPos)
                     )
 
     def updateInterference(self,packet):

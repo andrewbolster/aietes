@@ -35,7 +35,6 @@ class Behaviour():
         """
         Update local (and global) knowledge with the current state of the object
         """
-        self.move(self.responseVector())
         self.simulation.environment.update(self.node.id,self.position)
         pass
 
@@ -49,12 +48,11 @@ class Behaviour():
         #TODO expand this to do SLAM?
         self.memory+=memory_entry(object_id,position)
 
-    def responseVector():
+    def process():
         """
-        Returns a 6-force-vector indicating the direction / orientation in which to move
+        Process current map and memory information and update velocities
         """
-        forceVector= numpy.array([0,0,0])
-        return forceVector
+        return self.responseVector(self.node.position,self.node.velocity)
 
     def distance(self,my_position, their_position):
         return scipy.spatial.distance.euclidean(my_position,their_position)

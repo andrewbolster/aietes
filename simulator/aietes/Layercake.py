@@ -23,3 +23,9 @@ class Layercake():
         #Application
         self.app = self.config.app_mod(self,self.config.Application)
 
+    def activate(self):
+        """
+        Fired on Sim Start
+        """
+        self.mac.activate()
+

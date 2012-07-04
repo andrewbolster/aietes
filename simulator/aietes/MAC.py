@@ -21,11 +21,11 @@ class MAC():
         self.incoming_packet=None
         self.InitialiseStateEngine()
 
-    def activate(self,):
+    def activate(self):
         self.logger.info('activating instance')
-        self.timer=self.InternalTime(self.sm)                             #Instance of Internal Timer
+        self.timer=self.InternalTimer(self.sm)                             #Instance of Internal Timer
         self.timer_event = Sim.SimEvent("timer_event")                    #SimPy Event for signalling
-        Sim.activate(self.timer, self.timer.Lifecycle(self.timer_event))  #Tie the event to lifecycle function
+        Sim.activate(self.timer, self.timer.lifecycle(self.timer_event))  #Tie the event to lifecycle function
 
     def macBuilder(self):
         '''Generate run-time MAC config
@@ -41,7 +41,7 @@ class MAC():
             Sim.Process.__init__(self,name="%s_Timer"%self.__class__.__name__)
             self.sm=state_machine
 
-        def lifeCycle(self,Request):
+        def lifecycle(self,Request):
             while True:
                 yield Sim.waitevent, self, Request
                 yield Sim.hold, self, Request.signalparam[1]  #Wait for a given time

@@ -66,7 +66,14 @@ class Simulation():
             capacity= len(self.nodes),
             name= 'Move Flag')
 
-    def go(self):
+    def simulate(self):
+        """
+        Initiate the processed Simulation
+        """
+        self.logger.info("Initialising Simulation, to run for %s"%self.config.Simulation.sim_duration)
+        for node in self.nodes:
+            node.activate()
+
         Sim.simulate(until=self.config.Simulation.sim_duration)
 
     def clearToStep(self):
