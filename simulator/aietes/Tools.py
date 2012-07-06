@@ -1,3 +1,4 @@
+from SimPy import Simulation as Sim
 import math
 import logging
 
@@ -184,3 +185,16 @@ class dotdict(dict):
     def __dir__(self):
         return self.keys(),dir(dict(self))
 
+class memory_entry():
+    def __init__(self,object_id,position,distance):
+        self.object_id=object_id
+        self.position=position
+        self.distance=distance
+    def __repr__(self):
+        return "%s:%s:%s"%(self.object_id,self.position,self.distance)
+
+class map_entry():
+    def __init__(self,object_id,position):
+        self.object_id=object_id
+        self.position=position
+        self.time=Sim.now()

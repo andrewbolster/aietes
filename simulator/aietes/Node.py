@@ -105,19 +105,19 @@ class Node(Sim.Process):
             self.logger.debug('updating map')
             self.behaviour.update()
             yield Sim.release, self, self.simulation.update_flag
-            yield Sim.waituntil, self, self.simulation.clearToStep()
+            yield Sim.waituntil, self, self.simulation.clearToStep
             #Update Node State
             yield Sim.request, self, self.simulation.process_flag
             self.logger.debug('updating behaviour')
             self.behaviour.process()
             yield Sim.release, self, self.simulation.process_flag
-            yield Sim.waituntil, self, self.simulation.clearToStep()
+            yield Sim.waituntil, self, self.simulation.clearToStep
             #Move Fleet
             yield Sim.request, self, self.simulation.move_flag
             self.logger.debug('updating position')
-            self.behaviour.move()
+            self.move()
             yield Sim.release, self, self.simulation.move_flag
-            yield Sim.waituntil, self, self.simulation.clearToStep()
+            yield Sim.waituntil, self, self.simulation.clearToStep
             yield Sim.hold, self, self.behaviour.update_rate
 
 

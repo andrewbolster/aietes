@@ -1,5 +1,6 @@
+from SimPy import Simulation as Sim
 import logging
-from Tools import baselogger,dotdict
+from Tools import baselogger,dotdict,map_entry
 import numpy
 import uuid
 class Environment():
@@ -18,12 +19,13 @@ class Environment():
         self.logger = logging.getLogger("%s.%s"%(baselogger.name,self.__class__.__name__))
         self.logger.info('creating instance')
         self.volume=numpy.ndarray(shape=shape,dtype=uuid.UUID)
-        self.map=dotdict({})
+        self.map={}
         self.depth=base_depth
         self.sos=1400
         #TODO Random Surface Generation
         #self.generateSurface()
         #TODO 'Tidal motion' factor
+
 
     def random_position(self,empty=True):
         """
@@ -38,15 +40,18 @@ class Environment():
 
         return [ran_x, ran_y, ran_z ]
 
-    def update_object(self,object_id,position):
+    def update(self,object_id,position):
         """
         Update the environment to reflect a movement
         """
-        self.logger.debug("Moving %s from %s to %s"%(object_id,
-                                                     self.map[object_id],
-                                                     position)
-                         )
-        self.map[object_id]=position
+        try:
+            self.logger.debug("Moving %s from %s to %s"%(object_id,
+                                                         self.map[object_id].position,
+                                                         position)
+                             )
+        except KeyError:
+            self.logger.debug("Creating map entry for %s at %s"%(object_id,position))
+        self.map[object_id]=map_entry(object_id,position)
 
 
     def export(self,filename=None):
