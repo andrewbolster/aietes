@@ -3,7 +3,7 @@ import math
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
-baselogger = logging.getLogger('AIETES')
+baselogger = logging.getLogger('SIM')
 
 #####################################################################
 # Magic Numbers
@@ -194,7 +194,10 @@ class memory_entry():
         return "%s:%s:%s"%(self.object_id,self.position,self.distance)
 
 class map_entry():
-    def __init__(self,object_id,position):
+    def __init__(self,object_id,position,name=None):
         self.object_id=object_id
         self.position=position
+        self.name=name
         self.time=Sim.now()
+    def __repr__(self):
+        return "%s:%s:%s"%(self.object_id,self.position,self.time)

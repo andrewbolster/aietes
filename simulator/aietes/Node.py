@@ -4,14 +4,14 @@ import logging, numpy
 import uuid
 from operator import attrgetter,itemgetter
 
-module_logger = logging.getLogger('AIETES.Node')
+from Tools import baselogger
 
 class Node(Sim.Process):
     """
     Generic Representation of a network node
     """
     def __init__(self,name,simulation,node_config):
-        self.logger = logging.getLogger("%s.%s[%s]"%(module_logger.name,self.__class__.__name__,name))
+        self.logger = baselogger.getChild("%s[%s]"%(self.__class__.__name__,name))
         self.logger.info('creating instance')
         self.id=uuid.uuid4() #Hopefully unique id
 
@@ -19,6 +19,8 @@ class Node(Sim.Process):
 
         self.simulation=simulation
         self.config=node_config
+
+        self.pos_log=[]
 
         # Physical Configuration
 
@@ -29,7 +31,6 @@ class Node(Sim.Process):
         self.velocity=numpy.array([0,0,0])
 
         self._lastupdate=Sim.now()
-
 
         # Comms Stack
         self.layercake = Layercake(self,simulation)
@@ -72,15 +73,19 @@ class Node(Sim.Process):
 
     def push(self,forceVector):
         assert len(forceVector==3)
-        self.velocity+=numpy.array(forceVector)
+        self.velocity=numpy.array(forceVector,dtype=numpy.float)
 
-    def _update(self):
+    def move(self):
         """
         Update node status
         """
         #Positional information
-        self.position +=numpy.array(self.velocity*(self._lastupdate-Sim.now()))
+        unit_velocity=numpy.around(self.velocity,decimals=0)
+        old_pos = self.position.copy()
+        self.position +=numpy.array(unit_velocity*(Sim.now()-self._lastupdate))
         self._lastupdate = Sim.now()
+        self.logger.debug("Moving by %s * %s from %s to %s"%(unit_velocity,(Sim.now()-self._lastupdate),old_pos,self.position))
+        self.pos_log.append((self.position.copy(),self._lastupdate))
 
     def setPos(self,placeVector):
         assert isinstance(placeVector,numpy.array)
@@ -100,24 +105,22 @@ class Node(Sim.Process):
         """
         self.logger.info("Initialised Node Lifecycle")
         while(True):
+            yield Sim.request, self,self.simulation.process_flag
             #Update Fleet State
-            yield Sim.request, self, self.simulation.update_flag
             self.logger.debug('updating map')
-            self.behaviour.update()
-            yield Sim.release, self, self.simulation.update_flag
-            yield Sim.waituntil, self, self.simulation.clearToStep
+            self.simulation.environment.update(self.id,self.position)
+            yield Sim.waituntil, self, self.simulation.outer_join
+            yield Sim.request, self, self.simulation.move_flag
+
             #Update Node State
-            yield Sim.request, self, self.simulation.process_flag
             self.logger.debug('updating behaviour')
             self.behaviour.process()
-            yield Sim.release, self, self.simulation.process_flag
-            yield Sim.waituntil, self, self.simulation.clearToStep
+            yield Sim.release, self,self.simulation.process_flag
+            yield Sim.waituntil, self, self.simulation.inner_join
+
             #Move Fleet
-            yield Sim.request, self, self.simulation.move_flag
             self.logger.debug('updating position')
             self.move()
             yield Sim.release, self, self.simulation.move_flag
-            yield Sim.waituntil, self, self.simulation.clearToStep
             yield Sim.hold, self, self.behaviour.update_rate
-
 

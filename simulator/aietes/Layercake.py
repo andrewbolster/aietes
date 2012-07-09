@@ -2,7 +2,6 @@ from SimPy import Simulation as Sim
 import PHY, MAC, Net, Applications
 import logging
 import pydot
-module_logger=logging.getLogger('AIETES.Layercake')
 
 class Layercake():
     """
@@ -13,6 +12,7 @@ class Layercake():
         self.host=host
         self.channel_event=simulation.channel_event
         self.config= simulation.config
+        self.logger = host.logger
 
         #PHY
         self.phy = PHY.PHY(self,self.channel_event,self.config.PHY)

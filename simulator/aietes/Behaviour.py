@@ -2,7 +2,7 @@ from SimPy import Simulation as Sim
 import logging
 import numpy
 import scipy.spatial
-from Tools import dotdict,map_entry,memory_entry
+from Tools import dotdict,map_entry,memory_entry,baselogger
 from operator import attrgetter,itemgetter
 
 
@@ -13,7 +13,7 @@ class Behaviour():
     """
     def __init__(self,node,bev_config):
         #TODO internal representation of the environment
-        self.logger = logging.getLogger("%s.%s"%(node.logger.name,self.__class__.__name__))
+        self.logger = node.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance from bev_config: %s'%bev_config)
         self.node=node
         self.bev_config=bev_config
@@ -34,16 +34,6 @@ class Behaviour():
     def _init_behaviour(self):
         pass
 
-    def update(self):
-        """
-        Update local (and global) knowledge with the current state of the object
-        """
-        self.simulation.environment.update(self.node.id,self.node.position)
-        pass
-
-    def move(self):
-        pass
-
     def addMemory(self,object_id,position):
         """
         Called by node lifecycle to update the internal representation of the environment
@@ -56,10 +46,14 @@ class Behaviour():
         Process current map and memory information and update velocities
         """
         self.neighbours = self.neighbour_map()
-        return self.responseVector(self.node.position,self.node.velocity)
+        forceVector = self.responseVector(self.node.position,self.node.velocity)
+        self.node.push(forceVector)
+        return
 
     def distance(self, their_position):
-        return numpy.linalg.norm(self.node.position - their_position)
+        d = numpy.linalg.norm(self.node.position - their_position)
+        #self.logger.debug("Distance:%s"%d)
+        return d
 
 class Flock(Behaviour):
     """
@@ -71,8 +65,11 @@ class Flock(Behaviour):
     def _init_behaviour(self):
         self.nearest_neighbours = self.bev_config.nearest_neighbours
         self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
-        self.neighbour_min_rad = self.bev_config.neighbour_min_rad
+        self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
         self.clumping_factor = self.bev_config.clumping_factor
+        assert self.nearest_neighbours>0
+        assert self.neighbourhood_max_rad>0
+        assert self.neighbour_min_rad>0
 
     def _get_neighbours(self,position):
         """
@@ -92,11 +89,11 @@ class Flock(Behaviour):
         """
         Called on process: Returns desired vector
         """
-        forceVector= numpy.array([0,0,0])
+        forceVector= numpy.array([0,0,0],dtype=numpy.float)
         forceVector+= self.clumpingVector(position)
         forceVector+= self.replusiveVector(position)
         #forceVector+= self.localHeading(position)
-        self.logger.debug("%s:%s"%(__name__,forceVector))
+        self.logger.debug("Response:%s"%(forceVector))
         return forceVector
 
     def clumpingVector(self,position):
@@ -104,18 +101,22 @@ class Flock(Behaviour):
         Represents the Long Range Attraction factor:
             Head towards average fleet point
         """
-        vector=numpy.array([0,0,0])
+        vector=numpy.array([0,0,0],dtype=numpy.float)
+        valid = True
         for neighbour in self._get_neighbours(self.node.position):
             vector+=numpy.array(neighbour.position)
 
         try:
             #This assumes that the map contains one entry for each non-self node
-            neighbourhood_com=vector/min(self.nearest_neighbours,len(self.neighbour_map()))
+            neighbourhood_com=(vector)/min(self.nearest_neighbours,len(self.neighbour_map()))
+            #self.logger.debug("Cluster Centre,position,factor: %s,%s,%s"%(neighbourhood_com,vector,self.clumping_factor))
             # Return the fudged, relative vector to the centre of the cluster
-            forceVector= (neighbourhood_com-position)/self.clumping_factor
-        except ZeroDivisionException:
+            forceVector= (neighbourhood_com-position)*self.clumping_factor
+        except ZeroDivisionError:
+            self.logger.error("Zero Division Error: Returning zero vector")
             forceVector= position-position
-        self.logger.debug("%s:%s"%(__name__,forceVector))
+
+        self.logger.debug("Clump:%s"%(forceVector))
         return forceVector
 
     def replusiveVector(self,position):
@@ -125,14 +126,16 @@ class Flock(Behaviour):
         """
         #TODO Test if this is better as a scalar function rather than a step value
 
-        forceVector=numpy.array([0,0,0])
+        forceVector=numpy.array([0,0,0],dtype=numpy.float)
         for neighbour in self._get_neighbours(position):
-            if self.distance(neighbour.position) > self.neighbour_min_rad:
+            if self.distance(neighbour.position) < self.neighbour_min_rad:
                 #Too Close, Move away
-                forceVector-=(position-neighbour.position)
+                distanceFactor=self.neighbour_min_rad/(self.distance(neighbour.position)+self.neighbour_min_rad)
+                forceVector-=(position-neighbour.position)*distanceFactor
+                self.logger.debug("Too close to %s"%neighbour)
 
         # Return an inverse vector to the obstacles
-        self.logger.debug("%s:%s"%(__name__,forceVector))
+        self.logger.debug("Repulse:%s"%(forceVector))
         return forceVector
 
     def localHeading(self,position):

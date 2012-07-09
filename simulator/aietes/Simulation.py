@@ -28,17 +28,44 @@ class ConfigError(Exception):
         self.status=value
     def __str__(self):
         return repr(self.status)
+class Fleet(Sim.Process):
+    """
+    Fleets act initially as traffic managers for Nodes
+    """
+    def __init__(self,nodes):
+
+        self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
+        self.logger.info("creating instance")
+        Sim.Process.__init__(self,name="Fleet")
+        self.nodes = nodes
+
+    def activate(self):
+        Sim.activate(self,self.lifecycle())
+        for node in self.nodes:
+            node.activate()
+
+
+    def lifecycle(self):
+        def allPassive():
+            return all([n.passive() for n in self.nodes])
+        self.logger.info("Initialised Node Lifecycle")
+        while(True):
+            yield Sim.waituntil, self, allPassive
+            self.logger.info("Fleet Step")
+            for node in self.nodes:
+                Sim.reactivate(node)
+
 
 class Simulation():
     """
     Defines a single simulation
     """
-    nodes=[]
-    fleets=[]
     def __init__(self,config_file=''):
-        self.logger = logging.getLogger("%s.%s"%(baselogger.name,self.__class__.__name__))
+        self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
         self.logger.info("creating instance from %s"%config_file)
         self.config_file=config_file
+        self.nodes=[]
+        self.fleets=[]
 
     def prepare(self):
         #Attempt Validation and construct the simulation from that config.
@@ -55,32 +82,42 @@ class Simulation():
         self.environment = self.configureEnvironment(self.config.Environment)
         self.nodes = self.configureNodes(self.config.Nodes)
 
-        #Configure Resources
-        self.update_flag= Sim.Resource(
-            capacity= len(self.nodes),
-            name= 'Update Flag')
-        self.process_flag= Sim.Resource(
-            capacity= len(self.nodes),
-            name= 'Process Flag')
-        self.move_flag= Sim.Resource(
-            capacity= len(self.nodes),
-            name= 'Move Flag')
+        #Single Fleet to control all
+        self.fleets.append(Fleet(self.nodes))
+
+        # Set up 'join-like' operation for nodes
+        self.move_flag = Sim.Resource(capacity=len(self.nodes))
+        self.process_flag = Sim.Resource(capacity=len(self.nodes))
+
+    def inner_join(self):
+        joined=self.move_flag.n == 0 and self.process_flag.n == len(self.nodes)
+        if joined:
+            self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
+        return joined
+
+    def outer_join(self):
+        joined=self.move_flag.n == len(self.nodes) and self.process_flag.n == 0
+        if joined:
+            self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
+        return joined
 
     def simulate(self):
         """
         Initiate the processed Simulation
         """
         self.logger.info("Initialising Simulation, to run for %s"%self.config.Simulation.sim_duration)
-        for node in self.nodes:
-            node.activate()
+        for fleet in self.fleets:
+            fleet.activate()
 
         Sim.simulate(until=self.config.Simulation.sim_duration)
 
-    def clearToStep(self):
-        n_nodes=len(self.nodes)
-        return self.update_flag.n == n_nodes \
-                and self.process_flag.n == n_nodes \
-                and self.move_flag.n == n_nodes
+    def reverse_node_lookup(self, uuid):
+        """Return Node Given UUID
+        """
+        for n in self.nodes:
+            if n.id == uuid:
+                return n
+
 
     def validateConfig(self,config_file='', configspec='defaults.conf'):
         """
@@ -140,10 +177,12 @@ class Simulation():
         Configure the physical environment within which the simulation executed
         Assumes empty unless told otherwise
         """
-        return Environment(shape=env_config.shape,
-                           resolution=env_config.resolution,
-                           base_depth=env_config.base_depth
-                          )
+        return Environment(
+            self,
+            shape=env_config.shape,
+            resolution=env_config.resolution,
+            base_depth=env_config.base_depth
+            )
 
     def configureNodes(self,node_config,fleet=None):
         """
@@ -183,6 +222,9 @@ class Simulation():
             if gen_style == "random":
                 vector = self.environment.random_position()
                 self.logger.debug("Gave node %s a random vector: %s"%(nodeName,vector))
+            if gen_style == "center":
+                vector= self.environment.position_around()
+                self.logger.debug("Gave node %s a center vector: %s"%(nodeName,vector))
             else:
                 vector = [0,0,0]
                 self.logger.debug("Gave node %s a zero vector from %s"%(nodeName,gen_style))

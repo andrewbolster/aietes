@@ -2,17 +2,16 @@ import SimPy.Simulation as Sim
 from numpy import *
 from numpy.random import poisson
 import logging
+from Tools import baselogger
 
 from Packet import AppPacket
-
-module_logger=logging.getLogger('AIETES.MAC')
 
 class Application(Sim.Process):
     """
     Generic Class for top level application layers
     """
     def __init__(self,layercake, config=None):
-        self._start_log()
+        self._start_log(layercake)
         Sim.Process.__init__(self)
         self.stats={'packets_sent':0,
                     'packets_recieved':0,
@@ -26,8 +25,8 @@ class Application(Sim.Process):
         if hasattr(config,'packet_rate'):
             self.packet_rate=getattr(config,'packet_rate')
 
-    def _start_log(self):
-        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
+    def _start_log(self,layercake):
+        self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance')
 
     def lifecycle(self,period=None,destination=None):

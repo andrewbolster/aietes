@@ -1,17 +1,16 @@
 from SimPy import Simulation as Sim
 from FSM import FSM
 from Packet import Packet
-from Tools import dotdict
+from Tools import dotdict, baselogger
 import logging
 import pydot
-module_logger=logging.getLogger('AIETES.MAC')
 
 class MAC():
     '''Generic Class for MAC Algorithms
     The only real difference between MAC's are their packet types and State Machines
     '''
     def __init__(self,layercake,config=None):
-        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
+        self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance')
         self.config=config
         self.layercake = layercake

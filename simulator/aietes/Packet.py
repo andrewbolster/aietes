@@ -12,7 +12,6 @@ Packets have to cope with bi-directional adaptation:
 Encapsupation runs to:
     PHY(MAC(RT(APP)))
 """
-module_logger=logging.getLogger('AIETES.PKT')
 
 class Packet():
     '''Base Packet Class
@@ -33,7 +32,7 @@ class Packet():
         self.payload = packet         #Overwrite the 'upper' packet payload with the packet
 
     def _start_log(self):
-        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
+        self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance')
 
     def decap(self):

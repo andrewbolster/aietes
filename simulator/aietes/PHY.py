@@ -5,7 +5,6 @@ from Packet import PHYPacket
 import logging
 
 from copy import deepcopy
-module_logger=logging.getLogger('AIETES.PHY')
 
 #####################################################################
 # Physical Layer
@@ -39,7 +38,7 @@ class PHY():
             }
         '''
         #Generic Spec
-        self.logger = logging.getLogger("%s.%s"%(module_logger.name,self.__class__.__name__))
+        self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance')
         self.__dict__.update(config)
         self.layercake = layercake
