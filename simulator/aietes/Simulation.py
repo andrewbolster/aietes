@@ -15,9 +15,6 @@ import Behaviour
 
 from Tools import dotdict, baselogger
 
-naming_convention=['Zeus','Neptune','Jupiter','Hera','Mercury','Faunus','Hestia','Demeter','Poseidon','Diana','Apollo','Pluto','Juno','Vesta','Diana','Hermes','Persephone','Cupid','Ares','Hephaestus']
-
-
 class ConfigError(Exception):
     """
     Raised when a configuration cannot be validated through ConfigObj/Validator
@@ -132,6 +129,7 @@ class Simulation():
             raise ConfigError(config_status)
 
         config= dotdict(config.dict())
+        naming_convention= config.Nodes.naming_convention
         # NODE CONFIGURATION
         if config.Nodes.count > len(naming_convention):
             # If the naming convention can't provide unique names, bail
@@ -243,3 +241,8 @@ class Simulation():
                             'Behaviour':node_config.Behaviour
                         })
         return config
+
+    def postProcess():
+        """
+        Performs output and data generation for a given simulation
+        """

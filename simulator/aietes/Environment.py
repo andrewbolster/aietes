@@ -1,8 +1,10 @@
 from SimPy import Simulation as Sim
 import logging
 from Tools import baselogger,dotdict,map_entry
+from collections import namedtuple
 import numpy
 import uuid
+Log = namedtuple('Log',['name','object_id','time','position'], verbose=True)
 class Environment():
     """
     Environment Class representing the physical environment inc any objects
@@ -20,6 +22,7 @@ class Environment():
         self.logger.info('creating instance')
         self.volume=numpy.ndarray(shape=shape,dtype=uuid.UUID)
         self.map={}
+        self.pos_log=[]
         self.depth=base_depth
         self.sos=1400
         self.simulation = simulation
@@ -80,6 +83,11 @@ class Environment():
             self.logger.debug("Creating map entry for %s at %s"%(object_name,position))
             self.map[object_id]=map_entry(object_id,position,object_name)
         self.volume[tuple(position)]=object_id
+        self.pos_log.append(Log(name=object_name,
+                                position=position,
+                                object_id=object_id,
+                                time=Sim.now()
+                               ))
 
 
     def export(self,filename=None):

@@ -37,10 +37,7 @@ import os
 import traceback
 import optparse
 import time
-#from pexpect import run, spawn
-
-from SimPy.Simulation import *
-from SimPy.SimPlot import *
+from Simulation import Simulation
 
 # Uncomment the following section if you want readline history support.
 #import readline, atexit
@@ -50,69 +47,6 @@ from SimPy.SimPlot import *
 #except IOError:
 #    pass
 #atexit.register(readline.write_history_file, histfile)
-class Behaviour():
-    """
-    Represents a given behaviour
-    """
-
-class Environment():
-    """
-    Represents the real environment within which the simulation runs
-    """
-    size= 1000000
-    dim= pow(size,-3)
-    xmin=-dim
-    xmax=dim
-    ymin=-dim
-    ymax=dim
-    zmin=-dim
-    zmax=dim
-
-
-class Node(Process):
-    """
-    Represents individual craft/nodes/vectors, including behaviour, comms, etc
-    """
-    fleet=None
-    # Position and Orientation as a single vector #[x,y,z,alpha, beta, gamma]
-    placement = [ 0, 0, 0, 0, 0, 0 ]
-
-    def __init__(self,fleet,node_def):
-        self.fleet = fleet
-        self.id = fleet.give_id()
-
-    def _move(self,force_vector):
-        """
-        Allow movement with either a 3- or 6- vector
-        """
-        if len(vector) == 3:
-            placement[:3]+=force_vector
-        elif len(vector) == 6:
-            placement+=force_vector
-        else
-            raise ValueError("Incorrect Vector Definition")
-
-    def 
-
-def Fleet():
-    """
-    Encapsulates fleet level characteristics and behaviours, inc node 
-    generation etc
-    """
-    nodes=[]
-    def __init__(self,fleet_def):
-        for node_def in fleet_def.node_defs:
-            self.nodes.append(Node(self,node_def))
-
-
-def SimRun(Simulation)
-    """
-    Encapsulates an individual simulation execution, including all relevant 
-    contextual information to provide replication
-    """
-    fleets=[]
-    def __init__(self,context)
-
 def main ():
     """
     Everyone knows what the main does; it does everything!
@@ -120,17 +54,13 @@ def main ():
 
     global options, args
 
-    if options.context_file:
-        # TODO Import context
-    else
-        context= Context()
-
     sim = Simulation()
 
-    sim.run()
+    sim.prepare()
 
+    sim.simulate()
 
-
+    sim.postProcess()
 
 
 if __name__ == '__main__':
