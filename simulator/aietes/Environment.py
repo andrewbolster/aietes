@@ -2,7 +2,7 @@ from SimPy import Simulation as Sim
 import logging
 from Tools import baselogger,dotdict,map_entry
 from collections import namedtuple
-import numpy
+import numpy as np
 import uuid
 Log = namedtuple('Log',['name','object_id','time','position'], verbose=True)
 class Environment():
@@ -20,7 +20,7 @@ class Environment():
         """
         self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance')
-        self.volume=numpy.ndarray(shape=shape,dtype=uuid.UUID)
+        self.volume=np.ndarray(shape=shape,dtype=uuid.UUID)
         self.map={}
         self.pos_log=[]
         self.depth=base_depth
@@ -37,9 +37,9 @@ class Environment():
         """
         is_empty=False
         while not is_empty:
-            ran_x = numpy.random.randint(0,self.volume.shape[0])
-            ran_y = numpy.random.randint(0,self.volume.shape[1])
-            ran_z = numpy.random.randint(0,self.volume.shape[2])
+            ran_x = np.random.randint(0,self.volume.shape[0])
+            ran_y = np.random.randint(0,self.volume.shape[1])
+            ran_z = np.random.randint(0,self.volume.shape[2])
             is_empty = not (want_empty or bool(self.volume[ran_x, ran_y, ran_z ]))
 
         return [ran_x, ran_y, ran_z ]
@@ -49,14 +49,14 @@ class Environment():
         Return a nearly-random map entry within the environment volume around a given position
         """
         if position is None:
-            position = numpy.asarray(self.volume.shape)/2
+            position = np.asarray(self.volume.shape)/2
         if self.is_outside(position):
             raise ValueError("Position is not within volume")
         else:
             valid = False
             while not valid:
-                candidate_pos=numpy.random.normal(numpy.asarray(position),5)
-                candidate_pos = tuple(numpy.asarray(candidate_pos,dtype=int))
+                candidate_pos=np.random.normal(np.asarray(position),5)
+                candidate_pos = tuple(np.asarray(candidate_pos,dtype=int))
                 valid = self.volume[candidate_pos] is None
                 self.logger.debug("Candidate position: %s:%s"%((candidate_pos),valid))
         return candidate_pos
@@ -95,7 +95,6 @@ class Environment():
         Export the current environment to a csv
         """
         assert filename is not None
-        numpy.savez(filename, self)
-        #TODO finish this
+        np.savez(filename, self.pos_log)
 
 

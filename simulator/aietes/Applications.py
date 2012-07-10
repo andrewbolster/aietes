@@ -84,7 +84,7 @@ class AccessibilityTest(Application):
             dest=destination,
             pkt_type='DATA'
         )
-        period=numpy.poisson(period)
+        period=poisson(period)
         return (packet,period)
 
     def packetRecv(self,packet):

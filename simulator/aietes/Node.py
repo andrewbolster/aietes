@@ -1,6 +1,7 @@
 import SimPy.Simulation as Sim
 from Layercake import Layercake
-import logging, numpy
+import logging
+import numpy as np
 import uuid
 from operator import attrgetter,itemgetter
 
@@ -26,9 +27,9 @@ class Node(Sim.Process):
 
         #Extract (X,Y,Z) vector from 6-vector as position
         assert len(self.config.vector) == 3, "Malformed Vector%s"%self.config.vector
-        self.position=numpy.array(self.config.vector)
+        self.position=np.array(self.config.vector)
         #Implied six vector velocity
-        self.velocity=numpy.array([0,0,0])
+        self.velocity=np.array([0,0,0])
 
         self._lastupdate=Sim.now()
 
@@ -73,22 +74,22 @@ class Node(Sim.Process):
 
     def push(self,forceVector):
         assert len(forceVector==3)
-        self.velocity=numpy.array(forceVector,dtype=numpy.float)
+        self.velocity=np.array(forceVector,dtype=np.float)
 
     def move(self):
         """
         Update node status
         """
         #Positional information
-        unit_velocity=numpy.around(self.velocity,decimals=0)
+        unit_velocity=np.around(self.velocity,decimals=0)
         old_pos = self.position.copy()
-        self.position +=numpy.array(unit_velocity*(Sim.now()-self._lastupdate))
+        self.position +=np.array(unit_velocity*(Sim.now()-self._lastupdate))
         self._lastupdate = Sim.now()
         self.logger.debug("Moving by %s * %s from %s to %s"%(unit_velocity,(Sim.now()-self._lastupdate),old_pos,self.position))
         self.pos_log.append((self.position.copy(),self._lastupdate))
 
     def setPos(self,placeVector):
-        assert isinstance(placeVector,numpy.array)
+        assert isinstance(placeVector,np.array)
         assert len(placeVector) == 3
         self.logger.info("Vector focibly moved")
         self.position = placeVector

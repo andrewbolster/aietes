@@ -1,6 +1,6 @@
 from SimPy import Simulation as Sim
 import logging
-import numpy
+import numpy as np
 import scipy.spatial
 from Tools import dotdict,map_entry,memory_entry,baselogger
 from operator import attrgetter,itemgetter
@@ -51,7 +51,7 @@ class Behaviour():
         return
 
     def distance(self, their_position):
-        d = numpy.linalg.norm(self.node.position - their_position)
+        d = np.linalg.norm(self.node.position - their_position)
         #self.logger.debug("Distance:%s"%d)
         return d
 
@@ -89,7 +89,7 @@ class Flock(Behaviour):
         """
         Called on process: Returns desired vector
         """
-        forceVector= numpy.array([0,0,0],dtype=numpy.float)
+        forceVector= np.array([0,0,0],dtype=np.float)
         forceVector+= self.clumpingVector(position)
         forceVector+= self.replusiveVector(position)
         #forceVector+= self.localHeading(position)
@@ -101,10 +101,10 @@ class Flock(Behaviour):
         Represents the Long Range Attraction factor:
             Head towards average fleet point
         """
-        vector=numpy.array([0,0,0],dtype=numpy.float)
+        vector=np.array([0,0,0],dtype=np.float)
         valid = True
         for neighbour in self._get_neighbours(self.node.position):
-            vector+=numpy.array(neighbour.position)
+            vector+=np.array(neighbour.position)
 
         try:
             #This assumes that the map contains one entry for each non-self node
@@ -126,7 +126,7 @@ class Flock(Behaviour):
         """
         #TODO Test if this is better as a scalar function rather than a step value
 
-        forceVector=numpy.array([0,0,0],dtype=numpy.float)
+        forceVector=np.array([0,0,0],dtype=np.float)
         for neighbour in self._get_neighbours(position):
             if self.distance(neighbour.position) < self.neighbour_min_rad:
                 #Too Close, Move away
@@ -142,7 +142,7 @@ class Flock(Behaviour):
         """
         Represents Local Average Heading
         """
-        vector=numpy.array([0,0,0])
+        vector=np.array([0,0,0])
         for neighbour in self._get_neighbours(position):
             vector += neighbour.p_velocity
         return vector

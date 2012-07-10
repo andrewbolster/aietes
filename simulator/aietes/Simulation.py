@@ -1,6 +1,6 @@
 import SimPy.Simulation as Sim
 import logging
-import numpy
+import numpy as np
 import scipy
 
 from configobj import ConfigObj
@@ -14,6 +14,11 @@ from Node import Node
 import Behaviour
 
 from Tools import dotdict, baselogger
+
+import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.axes3d as axes3
+import matplotlib.animation as ani
+
 
 class ConfigError(Exception):
     """
@@ -144,9 +149,9 @@ class Simulation():
             # Otherwise make up names from the naming_convention
             assert config.Nodes.count>=1, "No nodes configured"
             for n in range(config.Nodes.count):
-                candidate_name= naming_convention[numpy.random.randint(0,len(naming_convention))]
+                candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
                 while candidate_name in [ x.name for x in self.nodes ]:
-                    candidate_name= naming_convention[numpy.random.randint(0,len(naming_convention))]
+                    candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
                 config.Nodes.node_names.append(candidate_name)
                 self.logger.info("Gave node %d name %s"%(n,candidate_name))
 
@@ -242,7 +247,22 @@ class Simulation():
                         })
         return config
 
-    def postProcess():
+    def postProcess(self):
         """
         Performs output and data generation for a given simulation
         """
+        def getNodeRecord(pos_db,object_id):
+            return [ entry.position for entry in pos_db if entry.object_id == object_id ]
+
+
+        fig = plt.figure()
+        ax = axes3.Axes3D(fig)
+        ax.set_xlim3d([0,self.environment.shape[0]])
+        ax.set_ylim3d([0,self.environment.shape[1]])
+        ax.set_zlim3d([0,self.environment.shape[2]])
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+
+        animation = anim.TimedAnimation(fig)
