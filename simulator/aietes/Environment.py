@@ -1,10 +1,10 @@
 from SimPy import Simulation as Sim
 import logging
-from Tools import baselogger,dotdict,map_entry
+from Tools import baselogger,dotdict,map_entry,distance
 from collections import namedtuple
 import numpy as np
 import uuid
-Log = namedtuple('Log',['name','object_id','time','position'], verbose=True)
+Log = namedtuple('Log',['name','object_id','time','position'])
 class Environment():
     """
     Environment Class representing the physical environment inc any objects
@@ -20,8 +20,8 @@ class Environment():
         """
         self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance')
-        self.volume=np.ndarray(shape=shape,dtype=uuid.UUID)
         self.map={}
+        self.shape=shape
         self.pos_log=[]
         self.depth=base_depth
         self.sos=1400
@@ -30,6 +30,14 @@ class Environment():
         #self.generateSurface()
         #TODO 'Tidal motion' factor
 
+    def is_empty(self, position, tolerance=1):
+        """
+        Return if a given position is 'empty' for a given proximity tolerance
+        """
+        distances = [ distance(position,entry.position) > tolerance for entry in self.map ]
+        return all(distances)
+
+
 
     def random_position(self,want_empty=True):
         """
@@ -37,19 +45,20 @@ class Environment():
         """
         is_empty=False
         while not is_empty:
-            ran_x = np.random.randint(0,self.volume.shape[0])
-            ran_y = np.random.randint(0,self.volume.shape[1])
-            ran_z = np.random.randint(0,self.volume.shape[2])
-            is_empty = not (want_empty or bool(self.volume[ran_x, ran_y, ran_z ]))
+            ran_x = np.random.uniform(0,self.shape[0])
+            ran_y = np.random.uniform(0,self.shape[1])
+            ran_z = np.random.uniform(0,self.shape[2])
+            candidate_pos=(ran_x,ran_y,ran_z)
+            is_empty=self.is_empty(candidate_pos)
 
-        return [ran_x, ran_y, ran_z ]
+        return candidate_pos
 
     def position_around(self,position=None):
         """
         Return a nearly-random map entry within the environment volume around a given position
         """
         if position is None:
-            position = np.asarray(self.volume.shape)/2
+            position = np.asarray(self.shape)/2
         if self.is_outside(position):
             raise ValueError("Position is not within volume")
         else:
@@ -57,13 +66,13 @@ class Environment():
             while not valid:
                 candidate_pos=np.random.normal(np.asarray(position),5)
                 candidate_pos = tuple(np.asarray(candidate_pos,dtype=int))
-                valid = self.volume[candidate_pos] is None
+                valid = self.is_empty(candidate_pos)
                 self.logger.debug("Candidate position: %s:%s"%((candidate_pos),valid))
         return candidate_pos
 
 
     def is_outside(self,position):
-        too_high = not all(position<self.volume.shape)
+        too_high = not all(position<self.shape)
         too_low = not all(position>0)
         return too_high or too_low
 
@@ -74,15 +83,16 @@ class Environment():
         """
         object_name = self.simulation.reverse_node_lookup(object_id).name
         try:
-            self.logger.info("Moving %s from %s to %s"%(object_name,
-                                                         self.map[object_id].position,
-                                                         position)
-                             )
+            assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
+            update_distance = distance(self.map[object_id].position,position)
+            self.logger.info("Moving %s %f from %s to %s"%(object_name,
+                                                           update_distance,
+                                                           self.map[object_id].position,
+                                                           position))
             self.map[object_id]=map_entry(object_id,position,object_name)
         except KeyError:
             self.logger.debug("Creating map entry for %s at %s"%(object_name,position))
             self.map[object_id]=map_entry(object_id,position,object_name)
-        self.volume[tuple(position)]=object_id
         self.pos_log.append(Log(name=object_name,
                                 position=position,
                                 object_id=object_id,

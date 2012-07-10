@@ -5,7 +5,7 @@ import numpy as np
 import uuid
 from operator import attrgetter,itemgetter
 
-from Tools import baselogger
+from Tools import baselogger,distance
 
 class Node(Sim.Process):
     """
@@ -66,11 +66,15 @@ class Node(Sim.Process):
         Sim.activate(self,self.lifecycle())
         self.layercake.activate()
 
+        #Tell the environment that we are here!
+        self.simulation.environment.update(self.id,self.getPos())
+
+
 
     def distanceTo(self,otherNode):
         assert hasattr(otherNode,position), "Other object has no position"
         assert len(otherNode.position)==3
-        return scipy.spatial.distance.euclidean(self.position,otherVector.position)
+        return distance(self.position,otherVector.position)
 
     def push(self,forceVector):
         assert len(forceVector==3)
@@ -81,12 +85,11 @@ class Node(Sim.Process):
         Update node status
         """
         #Positional information
-        unit_velocity=np.around(self.velocity,decimals=0)
         old_pos = self.position.copy()
-        self.position +=np.array(unit_velocity*(Sim.now()-self._lastupdate))
-        self._lastupdate = Sim.now()
-        self.logger.debug("Moving by %s * %s from %s to %s"%(unit_velocity,(Sim.now()-self._lastupdate),old_pos,self.position))
+        self.position +=np.array(self.velocity*(Sim.now()-self._lastupdate))
+        self.logger.debug("Moving by %s * %s from %s to %s"%(self.velocity,(Sim.now()-self._lastupdate),old_pos,self.position))
         self.pos_log.append((self.position.copy(),self._lastupdate))
+        self._lastupdate = Sim.now()
 
     def setPos(self,placeVector):
         assert isinstance(placeVector,np.array)
@@ -95,8 +98,11 @@ class Node(Sim.Process):
         self.position = placeVector
 
     def getPos(self):
-        self._update()
-        return self.position
+        return self.position.copy()
+
+    def distance_to(self, their_position):
+        d = distance(self.getPos(),their_position)
+        return d
 
 
     def lifecycle(self):
@@ -107,21 +113,21 @@ class Node(Sim.Process):
         self.logger.info("Initialised Node Lifecycle")
         while(True):
             yield Sim.request, self,self.simulation.process_flag
-            #Update Fleet State
-            self.logger.debug('updating map')
-            self.simulation.environment.update(self.id,self.position)
             yield Sim.waituntil, self, self.simulation.outer_join
-            yield Sim.request, self, self.simulation.move_flag
-
             #Update Node State
             self.logger.debug('updating behaviour')
             self.behaviour.process()
+
             yield Sim.release, self,self.simulation.process_flag
             yield Sim.waituntil, self, self.simulation.inner_join
-
+            yield Sim.request, self, self.simulation.move_flag
             #Move Fleet
-            self.logger.debug('updating position')
+            self.logger.debug('updating position, then waiting %s'%self.behaviour.update_rate)
             self.move()
-            yield Sim.release, self, self.simulation.move_flag
+
+            #Update Fleet State
+            self.logger.debug('updating map')
+            self.simulation.environment.update(self.id,self.getPos())
             yield Sim.hold, self, self.behaviour.update_rate
+            yield Sim.release, self, self.simulation.move_flag
 

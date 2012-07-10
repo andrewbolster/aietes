@@ -13,11 +13,12 @@ from Environment import Environment
 from Node import Node
 import Behaviour
 
-from Tools import dotdict, baselogger
+from Tools import *
 
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3
 import matplotlib.animation as ani
+from operator import itemgetter
 
 
 class ConfigError(Exception):
@@ -73,6 +74,7 @@ class Simulation():
         #Attempt Validation and construct the simulation from that config.
         try:
             self.config=self.validateConfig(self.config_file)
+            baselogger.setLevel(LOGLEVELS.get(self.config.log_level,logging.NOTSET))
         except ConfigError as err:
             self.logger.error("Error in configuration, cannot continue: %s"%err)
             raise SystemExit(1)
@@ -92,12 +94,18 @@ class Simulation():
         self.process_flag = Sim.Resource(capacity=len(self.nodes))
 
     def inner_join(self):
+        """
+        When all nodes have a move flag and none are processing
+        """
         joined=self.move_flag.n == 0 and self.process_flag.n == len(self.nodes)
         if joined:
             self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
         return joined
 
     def outer_join(self):
+        """
+        When all nodes have a processing flag and none are moving
+        """
         joined=self.move_flag.n == len(self.nodes) and self.process_flag.n == 0
         if joined:
             self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
@@ -119,6 +127,7 @@ class Simulation():
         for n in self.nodes:
             if n.id == uuid:
                 return n
+        raise KeyError("Given UUID does not exist in Nodes list")
 
 
     def validateConfig(self,config_file='', configspec='defaults.conf'):
@@ -247,14 +256,10 @@ class Simulation():
                         })
         return config
 
-    def postProcess(self):
+    def postProcess(self,log):
         """
         Performs output and data generation for a given simulation
         """
-        def getNodeRecord(pos_db,object_id):
-            return [ entry.position for entry in pos_db if entry.object_id == object_id ]
-
-
         fig = plt.figure()
         ax = axes3.Axes3D(fig)
         ax.set_xlim3d([0,self.environment.shape[0]])
@@ -265,4 +270,13 @@ class Simulation():
         ax.set_zlabel('Z')
 
 
-        animation = anim.TimedAnimation(fig)
+        for oid in nodeIDs(log):
+            x=map(itemgetter(0),(map(itemgetter(1),objectLog(log,oid))))
+            y=map(itemgetter(1),(map(itemgetter(1),objectLog(log,oid))))
+            z=map(itemgetter(2),(map(itemgetter(1),objectLog(log,oid))))
+            ax.plot(x,y,z,label=self.reverse_node_lookup(oid))
+
+        plt.show()
+
+
+

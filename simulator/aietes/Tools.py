@@ -1,8 +1,9 @@
 from SimPy import Simulation as Sim
 import math
 import logging
+import numpy as np
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 baselogger = logging.getLogger('SIM')
 
 #####################################################################
@@ -14,6 +15,37 @@ I_ref = 172.0
 speed_of_sound= 1482
 #Transducer Capacity (Arbitrary)
 transducer_capacity= 1000
+LOGLEVELS = {'debug': logging.DEBUG,
+          'info': logging.INFO,
+          'warning': logging.WARNING,
+          'error': logging.ERROR,
+          'critical': logging.CRITICAL}
+
+#####################################################################
+# Measuring functions
+#####################################################################
+
+def distance(pos_a, pos_b, scale=1):
+    """
+    Return the distance between two positions
+    """
+    return np.linalg.norm(pos_a - pos_b) * scale
+
+#####################################################################
+# Lazy Testing functions
+#####################################################################
+
+def recordsCheck(pos_log):
+    return [ len([ entry.time for entry in pos_log if entry.name == superentry.name]) for superentry in pos_log if superentry.time == 0]
+
+def namedLog(pos_log):
+    return [ objectLog(pos_log,object_id) for object_id in nodeIDs(pos_log)]
+
+def nodeIDs(pos_log):
+    return { entry.object_id for entry in pos_log }
+
+def objectLog(pos_log,object_id):
+    return [(entry.time,entry.position) for entry in pos_log if entry.object_id == object_id]
 
 #####################################################################
 # Propagation functions
@@ -186,12 +218,13 @@ class dotdict(dict):
         return self.keys(),dir(dict(self))
 
 class memory_entry():
-    def __init__(self,object_id,position,distance):
+    def __init__(self,object_id,position,distance,name=None):
         self.object_id=object_id
+        self.name=name
         self.position=position
         self.distance=distance
     def __repr__(self):
-        return "%s:%s:%s"%(self.object_id,self.position,self.distance)
+        return "%s:%s:%s"%(self.name,self.position,self.distance)
 
 class map_entry():
     def __init__(self,object_id,position,name=None):

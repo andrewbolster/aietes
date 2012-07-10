@@ -2,7 +2,7 @@ from SimPy import Simulation as Sim
 import logging
 import numpy as np
 import scipy.spatial
-from Tools import dotdict,map_entry,memory_entry,baselogger
+from Tools import dotdict,map_entry,memory_entry,baselogger,distance
 from operator import attrgetter,itemgetter
 
 
@@ -50,10 +50,6 @@ class Behaviour():
         self.node.push(forceVector)
         return
 
-    def distance(self, their_position):
-        d = np.linalg.norm(self.node.position - their_position)
-        #self.logger.debug("Distance:%s"%d)
-        return d
 
 class Flock(Behaviour):
     """
@@ -76,7 +72,11 @@ class Flock(Behaviour):
         Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         """
         #Sort and filter Neighbours by distance
-        neighbours_with_distance=[memory_entry(key,value.position,self.distance(value.position)) for key,value in self.neighbours.items()]
+        neighbours_with_distance=[memory_entry(key,
+                                               value.position,
+                                               self.node.distance_to(value.position),
+                                               self.simulation.reverse_node_lookup(key).name
+                                              ) for key,value in self.neighbours.items()]
         #self.logger.debug("Got Distances: %s"%neighbours_with_distance)
         nearest_neighbours=sorted(neighbours_with_distance
             ,key=attrgetter('distance')
@@ -128,9 +128,9 @@ class Flock(Behaviour):
 
         forceVector=np.array([0,0,0],dtype=np.float)
         for neighbour in self._get_neighbours(position):
-            if self.distance(neighbour.position) < self.neighbour_min_rad:
+            if self.node.distance_to(neighbour.position) < self.neighbour_min_rad:
                 #Too Close, Move away
-                distanceFactor=self.neighbour_min_rad/(self.distance(neighbour.position)+self.neighbour_min_rad)
+                distanceFactor=self.neighbour_min_rad/(self.node.distance_to(neighbour.position)+self.neighbour_min_rad)
                 forceVector-=(position-neighbour.position)*distanceFactor
                 self.logger.debug("Too close to %s"%neighbour)
 
