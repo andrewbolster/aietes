@@ -29,7 +29,14 @@ def distance(pos_a, pos_b, scale=1):
     """
     Return the distance between two positions
     """
-    return np.linalg.norm(pos_a - pos_b) * scale
+    return mag(pos_a - pos_b) * scale
+
+def mag(vector):
+    """
+    Return the magnitude of a given vector
+    """
+    return np.linalg.norm(vector)
+
 
 #####################################################################
 # Lazy Testing functions

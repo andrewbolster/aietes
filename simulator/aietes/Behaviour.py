@@ -15,6 +15,7 @@ class Behaviour():
         #TODO internal representation of the environment
         self.logger = node.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance from bev_config: %s'%bev_config)
+        #TODO REMOVE ME
         self.logger.setLevel(logging.DEBUG)
         self.node=node
         self.bev_config=bev_config

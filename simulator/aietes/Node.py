@@ -5,7 +5,7 @@ import numpy as np
 import uuid
 from operator import attrgetter,itemgetter
 
-from Tools import baselogger,distance
+from Tools import *
 
 class Node(Sim.Process):
     """
@@ -14,6 +14,8 @@ class Node(Sim.Process):
     def __init__(self,name,simulation,node_config):
         self.logger = baselogger.getChild("%s[%s]"%(self.__class__.__name__,name))
         self.logger.info('creating instance')
+        #TODO REMOVE ME
+        self.logger.setLevel(logging.DEBUG)
         self.id=uuid.uuid4() #Hopefully unique id
         Sim.Process.__init__(self,name=name)
 
@@ -28,7 +30,8 @@ class Node(Sim.Process):
         assert len(self.config.vector) == 3, "Malformed Vector%s"%self.config.vector
         self.position=np.array(self.config.vector,dtype=np.float)
         #Implied six vector velocity
-        self.velocity=np.array([0,0,0])
+        self.velocity=np.array([0,0,0],dtype=np.float)
+        self.highest_attained_speed =0.0
 
         self._lastupdate=Sim.now()
 
@@ -68,8 +71,6 @@ class Node(Sim.Process):
         #Tell the environment that we are here!
         self.simulation.environment.update(self.id,self.getPos())
 
-
-
     def distanceTo(self,otherNode):
         assert hasattr(otherNode,position), "Other object has no position"
         assert len(otherNode.position)==3
@@ -77,7 +78,12 @@ class Node(Sim.Process):
 
     def push(self,forceVector):
         assert len(forceVector==3)
-        self.velocity=np.array(forceVector,dtype=np.float)
+        new_velocity=np.array(forceVector,dtype=np.float)
+        if any(new_velocity>self.max_speed):
+            new_velocity/=mag(new_velocity)
+            new_velocity*=self.max_speed
+        self.logger.debug("Attempted Velocity: %s, clipped: %s"%(forceVector,new_velocity))
+        self.velocity+=new_velocity
 
     def move(self):
         """
@@ -85,11 +91,12 @@ class Node(Sim.Process):
         """
         #Positional information
         old_pos = self.position.copy()
-        attempted_vector = np.array(self.velocity)
         dT = self.simulation.deltaT(Sim.now(),self._lastupdate)
-        self.position+=attempted_vector.clip(-self.max_speed,self.max_speed)*dT
+        attempted_vector = np.array(self.velocity,dtype=np.float)*dT
+        self.position+=attempted_vector
         self.logger.debug("Moving by %s * %s from %s to %s"%(self.velocity,dT,old_pos,self.position))
         self.pos_log.append((self.position.copy(),self._lastupdate))
+        self.highest_attained_speed = max(self.highest_attained_speed,mag(attempted_vector))
         self._lastupdate = Sim.now()
 
     def setPos(self,placeVector):
@@ -128,7 +135,7 @@ class Node(Sim.Process):
 
             #Update Fleet State
             self.logger.debug('updating map')
-            self.simulation.environment.update(self.id,self.getPos())
             yield Sim.hold, self, self.behaviour.update_rate
             yield Sim.release, self, self.simulation.move_flag
+            self.simulation.environment.update(self.id,self.getPos())
 
