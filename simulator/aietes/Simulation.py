@@ -115,11 +115,12 @@ class Simulation():
         """
         Initiate the processed Simulation
         """
-        self.logger.info("Initialising Simulation, to run for %s"%self.config.Simulation.sim_duration)
+        duration_intervals = self.config.Simulation.sim_duration/self.config.Simulation.sim_interval
+        self.logger.info("Initialising Simulation, to run for %s steps"%duration_intervals)
         for fleet in self.fleets:
             fleet.activate()
 
-        Sim.simulate(until=self.config.Simulation.sim_duration)
+        Sim.simulate(until=duration_intervals)
 
     def reverse_node_lookup(self, uuid):
         """Return Node Given UUID
@@ -234,7 +235,7 @@ class Simulation():
             if gen_style == "random":
                 vector = self.environment.random_position()
                 self.logger.debug("Gave node %s a random vector: %s"%(nodeName,vector))
-            if gen_style == "center":
+            elif gen_style == "center":
                 vector= self.environment.position_around()
                 self.logger.debug("Gave node %s a center vector: %s"%(nodeName,vector))
             else:
@@ -278,5 +279,10 @@ class Simulation():
 
         plt.show()
 
+    def deltaT(self,now,then):
+        """
+        Time in seconds between two simulation times
+        """
+        return (now-then)*self.config.Simulation.sim_interval
 
 

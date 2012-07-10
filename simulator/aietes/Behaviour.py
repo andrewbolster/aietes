@@ -15,6 +15,7 @@ class Behaviour():
         #TODO internal representation of the environment
         self.logger = node.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance from bev_config: %s'%bev_config)
+        self.logger.setLevel(logging.DEBUG)
         self.node=node
         self.bev_config=bev_config
         self.update_rate=1
@@ -63,6 +64,7 @@ class Flock(Behaviour):
         self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
         self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
         self.clumping_factor = self.bev_config.clumping_factor
+        self.schooling_factor = self.bev_config.schooling_factor
         assert self.nearest_neighbours>0
         assert self.neighbourhood_max_rad>0
         assert self.neighbour_min_rad>0
@@ -91,8 +93,8 @@ class Flock(Behaviour):
         """
         forceVector= np.array([0,0,0],dtype=np.float)
         forceVector+= self.clumpingVector(position)
-        forceVector+= self.replusiveVector(position)
-        #forceVector+= self.localHeading(position)
+        forceVector+= self.repulsiveVector(position)
+        forceVector+= self.localHeading(position)
         self.logger.debug("Response:%s"%(forceVector))
         return forceVector
 
@@ -102,14 +104,13 @@ class Flock(Behaviour):
             Head towards average fleet point
         """
         vector=np.array([0,0,0],dtype=np.float)
-        valid = True
         for neighbour in self._get_neighbours(self.node.position):
             vector+=np.array(neighbour.position)
 
         try:
             #This assumes that the map contains one entry for each non-self node
-            neighbourhood_com=(vector)/min(self.nearest_neighbours,len(self.neighbour_map()))
-            #self.logger.debug("Cluster Centre,position,factor: %s,%s,%s"%(neighbourhood_com,vector,self.clumping_factor))
+            neighbourhood_com=(vector)/min(self.nearest_neighbours,len(self.neighbours))
+            self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s"%(neighbourhood_com,vector,self.clumping_factor,len(self.neighbours)))
             # Return the fudged, relative vector to the centre of the cluster
             forceVector= (neighbourhood_com-position)*self.clumping_factor
         except ZeroDivisionError:
@@ -119,20 +120,19 @@ class Flock(Behaviour):
         self.logger.debug("Clump:%s"%(forceVector))
         return forceVector
 
-    def replusiveVector(self,position):
+    def repulsiveVector(self,position):
         """
         Repesents the Short Range Repulsion behaviour:
             If a node is too close, steer away from it
         """
-        #TODO Test if this is better as a scalar function rather than a step value
-
         forceVector=np.array([0,0,0],dtype=np.float)
         for neighbour in self._get_neighbours(position):
-            if self.node.distance_to(neighbour.position) < self.neighbour_min_rad:
-                #Too Close, Move away
-                distanceFactor=self.neighbour_min_rad/(self.node.distance_to(neighbour.position)+self.neighbour_min_rad)
-                forceVector-=(position-neighbour.position)*distanceFactor
-                self.logger.debug("Too close to %s"%neighbour)
+            distanceVal=self.node.distance_to(neighbour.position)
+            if distanceVal < self.neighbour_min_rad:
+                forceVector+=(position-neighbour.position)
+                assert distanceVal > (self.neighbour_min_rad/2), "Too close to %s:%s"%(neighbour,distanceVal)
+        if np.linalg.norm(forceVector) > 0:
+            self.logger.error("Distance:%f,Vector:%s"%(distanceVal,forceVector))
 
         # Return an inverse vector to the obstacles
         self.logger.debug("Repulse:%s"%(forceVector))
@@ -143,9 +143,12 @@ class Flock(Behaviour):
         Represents Local Average Heading
         """
         vector=np.array([0,0,0])
-        for neighbour in self._get_neighbours(position):
-            vector += neighbour.p_velocity
-        return vector
+        for neighbour in self.simulation.nodes:
+            if neighbour is not self.node:
+                vector+=neighbour.velocity
+        forceVector = self.schooling_factor * vector / (len(self.simulation.nodes) - 1)
+        self.logger.debug("Schooling:%s"%(forceVector))
+        return forceVector
 
     def _percieved_vector(self,node_id):
         """

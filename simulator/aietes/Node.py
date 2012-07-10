@@ -15,7 +15,6 @@ class Node(Sim.Process):
         self.logger = baselogger.getChild("%s[%s]"%(self.__class__.__name__,name))
         self.logger.info('creating instance')
         self.id=uuid.uuid4() #Hopefully unique id
-
         Sim.Process.__init__(self,name=name)
 
         self.simulation=simulation
@@ -27,7 +26,7 @@ class Node(Sim.Process):
 
         #Extract (X,Y,Z) vector from 6-vector as position
         assert len(self.config.vector) == 3, "Malformed Vector%s"%self.config.vector
-        self.position=np.array(self.config.vector)
+        self.position=np.array(self.config.vector,dtype=np.float)
         #Implied six vector velocity
         self.velocity=np.array([0,0,0])
 
@@ -39,9 +38,9 @@ class Node(Sim.Process):
         #Propultion Capabilities
         if isinstance(self.config.max_speed,int):
             #Max speed is independent of direction
-            self.max_speed=[self.config.max_speed,self.config.max_speed, self.config.max_speed]
+            self.max_speed=np.asarray([self.config.max_speed,self.config.max_speed, self.config.max_speed])
         else:
-            self.max_speed = self.config.max_speed
+            self.max_speed = np.asarray(self.config.max_speed)
         assert len(self.max_speed) == 3
 
         if isinstance(self.config.max_turn,int):
@@ -86,8 +85,10 @@ class Node(Sim.Process):
         """
         #Positional information
         old_pos = self.position.copy()
-        self.position +=np.array(self.velocity*(Sim.now()-self._lastupdate))
-        self.logger.debug("Moving by %s * %s from %s to %s"%(self.velocity,(Sim.now()-self._lastupdate),old_pos,self.position))
+        attempted_vector = np.array(self.velocity)
+        dT = self.simulation.deltaT(Sim.now(),self._lastupdate)
+        self.position+=attempted_vector.clip(-self.max_speed,self.max_speed)*dT
+        self.logger.debug("Moving by %s * %s from %s to %s"%(self.velocity,dT,old_pos,self.position))
         self.pos_log.append((self.position.copy(),self._lastupdate))
         self._lastupdate = Sim.now()
 
