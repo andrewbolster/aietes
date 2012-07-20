@@ -130,7 +130,7 @@ class Flock(Behaviour):
         for neighbour in self._get_neighbours(position):
             distanceVal=self.node.distance_to(neighbour.position)
             if distanceVal < self.neighbour_min_rad:
-                forceVector+=(position-neighbour.position)
+                forceVector+=(np.linalg.norm(position-neighbour.position))/float(distanceVal)
                 assert distanceVal > (self.neighbour_min_rad/2), "Too close to %s:%s"%(neighbour,distanceVal)
         if np.linalg.norm(forceVector) > 0:
             self.logger.error("Distance:%f,Vector:%s"%(distanceVal,forceVector))
