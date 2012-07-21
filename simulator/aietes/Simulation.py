@@ -257,10 +257,14 @@ class Simulation():
                         })
         return config
 
-    def postProcess(self,log):
+    def postProcess(self,log=None):
         """
         Performs output and data generation for a given simulation
         """
+        if log is None:
+            self.logger.debug("Using default postprocessing log")
+            log=self.environment.pos_log
+
         fig = plt.figure()
         ax = axes3.Axes3D(fig)
         ax.set_xlim3d([0,self.environment.shape[0]])

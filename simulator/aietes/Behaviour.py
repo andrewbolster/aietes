@@ -15,8 +15,7 @@ class Behaviour():
         #TODO internal representation of the environment
         self.logger = node.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance from bev_config: %s'%bev_config)
-        #TODO REMOVE ME
-        self.logger.setLevel(logging.DEBUG)
+        #self.logger.setLevel(logging.DEBUG)
         self.node=node
         self.bev_config=bev_config
         self.update_rate=1
@@ -24,8 +23,6 @@ class Behaviour():
         self._init_behaviour()
         self.simulation = self.node.simulation
         self.neighbours = {}
-
-
 
     def neighbour_map(self):
         """
@@ -42,6 +39,7 @@ class Behaviour():
         """
         #TODO expand this to do SLAM?
         self.memory+=memory_entry(object_id,position)
+
 
     def process(self):
         """
@@ -96,8 +94,39 @@ class Flock(Behaviour):
         forceVector+= self.clumpingVector(position)
         forceVector+= self.repulsiveVector(position)
         forceVector+= self.localHeading(position)
+        forceVector = self.avoidWall(position,velocity,forceVector)
         self.logger.debug("Response:%s"%(forceVector))
         return forceVector
+
+    def avoidWall(self, position, velocity, forceVector):
+        """
+        Called by responseVector to avoid walls to a distance of half min distance
+        """
+        min_dist = self.neighbour_min_rad/2.0 #Keep it consistent with flock avoidance behaviour
+        avoid = False
+        if any((np.zeros(3)+min_dist)>position):
+            self.logger.error("Too Close to the Origin-surfaces: %s"%position)
+            offending_dim = position.argmin()
+            avoiding_position = position.copy()
+            avoiding_position[offending_dim]=float(0.0)
+            avoid = True
+        elif any(position>(np.asarray(self.simulation.environment.shape) - min_dist)):
+            self.logger.error("Too Close to the Upper-surfaces: %s"%position)
+            offending_dim = position.argmax()
+            avoiding_position = position.copy()
+            avoiding_position[offending_dim]=float(self.simulation.environment.shape[offending_dim])
+            avoid = True
+        else:
+            response = forceVector
+
+        if avoid:
+            response = (position-avoiding_position)
+            #response = (avoiding_position-position)
+            self.logger.error("Wall Avoidance:%s, Avoiding:%s,%s,%s"%(response,avoiding_position,position,offending_dim))
+
+        return response
+
+
 
     def clumpingVector(self,position):
         """

@@ -85,7 +85,7 @@ class Environment():
         try:
             assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
             update_distance = distance(self.map[object_id].position,position)
-            self.logger.info("Moving %s %f from %s to %s"%(object_name,
+            self.logger.debug("Moving %s %f from %s to %s"%(object_name,
                                                            update_distance,
                                                            self.map[object_id].position,
                                                            position))
@@ -98,6 +98,14 @@ class Environment():
                                 object_id=object_id,
                                 time=Sim.now()
                                ))
+    def pointPlane(self):
+        """
+        Calculate the current best fit plane between all nodes
+        """
+        position_total=np.zeros(3)
+        for map_record in map:
+            position_total += map_record.position
+        
 
 
     def export(self,filename=None):

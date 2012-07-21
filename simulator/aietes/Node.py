@@ -15,7 +15,7 @@ class Node(Sim.Process):
         self.logger = baselogger.getChild("%s[%s]"%(self.__class__.__name__,name))
         self.logger.info('creating instance')
         #TODO REMOVE ME
-        self.logger.setLevel(logging.DEBUG)
+        #self.logger.setLevel(logging.DEBUG)
         self.id=uuid.uuid4() #Hopefully unique id
         Sim.Process.__init__(self,name=name)
 
@@ -77,13 +77,21 @@ class Node(Sim.Process):
         return distance(self.position,otherVector.position)
 
     def push(self,forceVector):
-        assert len(forceVector==3)
+        assert len(forceVector==3), "Out of spec vector: %s,%s"%(forceVector,type(forceVector))
         new_velocity=np.array(forceVector,dtype=np.float)
-        if any(new_velocity>self.max_speed):
+        if any(abs(new_velocity)>self.max_speed):
             new_velocity/=mag(new_velocity)
             new_velocity*=self.max_speed
-        self.logger.debug("Attempted Velocity: %s, clipped: %s"%(forceVector,new_velocity))
+            self.logger.debug("Attempted Velocity: %s, clipped: %s"%(forceVector,new_velocity))
+        else:
+            self.logger.debug("Velocity: %s"%forceVector)
         self.velocity+=new_velocity
+
+    def wallCheck(self):
+        """
+        Are we still in the bloody box?
+        """
+        return (all(self.position<np.asarray(self.simulation.environment.shape)) and all(np.zeros(3)<self.position))
 
     def move(self):
         """
@@ -94,7 +102,10 @@ class Node(Sim.Process):
         dT = self.simulation.deltaT(Sim.now(),self._lastupdate)
         attempted_vector = np.array(self.velocity,dtype=np.float)*dT
         self.position+=attempted_vector
-        self.logger.debug("Moving by %s * %s from %s to %s"%(self.velocity,dT,old_pos,self.position))
+        self.logger.info("Moving by %s * %s from %s to %s"%(self.velocity,dT,old_pos,self.position))
+        if not self.wallCheck():
+            self.logger.critical("WE'RE OUT OF THE ENVIRONMENT! %s, v=%s"%(self.position,attempted_vector))
+            raise Exception("WERE FUCKED")
         self.pos_log.append((self.position.copy(),self._lastupdate))
         self.highest_attained_speed = max(self.highest_attained_speed,mag(attempted_vector))
         self._lastupdate = Sim.now()
