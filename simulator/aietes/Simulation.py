@@ -18,7 +18,7 @@ from Tools import *
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3
 import matplotlib.animation as ani
-from operator import itemgetter
+from operator import itemgetter,attrgetter
 
 
 class ConfigError(Exception):
@@ -31,16 +31,18 @@ class ConfigError(Exception):
         self.status=value
     def __str__(self):
         return repr(self.status)
+
 class Fleet(Sim.Process):
     """
     Fleets act initially as traffic managers for Nodes
     """
-    def __init__(self,nodes):
+    def __init__(self,nodes,simulation):
 
         self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
         self.logger.info("creating instance")
         Sim.Process.__init__(self,name="Fleet")
         self.nodes = nodes
+        self.environment = simulation.environment
 
     def activate(self):
         Sim.activate(self,self.lifecycle())
@@ -54,7 +56,7 @@ class Fleet(Sim.Process):
         self.logger.info("Initialised Node Lifecycle")
         while(True):
             yield Sim.waituntil, self, allPassive
-            self.logger.info("Fleet Step")
+            self.logger.info("Fleet Step: EIG:(%s)[%s]"%self.environment.pointPlane())
             for node in self.nodes:
                 Sim.reactivate(node)
 
@@ -87,7 +89,7 @@ class Simulation():
         self.nodes = self.configureNodes(self.config.Nodes)
 
         #Single Fleet to control all
-        self.fleets.append(Fleet(self.nodes))
+        self.fleets.append(Fleet(self.nodes,self))
 
         # Set up 'join-like' operation for nodes
         self.move_flag = Sim.Resource(capacity=len(self.nodes))
@@ -267,20 +269,29 @@ class Simulation():
 
         fig = plt.figure()
         ax = axes3.Axes3D(fig)
-        ax.set_xlim3d([0,self.environment.shape[0]])
-        ax.set_ylim3d([0,self.environment.shape[1]])
-        ax.set_zlim3d([0,self.environment.shape[2]])
+        ax.set_xlim3d(0,self.environment.shape[0])
+        ax.set_ylim3d(0,self.environment.shape[1])
+        ax.set_zlim3d(0,self.environment.shape[2])
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
+        
+        def updatelines(i,data,lines):
+            for line,dat in zip(lines,data):
+                line.set_data(dat[0:2, :i])         #x,y axis
+                line.set_3d_properties(dat[2, :i])  #z axis
+            return lines
 
+        data = []
+        names = []
+        for node in self.nodes:
+            data.append(node.pos_log)
+            names.append(node.name)
 
-        for oid in nodeIDs(log):
-            x=map(itemgetter(0),(map(itemgetter(1),objectLog(log,oid))))
-            y=map(itemgetter(1),(map(itemgetter(1),objectLog(log,oid))))
-            z=map(itemgetter(2),(map(itemgetter(1),objectLog(log,oid))))
-            ax.plot(x,y,z,label=self.reverse_node_lookup(oid))
+        lines = [ax.plot(dat[0, 0:1], dat[1,0:1], dat[2, 0:1],label=names[i])[0] for i,dat in enumerate(data) ]
 
+        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(Sim.now()), fargs=(data, lines), interval=50, repeat_delay=300,  blit=False)
+        ax.legend()
         plt.show()
 
     def deltaT(self,now,then):

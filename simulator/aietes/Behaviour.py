@@ -102,7 +102,7 @@ class Flock(Behaviour):
         """
         Called by responseVector to avoid walls to a distance of half min distance
         """
-        min_dist = self.neighbour_min_rad/2.0 #Keep it consistent with flock avoidance behaviour
+        min_dist = self.neighbour_min_rad*2 
         avoid = False
         if any((np.zeros(3)+min_dist)>position):
             self.logger.error("Too Close to the Origin-surfaces: %s"%position)
@@ -120,7 +120,7 @@ class Flock(Behaviour):
             response = forceVector
 
         if avoid:
-            response = (position-avoiding_position)
+            response = 0.5 * (position-avoiding_position)
             #response = (avoiding_position-position)
             self.logger.error("Wall Avoidance:%s, Avoiding:%s,%s,%s"%(response,avoiding_position,position,offending_dim))
 
@@ -157,16 +157,17 @@ class Flock(Behaviour):
         """
         forceVector=np.array([0,0,0],dtype=np.float)
         for neighbour in self._get_neighbours(position):
-            distanceVal=self.node.distance_to(neighbour.position)
-            if distanceVal < self.neighbour_min_rad:
-                forceVector+=(np.linalg.norm(position-neighbour.position))/float(distanceVal)
-                assert distanceVal > (self.neighbour_min_rad/2), "Too close to %s:%s"%(neighbour,distanceVal)
-        if np.linalg.norm(forceVector) > 0:
-            self.logger.error("Distance:%f,Vector:%s"%(distanceVal,forceVector))
-
+            forceVector+=self.repulseFromPosition(position,neighbour.position)
         # Return an inverse vector to the obstacles
         self.logger.debug("Repulse:%s"%(forceVector))
         return forceVector
+
+    def repulseFromPosition(self,position,repulsive_position):
+        distanceVal=distance(position,repulsive_position)
+        forceVector=2*(position-repulsive_position)/np.sqrt(distanceVal)
+        assert distanceVal > 2, "Too close to %s"%(repulsive_position)
+        return -forceVector
+
 
     def localHeading(self,position):
         """

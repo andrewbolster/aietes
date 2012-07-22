@@ -1,6 +1,7 @@
 from SimPy import Simulation as Sim
 import logging
 from Tools import baselogger,dotdict,map_entry,distance
+from operator import attrgetter
 from collections import namedtuple
 import numpy as np
 import uuid
@@ -64,7 +65,7 @@ class Environment():
         else:
             valid = False
             while not valid:
-                candidate_pos=np.random.normal(np.asarray(position),5)
+                candidate_pos=np.random.normal(np.asarray(position),25)
                 candidate_pos = tuple(np.asarray(candidate_pos,dtype=int))
                 valid = self.is_empty(candidate_pos)
                 self.logger.debug("Candidate position: %s:%s"%((candidate_pos),valid))
@@ -98,15 +99,29 @@ class Environment():
                                 object_id=object_id,
                                 time=Sim.now()
                                ))
-    def pointPlane(self):
+    def pointPlane(self,index=-1):
         """
         Calculate the current best fit plane between all nodes
         """
-        position_total=np.zeros(3)
-        for map_record in map:
-            position_total += map_record.position
-        
+        pos_get = attrgetter('position')
+        positions = map(pos_get,self.map.values())
+        N = len(positions)
+        average = sum(positions)/N
+        covariant = np.cov(np.asarray(positions-average),rowvar=0)
+        evecs,evals = np.linalg.eig(covariant)
+        sorted_evecs = evecs[evals.argsort()]
+        return (average,sorted_evecs[index])
 
+    def normalPlane(self,point,normal):#plot final plane
+        d = np.dot(-point,normal)
+        [xx,yy] = np.meshgrid(np.arange(point[0]-10,point[0]+10),
+                              np.arange(point[1]-10,point[1]+10))
+        zz = (-normal[0]*xx-normal[1]*yy -d)/normal[2]
+        return(xx,yy,zz)
+
+    def eigenPlot(self,index=-1):
+        average,normal = self.pointPlane(index)
+        return(self.normalPlane(average,normal))
 
     def export(self,filename=None):
         """

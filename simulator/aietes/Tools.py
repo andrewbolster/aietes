@@ -2,6 +2,7 @@ from SimPy import Simulation as Sim
 import math
 import logging
 import numpy as np
+from operator import itemgetter,attrgetter
 
 logging.basicConfig(level=logging.INFO)
 baselogger = logging.getLogger('SIM')
