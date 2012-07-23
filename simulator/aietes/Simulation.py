@@ -259,7 +259,7 @@ class Simulation():
                         })
         return config
 
-    def postProcess(self,log=None):
+    def postProcess(self,log=None,outputFile=None):
         """
         Performs output and data generation for a given simulation
         """
@@ -269,12 +269,6 @@ class Simulation():
 
         fig = plt.figure()
         ax = axes3.Axes3D(fig)
-        ax.set_xlim3d(0,self.environment.shape[0])
-        ax.set_ylim3d(0,self.environment.shape[1])
-        ax.set_zlim3d(0,self.environment.shape[2])
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
         
         def updatelines(i,data,lines):
             for line,dat in zip(lines,data):
@@ -292,6 +286,18 @@ class Simulation():
 
         line_ani = ani.FuncAnimation(fig, updatelines, frames=int(Sim.now()), fargs=(data, lines), interval=50, repeat_delay=300,  blit=False)
         ax.legend()
+        ax.set_xlim3d((0,self.environment.shape[0]))
+        ax.set_ylim3d((0,self.environment.shape[1]))
+        ax.set_zlim3d((0,self.environment.shape[2]))
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        if outputFile is not None:
+            filename = "ani-%s.mp4"%outputFile
+            self.logger.info("Writing animation to %s"%filename)
+            line_ani.save(filename)
+
         plt.show()
 
     def deltaT(self,now,then):

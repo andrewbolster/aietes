@@ -1,3 +1,4 @@
 python-simpy
 python-pydot
 python-scipy
+ffmpeg #for animation storage

@@ -102,6 +102,7 @@ class Flock(Behaviour):
         """
         Called by responseVector to avoid walls to a distance of half min distance
         """
+        response = np.zeros(shape=forceVector.shape)
         min_dist = self.neighbour_min_rad*2 
         avoid = False
         if any((np.zeros(3)+min_dist)>position):
@@ -120,7 +121,8 @@ class Flock(Behaviour):
             response = forceVector
 
         if avoid:
-            response = 0.5 * (position-avoiding_position)
+            #response = 0.5 * (position-avoiding_position)
+            response = self.repulseFromPosition(position,avoiding_position)
             #response = (avoiding_position-position)
             self.logger.error("Wall Avoidance:%s, Avoiding:%s,%s,%s"%(response,avoiding_position,position,offending_dim))
 
@@ -163,10 +165,12 @@ class Flock(Behaviour):
         return forceVector
 
     def repulseFromPosition(self,position,repulsive_position):
+        forceVector=np.array([0,0,0],dtype=np.float)
         distanceVal=distance(position,repulsive_position)
-        forceVector=2*(position-repulsive_position)/np.sqrt(distanceVal)
+        forceVector=(position-repulsive_position)/float(distanceVal)
         assert distanceVal > 2, "Too close to %s"%(repulsive_position)
-        return -forceVector
+        self.logger.debug("Repulsion from %s: %s, at range of %s"%(forceVector, repulsive_position,distanceVal))
+        return forceVector
 
 
     def localHeading(self,position):
