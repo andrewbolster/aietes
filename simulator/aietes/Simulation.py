@@ -56,7 +56,7 @@ class Fleet(Sim.Process):
         self.logger.info("Initialised Node Lifecycle")
         while(True):
             yield Sim.waituntil, self, allPassive
-            self.logger.info("Fleet Step: EIG:(%s)[%s]"%self.environment.pointPlane())
+            self.logger.info("Fleet Step: %s EIG:(%s)"%(Sim.now(),self.environment.pointPlane()[0]))
             for node in self.nodes:
                 Sim.reactivate(node)
 
@@ -164,6 +164,7 @@ class Simulation():
                 candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
                 while candidate_name in [ x.name for x in self.nodes ]:
                     candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
+                    #TODO Need to do initial vector?? Seems fine
                 config.Nodes.node_names.append(candidate_name)
                 self.logger.info("Gave node %d name %s"%(n,candidate_name))
 

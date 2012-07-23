@@ -46,29 +46,12 @@ class Behaviour():
         Process current map and memory information and update velocities
         """
         self.neighbours = self.neighbour_map()
+        self.nearest_neighbours = self.getNearestNeighbours(self.node.position,n_neighbours=self.n_nearest_neighbours)
         forceVector = self.responseVector(self.node.position,self.node.velocity)
         self.node.push(forceVector)
         return
 
-
-class Flock(Behaviour):
-    """
-    Flocking Behaviour as modelled by three rules:
-        Short Range Repulsion
-        Local-Average heading
-        Long Range Attraction
-    """
-    def _init_behaviour(self):
-        self.nearest_neighbours = self.bev_config.nearest_neighbours
-        self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
-        self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
-        self.clumping_factor = self.bev_config.clumping_factor
-        self.schooling_factor = self.bev_config.schooling_factor
-        assert self.nearest_neighbours>0
-        assert self.neighbourhood_max_rad>0
-        assert self.neighbour_min_rad>0
-
-    def _get_neighbours(self,position):
+    def getNearestNeighbours(self,position,n_neighbours=None, distance=np.inf):
         """
         Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         """
@@ -84,7 +67,28 @@ class Flock(Behaviour):
             )
         #Select N neighbours in order
         #self.logger.debug("Nearest Neighbours:%s"%nearest_neighbours)
+        if n_neighbours is not None:
+            nearest_neighbours = nearest_neighbours[:n_neighbours]
         return nearest_neighbours
+
+
+
+class Flock(Behaviour):
+    """
+    Flocking Behaviour as modelled by three rules:
+        Short Range Repulsion
+        Local-Average heading
+        Long Range Attraction
+    """
+    def _init_behaviour(self):
+        self.n_nearest_neighbours = self.bev_config.nearest_neighbours
+        self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
+        self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
+        self.clumping_factor = self.bev_config.clumping_factor
+        self.schooling_factor = self.bev_config.schooling_factor
+        assert self.n_nearest_neighbours>0
+        assert self.neighbourhood_max_rad>0
+        assert self.neighbour_min_rad>0
 
     def responseVector(self,position,velocity):
         """
@@ -136,13 +140,13 @@ class Flock(Behaviour):
             Head towards average fleet point
         """
         vector=np.array([0,0,0],dtype=np.float)
-        for neighbour in self._get_neighbours(self.node.position):
+        for neighbour in self.nearest_neighbours:
             vector+=np.array(neighbour.position)
 
         try:
             #This assumes that the map contains one entry for each non-self node
-            neighbourhood_com=(vector)/min(self.nearest_neighbours,len(self.neighbours))
-            self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s"%(neighbourhood_com,vector,self.clumping_factor,len(self.neighbours)))
+            neighbourhood_com=(vector)/len(self.nearest_neighbours)
+            self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s"%(neighbourhood_com,vector,self.clumping_factor,len(self.nearest_neighbours)))
             # Return the fudged, relative vector to the centre of the cluster
             forceVector= (neighbourhood_com-position)*self.clumping_factor
         except ZeroDivisionError:
@@ -158,7 +162,7 @@ class Flock(Behaviour):
             If a node is too close, steer away from it
         """
         forceVector=np.array([0,0,0],dtype=np.float)
-        for neighbour in self._get_neighbours(position):
+        for neighbour in self.nearest_neighbours:
             forceVector+=self.repulseFromPosition(position,neighbour.position)
         # Return an inverse vector to the obstacles
         self.logger.debug("Repulse:%s"%(forceVector))
