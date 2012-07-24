@@ -260,32 +260,46 @@ class Simulation():
                         })
         return config
 
-    def postProcess(self,log=None,outputFile=None):
+    def postProcess(self,log=None,outputFile=None,displayFrames=None,dataFile=False,movieFile=False,inputFile=None,xRes=1024,yRes=768):
         """
         Performs output and data generation for a given simulation
         """
-        if log is None:
-            self.logger.debug("Using default postprocessing log")
-            log=self.environment.pos_log
-
-        fig = plt.figure()
+        dpi=80 #Standard
+        fig = plt.figure(dpi=dpi, figsize=(xRes/dpi,yRes/dpi))
         ax = axes3.Axes3D(fig)
         
-        def updatelines(i,data,lines):
+        def updatelines(i,data,lines,displayFrames):
+            """
+            Update the currently displayed line data
+            data contains [x,y,z],[t] data for each vector
+            displayFrames configures the display cache size
+            """
+            if isinstance(displayFrames,int):
+                j=max(i-displayFrames,0)
+            else:
+                j=0
             for line,dat in zip(lines,data):
-                line.set_data(dat[0:2, :i])         #x,y axis
-                line.set_3d_properties(dat[2, :i])  #z axis
+                line.set_data(dat[0:2, j:i])         #x,y axis
+                line.set_3d_properties(dat[2, j:i])  #z axis
             return lines
 
         data = []
         names = []
-        for node in self.nodes:
-            data.append(node.pos_log)
-            names.append(node.name)
+        if inputFile is not None:
+            self.logger.info("Retrieving data from file: %s"%inputFile)
+            (data,names) = (np.load(inputFile).items())[0][1]
+            assert len(data)==len(names), 'Array Sizes don\'t match!'
+        else:
+            if log is None and inputFile is None:
+                self.logger.info("Using default postprocessing log")
+                log=self.environment.pos_log
+            for node in self.nodes:
+                data.append(node.pos_log)
+                names.append(node.name)
 
         lines = [ax.plot(dat[0, 0:1], dat[1,0:1], dat[2, 0:1],label=names[i])[0] for i,dat in enumerate(data) ]
 
-        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(Sim.now()), fargs=(data, lines), interval=50, repeat_delay=300,  blit=False)
+        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(Sim.now()), fargs=(data, lines, displayFrames), interval=50, repeat_delay=300,  blit=False)
         ax.legend()
         ax.set_xlim3d((0,self.environment.shape[0]))
         ax.set_ylim3d((0,self.environment.shape[1]))
@@ -295,9 +309,15 @@ class Simulation():
         ax.set_zlabel('Z')
 
         if outputFile is not None:
-            filename = "ani-%s.mp4"%outputFile
-            self.logger.info("Writing animation to %s"%filename)
-            line_ani.save(filename)
+            if dataFile:
+                filename = "dat-%s.npy"%outputFile
+                self.logger.info("Writing datafile to %s"%filename)
+                np.savez(filename,(data,names))
+            if movieFile:
+                filename = "ani-%s.mp4"%outputFile
+                self.logger.info("Writing animation to %s"%filename)
+                line_ani.save(filename, fps=24)
+
 
         plt.show()
 
