@@ -82,9 +82,9 @@ class Node(Sim.Process):
         if any(abs(new_velocity)>self.max_speed):
             new_velocity/=mag(new_velocity)
             new_velocity*=mag(self.max_speed)
-            self.logger.debug("Attempted Velocity: %s, clipped: %s"%(forceVector,new_velocity))
+            if debug: self.logger.debug("Attempted Velocity: %s, clipped: %s"%(forceVector,new_velocity))
         else:
-            self.logger.debug("Velocity: %s"%forceVector)
+            if debug: self.logger.debug("Velocity: %s"%forceVector)
         self.velocity=new_velocity
 
     def wallCheck(self):
@@ -102,7 +102,7 @@ class Node(Sim.Process):
         dT = self.simulation.deltaT(Sim.now(),self._lastupdate)
         attempted_vector = np.array(self.velocity,dtype=np.float)*dT
         self.position+=attempted_vector
-        self.logger.debug("Moving by %s at %s * %f from %s to %s"%(self.velocity,mag(self.velocity),dT,old_pos,self.position))
+        if debug: self.logger.debug("Moving by %s at %s * %f from %s to %s"%(self.velocity,mag(self.velocity),dT,old_pos,self.position))
         if not self.wallCheck():
             self.logger.critical("WE'RE OUT OF THE ENVIRONMENT! %s, v=%s"%(self.position,attempted_vector))
             raise Exception("%s Crashed out of the environment at %s m/s"%(self.name,mag(attempted_vector)))

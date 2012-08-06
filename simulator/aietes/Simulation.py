@@ -21,6 +21,7 @@ import matplotlib.animation as ani
 from operator import itemgetter,attrgetter
 
 
+
 class ConfigError(Exception):
     """
     Raised when a configuration cannot be validated through ConfigObj/Validator
@@ -43,6 +44,7 @@ class Fleet(Sim.Process):
         Sim.Process.__init__(self,name="Fleet")
         self.nodes = nodes
         self.environment = simulation.environment
+        self.simulation = simulation
 
     def activate(self):
         Sim.activate(self,self.lifecycle())
@@ -56,7 +58,10 @@ class Fleet(Sim.Process):
         self.logger.info("Initialised Node Lifecycle")
         while(True):
             yield Sim.waituntil, self, allPassive
-            self.logger.info("Fleet Step: %s EIG:(%s)"%(Sim.now(),self.environment.pointPlane()[0]))
+            #self.logger.info("Fleet Step: %s EIG:(%s)"%(Sim.now(),self.environment.pointPlane()[0]))
+            percent_now= ((100 * Sim.now()) / self.simulation.duration_intervals)
+            if percent_now%10 == 0:
+                self.logger.info("Fleet: %d%%"%(percent_now))
             for node in self.nodes:
                 Sim.reactivate(node)
 
@@ -117,12 +122,12 @@ class Simulation():
         """
         Initiate the processed Simulation
         """
-        duration_intervals = self.config.Simulation.sim_duration/self.config.Simulation.sim_interval
-        self.logger.info("Initialising Simulation, to run for %s steps"%duration_intervals)
+        self.duration_intervals = self.config.Simulation.sim_duration/self.config.Simulation.sim_interval
+        self.logger.info("Initialising Simulation, to run for %s steps"%self.duration_intervals)
         for fleet in self.fleets:
             fleet.activate()
 
-        Sim.simulate(until=duration_intervals)
+        Sim.simulate(until=self.duration_intervals)
 
     def reverse_node_lookup(self, uuid):
         """Return Node Given UUID
@@ -317,9 +322,8 @@ class Simulation():
                 filename = "ani-%s.mp4"%outputFile
                 self.logger.info("Writing animation to %s"%filename)
                 line_ani.save(filename, fps=24)
-
-
-        plt.show()
+        else:
+            plt.show()
 
     def deltaT(self,now,then):
         """

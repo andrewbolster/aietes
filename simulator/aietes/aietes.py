@@ -38,6 +38,8 @@ import traceback
 import optparse
 import time
 from Simulation import Simulation
+import profile
+from datetime import datetime as dt
 
 # Uncomment the following section if you want readline history support.
 #import readline, atexit
@@ -58,9 +60,17 @@ def main ():
 
     sim.prepare()
 
+    outfile=None
     sim.simulate()
 
-    sim.postProcess()
+    if options.output:
+        print("Storing output in %s"%outfile)
+        outfile=dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
+        sim.postProcess(outputFile=outfile,dataFile=True)
+
+    if options.postprocess:
+        sim.postProcess()
+
 
 
 if __name__ == '__main__':
@@ -72,11 +82,20 @@ if __name__ == '__main__':
                 version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
         parser.add_option ('-v', '--verbose', action='store_true',
                 default=False, help='verbose output')
+        parser.add_option ('-P', '--profile', action='store_true',
+                default=False, help='profiled execution')
+        parser.add_option ('-p', '--postprocess', action='store_true',
+                default=False, help='perform postprocessing')
+        parser.add_option ('-o', '--output', action='store_true',
+                default=False, help='store output')
         (options, args) = parser.parse_args()
         #if len(args) < 1:
         #    parser.error ('missing argument')
         if options.verbose: print time.asctime()
-        exit_code = main()
+        if options.profile:
+            profile.run('print("PROFILING"); exit_code=main(); print("EXIT CODE:%s"%exit_code)')
+        else:
+            exit_code = main()
         if exit_code is None:
             exit_code = 0
         if options.verbose: print time.asctime()

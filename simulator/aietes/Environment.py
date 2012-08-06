@@ -1,6 +1,6 @@
 from SimPy import Simulation as Sim
 import logging
-from Tools import baselogger,dotdict,map_entry,distance
+from Tools import baselogger,dotdict,map_entry,distance,debug
 from operator import attrgetter
 from collections import namedtuple
 import numpy as np
@@ -68,7 +68,7 @@ class Environment():
                 candidate_pos=np.random.normal(np.asarray(position),25)
                 candidate_pos = tuple(np.asarray(candidate_pos,dtype=int))
                 valid = self.is_empty(candidate_pos)
-                self.logger.debug("Candidate position: %s:%s"%((candidate_pos),valid))
+                if debug: self.logger.debug("Candidate position: %s:%s"%((candidate_pos),valid))
         return candidate_pos
 
 
@@ -86,13 +86,13 @@ class Environment():
         try:
             assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
             update_distance = distance(self.map[object_id].position,position)
-            self.logger.debug("Moving %s %f from %s to %s"%(object_name,
+            if debug: self.logger.debug("Moving %s %f from %s to %s"%(object_name,
                                                            update_distance,
                                                            self.map[object_id].position,
                                                            position))
             self.map[object_id]=map_entry(object_id,position,object_name)
         except KeyError:
-            self.logger.debug("Creating map entry for %s at %s"%(object_name,position))
+            if debug: self.logger.debug("Creating map entry for %s at %s"%(object_name,position))
             self.map[object_id]=map_entry(object_id,position,object_name)
         self.pos_log.append(Log(name=object_name,
                                 position=position,

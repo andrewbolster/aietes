@@ -2,8 +2,9 @@ from SimPy import Simulation as Sim
 import logging
 import numpy as np
 import scipy.spatial
-from Tools import dotdict,map_entry,memory_entry,baselogger,distance
+from Tools import dotdict,map_entry,memory_entry,baselogger,distance,fudge_normal,debug
 from operator import attrgetter,itemgetter
+import copy
 
 
 class Behaviour():
@@ -28,7 +29,12 @@ class Behaviour():
         """
         Returns a filtered map pulled from the global environment excluding self
         """
-        return dict((k,v) for k,v in self.simulation.environment.map.items() if v.object_id != self.node.id)
+        orig_map=dict((k,v) for k,v in self.simulation.environment.map.items() if v.object_id != self.node.id)
+
+        for k,v in orig_map.items():
+            orig_map[k].position = fudge_normal(v.position,0.5)
+
+        return orig_map
 
     def _init_behaviour(self):
         pass
@@ -99,7 +105,7 @@ class Flock(Behaviour):
         forceVector+= self.repulsiveVector(position)
         forceVector+= self.localHeading(position)
         forceVector = self.avoidWall(position,velocity,forceVector)
-        self.logger.debug("Response:%s"%(forceVector))
+        if debug: self.logger.debug("Response:%s"%(forceVector))
         return forceVector
 
     def avoidWall(self, position, velocity, forceVector):
@@ -110,13 +116,13 @@ class Flock(Behaviour):
         min_dist = self.neighbour_min_rad*2 
         avoid = False
         if any((np.zeros(3)+min_dist)>position):
-            self.logger.error("Too Close to the Origin-surfaces: %s"%position)
+            if debug: self.logger.debug("Too Close to the Origin-surfaces: %s"%position)
             offending_dim = position.argmin()
             avoiding_position = position.copy()
             avoiding_position[offending_dim]=float(0.0)
             avoid = True
         elif any(position>(np.asarray(self.simulation.environment.shape) - min_dist)):
-            self.logger.error("Too Close to the Upper-surfaces: %s"%position)
+            if debug: self.logger.debug("Too Close to the Upper-surfaces: %s"%position)
             offending_dim = position.argmax()
             avoiding_position = position.copy()
             avoiding_position[offending_dim]=float(self.simulation.environment.shape[offending_dim])
@@ -128,7 +134,7 @@ class Flock(Behaviour):
             #response = 0.5 * (position-avoiding_position)
             response = self.repulseFromPosition(position,avoiding_position)
             #response = (avoiding_position-position)
-            self.logger.error("Wall Avoidance:%s, Avoiding:%s,%s,%s"%(response,avoiding_position,position,offending_dim))
+            self.logger.error("Wall Avoidance:%s"%(response))
 
         return response
 
@@ -146,14 +152,14 @@ class Flock(Behaviour):
         try:
             #This assumes that the map contains one entry for each non-self node
             neighbourhood_com=(vector)/len(self.nearest_neighbours)
-            self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s"%(neighbourhood_com,vector,self.clumping_factor,len(self.nearest_neighbours)))
+            if debug: self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s"%(neighbourhood_com,vector,self.clumping_factor,len(self.nearest_neighbours)))
             # Return the fudged, relative vector to the centre of the cluster
             forceVector= (neighbourhood_com-position)*self.clumping_factor
         except ZeroDivisionError:
             self.logger.error("Zero Division Error: Returning zero vector")
             forceVector= position-position
 
-        self.logger.debug("Clump:%s"%(forceVector))
+        if debug: self.logger.debug("Clump:%s"%(forceVector))
         return forceVector
 
     def repulsiveVector(self,position):
@@ -165,7 +171,7 @@ class Flock(Behaviour):
         for neighbour in self.nearest_neighbours:
             forceVector+=self.repulseFromPosition(position,neighbour.position)
         # Return an inverse vector to the obstacles
-        self.logger.debug("Repulse:%s"%(forceVector))
+        if debug: self.logger.debug("Repulse:%s"%(forceVector))
         return forceVector
 
     def repulseFromPosition(self,position,repulsive_position):
@@ -173,7 +179,7 @@ class Flock(Behaviour):
         distanceVal=distance(position,repulsive_position)
         forceVector=(position-repulsive_position)/float(distanceVal)
         assert distanceVal > 2, "Too close to %s"%(repulsive_position)
-        self.logger.debug("Repulsion from %s: %s, at range of %s"%(forceVector, repulsive_position,distanceVal))
+        if debug: self.logger.debug("Repulsion from %s: %s, at range of %s"%(forceVector, repulsive_position,distanceVal))
         return forceVector
 
 
@@ -186,7 +192,7 @@ class Flock(Behaviour):
             if neighbour is not self.node:
                 vector+=neighbour.velocity
         forceVector = self.schooling_factor * vector / (len(self.simulation.nodes) - 1)
-        self.logger.debug("Schooling:%s"%(forceVector))
+        if debug: self.logger.debug("Schooling:%s"%(forceVector))
         return forceVector
 
     def _percieved_vector(self,node_id):

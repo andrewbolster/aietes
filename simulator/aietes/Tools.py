@@ -7,6 +7,8 @@ from operator import itemgetter,attrgetter
 logging.basicConfig(level=logging.INFO)
 baselogger = logging.getLogger('SIM')
 
+debug=False
+
 #####################################################################
 # Magic Numbers
 #####################################################################
@@ -241,3 +243,15 @@ class map_entry():
         self.time=Sim.now()
     def __repr__(self):
         return "%s:%s:%s"%(self.object_id,self.position,self.time)
+
+def fudge_normal(value,stdev):
+    #Deal with multiple inputs
+    if hasattr(value,'shape'):
+        shape = value.shape
+    elif isinstance(value, int) or isinstance(value,float):
+        shape = 1
+    elif isinstance(value, list):
+        shape = len(value)
+    else:
+        raise ValueError("Cannot process value type %s:%s"%(type(value),value))
+    return value + np.random.normal(0,stdev,shape)
