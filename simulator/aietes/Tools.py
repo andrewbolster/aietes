@@ -4,10 +4,10 @@ import logging
 import numpy as np
 from operator import itemgetter,attrgetter
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 baselogger = logging.getLogger('SIM')
 
-debug=False
+debug=True
 
 #####################################################################
 # Magic Numbers

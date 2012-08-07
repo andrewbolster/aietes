@@ -54,7 +54,7 @@ class Node(Sim.Process):
         assert len(self.max_turn) == 3
 
         #Internal Configure Node Behaviour
-        self.behaviour=self.config.behave_mod(self,self.config.Behaviour)
+        self.behaviour=self.config.behave_mod(node=self,bev_config=self.config.Behaviour)
 
         #Simulation Configuration
         self.internalEvent = Sim.SimEvent(self.name)

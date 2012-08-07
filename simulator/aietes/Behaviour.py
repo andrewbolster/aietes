@@ -12,16 +12,17 @@ class Behaviour():
     Generic Represnetation of a Nodes behavioural characteristics
     #TODO should be a state machine?
     """
-    def __init__(self,node,bev_config):
+    def __init__(self,*args,**kwargs):
         #TODO internal representation of the environment
-        self.logger = node.logger.getChild("%s"%(self.__class__.__name__))
-        self.logger.info('creating instance from bev_config: %s'%bev_config)
+        self.node=kwargs.get('node')
+        self.bev_config=kwargs.get('bev_config')
+        self.logger = self.node.logger.getChild("%s"%(self.__class__.__name__))
+        self.logger.info('creating instance')
+        if debug: self.logger.debug('from bev_config: %s'%self.bev_config)
         #self.logger.setLevel(logging.DEBUG)
-        self.node=node
-        self.bev_config=bev_config
         self.update_rate=1
         self.memory={}
-        self._init_behaviour()
+        self.behaviours=[]
         self.simulation = self.node.simulation
         self.neighbours = {}
 
@@ -35,9 +36,6 @@ class Behaviour():
             orig_map[k].position = fudge_normal(v.position,0.5)
 
         return orig_map
-
-    def _init_behaviour(self):
-        pass
 
     def addMemory(self,object_id,position):
         """
@@ -77,34 +75,13 @@ class Behaviour():
             nearest_neighbours = nearest_neighbours[:n_neighbours]
         return nearest_neighbours
 
-
-
-class Flock(Behaviour):
-    """
-    Flocking Behaviour as modelled by three rules:
-        Short Range Repulsion
-        Local-Average heading
-        Long Range Attraction
-    """
-    def _init_behaviour(self):
-        self.n_nearest_neighbours = self.bev_config.nearest_neighbours
-        self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
-        self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
-        self.clumping_factor = self.bev_config.clumping_factor
-        self.schooling_factor = self.bev_config.schooling_factor
-        assert self.n_nearest_neighbours>0
-        assert self.neighbourhood_max_rad>0
-        assert self.neighbour_min_rad>0
-
-    def responseVector(self,position,velocity):
+    def responseVector(self, position,velocity):
         """
         Called on process: Returns desired vector
         """
         forceVector= np.array([0,0,0],dtype=np.float)
-        forceVector+= self.clumpingVector(position)
-        forceVector+= self.repulsiveVector(position)
-        forceVector+= self.localHeading(position)
-        forceVector+= self.waypointVector(position,None)
+        for behaviour in self.behaviours:
+            forceVector += behaviour(position)
         forceVector = self.avoidWall(position,velocity,forceVector)
         if debug: self.logger.debug("Response:%s"%(forceVector))
         return forceVector
@@ -141,6 +118,30 @@ class Flock(Behaviour):
 
 
 
+
+class Flock(Behaviour):
+    """
+    Flocking Behaviour as modelled by three rules:
+        Short Range Repulsion
+        Local-Average heading
+        Long Range Attraction
+    """
+    def __init__(self,*args,**kwargs):
+        Behaviour.__init__(self,*args,**kwargs)
+        self.n_nearest_neighbours = self.bev_config.nearest_neighbours
+        self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
+        self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
+        self.clumping_factor = self.bev_config.clumping_factor
+        self.schooling_factor = self.bev_config.schooling_factor
+
+        self.behaviours.append(self.clumpingVector)
+        self.behaviours.append(self.repulsiveVector)
+        self.behaviours.append(self.localHeading)
+
+        assert self.n_nearest_neighbours>0
+        assert self.neighbourhood_max_rad>0
+        assert self.neighbour_min_rad>0
+
     def clumpingVector(self,position):
         """
         Represents the Long Range Attraction factor:
@@ -175,15 +176,6 @@ class Flock(Behaviour):
         if debug: self.logger.debug("Repulse:%s"%(forceVector))
         return forceVector
 
-    def waypointVector(self,position,nextwaypoint=None):
-        forceVector=np.array([0,0,0],dtype=np.float)
-        if nextwaypoint is not None:
-            if distance(position,nextwaypoint.position)<nextwaypoint.prox:
-                self.logger.info("Moving to Next waypoint")
-                nextwaypoint=nextwaypoint.next
-            forceVector=self.attractToPosition(nextwaypoint.position)
-        return forceVector
-
     def repulseFromPosition(self,position,repulsive_position):
         forceVector=np.array([0,0,0],dtype=np.float)
         distanceVal=distance(position,repulsive_position)
@@ -196,7 +188,7 @@ class Flock(Behaviour):
         forceVector=np.array([0,0,0],dtype=np.float)
         distanceVal=distance(position,attractive_position)
         forceVector=(attractive_position-position)/float(distanceVal)
-        if debug: self.logger.debug("Attraction to %s: %s, at range of %s"%(forceVector, repulsive_position,distanceVal))
+        if debug: self.logger.debug("Attraction to %s: %s, at range of %s"%(forceVector, attractive_position,distanceVal))
         return forceVector
 
     def localHeading(self,position):
@@ -218,4 +210,80 @@ class Flock(Behaviour):
         """
         node_history=sorted(filter(lambda x: x.object_id==nodeid, self.memory), key=time)
         return (node_history[-1].position-node_history[-2].position)/(node_history[-1].time-node_history[-2].time)
+
+
+class Waypoint(Flock):
+    def __init__(self,*args,**kwargs):
+        Flock.__init__(self,*args,**kwargs)
+        if not hasattr(self,str(self.bev_config.waypoint_style)):
+            raise ValueError("Cannot generate using waypoint definition:%s"%self.bev_config.waypoint_style)
+        else:
+            generator=attrgetter(str(self.bev_config.waypoint_style))
+            g=generator(self)
+            self.logger.info("Generating waypoints: %s"%g.__name__)
+            g()
+        self.behaviours.append(self.waypointVector)
+
+    def patrolCube(self):
+        """
+        Generates a cubic patrol loop within the environment
+        """
+        shape=np.asarray(self.simulation.environment.shape)
+        prox=20
+        cubedef=np.asarray(
+            [[0,0,0],[1,0,0],[1,1,0],[0,1,0],
+             [0,0,1],[1,0,1],[1,1,1],[1,1,0]]
+        )
+        self.cubepatrolroute=[(shape*(((vertex-0.5)/3)+0.5),prox) for vertex in cubedef]
+        self.nextwaypoint=waypoint(self.cubepatrolroute)
+        self.nextwaypoint.makeLoop(self.nextwaypoint)
+
+   
+    def waypointVector(self,position):
+        forceVector=np.array([0,0,0],dtype=np.float)
+        if self.nextwaypoint is not None:
+            if distance(position,self.nextwaypoint.position)<self.nextwaypoint.prox:
+                self.logger.info("Moving to Next waypoint")
+                self.nextwaypoint=self.nextwaypoint.next
+            forceVector=self.attractToPosition(position, self.nextwaypoint.position)
+        return forceVector*0.2
+
+
+class waypoint(object):
+    def __init__(self,positions):
+        """
+        Defines waypoint paths:
+            positions = [ [ position, proximity ], *]
+        """
+        self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
+        (self.position,self.prox)=positions[0]
+        self.logger.info("Waypoint: %s,%s"%(self.position,self.prox))
+        if len(positions) == 1:
+            self.logger.info("End of Position List")
+            self.next=None
+        else:
+            self.next=waypoint(positions[1:])
+
+    def append(self,position):
+        if self.next is None:
+            self.next=waypoint([position])
+        else:
+            self.next.append(position)
+
+    def insert(self,position):
+        temp_waypoint = self.next
+        self.next = waypoint([position])
+        self.next.next=temp_waypoint
+
+    def makeLoop(self,head):
+        if self.next is None:
+            self.next = head
+        else:
+            self.next.makeLoop(self)
+
+
+
+
+
+
 
