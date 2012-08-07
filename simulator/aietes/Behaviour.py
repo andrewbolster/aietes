@@ -52,6 +52,7 @@ class Behaviour():
         self.neighbours = self.neighbour_map()
         self.nearest_neighbours = self.getNearestNeighbours(self.node.position,n_neighbours=self.n_nearest_neighbours)
         forceVector = self.responseVector(self.node.position,self.node.velocity)
+        forceVector = fudge_normal(forceVector,0.012)
         self.node.push(forceVector)
         return
 
@@ -133,6 +134,7 @@ class Flock(Behaviour):
         self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
         self.clumping_factor = self.bev_config.clumping_factor
         self.schooling_factor = self.bev_config.schooling_factor
+        self.repulsive_factor = self.bev_config.repulsive_factor
 
         self.behaviours.append(self.clumpingVector)
         self.behaviours.append(self.repulsiveVector)
@@ -153,10 +155,10 @@ class Flock(Behaviour):
 
         try:
             #This assumes that the map contains one entry for each non-self node
-            neighbourhood_com=(vector)/len(self.nearest_neighbours)
-            if debug: self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s"%(neighbourhood_com,vector,self.clumping_factor,len(self.nearest_neighbours)))
+            self.neighbourhood_com=(vector)/len(self.nearest_neighbours)
+            if debug: self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s"%(self.neighbourhood_com,vector,self.clumping_factor,len(self.nearest_neighbours)))
             # Return the fudged, relative vector to the centre of the cluster
-            forceVector= (neighbourhood_com-position)*self.clumping_factor
+            forceVector= (self.neighbourhood_com-position)*self.clumping_factor
         except ZeroDivisionError:
             self.logger.error("Zero Division Error: Returning zero vector")
             forceVector= position-position
@@ -174,7 +176,7 @@ class Flock(Behaviour):
             forceVector+=self.repulseFromPosition(position,neighbour.position)
         # Return an inverse vector to the obstacles
         if debug: self.logger.debug("Repulse:%s"%(forceVector))
-        return forceVector
+        return forceVector * self.repulsive_factor
 
     def repulseFromPosition(self,position,repulsive_position):
         forceVector=np.array([0,0,0],dtype=np.float)
@@ -215,6 +217,7 @@ class Flock(Behaviour):
 class Waypoint(Flock):
     def __init__(self,*args,**kwargs):
         Flock.__init__(self,*args,**kwargs)
+        self.waypoint_factor = self.bev_config.waypoint_factor
         if not hasattr(self,str(self.bev_config.waypoint_style)):
             raise ValueError("Cannot generate using waypoint definition:%s"%self.bev_config.waypoint_style)
         else:
@@ -229,7 +232,7 @@ class Waypoint(Flock):
         Generates a cubic patrol loop within the environment
         """
         shape=np.asarray(self.simulation.environment.shape)
-        prox=20
+        prox=50
         cubedef=np.asarray(
             [[0,0,0],[1,0,0],[1,1,0],[0,1,0],
              [0,0,1],[1,0,1],[1,1,1],[1,1,0]]
@@ -242,11 +245,11 @@ class Waypoint(Flock):
     def waypointVector(self,position):
         forceVector=np.array([0,0,0],dtype=np.float)
         if self.nextwaypoint is not None:
-            if distance(position,self.nextwaypoint.position)<self.nextwaypoint.prox:
-                self.logger.info("Moving to Next waypoint")
+            if distance(self.neighbourhood_com,self.nextwaypoint.position)<self.nextwaypoint.prox:
+                self.logger.info("Moving to Next waypoint:%s"%self.nextwaypoint.position)
                 self.nextwaypoint=self.nextwaypoint.next
             forceVector=self.attractToPosition(position, self.nextwaypoint.position)
-        return forceVector*0.2
+        return forceVector*0.1
 
 
 class waypoint(object):

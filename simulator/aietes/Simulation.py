@@ -20,6 +20,7 @@ import mpl_toolkits.mplot3d.axes3d as axes3
 import matplotlib.animation as ani
 from operator import itemgetter,attrgetter
 
+np.set_printoptions(precision=3)
 
 
 class ConfigError(Exception):
@@ -60,10 +61,40 @@ class Fleet(Sim.Process):
             yield Sim.waituntil, self, allPassive
             #self.logger.info("Fleet Step: %s EIG:(%s)"%(Sim.now(),self.environment.pointPlane()[0]))
             percent_now= ((100 * Sim.now()) / self.simulation.duration_intervals)
-            if percent_now%10 == 0:
-                self.logger.info("Fleet: %d%%"%(percent_now))
+            if percent_now%1 == 0:
+                self.logger.info("Fleet  %d%%: %s"%(percent_now,self.currentStats()))
             for node in self.nodes:
                 Sim.reactivate(node)
+
+    def currentStats(self):
+        """
+        Print Current Vector Statistics
+        """
+        avgHeading = np.array([0,0,0],dtype=np.float)
+        fleetCenter = np.array([0,0,0],dtype=np.float)
+        for node in self.nodes:
+            avgHeading+=node.velocity
+            fleetCenter+=node.position
+
+        avgHeading/=float(len(self.nodes))
+        fleetCenter/=float(len(self.nodes))
+
+        maxDistance=np.float(0.0)
+        maxDeviation=np.float(0.0)
+        for node in self.nodes:
+            maxDistance = max(maxDistance,distance(node.position,fleetCenter))
+            v=node.velocity
+            c= np.dot(avgHeading,v)/np.linalg.norm(avgHeading)/np.linalg.norm(v)
+            maxDeviation = max(maxDeviation,np.arccos(c))
+
+        return("V:%s,C:%s,D:%s,A:%s"%(avgHeading,fleetCenter,maxDistance,maxDeviation))
+
+
+
+
+
+
+
 
 
 class Simulation():
@@ -269,8 +300,9 @@ class Simulation():
         """
         Performs output and data generation for a given simulation
         """
-        dpi=80 #Standard
-        fig = plt.figure(dpi=dpi, figsize=(xRes/dpi,yRes/dpi))
+        dpi=80
+        ipp=80
+        fig = plt.figure(dpi=dpi, figsize=(xRes/ipp,yRes/ipp))
         ax = axes3.Axes3D(fig)
         
         def updatelines(i,data,lines,displayFrames):
@@ -308,7 +340,7 @@ class Simulation():
 
         lines = [ax.plot(dat[0, 0:1], dat[1,0:1], dat[2, 0:1],label=names[i])[0] for i,dat in enumerate(data) ]
 
-        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(n_frames), fargs=(data, lines, displayFrames), interval=5, repeat_delay=300,  blit=True)
+        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(n_frames), fargs=(data, lines, displayFrames), interval=5, repeat_delay=300,  blit=True,)
         ax.legend()
         ax.set_xlim3d((0,shape[0]))
         ax.set_ylim3d((0,shape[1]))
@@ -327,9 +359,9 @@ class Simulation():
                     fps=24
                 else:
                     fps=movieFile
-                filename = "ani-%s.mp4"%outputFile
+                filename = "ani-%s.flv"%outputFile
                 self.logger.info("Writing animation to %s"%filename)
-                line_ani.save(filename, fps=fps)
+                line_ani.save(filename, fps=fps, codec='flv')
         else:
             plt.show()
 
