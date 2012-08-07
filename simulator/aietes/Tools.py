@@ -254,4 +254,7 @@ def fudge_normal(value,stdev):
         shape = len(value)
     else:
         raise ValueError("Cannot process value type %s:%s"%(type(value),value))
-    return value + np.random.normal(0,stdev,shape)
+    if stdev <=0:
+        return value
+    else:
+        return value + np.random.normal(0,stdev,shape)

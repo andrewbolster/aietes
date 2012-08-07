@@ -104,6 +104,7 @@ class Flock(Behaviour):
         forceVector+= self.clumpingVector(position)
         forceVector+= self.repulsiveVector(position)
         forceVector+= self.localHeading(position)
+        forceVector+= self.waypointVector(position,None)
         forceVector = self.avoidWall(position,velocity,forceVector)
         if debug: self.logger.debug("Response:%s"%(forceVector))
         return forceVector
@@ -174,6 +175,15 @@ class Flock(Behaviour):
         if debug: self.logger.debug("Repulse:%s"%(forceVector))
         return forceVector
 
+    def waypointVector(self,position,nextwaypoint=None):
+        forceVector=np.array([0,0,0],dtype=np.float)
+        if nextwaypoint is not None:
+            if distance(position,nextwaypoint.position)<nextwaypoint.prox:
+                self.logger.info("Moving to Next waypoint")
+                nextwaypoint=nextwaypoint.next
+            forceVector=self.attractToPosition(nextwaypoint.position)
+        return forceVector
+
     def repulseFromPosition(self,position,repulsive_position):
         forceVector=np.array([0,0,0],dtype=np.float)
         distanceVal=distance(position,repulsive_position)
@@ -182,6 +192,12 @@ class Flock(Behaviour):
         if debug: self.logger.debug("Repulsion from %s: %s, at range of %s"%(forceVector, repulsive_position,distanceVal))
         return forceVector
 
+    def attractToPosition(self,position,attractive_position):
+        forceVector=np.array([0,0,0],dtype=np.float)
+        distanceVal=distance(position,attractive_position)
+        forceVector=(attractive_position-position)/float(distanceVal)
+        if debug: self.logger.debug("Attraction to %s: %s, at range of %s"%(forceVector, repulsive_position,distanceVal))
+        return forceVector
 
     def localHeading(self,position):
         """
@@ -190,7 +206,7 @@ class Flock(Behaviour):
         vector=np.array([0,0,0])
         for neighbour in self.simulation.nodes:
             if neighbour is not self.node:
-                vector+=neighbour.velocity
+                vector+=fudge_normal(neighbour.velocity,max(abs(neighbour.velocity))/3)
         forceVector = self.schooling_factor * vector / (len(self.simulation.nodes) - 1)
         if debug: self.logger.debug("Schooling:%s"%(forceVector))
         return forceVector

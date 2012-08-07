@@ -290,9 +290,10 @@ class Simulation():
 
         data = []
         names = []
+        shape = []
         if inputFile is not None:
             self.logger.info("Retrieving data from file: %s"%inputFile)
-            (data,names) = (np.load(inputFile).items())[0][1]
+            (data,names,shape) = (np.load(inputFile).items())[0][1]
             assert len(data)==len(names), 'Array Sizes don\'t match!'
         else:
             if log is None and inputFile is None:
@@ -301,14 +302,17 @@ class Simulation():
             for node in self.nodes:
                 data.append(node.pos_log)
                 names.append(node.name)
+            shape=self.environment.shape
+
+        n_frames= len(data[0][0])
 
         lines = [ax.plot(dat[0, 0:1], dat[1,0:1], dat[2, 0:1],label=names[i])[0] for i,dat in enumerate(data) ]
 
-        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(Sim.now()), fargs=(data, lines, displayFrames), interval=50, repeat_delay=300,  blit=False)
+        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(n_frames), fargs=(data, lines, displayFrames), interval=5, repeat_delay=300,  blit=True)
         ax.legend()
-        ax.set_xlim3d((0,self.environment.shape[0]))
-        ax.set_ylim3d((0,self.environment.shape[1]))
-        ax.set_zlim3d((0,self.environment.shape[2]))
+        ax.set_xlim3d((0,shape[0]))
+        ax.set_ylim3d((0,shape[1]))
+        ax.set_zlim3d((0,shape[2]))
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
@@ -317,11 +321,15 @@ class Simulation():
             if dataFile:
                 filename = "dat-%s.npy"%outputFile
                 self.logger.info("Writing datafile to %s"%filename)
-                np.savez(filename,(data,names))
+                np.savez(filename,(data,names,self.environment.shape))
             if movieFile:
+                if isinstance(movieFile,bool):
+                    fps=24
+                else:
+                    fps=movieFile
                 filename = "ani-%s.mp4"%outputFile
                 self.logger.info("Writing animation to %s"%filename)
-                line_ani.save(filename, fps=24)
+                line_ani.save(filename, fps=fps)
         else:
             plt.show()
 
