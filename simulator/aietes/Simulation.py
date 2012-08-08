@@ -15,6 +15,8 @@ import Behaviour
 
 from Tools import *
 
+import matplotlib; matplotlib.use('WXAgg')
+
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3
 import matplotlib.animation as ani
@@ -72,9 +74,12 @@ class Fleet(Sim.Process):
         """
         avgHeading = np.array([0,0,0],dtype=np.float)
         fleetCenter = np.array([0,0,0],dtype=np.float)
+        fleetWaypoints = []
         for node in self.nodes:
             avgHeading+=node.velocity
             fleetCenter+=node.position
+            fleetWaypoints.append(node.behaviour.nextwaypoint.position)
+
 
         avgHeading/=float(len(self.nodes))
         fleetCenter/=float(len(self.nodes))
@@ -87,7 +92,9 @@ class Fleet(Sim.Process):
             c= np.dot(avgHeading,v)/np.linalg.norm(avgHeading)/np.linalg.norm(v)
             maxDeviation = max(maxDeviation,np.arccos(c))
 
-        return("V:%s,C:%s,D:%s,A:%s"%(avgHeading,fleetCenter,maxDistance,maxDeviation))
+        commonheading = all(all(fleetWaypoints[0] == waypoint) for waypoint in fleetWaypoints)
+
+        return("V:%s,W:%s,C:%s,D:%s,A:%s"%(avgHeading,commonheading,fleetCenter,maxDistance,maxDeviation))
 
 
 
@@ -296,7 +303,7 @@ class Simulation():
                         })
         return config
 
-    def postProcess(self,log=None,outputFile=None,displayFrames=None,dataFile=False,movieFile=False,inputFile=None,xRes=1024,yRes=768):
+    def postProcess(self,log=None,outputFile=None,displayFrames=None,dataFile=False,movieFile=False,inputFile=None,xRes=1024,yRes=768,fps=24):
         """
         Performs output and data generation for a given simulation
         """
@@ -340,7 +347,7 @@ class Simulation():
 
         lines = [ax.plot(dat[0, 0:1], dat[1,0:1], dat[2, 0:1],label=names[i])[0] for i,dat in enumerate(data) ]
 
-        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(n_frames), fargs=(data, lines, displayFrames), interval=5, repeat_delay=300,  blit=True,)
+        line_ani = ani.FuncAnimation(fig, updatelines, frames=int(n_frames), fargs=(data, lines, displayFrames), interval=1000/fps, repeat_delay=300,  blit=True,)
         ax.legend()
         ax.set_xlim3d((0,shape[0]))
         ax.set_ylim3d((0,shape[1]))
@@ -351,19 +358,21 @@ class Simulation():
 
         if outputFile is not None:
             if dataFile:
-                filename = "dat-%s.npy"%outputFile
+                filename = "dat-%s"%outputFile
                 self.logger.info("Writing datafile to %s"%filename)
                 np.savez(filename,(data,names,self.environment.shape))
             if movieFile:
-                if isinstance(movieFile,bool):
-                    fps=24
-                else:
-                    fps=movieFile
-                filename = "ani-%s.flv"%outputFile
+                filename = "ani-%s"%outputFile
                 self.logger.info("Writing animation to %s"%filename)
-                line_ani.save(filename, fps=fps, codec='flv')
+                save(line_ani,
+                     filename=filename,
+                     fps=fps,
+                     codec='mpeg4',
+                     clear_temp=True
+                    )
         else:
             plt.show()
+
 
     def deltaT(self,now,then):
         """
@@ -371,4 +380,89 @@ class Simulation():
         """
         return (now-then)*self.config.Simulation.sim_interval
 
+def save(self, filename, fps=5, codec='libx264', clear_temp=True,
+    frame_prefix='_tmp'):
+    '''
+    Saves a movie file by drawing every frame.
+
+    *filename* is the output filename, eg :file:`mymovie.mp4`
+
+    *fps* is the frames per second in the movie
+
+    *codec* is the codec to be used,if it is supported by the output method.
+
+    *clear_temp* specifies whether the temporary image files should be
+    deleted.
+
+    *frame_prefix* gives the prefix that should be used for individual
+    image files.  This prefix will have a frame number (i.e. 0001) appended
+    when saving individual frames.
+    '''
+    # Need to disconnect the first draw callback, since we'll be doing
+    # draws. Otherwise, we'll end up starting the animation.
+    if self._first_draw_id is not None:
+        self._fig.canvas.mpl_disconnect(self._first_draw_id)
+        reconnect_first_draw = True
+    else:
+        reconnect_first_draw = False
+
+    fnames = []
+    # Create a new sequence of frames for saved data. This is different
+    # from new_frame_seq() to give the ability to save 'live' generated
+    # frame information to be saved later.
+    # TODO: Right now, after closing the figure, saving a movie won't
+    # work since GUI widgets are gone. Either need to remove extra code
+    # to allow for this non-existant use case or find a way to make it work.
+    for idx,data in enumerate(self.new_saved_frame_seq()):
+        #TODO: Need to see if turning off blit is really necessary
+        self._draw_next_frame(data, blit=False)
+        fname = '%s%04d.png' % (frame_prefix, idx)
+        fnames.append(fname)
+        self._fig.savefig(fname)
+
+    _make_movie(self,filename, fps, codec, frame_prefix, cmd_gen=mencoder_cmd)
+
+    #Delete temporary files
+    if clear_temp:
+        import os
+        for fname in fnames:
+            os.remove(fname)
+
+    # Reconnect signal for first draw if necessary
+    if reconnect_first_draw:
+        self._first_draw_id = self._fig.canvas.mpl_connect('draw_event',
+            self._start)
+
+def ffmpeg_cmd(self, fname, fps, codec, frame_prefix):
+    # Returns the command line parameters for subprocess to use
+    # ffmpeg to create a movie
+    return ['ffmpeg', '-y', '-r', str(fps),
+            '-b', '1800k', '-i','%s%%04d.png' % frame_prefix,
+            '-vcodec', codec, '-vpre','slow','-vpre','baseline',
+            "%s.mp4"%fname]
+
+def mencoder_cmd(self, fname, fps, codec, frame_prefix):
+    # Returns the command line parameters for subprocess to use
+    # mencoder to create a movie
+    return ['mencoder',
+               '-nosound',
+               '-quiet',
+               '-ovc', 'lavc',
+               '-lavcopts',"vcodec=%s"%codec,
+               '-o', "%s.mp4"%fname,
+               '-mf', 'type=png:fps=24', 'mf://%s%%04d.png'%frame_prefix]
+
+
+def _make_movie(self, fname, fps, codec, frame_prefix, cmd_gen=None):
+        # Uses subprocess to call the program for assembling frames into a
+        # movie file.  *cmd_gen* is a callable that generates the sequence
+        # of command line arguments from a few configuration options.
+        from subprocess import Popen, PIPE
+        if cmd_gen is None:
+            cmd_gen = ffmpeg_cmd
+        command = cmd_gen(self,fname, fps, codec, frame_prefix)
+        print command
+        proc = Popen(command, shell=False,
+            stdout=PIPE, stderr=PIPE)
+        proc.wait()
 

@@ -56,20 +56,20 @@ def main ():
 
     global options, args
 
+    outfile=None
     sim = Simulation()
 
-    sim.prepare()
-
-    outfile=None
-    sim.simulate()
+    if options.input is None:
+        sim.prepare()
+        sim.simulate()
 
     if options.output:
         print("Storing output in %s"%outfile)
         outfile=dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
-        sim.postProcess(outputFile=outfile,dataFile=True)
+        sim.postProcess(inputFile=options.input,outputFile=outfile,dataFile=options.data,movieFile=options.movie, fps=options.fps)
 
-    if options.postprocess:
-        sim.postProcess()
+    if options.plot:
+        sim.postProcess(inputFile=options.input, displayFrames=720)
 
 
 
@@ -84,11 +84,20 @@ if __name__ == '__main__':
                 default=False, help='verbose output')
         parser.add_option ('-P', '--profile', action='store_true',
                 default=False, help='profiled execution')
-        parser.add_option ('-p', '--postprocess', action='store_true',
-                default=False, help='perform postprocessing')
+        parser.add_option ('-p', '--plot', action='store_true',
+                default=False, help='perform ploting')
         parser.add_option ('-o', '--output', action='store_true',
                 default=False, help='store output')
+        parser.add_option ('-m', '--movie', action='store_true',
+                default=None, help='generate and store movie (this takes a long time)')
+        parser.add_option ('-f', '--fps', action='store', type="int",
+                default=24, help='set the fps for animation')
+        parser.add_option ('-d', '--data', action='store_true',
+                default=None, help='store output to datafile')
+        parser.add_option ('-i', '--input', action='store', dest='input',
+                default=None, help='store input file, this kills the simulation')
         (options, args) = parser.parse_args()
+        print options
         #if len(args) < 1:
         #    parser.error ('missing argument')
         if options.verbose: print time.asctime()

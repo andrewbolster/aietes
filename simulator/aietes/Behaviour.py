@@ -33,7 +33,7 @@ class Behaviour():
         orig_map=dict((k,v) for k,v in self.simulation.environment.map.items() if v.object_id != self.node.id)
 
         for k,v in orig_map.items():
-            orig_map[k].position = fudge_normal(v.position,0.5)
+            orig_map[k].position = fudge_normal(v.position,0.2)
 
         return orig_map
 
@@ -235,7 +235,7 @@ class Waypoint(Flock):
         prox=50
         cubedef=np.asarray(
             [[0,0,0],[1,0,0],[1,1,0],[0,1,0],
-             [0,0,1],[1,0,1],[1,1,1],[1,1,0]]
+             [0,0,1],[1,0,1],[1,1,1],[0,1,1]]
         )
         self.cubepatrolroute=[(shape*(((vertex-0.5)/3)+0.5),prox) for vertex in cubedef]
         self.nextwaypoint=waypoint(self.cubepatrolroute)
@@ -282,7 +282,7 @@ class waypoint(object):
         if self.next is None:
             self.next = head
         else:
-            self.next.makeLoop(self)
+            self.next.makeLoop(head)
 
 
 
