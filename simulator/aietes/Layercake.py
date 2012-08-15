@@ -28,4 +28,5 @@ class Layercake():
         Fired on Sim Start
         """
         self.mac.activate()
+        self.app.activate()
 

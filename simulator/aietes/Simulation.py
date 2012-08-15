@@ -15,7 +15,7 @@ import Behaviour
 
 from Tools import *
 
-import matplotlib; matplotlib.use('WXAgg')
+import matplotlib; matplotlib.use('wxagg')
 
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3

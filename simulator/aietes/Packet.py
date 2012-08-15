@@ -1,4 +1,6 @@
 from SimPy import Simulation as Sim
+from Tools import baselogger, debug
+import uuid
 import logging
 """
 Packets have to cope with bi-directional adaptation:
@@ -13,7 +15,7 @@ Encapsupation runs to:
     PHY(MAC(RT(APP)))
 """
 
-class Packet():
+class Packet(dict):
     '''Base Packet Class
     '''
     def __init__(self,packet,):
@@ -27,19 +29,29 @@ class Packet():
             | Z | Y | X | payload|
 
         '''
-        self._start_log()
-        self.__dict__.update(packet)  #Import everything from the upper packet
+        self._start_log(msg=packet)
+
+        #Import everything from the upper packet
+        for k,v in packet.__dict__.items():
+            if debug: self.logger.debug("Got KV: %s %s"%(k,v))
+            setattr(self,k,v)
         self.payload = packet         #Overwrite the 'upper' packet payload with the packet
 
-    def _start_log(self):
+    def _start_log(self,msg=None):
         self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
-        self.logger.info('creating instance')
+        if msg is None:
+            self.logger.info('creating instance')
+        else:
+            self.logger.info('creating instance: %s'%str(msg))
 
     def decap(self):
         return self.payload #Should return the upper level packet class
 
     def isFor(self,node_name):
         return self.payload.destination == node_name
+
+    def __repr__(self):
+        return str("To: %s, From: %s, at %d"%(self.destination,self.source,self.launch_time))
 
 #####################################################################
 # Application Packet
@@ -54,8 +66,8 @@ class AppPacket(Packet):
     length = 24 # Default Packet Length
 
     def __init__(self, source, dest, pkt_type, data=None, route=[]):
-        self._start_log()
-        self.source = node.name
+        self._start_log(msg=data)
+        self.source = source
         self.destination = dest
         self.type = pkt_type
         self.launch_time=Sim.now()
@@ -78,9 +90,9 @@ class RoutePacket(Packet):
     def __init__(self,route_layer,packet,level=0.0):
         Packet.__init__(self,packet)
         self.route.append({'name':route_layer.host.name,
-                           'position':route_layer.host.current_postion()
+                           'position':route_layer.host.getPos()
                           })
-        self.source_position = route_layer.host.current_position()
+        self.source_position = route_layer.host.getPos()
 
 
     def last_sender(self):
@@ -111,8 +123,8 @@ class PHYPacket(Sim.Process, Packet):
     This is because the transducer and modem are RESOURCES that are used, not
     processing units.
     '''
-    def __init__(self,phy, name):
-        Sim.Process.__init__(self, name)
+    def __init__(self, phy):
+        Sim.Process.__init__(self)
         self.phy=phy
         self.doomed=False
 

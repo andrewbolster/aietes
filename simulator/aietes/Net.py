@@ -1,9 +1,11 @@
+from Packet import RoutePacket
 
 class RoutingTable():
     '''Routing table generic class
     '''
     def __init__(self,layercake,config=None):
         self.layercake=layercake
+        self.host = layercake.host
         self.config=config
         self.has_routing_table=False
         self.table={}

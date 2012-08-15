@@ -1,6 +1,6 @@
 from SimPy import Simulation as Sim
 from FSM import FSM
-from Packet import Packet
+from Packet import MACPacket
 from Tools import dotdict, baselogger
 import logging
 import pydot
@@ -14,6 +14,7 @@ class MAC():
         self.logger.info('creating instance')
         self.config=config
         self.layercake = layercake
+        self.node = self.layercake.host
 
         self.macBuilder()
         self.outgoing_queue=[]
@@ -62,7 +63,7 @@ class MAC():
         Encapsulates the Route layer packet in to a MAC Packet
         '''
         self.outgoing_queue.append(MACPacket(FromAbove))
-        self.sm.process("send_data")
+        self.sm.process("send_DATA")
 
     def transmit(self):
         '''Real Transmission of packet to physical layer
@@ -123,8 +124,13 @@ class MAC():
     def onError(self):
         ''' Called via state machine when unexpected input symbol in a determined state
         '''
-        self.logger.err("Unexpected transition by %s from %s because of symbol %s from %s"%
-                        (self.node.name, self.sm.current_state, self.sm.input_symbol, self.incoming_packet)
+        self.logger.error(
+            "Unexpected transition by %s from %s because of symbol %s from %s"%
+                        (self.node.name,
+                         self.sm.current_state,
+                         self.sm.input_symbol,
+                         self.incoming_packet
+                        )
                        )
     def onTimeout(self):
         '''When it all goes wrong

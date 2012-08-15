@@ -21,6 +21,7 @@ class Application(Sim.Process):
                    }
         self.packet_log={}
         self.config=config
+        self.layercake=layercake
         self.packet_rate=None
         if hasattr(config,'packet_rate'):
             self.packet_rate=getattr(config,'packet_rate')
@@ -29,9 +30,19 @@ class Application(Sim.Process):
         self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance')
 
+    def activate(self):
+        Sim.activate(self,self.lifecycle())
+
     def lifecycle(self,period=None,destination=None):
+        if destination is None:
+            self.logger.info("No Destination defined, defaulting to \"AnySink\"")
+            destination = "Any"
+        if period is None:
+            self.logger.info("No Period defined, defaulting to one emit per second")
+            period = 1
         while True:
-            (packet,period)=self.packetGen(period,destination)
+            (packet,period)=self.packetGen(period=period,
+                                           destination=destination)
             self.layercake.net.send(packet)
             self.stats['packets_sent']+=1
             yield Sim.hold, self, period
@@ -74,7 +85,7 @@ class Application(Sim.Process):
 
 
 class AccessibilityTest(Application):
-    def packetGen(self,period,destination="AnySink"):
+    def packetGen(self,period,destination):
         """
         Copy of behaviour from AUVNetSim for default class,
         exhibiting poisson departure behaviour

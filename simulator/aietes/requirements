@@ -1,4 +1,5 @@
 python-simpy
 python-pydot
 python-scipy
-ffmpeg #for animation storage
+mencoder #for animation storage
+python-wxgtk2.8
