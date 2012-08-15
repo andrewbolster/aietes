@@ -39,8 +39,11 @@ class PHY():
         '''
         #Generic Spec
         self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
-        self.logger.info('creating instance')
-        self.__dict__.update(config)
+        self.logger.info('creating instance:%s'%config)
+        #Inherit values from config
+        for k,v in config.items():
+            self.logger.info("Updating: [%s]=%s"%(k,v))
+            setattr(self,k,v)
         self.layercake = layercake
 
         #Inferred System Parameters
@@ -55,26 +58,38 @@ class PHY():
         self.transducer = Transducer(self)
         self.messages = []
 
+        #Statistics
+        self.max_output_power_used = 0
+        self.tx_energy = 0
+        self.rx_energy = 0
+
+    def isIdle(self):
+        """Before TX, check if the transducer activeQ (inherited from Sim.Resource) is empty i.e
+        Are we recieving?
+        """
+        if len(self.transducer.activeQ)>0:
+            self.logger.info("The Channel is not idle: %d packets currently in flight"%str(len(self.transducer.activeQ)))
+            return False
+        return True
+
     def send(self,FromAbove):
         '''Function called from upper layers to send packet
         '''
         packet=PHYPacket(FromAbove)
-        if self.IsIdle()==False:
+        if not self.isIdle():
             self.PrintMessage("I should not do this... the channel is not idle!") # The MAC protocol is the one that should check this before transmitting
 
         self.collision = False
 
-        if self.variable_power:
+        if hasattr(self,"variable_power") and self.variable_power:
             distance = self.level2distance[packet.level]
             power = distance2Intensity(self.bandwidth, self.freq, distance, self.SNR_threshold)
         else:
+            self.logger.info("Using Static Power Model")
             power = self.transmit_power
 
         if power > self.max_output_power_used:
             self.max_output_power_used = power
-
-        if power > self.max_output_power:
-            power = self.max_output_power
 
         new_transmission = OutgoingPacket(self)
         Sim.activate(new_transmission, new_transmission.transmit(packet, power))
