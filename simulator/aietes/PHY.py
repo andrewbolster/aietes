@@ -75,7 +75,7 @@ class PHY():
     def send(self,FromAbove):
         '''Function called from upper layers to send packet
         '''
-        packet=PHYPacket(FromAbove)
+        packet = PHYPacket(self,FromAbove)
         if not self.isIdle():
             self.PrintMessage("I should not do this... the channel is not idle!") # The MAC protocol is the one that should check this before transmitting
 
@@ -91,8 +91,10 @@ class PHY():
         if power > self.max_output_power_used:
             self.max_output_power_used = power
 
-        new_transmission = OutgoingPacket(self)
-        Sim.activate(new_transmission, new_transmission.transmit(packet, power))
+        Sim.activate(packet, packet.send(power))
+
+    def bandwidth_to_bit(self, bandwidth):
+        return bandwidth * 1e3 * self.bandwidth_to_bit_ratio
 
 #####################################################################
 # Transducer
@@ -233,7 +235,7 @@ class ArrivalScheduler(Sim.Process):
 
             yield Sim.hold, self, travel_time
 
-            new_incoming_packet = Packet.incoming(transducer.phy, DB2Linear(receive_power), params["packet"])
-            Sim.activate(new_incoming_packet,new_incoming_packet.Receive(params["duration"]))
+            new_incoming_packet = PHYPacket(transducer.phy, params["packet"])
+            Sim.activate(new_incoming_packet, DB2Linear(receive_power), new_incoming_packet.Receive(params["duration"]))
 
 

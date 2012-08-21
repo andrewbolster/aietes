@@ -51,7 +51,7 @@ class Packet(dict):
         return self.payload.destination == node_name
 
     def __repr__(self):
-        return str("To: %s, From: %s, at %d"%(self.destination,self.source,self.launch_time))
+        return str("To: %s, From: %s, at %d, len(%s)"%(self.destination,self.source,self.launch_time, self.length))
 
 #####################################################################
 # Application Packet
@@ -123,32 +123,16 @@ class PHYPacket(Sim.Process, Packet):
     This is because the transducer and modem are RESOURCES that are used, not
     processing units.
     '''
-    def __init__(self, phy):
+    def __init__(self, phy, packet=None):
         Sim.Process.__init__(self)
+        Packet.__init__(self,packet)
         self.phy=phy
         self.doomed=False
 
-    #TODO THESE WILL NOT WORK
-    @classmethod
-    def incoming(cls, phy, power, payload):
-        '''Overloaded 'Constructor' for incoming packets, recieved 'from' the transducer
-        '''
-        Packet.__init__(self,payload)
-        self.direction = 'in'
-        self.power = power
-        self.max_interference = 1
-        return cls(phy, "RecieveMessage: "+str(payload))
-
-    @classmethod
-    def outgoing(cls, phy, power, payload):
-        '''Overloaded 'Constructor' for outgoing packets, recieved from the MAC
-        '''
-
-        self.direction = 'out'
-        self.power = power
-        self.payload = payload
-
-    def send(self):
+    def send(self, power=None):
+        # Default power if needed
+        if power is None:
+            power = self.phy.transmit_power
         #Lock Modem
         yield Sim.request, self, self.phy.modem
 
@@ -164,7 +148,7 @@ class PHYPacket(Sim.Process, Packet):
             bandwidth = self.phy.bandwidth
 
         bitrate = self.phy.bandwidth_to_bit(bandwidth) #TODO Function
-        duration = packet.length/bitrate
+        duration = self.length/bitrate
 
         self.phy.transducer.channel_event.signal()
 
@@ -180,7 +164,7 @@ class PHYPacket(Sim.Process, Packet):
         power_w = DB2Linear(AcousticPower(self.power))
         self.phy.tx_energy += (power_w * duration)
 
-    def recv(self, duration):
+    def recv(self, power, duration):
         if self.power >= self.phy.threshold['listen']:
             # Otherwise I will not even notice that there are packets in the network
             yield Sim.request, self, self.phy.transducer
