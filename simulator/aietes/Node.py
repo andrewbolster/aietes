@@ -1,4 +1,3 @@
-import SimPy.Simulation as Sim
 from Layercake import Layercake
 import logging
 import numpy as np
@@ -13,9 +12,6 @@ class Node(Sim.Process):
     """
     def __init__(self,name,simulation,node_config):
         self.logger = baselogger.getChild("%s[%s]"%(self.__class__.__name__,name))
-        self.logger.info('creating instance')
-        #TODO REMOVE ME
-        #self.logger.setLevel(logging.DEBUG)
         self.id=uuid.uuid4() #Hopefully unique id
         Sim.Process.__init__(self,name=name)
 

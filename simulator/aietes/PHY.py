@@ -1,4 +1,3 @@
-from SimPy import Simulation as Sim
 import math
 from Tools import *
 from Packet import PHYPacket
@@ -54,7 +53,7 @@ class PHY():
         self.collision = False
 
         #Generate modem/transd etc
-        self.modem = Sim.Resource(name='a_modem')
+        self.modem = Sim.Resource(name=self.__class__.__name__)
         self.transducer = Transducer(self)
         self.messages = []
 
@@ -82,8 +81,8 @@ class PHY():
         self.collision = False
 
         if hasattr(self,"variable_power") and self.variable_power:
-            distance = self.level2distance[packet.level]
-            power = distance2Intensity(self.bandwidth, self.freq, distance, self.SNR_threshold)
+            tx_range = self.level2distance[packet.level]
+            power = distance2Intensity(self.bandwidth, self.frequency, tx_range, self.SNR_threshold)
         else:
             self.logger.info("Using Static Power Model")
             power = self.transmit_power
@@ -103,9 +102,11 @@ class Transducer(Sim.Resource):
     '''Packets request the resource and can interfere
     '''
     def __init__(self, phy,
-                 name="a_transducer"):
+                 name="Transducer"):
 
         Sim.Resource.__init__(self,name=name, capacity=transducer_capacity)
+        self.logger = phy.logger.getChild("%s"%(self.__class__.__name__))
+        self.logger.info('creating instance')
 
         self.phy = phy
         self.layercake = self.phy.layercake
@@ -133,7 +134,7 @@ class Transducer(Sim.Resource):
 
         self.interference += packet.power
 
-        [x.updateInterference(self.interference) for x in self.activeQ()]
+        [x.updateInterference(self.interference) for x in self.activeQ]
 
     def _request(self,arg):
         '''Overiding SimPy's to update interference information upon queuing of a new incoming packet from the channel
@@ -149,8 +150,7 @@ class Transducer(Sim.Resource):
         assert isinstance(packet, PHYPacket), \
                 "%s is not a PHY Packet" % str(packet)
         doomed = packet.doomed
-        minSIR = packet.GetMinSIR()
-        mac_packet = deepcopy(packet.payload)
+        minSIR = packet.getMinSIR()
 
         # Reduce the overall interference by this message's power
         self.interference -= packet.power
@@ -169,7 +169,7 @@ class Transducer(Sim.Resource):
                 and packet.power >= self.phy.threshold['recieve']:
                     # Properly received: enough power, not enough interference
                     self.collision = False
-                    self.layercake.mac.recv(new_packet)
+                    self.layercake.mac.recv(packet.payload)
 
             elif packet.power >= self.phy.receiving['recieve']:
                 # Too much interference but enough power to receive it: it suffered a collision
@@ -212,8 +212,11 @@ class AcousticEventListener(Sim.Process):
 
     def listen(self, channel_event, position_query):
         while(True):
+            #Wait until something happens on the channel
             yield Sim.waitevent, self, channel_event
+
             params = channel_event.signalparam
+            if debug: self.transducer.logger.debug("Scheduling Arrival: Params: %s"%params)
             sched = ArrivalScheduler(name="ArrivalScheduler"+self.name[-1])
             Sim.activate(sched, sched.schedule_arrival(self.transducer, params, position_query()))
 
@@ -227,15 +230,17 @@ class ArrivalScheduler(Sim.Process):
     """
 
     def schedule_arrival(self, transducer, params, pos):
-        distance = pos.distanceto(params["pos"])
+        distance_to = distance(pos, params['pos'])
 
-        if distance > 0.01:  # I should not receive my own transmissions
-            receive_power = params["power"] - Attenuation(params["frequency"], distance)
-            travel_time = distance/speed_of_sound  # Speed of sound in water = 1482.0 m/s
+        if distance_to > 0.01:  # I should not receive my own transmissions
+            receive_power = params["power"] - Attenuation(params["frequency"], distance_to)
+            travel_time = distance_to/speed_of_sound  # Speed of sound in water = 1482.0 m/s
 
             yield Sim.hold, self, travel_time
 
-            new_incoming_packet = PHYPacket(transducer.phy, params["packet"])
-            Sim.activate(new_incoming_packet, DB2Linear(receive_power), new_incoming_packet.Receive(params["duration"]))
+            new_incoming_packet = PHYPacket(transducer.phy, power=DB2Linear(receive_power), packet = params["packet"])
+            baselogger.info("ArrivalScheduler: Back from Yielding: %s"%travel_time)
+            baselogger.info("Type: %s"%(type(new_incoming_packet)))
+            Sim.activate(new_incoming_packet, new_incoming_packet.recv(duration=params["duration"]))
 
 

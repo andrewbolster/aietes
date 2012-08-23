@@ -1,7 +1,9 @@
-from SimPy import Simulation as Sim
+from SimPy import SimulationTrace as Sim
 import math
+import random
 import logging
 import numpy as np
+#from os import urandom as randomstr #Provides unicode random String
 from operator import itemgetter,attrgetter
 
 logging.basicConfig(level=logging.DEBUG)
@@ -32,7 +34,11 @@ def distance(pos_a, pos_b, scale=1):
     """
     Return the distance between two positions
     """
-    return mag(pos_a - pos_b) * scale
+    try:
+        return mag(pos_a - pos_b) * scale
+    except TypeError as Err:
+        logging.error("TypeError on Distances (%s,%s): %s"%(pos_a, pos_b, Err))
+        raise
 
 def mag(vector):
     """
@@ -258,3 +264,9 @@ def fudge_normal(value,stdev):
         return value
     else:
         return value + np.random.normal(0,stdev,shape)
+
+def randomstr(length):
+        word = ''
+        for i in range(length):
+            word += random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
+        return word

@@ -1,5 +1,5 @@
-from SimPy import Simulation as Sim
 import PHY, MAC, Net, Applications
+from Tools import Sim
 import logging
 import pydot
 

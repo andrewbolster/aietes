@@ -1,8 +1,7 @@
-import SimPy.Simulation as Sim
 from numpy import *
 from numpy.random import poisson
 import logging
-from Tools import baselogger
+from Tools import baselogger,debug,randomstr, Sim
 
 from Packet import AppPacket
 
@@ -22,9 +21,12 @@ class Application(Sim.Process):
         self.packet_log={}
         self.config=config
         self.layercake=layercake
-        self.packet_rate=None
-        if hasattr(config,'packet_rate'):
+        if hasattr(config,'packet_rate') and getattr(config,'packet_rate') is not None:
             self.packet_rate=getattr(config,'packet_rate')
+            self.logger.info("Taking Packet_Rate from config: %s"%self.packet_rate)
+        else:
+            self.packet_rate = 1
+        self.period = 1/float(self.packet_rate)
 
     def _start_log(self,layercake):
         self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
@@ -33,18 +35,19 @@ class Application(Sim.Process):
     def activate(self):
         Sim.activate(self,self.lifecycle())
 
-    def lifecycle(self,period=None,destination=None):
+    def lifecycle(self,destination=None):
+
         if destination is None:
             self.logger.info("No Destination defined, defaulting to \"AnySink\"")
             destination = "Any"
-        if period is None:
-            self.logger.info("No Period defined, defaulting to one emit per second")
-            period = 1
+
         while True:
-            (packet,period)=self.packetGen(period=period,
+            (packet,period)=self.packetGen(period=self.period,
+                                           data=randomstr(24),
                                            destination=destination)
             self.layercake.net.send(packet)
-            self.stats['packets_sent']+=1
+            self.stats['packets_sent'] += 1
+            if debug: self.logger.info("Sending Packet: Waiting %s"%period)
             yield Sim.hold, self, period
 
     def recv(FromBelow):
@@ -85,7 +88,7 @@ class Application(Sim.Process):
 
 
 class AccessibilityTest(Application):
-    def packetGen(self,period,destination):
+    def packetGen(self,period,destination,data=None):
         """
         Copy of behaviour from AUVNetSim for default class,
         exhibiting poisson departure behaviour
@@ -93,9 +96,11 @@ class AccessibilityTest(Application):
         packet = AppPacket(
             source=self.layercake.host.name,
             dest=destination,
-            pkt_type='DATA'
+            pkt_type='DATA',
+            data=data,
+            logger=self.logger
         )
-        period=poisson(period)
+        period=poisson(float(period))
         return (packet,period)
 
     def packetRecv(self,packet):

@@ -1,4 +1,3 @@
-import SimPy.Simulation as Sim
 import logging
 import numpy as np
 import scipy
@@ -95,14 +94,6 @@ class Fleet(Sim.Process):
         commonheading = all(all(fleetWaypoints[0] == waypoint) for waypoint in fleetWaypoints)
 
         return("V:%s,W:%s,C:%s,D:%s,A:%s"%(avgHeading,commonheading,fleetCenter,maxDistance,maxDeviation))
-
-
-
-
-
-
-
-
 
 class Simulation():
     """

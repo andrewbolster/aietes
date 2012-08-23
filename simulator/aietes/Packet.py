@@ -1,5 +1,4 @@
-from SimPy import Simulation as Sim
-from Tools import baselogger, debug
+from Tools import baselogger, debug, DB2Linear, AcousticPower, Sim
 import uuid
 import logging
 """
@@ -29,7 +28,10 @@ class Packet(dict):
             | Z | Y | X | payload|
 
         '''
-        self._start_log(msg=packet)
+        if hasattr(packet,'logger'):
+            self._start_log(logger=packet.logger)
+        else:
+            self._start_log()
 
         #Import everything from the upper packet
         for k,v in packet.__dict__.items():
@@ -37,12 +39,11 @@ class Packet(dict):
             setattr(self,k,v)
         self.payload = packet         #Overwrite the 'upper' packet payload with the packet
 
-    def _start_log(self,msg=None):
-        self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
-        if msg is None:
-            self.logger.info('creating instance')
+    def _start_log(self, logger=None):
+        if logger is None:
+            self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
         else:
-            self.logger.info('creating instance: %s'%str(msg))
+            self.logger = logger.getChild("%s"%(self.__class__.__name__))
 
     def decap(self):
         return self.payload #Should return the upper level packet class
@@ -65,8 +66,8 @@ class AppPacket(Packet):
     data = None
     length = 24 # Default Packet Length
 
-    def __init__(self, source, dest, pkt_type, data=None, route=[]):
-        self._start_log(msg=data)
+    def __init__(self, source, dest='Any', pkt_type=None, data=None, route=[], logger=None):
+        self._start_log(logger=logger)
         self.source = source
         self.destination = dest
         self.type = pkt_type
@@ -74,6 +75,10 @@ class AppPacket(Packet):
         if data is not None:
             self.data = data
             self.length = len(data)
+        else:
+            self.data = AppPacket.data
+            self.length = AppPacket.length
+
         self.id=uuid.uuid4() #Hopefully unique id
 #####################################################################
 # Network Packet
@@ -123,11 +128,14 @@ class PHYPacket(Sim.Process, Packet):
     This is because the transducer and modem are RESOURCES that are used, not
     processing units.
     '''
-    def __init__(self, phy, packet=None):
-        Sim.Process.__init__(self)
+    def __init__(self, phy, packet=None, power=None):
         Packet.__init__(self,packet)
+        Sim.Process.__init__(self, name=self.__class__.__name__)
         self.phy=phy
         self.doomed=False
+        self.max_interference=None
+        if power is not None:
+            self.power = power
 
     def send(self, power=None):
         # Default power if needed
@@ -147,10 +155,15 @@ class PHYPacket(Sim.Process, Packet):
         else:
             bandwidth = self.phy.bandwidth
 
-        bitrate = self.phy.bandwidth_to_bit(bandwidth) #TODO Function
+        bitrate = self.phy.bandwidth_to_bit(bandwidth)
         duration = self.length/bitrate
 
-        self.phy.transducer.channel_event.signal()
+        self.phy.transducer.channel_event.signal({"pos":self.source_position,
+                                                  "power":power,
+                                                  "duration":duration,
+                                                  "frequency":self.phy.frequency,
+                                                  "packet":self
+                                                 })
 
         #Lock the transducer for duration of TX
         self.phy.transducer.onTX()
@@ -161,18 +174,27 @@ class PHYPacket(Sim.Process, Packet):
         yield Sim.release, self, self.phy.modem
 
         #Update power stats
-        power_w = DB2Linear(AcousticPower(self.power))
+        power_w = DB2Linear(AcousticPower(power))
         self.phy.tx_energy += (power_w * duration)
 
-    def recv(self, power, duration):
+        self.logger.info("PHY Packet Sent")
+
+    def recv(self, duration):
         if self.power >= self.phy.threshold['listen']:
             # Otherwise I will not even notice that there are packets in the network
             yield Sim.request, self, self.phy.transducer
             yield Sim.hold, self, duration
             yield Sim.release, self, self.phy.transducer
-        
+
             # Even if a packet is not received properly, we have consumed power
             self.phy.rx_energy += DB2Linear(self.phy.receive_power) * duration #TODO shouldn't this be listen power?
+
+            self.logger.info("Packet Recieved")
+        else:
+            self.logger.info("Packet Sensed but not Recieved (%s < %s)"%(
+                self.power,
+                self.phy.threshold['listen']
+            ))
 
     def updateInterference(self, interference):
         '''A simple ratchet of interference based on the transducer _request func

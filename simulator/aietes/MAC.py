@@ -1,7 +1,6 @@
-from SimPy import Simulation as Sim
 from FSM import FSM
 from Packet import MACPacket
-from Tools import dotdict, baselogger
+from Tools import dotdict, baselogger, debug, Sim
 import logging
 import pydot
 
@@ -10,7 +9,7 @@ class MAC():
     The only real difference between MAC's are their packet types and State Machines
     '''
     def __init__(self,layercake,config=None):
-        self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
+        self.logger = layercake.logger.getChild("MAC[%s]"%(self.__class__.__name__))
         self.logger.info('creating instance')
         self.config=config
         self.layercake = layercake
@@ -68,6 +67,7 @@ class MAC():
     def transmit(self):
         '''Real Transmission of packet to physical layer
         '''
+        if debug: self.logger.info("MAC Packet Sent")
         self.layercake.phy.send(self.outgoing_queue[0])
 
     def onTX_success(self):
@@ -117,6 +117,7 @@ class MAC():
             ack=generateACK(self.incoming_packet)
             self.transmit(ack)
             # Send up to next level in stack
+            if debug: self.logger.info("Packet Recieved")
             self.layercake.net.recv(self.incoming_packet)
 
 
