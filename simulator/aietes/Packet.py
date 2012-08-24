@@ -86,14 +86,15 @@ class AppPacket(Packet):
 class RoutePacket(Packet):
     '''Routing Level Packet
     '''
-    level = 0.0
-    route = []
-    next_hop = None #Analogue to packet['through'] in AUVNetSim
-    source_position = None
-    destination_position = None
 
     def __init__(self,route_layer,packet,level=0.0):
         Packet.__init__(self,packet)
+        self.level = 0.0
+        self.route = []
+        self.next_hop = None #Analogue to packet['through'] in AUVNetSim
+        self.source_position = None
+        self.destination_position = None
+
         self.route.append({'name':route_layer.host.name,
                            'position':route_layer.host.getPos()
                           })
@@ -106,7 +107,7 @@ class RoutePacket(Packet):
     def set_level(self,level):
         self.level = level
 
-    def set_nexthop(self,hop):
+    def set_next_hop(self,hop):
         self.next_hop=hop
 #####################################################################
 # Media Access Control Packet

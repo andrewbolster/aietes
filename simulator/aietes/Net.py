@@ -18,9 +18,9 @@ class RoutingTable():
     def send(self,FromAbove):
         packet=RoutePacket(self,FromAbove)
         if not hasattr(self.table,packet.destination):
-            packet.set_nexthop(packet.destination)
+            packet.set_next_hop(packet.destination)
         else:
-            packet.set_nexthop(self.table[packet.destination])
+            packet.set_next_hop(self.table[packet.destination])
         if debug: self.logger.info("Net Packet Sent")
         self.layercake.mac.send(packet)
 

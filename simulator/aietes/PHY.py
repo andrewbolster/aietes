@@ -21,7 +21,7 @@ class PHY():
         :Power Specifications
             transmit_power (dB re 1 uPa @1m)
             max_transmit_power (dB re 1 uPa @1m)
-            recieve_power (dBw)
+            receive_power (dBw)
             listen_power (dBw)
             var_power (None|,
                 { 'levelToDistance':
@@ -31,7 +31,7 @@ class PHY():
         :Initial Detection Specifications
             threshold (
                 { 'SIR': (dB),
-                  'SNR': (dB),# sufficient to recieve
+                  'SNR': (dB),# sufficient to receive
                   'LIS': (dB) # sufficient to detect
                 }
             }
@@ -46,7 +46,7 @@ class PHY():
         self.layercake = layercake
 
         #Inferred System Parameters
-        self.threshold['recieve'] = DB2Linear(ReceivingThreshold(self.frequency, self.bandwidth, self.threshold['SNR']))
+        self.threshold['receive'] = DB2Linear(ReceivingThreshold(self.frequency, self.bandwidth, self.threshold['SNR']))
         self.threshold['listen'] = DB2Linear(ListeningThreshold(self.frequency, self.bandwidth, self.threshold['LIS']))
         self.ambient_noise = DB2Linear( Noise(self.frequency) + 10*math.log10(self.bandwidth*1e3) ) #In linear scale
         self.interference = self.ambient_noise
@@ -165,18 +165,18 @@ class Transducer(Sim.Resource):
         # If it isn't doomed due to transmission & it is not interfered
         if minSIR>0:
             if not doomed \
-                and Linear2DB(minSIR) >= self.SIR_thresh \
-                and packet.power >= self.phy.threshold['recieve']:
+                and Linear2DB(minSIR) >= self.phy.threshold['SIR'] \
+                and packet.power >= self.phy.threshold['receive']:
                     # Properly received: enough power, not enough interference
                     self.collision = False
                     self.layercake.mac.recv(packet.payload)
 
-            elif packet.power >= self.phy.receiving['recieve']:
+            elif packet.power >= self.phy.threshold['receive']:
                 # Too much interference but enough power to receive it: it suffered a collision
-                if self.phy.host.name == new_packet.through or self.phy.host.name == new_packet.dest:
+                if self.host.name == packet.next_hop or self.host.name == packet.destination:
                     self.collision = True
-                    self.collisions.append(new_packet)
-                    self.physical_layer.PrintMessage("A "+new_packet.type+" packet to "+new_packet.through
+                    self.collisions.append(packet)
+                    self.physical_layer.PrintMessage("A "+packet.type+" packet to "+packet.next_hop
                                                      +" was discarded due to interference.")
             else:
                 # Not enough power to be properly received: just heard.
@@ -184,7 +184,7 @@ class Transducer(Sim.Resource):
 
         else:
             # This should never appear, and in fact, it doesn't, but just to detect bugs (we cannot have a negative SIR in lineal scale).
-            print new_packet.type, new_packet.source, new_packet.dest, new_packet.through, self.physical_layer.host.name
+            print packet.type, packet.source, packet.dest, packet.next_hop, self.physical_layer.host.name
 
 
     def onTX(self):

@@ -1,4 +1,4 @@
-from SimPy import SimulationTrace as Sim
+from SimPy import Simulation as Sim
 import math
 import random
 import logging

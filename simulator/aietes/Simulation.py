@@ -196,7 +196,7 @@ class Simulation():
             assert config.Nodes.count>=1, "No nodes configured"
             for n in range(config.Nodes.count):
                 candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
-                while candidate_name in [ x.name for x in self.nodes ]:
+                while candidate_name in config.Nodes.node_names:
                     candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
                     #TODO Need to do initial vector?? Seems fine
                 config.Nodes.node_names.append(candidate_name)
