@@ -169,6 +169,7 @@ class Transducer(Sim.Resource):
                 and packet.power >= self.phy.threshold['receive']:
                     # Properly received: enough power, not enough interference
                     self.collision = False
+                    if debug: self.logger.info("PHY Packet Recieved")
                     self.layercake.mac.recv(packet.payload)
 
             elif packet.power >= self.phy.threshold['receive']:
@@ -176,8 +177,11 @@ class Transducer(Sim.Resource):
                 if self.host.name == packet.next_hop or self.host.name == packet.destination:
                     self.collision = True
                     self.collisions.append(packet)
-                    self.physical_layer.PrintMessage("A "+packet.type+" packet to "+packet.next_hop
-                                                     +" was discarded due to interference.")
+                    if debug: self.logger.info("PHY Packet Sensed but not Recieved (%s < %s)"%(
+                        packet.power,
+                        self.phy.threshold['listen']
+                    ))
+
             else:
                 # Not enough power to be properly received: just heard.
                 self.phy.logger.debug("This packet was not addressed to me.")
@@ -239,8 +243,6 @@ class ArrivalScheduler(Sim.Process):
             yield Sim.hold, self, travel_time
 
             new_incoming_packet = PHYPacket(transducer.phy, power=DB2Linear(receive_power), packet = params["packet"])
-            baselogger.info("ArrivalScheduler: Back from Yielding: %s"%travel_time)
-            baselogger.info("Type: %s"%(type(new_incoming_packet)))
             Sim.activate(new_incoming_packet, new_incoming_packet.recv(duration=params["duration"]))
 
 

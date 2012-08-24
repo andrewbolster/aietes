@@ -1,7 +1,7 @@
 from numpy import *
 from numpy.random import poisson
 import logging
-from Tools import baselogger,debug,randomstr, Sim
+from Tools import baselogger,debug,randomstr, Sim, broadcast_address
 
 from Packet import AppPacket
 
@@ -38,8 +38,8 @@ class Application(Sim.Process):
     def lifecycle(self,destination=None):
 
         if destination is None:
-            self.logger.info("No Destination defined, defaulting to \"AnySink\"")
-            destination = "Any"
+            self.logger.info("No Destination defined, defaulting to \"%s\""%broadcast_address)
+            destination = broadcast_address
 
         while True:
             (packet,period)=self.packetGen(period=self.period,
@@ -50,7 +50,7 @@ class Application(Sim.Process):
             if debug: self.logger.info("Sending Packet: Waiting %s"%period)
             yield Sim.hold, self, period
 
-    def recv(FromBelow):
+    def recv(self, FromBelow):
         """
         Called by RoutingTable on packet reception
         """
@@ -64,6 +64,7 @@ class Application(Sim.Process):
         """
         assert isinstance(packet,AppPacket)
         source = packet.source
+        if debug: self.logger.info("App Packet Recieved from %s"%source)
         self.stats['packets_recieved']+=1
         if source in self.packet_log.keys():
             self.packet_log[source].append(packet)
@@ -71,7 +72,7 @@ class Application(Sim.Process):
             self.packet_log[source]=[packet]
         delay = Sim.now() - packet.launch_time
         #TODO Test if this hop check makes sense
-        hops = len(FromBelow.route)
+        hops = len(packet.route)
 
         self.stats['packets_time']+=delay
         self.stats['packets_hops']+=hops

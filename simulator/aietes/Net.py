@@ -25,8 +25,9 @@ class RoutingTable():
         self.layercake.mac.send(packet)
 
     def recv(self,FromBelow):
-        if debug: self.logger.info("Net Packet Recieved")
-        self.layercake.app.recv(FromBelow.decap())
+        self.incoming_packet = FromBelow.decap()
+        if debug: self.logger.info("Net Packet Recieved:%s"%self.incoming_packet)
+        self.layercake.app.recv(self.incoming_packet)
 
     def explicitACK(self,FromBelow):
         '''Assume we always want to call for ACK

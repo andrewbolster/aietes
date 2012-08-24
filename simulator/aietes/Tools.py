@@ -20,6 +20,7 @@ I_ref = 172.0
 speed_of_sound= 1482
 #Transducer Capacity (Arbitrary)
 transducer_capacity= 1000
+broadcast_address='Any'
 LOGLEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warning': logging.WARNING,

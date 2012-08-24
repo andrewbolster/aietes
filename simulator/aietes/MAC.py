@@ -97,9 +97,11 @@ class MAC():
         '''
         self.incoming_packet = FromBelow.decap()
         if FromBelow.isFor(self.node.name):
-            self.sm.process(self.type_to_signal[FromBelow.type])
+            self.sm.process(self.signals[FromBelow.type])
+            if debug: self.logger.info("MAC Packet Recieved")
         else:
             self.overheard()
+            self.logger.info("MAC Packet Overheard! For:%s"%self.incoming_packet.destination)
 
     def overheard(self):
         pass
@@ -113,14 +115,9 @@ class MAC():
         self.logger.info("RX-d packet from %s"%origin)
 
         if self.layercake.net.explicitACK(self.incoming_packet):
-            #TODO Make ACK
-            ack=generateACK(self.incoming_packet)
-            self.transmit(ack)
             # Send up to next level in stack
             if debug: self.logger.info("Packet Recieved")
             self.layercake.net.recv(self.incoming_packet)
-
-
 
     def onError(self):
         ''' Called via state machine when unexpected input symbol in a determined state
@@ -171,16 +168,10 @@ class ALOHA(MAC):
     '''A very simple algorithm
     '''
     def macBuilder(self):
-        self.packets=[]
-        self.packets.append(dotdict({
-            'name':"ACK",
-            'length':self.config.ack_packet_length,
-            'signal':"got_ACK"
-        }))
-        self.packets.append(dotdict({
-            'name':"DATA",
-            'signal':"got_DATA"
-        }))
+        self.signals = {
+            'ACK':"got_ACK",
+            'DATA':"got_DATA"
+        }
 
         #Adapted/derived variables
         self.timeout = 0    # co-adapted with TX pwr

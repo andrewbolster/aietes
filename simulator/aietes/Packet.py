@@ -1,4 +1,4 @@
-from Tools import baselogger, debug, DB2Linear, AcousticPower, Sim
+from Tools import *
 import uuid
 import logging
 """
@@ -49,7 +49,13 @@ class Packet(dict):
         return self.payload #Should return the upper level packet class
 
     def isFor(self,node_name):
-        return self.payload.destination == node_name
+        ''' Boolean if packet directed at node by either 
+        name or broadcast
+        '''
+        if self.payload.destination == broadcast_address:
+            return True
+        else:
+            return self.payload.destination == node_name
 
     def __repr__(self):
         return str("To: %s, From: %s, at %d, len(%s)"%(self.destination,self.source,self.launch_time, self.length))
@@ -66,12 +72,13 @@ class AppPacket(Packet):
     data = None
     length = 24 # Default Packet Length
 
-    def __init__(self, source, dest='Any', pkt_type=None, data=None, route=[], logger=None):
+    def __init__(self, source, dest, pkt_type=None, data=None, route=[], logger=None):
         self._start_log(logger=logger)
         self.source = source
         self.destination = dest
         self.type = pkt_type
         self.launch_time=Sim.now()
+        self.route = route
         if data is not None:
             self.data = data
             self.length = len(data)
@@ -80,6 +87,7 @@ class AppPacket(Packet):
             self.length = AppPacket.length
 
         self.id=uuid.uuid4() #Hopefully unique id
+
 #####################################################################
 # Network Packet
 #####################################################################
@@ -90,7 +98,6 @@ class RoutePacket(Packet):
     def __init__(self,route_layer,packet,level=0.0):
         Packet.__init__(self,packet)
         self.level = 0.0
-        self.route = []
         self.next_hop = None #Analogue to packet['through'] in AUVNetSim
         self.source_position = None
         self.destination_position = None
@@ -100,21 +107,21 @@ class RoutePacket(Packet):
                           })
         self.source_position = route_layer.host.getPos()
 
-
-    def last_sender(self):
-        return self.route[-1]
-
     def set_level(self,level):
         self.level = level
 
     def set_next_hop(self,hop):
         self.next_hop=hop
-#####################################################################
+
+####################################################################
 # Media Access Control Packet
 #####################################################################
 class MACPacket(Packet):
     '''MAC level packet
     '''
+    def last_sender(self):
+        return self.route[-1]
+
     def customBehaviour(self):
         #TODO What does a MAC packet do differently?
         pass
@@ -189,13 +196,6 @@ class PHYPacket(Sim.Process, Packet):
 
             # Even if a packet is not received properly, we have consumed power
             self.phy.rx_energy += DB2Linear(self.phy.receive_power) * duration #TODO shouldn't this be listen power?
-
-            self.logger.info("Packet Recieved")
-        else:
-            self.logger.info("Packet Sensed but not Recieved (%s < %s)"%(
-                self.power,
-                self.phy.threshold['listen']
-            ))
 
     def updateInterference(self, interference):
         '''A simple ratchet of interference based on the transducer _request func
