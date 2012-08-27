@@ -67,7 +67,7 @@ class MAC():
     def transmit(self):
         '''Real Transmission of packet to physical layer
         '''
-        if debug: self.logger.info("MAC Packet Sent")
+        if debug: self.logger.debug("MAC Packet Sent")
         self.layercake.phy.send(self.outgoing_queue[0])
 
     def onTX_success(self):
@@ -98,7 +98,7 @@ class MAC():
         self.incoming_packet = FromBelow.decap()
         if FromBelow.isFor(self.node.name):
             self.sm.process(self.signals[FromBelow.type])
-            if debug: self.logger.info("MAC Packet Recieved")
+            if debug: self.logger.info("MAC[%s] Packet Recieved"% FromBelow.type)
         else:
             self.overheard()
             self.logger.info("MAC Packet Overheard! For:%s"%self.incoming_packet.destination)

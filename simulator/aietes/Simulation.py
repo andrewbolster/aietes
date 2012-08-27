@@ -198,7 +198,6 @@ class Simulation():
                 candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
                 while candidate_name in config.Nodes.node_names:
                     candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
-                    #TODO Need to do initial vector?? Seems fine
                 config.Nodes.node_names.append(candidate_name)
                 self.logger.info("Gave node %d name %s"%(n,candidate_name))
 
@@ -213,10 +212,34 @@ class Simulation():
         except AttributeError:
             raise ConfigError("Can't find Network: %s"%config.Network.protocol)
 
+        # APPLICATION DISTRIBUTION SANITY CHECK
+        applications = config.Nodes.Application.protocol
+        allocations = config.Nodes.Application.distribution
+        node_count = config.Nodes.count
         try:
-            config.app_mod=getattr(Applications,str(config.Application.protocol))
+
+            if isinstance(applications, list):
+                if isinstance(allocations, list):
+                    app_checksum = len(applications) - len(allocations)
+                    node_checksum = len(applications) - node_count
+                    if app_checksum != 0 or node_checksum != 0:
+                        raise ConfigError("Incorrect Applications specification: %s,[%s] for %d nodes"%(
+                            applications,allocations,node_count))
+                    else:
+                        status_str = str(zip(applications,allocations))
+                        self.logger.info("Assigned Vector Applications: %s"%status_str)
+                        config.Nodes.app_mod=[getattr(Applications,str(app)) for app,n in zip(applications,allocations) for i in range(int(n))]
+                        pass
+                else:
+                    raise ConfigError("List of Application but no list of distributions!: %s,[%s] for %d nodes"%(
+                        applications,allocations,node_count))
+            else:
+                config.Nodes.app_mod=getattr(Applications,str(applications))
         except AttributeError:
-            raise ConfigError("Can't find Application: %s"%config.Application.protocol)
+            raise ConfigError("Can't find Application: %s"%applications)
+        except Exception as e:
+            raise e
+
 
         #Confirm
         self.logger.info("Built Config: %s"%str(config))
@@ -241,10 +264,11 @@ class Simulation():
         """
         nodelist = []
         #Configure specified nodes
-        for nodeName in node_config.node_names:
+        for node_id,nodeName in enumerate(node_config.node_names):
             config=self.vectorGen(
                 nodeName,
-                node_config
+                node_config,
+                node_id
             )
             self.logger.debug("Generating node %s with config %s"%(nodeName,config))
             new_node=Node(
@@ -258,7 +282,7 @@ class Simulation():
 
         return nodelist
 
-    def vectorGen(self,nodeName,node_config):
+    def vectorGen(self,nodeName,node_config,node_id):
         """
         If a node is named in the configuration file, use the defined initial vector
         otherwise, use configured behaviour to assign an initial vector
@@ -279,6 +303,7 @@ class Simulation():
                 vector = [0,0,0]
                 self.logger.debug("Gave node %s a zero vector from %s"%(nodeName,gen_style))
         assert len(vector)==3, "Incorrectly sized vector"
+
         # BEHAVIOUR CONFIG CHECK
         try:
             behave_mod=getattr(Behaviour,str(node_config.Behaviour.protocol))
@@ -286,10 +311,21 @@ class Simulation():
         except AttributeError:
             raise ConfigError("Can't find Behaviour: %s"%node_config.Behaviour.protocol)
 
+        # APPLICATIONS CONFIG CHECK
+        try:
+            if isinstance(node_config.app_mod,list):
+                app_mod = node_config.app_mod[node_id]
+            else:
+                app_mod = node_config.app_mod
+            self.logger.info("Using Application: %s"%app_mod)
+        except AttributeError:
+            raise ConfigError("Can't find Behaviour: %s"%node_config.Behaviour.protocol)
+        
         config = dotdict({  'vector':vector,
                             'max_speed':node_config.max_speed,
                             'max_turn':node_config.max_turn,
                             'behave_mod':behave_mod,
+                            'app_mod': app_mod,
                             'Behaviour':node_config.Behaviour
                         })
         return config

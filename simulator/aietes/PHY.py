@@ -84,7 +84,6 @@ class PHY():
             tx_range = self.level2distance[packet.level]
             power = distance2Intensity(self.bandwidth, self.frequency, tx_range, self.SNR_threshold)
         else:
-            self.logger.info("Using Static Power Model")
             power = self.transmit_power
 
         if power > self.max_output_power_used:

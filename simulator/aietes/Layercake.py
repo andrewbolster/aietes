@@ -8,7 +8,7 @@ class Layercake():
     Defines the Four relevant network layers for a given node
     PHY,MAC,Network,Application
     """
-    def __init__(self, host, simulation,fake=False):
+    def __init__(self, host, simulation,fake=False,):
         self.host=host
         self.channel_event=simulation.channel_event
         self.config= simulation.config
@@ -21,7 +21,7 @@ class Layercake():
         #Routing
         self.net = self.config.net_mod(self,self.config.Network)
         #Application
-        self.app = self.config.app_mod(self,self.config.Application)
+        self.app = self.host.config.app_mod(self,self.config.Nodes.Application)
 
     def activate(self):
         """

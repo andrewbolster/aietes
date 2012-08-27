@@ -105,6 +105,7 @@ class RoutePacket(Packet):
         self.route.append({'name':route_layer.host.name,
                            'position':route_layer.host.getPos()
                           })
+        if debug: self.logger.info("Net Packet Route:%s"%self.route)
         self.source_position = route_layer.host.getPos()
 
     def set_level(self,level):
@@ -185,7 +186,7 @@ class PHYPacket(Sim.Process, Packet):
         power_w = DB2Linear(AcousticPower(power))
         self.phy.tx_energy += (power_w * duration)
 
-        self.logger.info("PHY Packet Sent")
+        self.logger.debug("PHY Packet Sent")
 
     def recv(self, duration):
         if self.power >= self.phy.threshold['listen']:

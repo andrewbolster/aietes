@@ -7,7 +7,7 @@ class RoutingTable():
     def __init__(self,layercake,config=None):
         #Generic Spec
         self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
-        self.logger.info('creating instance:%s'%config)
+        if debug: self.logger.debug('creating instance:%s'%config)
 
         self.layercake=layercake
         self.host = layercake.host
@@ -16,12 +16,13 @@ class RoutingTable():
         self.table={}
 
     def send(self,FromAbove):
+        #Take Application Packet
         packet=RoutePacket(self,FromAbove)
         if not hasattr(self.table,packet.destination):
             packet.set_next_hop(packet.destination)
         else:
             packet.set_next_hop(self.table[packet.destination])
-        if debug: self.logger.info("Net Packet Sent")
+        if debug: self.logger.debug("Net Packet Sent")
         self.layercake.mac.send(packet)
 
     def recv(self,FromBelow):

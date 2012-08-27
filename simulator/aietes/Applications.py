@@ -24,8 +24,14 @@ class Application(Sim.Process):
         if hasattr(config,'packet_rate') and getattr(config,'packet_rate') is not None:
             self.packet_rate=getattr(config,'packet_rate')
             self.logger.info("Taking Packet_Rate from config: %s"%self.packet_rate)
+        elif hasattr(config, 'packet_count') and getattr(config, 'packet_rate') > 0:
+            #If packet count defined, only send our N packets
+            self.packet_rate = getattr(config, 'packet_rate')/self.layercake.config.sim_duration
+            self.logger.info("Taking Packet_Count from config: %s"%self.packet_rate)
         else:
             self.packet_rate = 1
+
+
         self.period = 1/float(self.packet_rate)
 
     def _start_log(self,layercake):
@@ -45,9 +51,10 @@ class Application(Sim.Process):
             (packet,period)=self.packetGen(period=self.period,
                                            data=randomstr(24),
                                            destination=destination)
-            self.layercake.net.send(packet)
-            self.stats['packets_sent'] += 1
-            if debug: self.logger.info("Sending Packet: Waiting %s"%period)
+            if packet is not None:
+                self.layercake.net.send(packet)
+                self.stats['packets_sent'] += 1
+                if debug: self.logger.debug("Sending Packet: Waiting %s"%period)
             yield Sim.hold, self, period
 
     def recv(self, FromBelow):
@@ -71,8 +78,8 @@ class Application(Sim.Process):
         else:
             self.packet_log[source]=[packet]
         delay = Sim.now() - packet.launch_time
-        #TODO Test if this hop check makes sense
-        hops = len(packet.route)
+        #Ignore first hop (source)
+        hops = len(packet.route)-1
 
         self.stats['packets_time']+=delay
         self.stats['packets_hops']+=hops
@@ -103,6 +110,16 @@ class AccessibilityTest(Application):
         )
         period=poisson(float(period))
         return (packet,period)
+
+    def packetRecv(self,packet):
+        assert isinstance(packet, AppPacket)
+
+class Listener(Application):
+    def packetGen(self,period,destination,data=None):
+        """
+        Does Nothing, says nothing
+        """
+        return (None,1)
 
     def packetRecv(self,packet):
         assert isinstance(packet, AppPacket)

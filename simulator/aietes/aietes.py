@@ -57,7 +57,7 @@ def main ():
     global options, args
 
     outfile=None
-    sim = Simulation()
+    sim = Simulation(config_file=options.config)
 
     if options.input is None:
         sim.prepare()
@@ -96,6 +96,8 @@ if __name__ == '__main__':
                 default=None, help='store output to datafile')
         parser.add_option ('-i', '--input', action='store', dest='input',
                 default=None, help='store input file, this kills the simulation')
+        parser.add_option ('-c', '--config', action='store', dest='config',
+                default='', help='generate simulation from config file')
         (options, args) = parser.parse_args()
         print options
         #if len(args) < 1:
