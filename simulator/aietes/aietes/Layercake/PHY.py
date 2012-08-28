@@ -1,5 +1,5 @@
 import math
-from Tools import *
+from aietes.Tools import *
 from Packet import PHYPacket
 import logging
 
@@ -36,7 +36,9 @@ class PHY():
                 }
             }
         '''
+        ##############################
         #Generic Spec
+        ##############################
         self.logger = layercake.logger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance:%s'%config)
         #Inherit values from config
@@ -45,19 +47,25 @@ class PHY():
             setattr(self,k,v)
         self.layercake = layercake
 
+        ##############################
         #Inferred System Parameters
+        ##############################
         self.threshold['receive'] = DB2Linear(ReceivingThreshold(self.frequency, self.bandwidth, self.threshold['SNR']))
         self.threshold['listen'] = DB2Linear(ListeningThreshold(self.frequency, self.bandwidth, self.threshold['LIS']))
         self.ambient_noise = DB2Linear( Noise(self.frequency) + 10*math.log10(self.bandwidth*1e3) ) #In linear scale
         self.interference = self.ambient_noise
         self.collision = False
 
+        ##############################
         #Generate modem/transd etc
+        ##############################
         self.modem = Sim.Resource(name=self.__class__.__name__)
         self.transducer = Transducer(self)
         self.messages = []
 
+        ##############################
         #Statistics
+        ##############################
         self.max_output_power_used = 0
         self.tx_energy = 0
         self.rx_energy = 0
@@ -116,7 +124,9 @@ class Transducer(Sim.Resource):
         self.channel_event = self.layercake.channel_event
         self.interference = self.phy.interference
 
+        ##############################
         #Configure event listener
+        ##############################
         self.listener = AcousticEventListener(self)
         Sim.activate(
                     self.listener,

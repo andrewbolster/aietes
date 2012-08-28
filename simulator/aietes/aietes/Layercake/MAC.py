@@ -1,6 +1,6 @@
 from FSM import FSM
 from Packet import MACPacket
-from Tools import dotdict, baselogger, debug, Sim
+from aietes.Tools import dotdict, baselogger, debug, Sim
 import logging
 import pydot
 
@@ -184,16 +184,19 @@ class ALOHA(MAC):
         '''Set up the state machine for ALOHA
         '''
         MAC.InitialiseStateEngine(self)
+        ##############################
         #Transitions from READY_WAIT
         self.sm.add_transition("got_DATA","READY_WAIT", self.onRX, "READY_WAIT")
         self.sm.add_transition("send_DATA","READY_WAIT", self.transmit, "READY_WAIT")
 
+        ##############################
         #Transitions from WAIT_ACK
         self.sm.add_transition("got_DATA", "WAIT_ACK", self.onRX, "WAIT_ACK")
         self.sm.add_transition("send_DATA", "WAIT_ACK", self.queueData, "WAIT_ACK")
         self.sm.add_transition("got_ACK", "WAIT_ACK", self.onTX_success, "READY_WAIT")
         self.sm.add_transition("timeout", "WAIT_ACK", self.onTimeout, "WAIT_2_RESEND")
 
+        ##############################
         #Transitions from WAIT_2_RESEND
         self.sm.add_transition("resend", "WAIT_2_RESEND", self.transmit, "WAIT_2_RESEND")
         self.sm.add_transition("got_DATA", "WAIT_2_RESEND", self.onRX, "WAIT_2_RESEND")

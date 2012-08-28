@@ -7,8 +7,8 @@ import validate
 import random
 
 from Layercake import Layercake
-import MAC, Net, Applications
 from Environment import Environment
+from Fleet import Fleet
 from Node import Node
 import Behaviour
 
@@ -23,77 +23,6 @@ from operator import itemgetter,attrgetter
 
 np.set_printoptions(precision=3)
 
-
-class ConfigError(Exception):
-    """
-    Raised when a configuration cannot be validated through ConfigObj/Validator
-    Contains a 'status' with the boolean dict representation of the error
-    """
-    def __init__(self,value):
-        baselogger.critical("Invalid Config; Dying")
-        self.status=value
-    def __str__(self):
-        return repr(self.status)
-
-class Fleet(Sim.Process):
-    """
-    Fleets act initially as traffic managers for Nodes
-    """
-    def __init__(self,nodes,simulation):
-
-        self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
-        self.logger.info("creating instance")
-        Sim.Process.__init__(self,name="Fleet")
-        self.nodes = nodes
-        self.environment = simulation.environment
-        self.simulation = simulation
-
-    def activate(self):
-        Sim.activate(self,self.lifecycle())
-        for node in self.nodes:
-            node.activate()
-
-
-    def lifecycle(self):
-        def allPassive():
-            return all([n.passive() for n in self.nodes])
-        self.logger.info("Initialised Node Lifecycle")
-        while(True):
-            yield Sim.waituntil, self, allPassive
-            #self.logger.info("Fleet Step: %s EIG:(%s)"%(Sim.now(),self.environment.pointPlane()[0]))
-            percent_now= ((100 * Sim.now()) / self.simulation.duration_intervals)
-            if percent_now%1 == 0:
-                self.logger.info("Fleet  %d%%: %s"%(percent_now,self.currentStats()))
-            for node in self.nodes:
-                Sim.reactivate(node)
-
-    def currentStats(self):
-        """
-        Print Current Vector Statistics
-        """
-        avgHeading = np.array([0,0,0],dtype=np.float)
-        fleetCenter = np.array([0,0,0],dtype=np.float)
-        fleetWaypoints = []
-        for node in self.nodes:
-            avgHeading+=node.velocity
-            fleetCenter+=node.position
-            fleetWaypoints.append(node.behaviour.nextwaypoint.position)
-
-
-        avgHeading/=float(len(self.nodes))
-        fleetCenter/=float(len(self.nodes))
-
-        maxDistance=np.float(0.0)
-        maxDeviation=np.float(0.0)
-        for node in self.nodes:
-            maxDistance = max(maxDistance,distance(node.position,fleetCenter))
-            v=node.velocity
-            c= np.dot(avgHeading,v)/np.linalg.norm(avgHeading)/np.linalg.norm(v)
-            maxDeviation = max(maxDeviation,np.arccos(c))
-
-        commonheading = all(all(fleetWaypoints[0] == waypoint) for waypoint in fleetWaypoints)
-
-        return("V:%s,W:%s,C:%s,D:%s,A:%s"%(avgHeading,commonheading,fleetCenter,maxDistance,maxDeviation))
 
 class Simulation():
     """
@@ -120,7 +49,7 @@ class Simulation():
         self.channel_event = Sim.SimEvent(self.config.Simulation.channel_event_name)
 
         self.environment = self.configureEnvironment(self.config.Environment)
-        self.nodes = self.configureNodes(self.config.Nodes)
+        self.nodes = self.configureNodes()
 
         #Single Fleet to control all
         self.fleets.append(Fleet(self.nodes,self))
@@ -128,24 +57,6 @@ class Simulation():
         # Set up 'join-like' operation for nodes
         self.move_flag = Sim.Resource(capacity=len(self.nodes))
         self.process_flag = Sim.Resource(capacity=len(self.nodes))
-
-    def inner_join(self):
-        """
-        When all nodes have a move flag and none are processing
-        """
-        joined=self.move_flag.n == 0 and self.process_flag.n == len(self.nodes)
-        if joined:
-            self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
-        return joined
-
-    def outer_join(self):
-        """
-        When all nodes have a processing flag and none are moving
-        """
-        joined=self.move_flag.n == len(self.nodes) and self.process_flag.n == 0
-        if joined:
-            self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
-        return joined
 
     def simulate(self):
         """
@@ -167,82 +78,119 @@ class Simulation():
         raise KeyError("Given UUID does not exist in Nodes list")
 
 
-    def validateConfig(self,config_file='', configspec='defaults.conf'):
+    def validateConfig(self,config_file='', configspec='configs/default.conf'):
         """
         Generate valid configuration information by interpolating a given config
         file with the defaults
+
+        NOTE: This does not verify if any of the functionality requested in the config is THERE
+        Only that the config 'makes sense' as requested.
+
+        I.e. does not check if particular modular behaviour exists or not.
         """
-        # GENERIC CONFIG CHECK
+
+        ##############################
+        # GENERIC CONFIG ACQUISITION
+        ##############################
+
         config= ConfigObj(config_file,configspec=configspec)
         config_status = config.validate(validate.Validator(),copy=True)
+
         if not config_status:
             # If configspec doesn't match the input, bail
             raise ConfigError(config_status)
 
         config= dotdict(config.dict())
-        naming_convention= config.Nodes.naming_convention
+
+
+        ##############################
         # NODE CONFIGURATION
-        if config.Nodes.count > len(naming_convention):
-            # If the naming convention can't provide unique names, bail
-            raise ConfigError("Not Enough Names in dictionary for number of nodes requested:%s/%s!"%(config.Nodes.count,len(naming_convention)))
+        ##############################
+        nodes_preconfigured = 0
+        pre_node_names=[]
+        nodes_config = dict()
+        node_default_config = config.Node.Nodes.pop('__default__')
+        # Add the stuff we know whould be there...
+        node_default_config.update(
+            #TODO import PHY,Behaviour, etc into the node config?
+        )
+        self.logger.info("Default Node Config: %s" % node_default_config)
 
-        if bool(config.Nodes.node_names):
-            # If given the correct number of names in the config file, do nothing
-            if config.Nodes.count > len(config.Nodes.node_names):
-                raise ConfigError("Not Enough Names in configfile for number of nodes requested!")
-            assert int(config.Nodes.count) == len(config.Nodes.node_names)
-        else:
-            # Otherwise make up names from the naming_convention
-            assert config.Nodes.count>=1, "No nodes configured"
-            for n in range(config.Nodes.count):
-                candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
-                while candidate_name in config.Nodes.node_names:
-                    candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
-                config.Nodes.node_names.append(candidate_name)
-                self.logger.info("Gave node %d name %s"%(n,candidate_name))
 
-        # LAYERCAKE CONFIG CHECK
-        try:
-            config.mac_mod=getattr(MAC,str(config.MAC.protocol))
-        except AttributeError:
-            raise ConfigError("Can't find MAC: %s"%config.MAC.protocol)
+        ###
+        # Check if there are individually configured nodes
+        if isinstance(config.Node.Nodes, dict) and len(config.Node.Nodes) > 0:
+            ###
+            #There Are Detailed Config Instances
+            nodes_preconfigured = len(config.Node.Nodes)
+            self.logger.info("Have %d nodes from config: %s" % (
+                                    nodes_preconfigured,
+                                    nodes_config)
+            )
+            pre_node_names = config.Node.Nodes.keys()
 
-        try:
-            config.net_mod=getattr(Net,str(config.Network.protocol))
-        except AttributeError:
-            raise ConfigError("Can't find Network: %s"%config.Network.protocol)
+        ###
+        # Check and generate application distribution
+        #   i.e. app = ["App A","App B"]
+        #        dist = [ 4, 5 ]
+        app = config.Node.Application.protocol
+        dist = config.Node.Application.distribution
+        nodes_count = config.Node.count
 
-        # APPLICATION DISTRIBUTION SANITY CHECK
-        applications = config.Nodes.Application.protocol
-        allocations = config.Nodes.Application.distribution
-        node_count = config.Nodes.count
-        try:
-
-            if isinstance(applications, list):
-                if isinstance(allocations, list):
-                    app_checksum = len(applications) - len(allocations)
-                    node_checksum = len(applications) - node_count
-                    if app_checksum != 0 or node_checksum != 0:
-                        raise ConfigError("Incorrect Applications specification: %s,[%s] for %d nodes"%(
-                            applications,allocations,node_count))
-                    else:
-                        status_str = str(zip(applications,allocations))
-                        self.logger.info("Assigned Vector Applications: %s"%status_str)
-                        config.Nodes.app_mod=[getattr(Applications,str(app)) for app,n in zip(applications,allocations) for i in range(int(n))]
-                        pass
-                else:
-                    raise ConfigError("List of Application but no list of distributions!: %s,[%s] for %d nodes"%(
-                        applications,allocations,node_count))
+        # Boundary checks:
+        #   len(app)==len(dist)
+        #   len(app)==nodes_count-nodes_preconfigured
+        self.logger.debug("App:%s,Dist:%s" % (app,dist))
+        if isinstance(app,list) and isinstance(dist, list):
+            if len(app) == len(dist) and len(app) == nodes_count-nodes_preconfigured:
+                applications = [str(a)
+                                for a,n in zip(app,dist)
+                                    for i in range(int(n))
+                               ]
+                self.logger.info("Distributed Applications:%s" % applications)
             else:
-                config.Nodes.app_mod=getattr(Applications,str(applications))
-        except AttributeError:
-            raise ConfigError("Can't find Application: %s"%applications)
-        except Exception as e:
-            raise e
+                raise ConfigError(
+                    "Application / Distribution mismatch"
+                )
+        else:
+            applications = [str(app) for i in range(int(nodes_count-nodes_preconfigured))]
+            self.logger.info("Using Application:%s" % applications)
 
+        ###
+        # Generate Names for any remaining auto-config nodes
+        auto_node_names = nameGeneration(
+            count = config.Node.count - nodes_preconfigured,
+            naming_convention = config.Node.naming_convention
+        )
+        node_names = auto_node_names + pre_node_names
 
+        # Give defaults to all
+        for node_name in node_names:
+            # Bare Dict/update instead of copy()
+            nodes_config[node_name]=dict()
+            nodes_config[node_name].update(node_default_config)
+
+        # Give auto-config default
+        for node_name, node_app in zip(auto_node_names,applications):
+            # Add derived application
+            nodes_config[node_name]['app']=str(node_app)
+
+        # Overlay Preconfigured with their own settings
+        for node_name, node_config in config.Node.Nodes.items():
+            # Import the magic!
+            nodes_config[node_name].update(node_config)
+
+        ###
+        # Generate Per-Vector Node initialisation configs
+        for node_name,node_config in nodes_config.items():
+            self.logger.info("[%s]: %s" % (node_name,node_config))
+
+        ##############################
         #Confirm
+        ##############################
+        config.Node.Nodes.update(nodes_config)
         self.logger.info("Built Config: %s"%str(config))
+
         return config
 
     def configureEnvironment(self, env_config):
@@ -257,41 +205,40 @@ class Simulation():
             base_depth=env_config.base_depth
             )
 
-    def configureNodes(self,node_config,fleet=None):
+    def configureNodes(self):
         """
         Configure 'fleets' of nodes for simulation
         Fleets are purely logical in this case
         """
-        nodelist = []
+        node_list = []
+        ##############################
         #Configure specified nodes
-        for node_id,nodeName in enumerate(node_config.node_names):
-            config=self.vectorGen(
-                nodeName,
-                node_config,
-                node_id
-            )
-            self.logger.debug("Generating node %s with config %s"%(nodeName,config))
+        ##############################
+        for node_name,config in self.config.Node.Nodes.items():
+            self.logger.debug("Generating node %s with config %s"%(node_name,config))
             new_node=Node(
-                nodeName,
+                node_name,
                 self,
                 config
             )
-            nodelist.append(new_node)
+            node_list.append(new_node)
 
         #TODO Fleet implementation
 
         return nodelist
 
-    def vectorGen(self,nodeName,node_config,node_id):
+    def vectorGen(self,node_name,node_config,node_id):
         """
         If a node is named in the configuration file, use the defined initial vector
         otherwise, use configured behaviour to assign an initial vector
         """
         try:# If there is an entry, use it
-            vector = node_config.initial_node_vectors[nodeName]
-            self.logger.info("Gave node %s a configured initial vector: %s"%(nodeName,str(vector)))
+            vector = node_config.initial_vector
+            if vector is None:
+                raise KeyError
+            else:
+                self.logger.info("Gave node %s a configured initial vector: %s"%(nodeName,str(vector)))
         except KeyError:
-            #TODO add additional behaviours, eg random within enviroment; distribution around a point, etc
             gen_style = node_config.vector_generation
             if gen_style == "random":
                 vector = self.environment.random_position()
@@ -304,31 +251,34 @@ class Simulation():
                 self.logger.debug("Gave node %s a zero vector from %s"%(nodeName,gen_style))
         assert len(vector)==3, "Incorrectly sized vector"
 
+        ##############################
         # BEHAVIOUR CONFIG CHECK
+        ##############################
         try:
-            behave_mod=getattr(Behaviour,str(node_config.Behaviour.protocol))
+            behave_mod=getattr(Behaviour,str(node_config.behaviour))
             self.logger.debug("Using behaviour: %s"%behave_mod)
         except AttributeError:
             raise ConfigError("Can't find Behaviour: %s"%node_config.Behaviour.protocol)
 
+        ##############################
         # APPLICATIONS CONFIG CHECK
+        ##############################
         try:
-            if isinstance(node_config.app_mod,list):
-                app_mod = node_config.app_mod[node_id]
-            else:
-                app_mod = node_config.app_mod
-            self.logger.info("Using Application: %s"%app_mod)
-        except AttributeError:
-            raise ConfigError("Can't find Behaviour: %s"%node_config.Behaviour.protocol)
-        
-        config = dotdict({  'vector':vector,
-                            'max_speed':node_config.max_speed,
-                            'max_turn':node_config.max_turn,
-                            'behave_mod':behave_mod,
-                            'app_mod': app_mod,
-                            'Behaviour':node_config.Behaviour
-                        })
-        return config
+            app_mod = getattr(Applications,str(node
+        self.logger.info("Using Application: %s"%app_mod)
+
+        ##############################
+        # Generate node_config
+        ##############################
+        config = dotdict({'vector':vector,
+                   'max_speed':node_config.max_speed,
+                   'max_turn':node_config.max_turn,
+                   'behave_mod':behave_mod,
+                   'app': app_mod,
+                   'Behaviour':node_config.Behaviour
+                  })
+        self.logger.debug("Config: %s"%node_config)
+        return dotdict()
 
     def postProcess(self,log=None,outputFile=None,displayFrames=None,dataFile=False,movieFile=False,inputFile=None,xRes=1024,yRes=768,fps=24):
         """
@@ -388,6 +338,8 @@ class Simulation():
                 filename = "dat-%s"%outputFile
                 self.logger.info("Writing datafile to %s"%filename)
                 np.savez(filename,(data,names,self.environment.shape))
+                self.config.filename=filename+'.conf'
+                self.config.write()
             if movieFile:
                 filename = "ani-%s"%outputFile
                 self.logger.info("Writing animation to %s"%filename)

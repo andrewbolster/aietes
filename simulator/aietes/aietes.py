@@ -37,7 +37,7 @@ import os
 import traceback
 import optparse
 import time
-from Simulation import Simulation
+from aietes import Simulation
 import profile
 from datetime import datetime as dt
 

@@ -1,5 +1,5 @@
 from Packet import RoutePacket
-from Tools import debug
+from aietes.Tools import debug
 
 class RoutingTable():
     '''Routing table generic class

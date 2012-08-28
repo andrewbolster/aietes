@@ -11,6 +11,18 @@ baselogger = logging.getLogger('SIM')
 
 debug=True
 
+class ConfigError(Exception):
+    """
+    Raised when a configuration cannot be validated through ConfigObj/Validator
+    Contains a 'status' with the boolean dict representation of the error
+    """
+    def __init__(self,value):
+        baselogger.critical("Invalid Config; Dying")
+        self.status=value
+    def __str__(self):
+        return repr(self.status)
+
+
 #####################################################################
 # Magic Numbers
 #####################################################################
@@ -26,6 +38,19 @@ LOGLEVELS = {'debug': logging.DEBUG,
           'warning': logging.WARNING,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
+
+DEFAULT_CONVENTION = ['Alpha','Beta','Gamma','Delta','Epsilon',
+                      'Zeta','Eta','Theta','Iota','Kappa',
+                      'Lambda','Mu','Nu','Xi','Omicron',
+                      'Pi','Rho','Sigma','Tau','Upsilon',
+                      'Phi','Chi','Psi','Omega']
+DEFAULT_CONVENTION = ['Alfa','Bravo','Charlie','Delta','Echo',
+                      'Foxtrot','Golf','Hotel','India','Juliet',
+                      'Kilo','Lima','Mike','November','Oscar',
+                      'Papa','Quebec','Romeo','Sierra','Tango',
+                      'Uniform','Victor','Whisky','X-ray','Yankee',
+                      'Zulu']
+
 
 #####################################################################
 # Measuring functions
@@ -267,7 +292,34 @@ def fudge_normal(value,stdev):
         return value + np.random.normal(0,stdev,shape)
 
 def randomstr(length):
+
         word = ''
         for i in range(length):
             word += random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
         return word
+
+def nameGeneration(count, naming_convention = None):
+
+    if naming_convention is None:
+        naming_convention = DEFAULT_CONVENTION
+
+    if count > len(naming_convention):
+        # If the naming convention can't provide unique names, bail
+        raise ConfigError(
+            "Not Enough Names in dictionary for number of nodes requested:%s/%s!"%(
+            count,len(naming_convention))
+        )
+
+    node_names = []
+
+    for n in range(count):
+        candidate_name = naming_convention[np.random.randint(0,len(naming_convention))]
+
+        while candidate_name in node_names:
+            candidate_name= naming_convention[np.random.randint(0,len(naming_convention))]
+
+        node_names.append(candidate_name)
+
+    return node_names
+
+

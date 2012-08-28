@@ -4,7 +4,7 @@ import numpy as np
 import uuid
 from operator import attrgetter,itemgetter
 
-from Tools import *
+from aietes.Tools import *
 
 class Node(Sim.Process):
     """
@@ -20,7 +20,9 @@ class Node(Sim.Process):
 
         self.pos_log=np.empty((3,self.simulation.config.Simulation.sim_duration))
 
+        ##############################
         # Physical Configuration
+        ##############################
 
         #Extract (X,Y,Z) vector from 6-vector as position
         assert len(self.config.vector) == 3, "Malformed Vector%s"%self.config.vector
@@ -31,10 +33,14 @@ class Node(Sim.Process):
 
         self._lastupdate=Sim.now()
 
+        ##############################
         # Comms Stack
-        self.layercake = Layercake(self,simulation)
+        ##############################
+        self.layercake = Layercake(self,node_config)
 
+        ##############################
         #Propultion Capabilities
+        ##############################
         if isinstance(self.config.max_speed,int):
             #Max speed is independent of direction
             self.max_speed=np.asarray([self.config.max_speed,self.config.max_speed, self.config.max_speed])
@@ -49,11 +55,15 @@ class Node(Sim.Process):
             self.max_turn = self.config.max_turn
         assert len(self.max_turn) == 3
 
+        ##############################
         #Internal Configure Node Behaviour
+        ##############################
         self.behaviour=self.config.behave_mod(node=self,bev_config=self.config.Behaviour)
 
+        ##############################
         #Simulation Configuration
         self.internalEvent = Sim.SimEvent(self.name)
+        ##############################
 
         self.logger.info('instance created')
 
@@ -66,6 +76,12 @@ class Node(Sim.Process):
 
         #Tell the environment that we are here!
         self.simulation.environment.update(self.id,self.getPos())
+
+    def assignFleet(self,fleet):
+        """
+        Assign or Re-assign a node to a given Fleet object
+        """
+        self.fleet=fleet
 
     def distanceTo(self,otherNode):
         assert hasattr(otherNode,position), "Other object has no position"
@@ -93,7 +109,9 @@ class Node(Sim.Process):
         """
         Update node status
         """
+        ##############################
         #Positional information
+        ##############################
         old_pos = self.position.copy()
         dT = self.simulation.deltaT(Sim.now(),self._lastupdate)
         attempted_vector = np.array(self.velocity,dtype=np.float)*dT
@@ -129,18 +147,25 @@ class Node(Sim.Process):
         while(True):
             yield Sim.request, self,self.simulation.process_flag
             yield Sim.waituntil, self, self.simulation.outer_join
+            ##############################
             #Update Node State
+            ##############################
             self.logger.debug('updating behaviour')
             self.behaviour.process()
 
             yield Sim.release, self,self.simulation.process_flag
             yield Sim.waituntil, self, self.simulation.inner_join
             yield Sim.request, self, self.simulation.move_flag
+
+            ##############################
             #Move Fleet
+            ##############################
             self.logger.debug('updating position, then waiting %s'%self.behaviour.update_rate)
             self.move()
 
+            ##############################
             #Update Fleet State
+            ##############################
             self.logger.debug('updating map')
             yield Sim.hold, self, self.behaviour.update_rate
             yield Sim.release, self, self.simulation.move_flag
