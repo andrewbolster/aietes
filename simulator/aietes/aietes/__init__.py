@@ -21,6 +21,8 @@ import mpl_toolkits.mplot3d.axes3d as axes3
 import matplotlib.animation as ani
 from operator import itemgetter,attrgetter
 
+from pprint import pformat
+
 np.set_printoptions(precision=3)
 
 
@@ -68,6 +70,23 @@ class Simulation():
             fleet.activate()
 
         Sim.simulate(until=self.duration_intervals)
+    def inner_join(self):
+        """
+        When all nodes have a move flag and none are processing
+        """
+        joined=self.move_flag.n == 0 and self.process_flag.n == len(self.nodes)
+        if joined:
+            self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
+        return joined
+
+    def outer_join(self):
+        """
+        When all nodes have a processing flag and none are moving
+        """
+        joined=self.move_flag.n == len(self.nodes) and self.process_flag.n == 0
+        if joined:
+            self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
+        return joined 
 
     def reverse_node_lookup(self, uuid):
         """Return Node Given UUID
@@ -111,10 +130,10 @@ class Simulation():
         nodes_config = dict()
         node_default_config = config.Node.Nodes.pop('__default__')
         # Add the stuff we know whould be there...
+        self.logger.info("Default Node Config: %s" % pformat(node_default_config))
         node_default_config.update(
             #TODO import PHY,Behaviour, etc into the node config?
         )
-        self.logger.info("Default Node Config: %s" % node_default_config)
 
 
         ###
@@ -133,9 +152,14 @@ class Simulation():
         # Check and generate application distribution
         #   i.e. app = ["App A","App B"]
         #        dist = [ 4, 5 ]
-        app = config.Node.Application.protocol
-        dist = config.Node.Application.distribution
-        nodes_count = config.Node.count
+        try:
+            app = node_default_config.Application.protocol
+            dist = node_default_config.Application.distribution
+            nodes_count = config.Node.count
+        except AttributeError as e:
+            self.logger.error("Error:%s"%e)
+            self.logger.info("%s" % pformat(node_default_config))
+            raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
         #   len(app)==len(dist)
@@ -189,7 +213,7 @@ class Simulation():
         #Confirm
         ##############################
         config.Node.Nodes.update(nodes_config)
-        self.logger.info("Built Config: %s"%str(config))
+        self.logger.info("Built Config: %s"%pformat(config))
 
         return config
 
@@ -219,66 +243,37 @@ class Simulation():
             new_node=Node(
                 node_name,
                 self,
-                config
+                config,
+                vector = self.vectorGen(node_name,config)
             )
             node_list.append(new_node)
 
         #TODO Fleet implementation
 
-        return nodelist
+        return node_list
 
-    def vectorGen(self,node_name,node_config,node_id):
+    def vectorGen(self,node_name,node_config):
         """
         If a node is named in the configuration file, use the defined initial vector
         otherwise, use configured behaviour to assign an initial vector
         """
         try:# If there is an entry, use it
-            vector = node_config.initial_vector
-            if vector is None:
-                raise KeyError
-            else:
-                self.logger.info("Gave node %s a configured initial vector: %s"%(nodeName,str(vector)))
+            vector = node_config['initial_vector']
+            self.logger.info("Gave node %s a configured initial vector: %s"%(node_name,str(vector)))
         except KeyError:
-            gen_style = node_config.vector_generation
+            gen_style = node_config['position_generation']
             if gen_style == "random":
                 vector = self.environment.random_position()
-                self.logger.debug("Gave node %s a random vector: %s"%(nodeName,vector))
+                self.logger.debug("Gave node %s a random vector: %s"%(node_name,vector))
             elif gen_style == "center":
                 vector= self.environment.position_around()
-                self.logger.debug("Gave node %s a center vector: %s"%(nodeName,vector))
+                self.logger.debug("Gave node %s a center vector: %s"%(node_name,vector))
             else:
                 vector = [0,0,0]
-                self.logger.debug("Gave node %s a zero vector from %s"%(nodeName,gen_style))
+                self.logger.debug("Gave node %s a zero vector from %s"%(node_name,gen_style))
         assert len(vector)==3, "Incorrectly sized vector"
 
-        ##############################
-        # BEHAVIOUR CONFIG CHECK
-        ##############################
-        try:
-            behave_mod=getattr(Behaviour,str(node_config.behaviour))
-            self.logger.debug("Using behaviour: %s"%behave_mod)
-        except AttributeError:
-            raise ConfigError("Can't find Behaviour: %s"%node_config.Behaviour.protocol)
-
-        ##############################
-        # APPLICATIONS CONFIG CHECK
-        ##############################
-        try:
-            app_mod = getattr(Applications,str(node
-        self.logger.info("Using Application: %s"%app_mod)
-
-        ##############################
-        # Generate node_config
-        ##############################
-        config = dotdict({'vector':vector,
-                   'max_speed':node_config.max_speed,
-                   'max_turn':node_config.max_turn,
-                   'behave_mod':behave_mod,
-                   'app': app_mod,
-                   'Behaviour':node_config.Behaviour
-                  })
-        self.logger.debug("Config: %s"%node_config)
-        return dotdict()
+        return vector
 
     def postProcess(self,log=None,outputFile=None,displayFrames=None,dataFile=False,movieFile=False,inputFile=None,xRes=1024,yRes=768,fps=24):
         """

@@ -1,4 +1,5 @@
 from Layercake import Layercake
+import Behaviour
 import logging
 import numpy as np
 import uuid
@@ -10,7 +11,7 @@ class Node(Sim.Process):
     """
     Generic Representation of a network node
     """
-    def __init__(self,name,simulation,node_config):
+    def __init__(self,name,simulation,node_config, vector=None):
         self.logger = baselogger.getChild("%s[%s]"%(self.__class__.__name__,name))
         self.id=uuid.uuid4() #Hopefully unique id
         Sim.Process.__init__(self,name=name)
@@ -25,8 +26,8 @@ class Node(Sim.Process):
         ##############################
 
         #Extract (X,Y,Z) vector from 6-vector as position
-        assert len(self.config.vector) == 3, "Malformed Vector%s"%self.config.vector
-        self.position=np.array(self.config.vector,dtype=np.float)
+        assert len(vector) == 3, "Malformed Vector%s"%vector
+        self.position=np.array(vector,dtype=np.float)
         #Implied six vector velocity
         self.velocity=np.array([0,0,0],dtype=np.float)
         self.highest_attained_speed =0.0
@@ -41,24 +42,30 @@ class Node(Sim.Process):
         ##############################
         #Propultion Capabilities
         ##############################
-        if isinstance(self.config.max_speed,int):
+        if isinstance(self.config['max_speed'],int):
             #Max speed is independent of direction
-            self.max_speed=np.asarray([self.config.max_speed,self.config.max_speed, self.config.max_speed])
+            self.max_speed=np.asarray([self.config['max_speed'],self.config['max_speed'], self.config['max_speed']])
         else:
-            self.max_speed = np.asarray(self.config.max_speed)
+            self.max_speed = np.asarray(self.config['max_speed'])
         assert len(self.max_speed) == 3
 
-        if isinstance(self.config.max_turn,int):
+        if isinstance(self.config['max_turn'],int):
             #Max Turn Rate is independent of orientation
-            self.max_turn=[self.config.max_turn,self.config.max_turn,self.config.max_turn]
+            self.max_turn=[self.config['max_turn'],self.config['max_turn'],self.config['max_turn']]
         else:
-            self.max_turn = self.config.max_turn
+            self.max_turn = self.config['max_turn']
         assert len(self.max_turn) == 3
 
         ##############################
         #Internal Configure Node Behaviour
         ##############################
-        self.behaviour=self.config.behave_mod(node=self,bev_config=self.config.Behaviour)
+        try:
+            behaviour = self.config['Behaviour']['protocol']
+            behave_mod=getattr(Behaviour,str(behaviour))
+        except AttributeError:
+            raise ConfigError("Can't find Behaviour: %s"%behaviour)
+
+        self.behaviour=behave_mod(node=self,bev_config=self.config['Behaviour'])
 
         ##############################
         #Simulation Configuration

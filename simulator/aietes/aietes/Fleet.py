@@ -1,4 +1,4 @@
-from aietes.Tools import Sim
+from aietes.Tools import Sim, baselogger, debug
 
 class Fleet(Sim.Process):
     """

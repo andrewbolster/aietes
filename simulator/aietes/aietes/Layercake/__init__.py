@@ -23,46 +23,49 @@ class Layercake():
 
         self.host = host
         self.config = config
+        self.channel_event = self.host.simulation.channel_event
         self.logger = host.logger
 
         ##############################
         # PHY
         ##############################
         try:
-            phy_mod = getattr(PHY,str(config.phy))
+            phy_mod = getattr(PHY,str(config['phy']))
         except AttributeError:
-            raise ConfigError("Can't find PHY: %s"%config.phy)
+            raise ConfigError("Can't find PHY: %s"%config['phy'])
 
-        self.phy = self.host.config.phy_mod(self,config.channel_event,config.phy)
+        self.phy = phy_mod(self,
+                           self.channel_event,
+                           self.config['PHY'])
 
         ##############################
         # MAC
         ##############################
         try:
-            mac_mod=getattr(MAC,str(config.mac))
+            mac_mod=getattr(MAC,str(config['mac']))
         except AttributeError:
-            raise ConfigError("Can't find MAC: %s"%config.mac)
-        self.mac = mac_mod(self,config.mac)
+            raise ConfigError("Can't find MAC: %s"%config['mac'])
+        self.mac = mac_mod(self,config['mac'])
 
 
         ##############################
         # Routing
         ##############################
         try:
-            net_mod=getattr(Net,str(config.net))
+            net_mod=getattr(Net,str(config['net']))
         except AttributeError:
-            raise ConfigError("Can't find Network: %s"%config.net)
+            raise ConfigError("Can't find Network: %s"%config['net'])
 
-        self.net = net_mod(self,config.net)
+        self.net = net_mod(self,config['net'])
 
         ##############################
         # Application
         ##############################
         try:
-            app_mod=getattr(Applications,str(config.app))
+            app_mod=getattr(Applications,str(config['app']))
         except AttributeError:
-            raise ConfigError("Can't find Application: %s"%config.app)
-        self.app = app_mod(self,config.app)
+            raise ConfigError("Can't find Application: %s"%config['app'])
+        self.app = app_mod(self,config['app'])
 
     def activate(self):
         """
