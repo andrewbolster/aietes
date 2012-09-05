@@ -130,7 +130,7 @@ class Simulation():
         nodes_config = dict()
         node_default_config = config.Node.Nodes.pop('__default__')
         # Add the stuff we know whould be there...
-        self.logger.info("Default Node Config: %s" % pformat(node_default_config))
+        self.logger.debug("Default Node Config: %s" % pformat(node_default_config))
         node_default_config.update(
             #TODO import PHY,Behaviour, etc into the node config?
         )
@@ -163,10 +163,10 @@ class Simulation():
 
         # Boundary checks:
         #   len(app)==len(dist)
-        #   len(app)==nodes_count-nodes_preconfigured
+        #   len(app) % nodes_count-nodes_preconfigured = 0
         self.logger.debug("App:%s,Dist:%s" % (app,dist))
         if isinstance(app,list) and isinstance(dist, list):
-            if len(app) == len(dist) and len(app) == nodes_count-nodes_preconfigured:
+            if len(app) == len(dist) and (nodes_count-nodes_preconfigured) % len(app) == 0:
                 applications = [str(a)
                                 for a,n in zip(app,dist)
                                     for i in range(int(n))
@@ -213,7 +213,7 @@ class Simulation():
         #Confirm
         ##############################
         config.Node.Nodes.update(nodes_config)
-        self.logger.info("Built Config: %s"%pformat(config))
+        self.logger.debug("Built Config: %s"%pformat(config))
 
         return config
 

@@ -1,4 +1,5 @@
-from aietes.Tools import Sim, baselogger, debug
+from aietes.Tools import Sim, baselogger, debug, distance
+import numpy as np
 
 class Fleet(Sim.Process):
     """

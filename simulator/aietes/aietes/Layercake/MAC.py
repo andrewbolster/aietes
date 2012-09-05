@@ -1,6 +1,6 @@
-from FSM import FSM
 from Packet import MACPacket
 from aietes.Tools import dotdict, baselogger, debug, Sim
+from aietes.Tools.FSM import *
 import logging
 import pydot
 

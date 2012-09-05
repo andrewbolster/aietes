@@ -9,7 +9,7 @@ from operator import itemgetter,attrgetter
 logging.basicConfig(level=logging.DEBUG)
 baselogger = logging.getLogger('SIM')
 
-debug=True
+debug=False
 
 class ConfigError(Exception):
     """
