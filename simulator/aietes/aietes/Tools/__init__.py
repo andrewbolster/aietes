@@ -140,7 +140,6 @@ def distance2Bandwidth(I0, f, d, SNR):
     SNR - Signal to noise ratio in dB
     """
 
-    baselogger.info("Computing d2b for "+(I0,f,d,SNR))
     A = Attenuation(f,d)
     N = Noise(f)
 

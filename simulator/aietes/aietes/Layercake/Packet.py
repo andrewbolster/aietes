@@ -144,6 +144,7 @@ class PHYPacket(Sim.Process, Packet):
         self.max_interference=None
 
         # POWER is TX power initially on encapsulation of the packet, but is the attenuated received power on decapsulation
+        #For Incoming Packet (RX), is Linear
         self.power = power
 
 
