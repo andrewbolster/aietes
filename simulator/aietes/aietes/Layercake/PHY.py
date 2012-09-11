@@ -5,6 +5,8 @@ import logging
 
 from copy import deepcopy
 
+debug = True
+
 #####################################################################
 # Physical Layer
 #####################################################################
@@ -82,14 +84,14 @@ class PHY():
     def send(self,FromAbove):
         '''Function called from upper layers to send packet
         '''
-        packet = PHYPacket(self,FromAbove)
         if not self.isIdle():
             self.PrintMessage("I should not do this... the channel is not idle!") # The MAC protocol is the one that should check this before transmitting
 
         self.collision = False
 
+
         if hasattr(self,"variable_power") and self.variable_power:
-            tx_range = self.level2distance[packet.level]
+            tx_range = self.level2distance[FromAbove.level]
             power = distance2Intensity(self.bandwidth, self.frequency, tx_range, self.SNR_threshold)
         else:
             power = self.transmit_power
@@ -97,7 +99,10 @@ class PHY():
         if power > self.max_output_power_used:
             self.max_output_power_used = power
 
-        Sim.activate(packet, packet.send(power))
+        #generate PHYPacket with set power
+        packet = PHYPacket(packet = FromAbove, power = power)
+        if debug: self.logger.debug("PHY Packet, %s, sent to %s, with power %s"%(packet.data,packet.next_hop, power))
+        Sim.activate(packet, packet.send(phy=self))
 
     def bandwidth_to_bit(self, bandwidth):
         return bandwidth * 1e3 * self.bandwidth_to_bit_ratio
@@ -123,6 +128,8 @@ class Transducer(Sim.Resource):
         self.collisions = []
         self.channel_event = self.layercake.channel_event
         self.interference = self.phy.interference
+
+        self.threshold = self.phy.threshold
 
         ##############################
         #Configure event listener
@@ -161,12 +168,13 @@ class Transducer(Sim.Resource):
         doomed = packet.doomed
         minSIR = packet.getMinSIR()
 
+        payload = packet.decap()
+
         # Reduce the overall interference by this message's power
         self.interference -= packet.power
-        # Prevent rounding errors 
+        # Prevent rounding errors
         #TODO shouldn't this be to <= ambient?
-        if self.interference<=0:
-            self.interference = self.phy.ambient_noise
+        self.interference = max(self.interference, self.phy.ambient_noise)
 
         # Delete this from the transducer queue by calling the Parent form of "_release"
         Sim.Resource._release(self, arg)
@@ -178,22 +186,25 @@ class Transducer(Sim.Resource):
                 and packet.power >= self.phy.threshold['receive']:
                     # Properly received: enough power, not enough interference
                     self.collision = False
-                    if debug: self.logger.info("PHY Packet Recieved")
-                    self.layercake.mac.recv(packet.payload)
+                    if debug: self.logger.info("PHY Packet Recieved: %s"%packet.data)
+                    self.layercake.mac.recv(packet.decap())
 
             elif packet.power >= self.phy.threshold['receive']:
                 # Too much interference but enough power to receive it: it suffered a collision
-                if self.host.name == packet.next_hop or self.host.name == packet.destination:
+                if self.host.name == payload.next_hop or self.host.name == payload.destination:
                     self.collision = True
-                    self.collisions.append(packet)
-                    if debug: self.logger.info("PHY Packet Sensed but not Recieved (%s < %s)"%(
-                        packet.power,
-                        self.phy.threshold['listen']
-                    ))
+                    self.collisions.append(payload)
+                    if debug:
+                        self.logger.info("PHY Packet Sensed but not Recieved (%s < %s)"%(
+                            packet.power,
+                            self.phy.threshold['listen']
+                        ))
 
+                else:
+                    # Not enough power to be properly received: just heard.
+                    self.phy.logger.debug("This packet was not addressed to me.")
             else:
-                # Not enough power to be properly received: just heard.
-                self.phy.logger.debug("This packet was not addressed to me.")
+                self.phy.logger.debug("Packet Not Recieved")
 
         else:
             # This should never appear, and in fact, it doesn't, but just to detect bugs (we cannot have a negative SIR in lineal scale).
@@ -229,7 +240,6 @@ class AcousticEventListener(Sim.Process):
             yield Sim.waitevent, self, channel_event
 
             params = channel_event.signalparam
-            if debug: self.transducer.logger.debug("Scheduling Arrival: Params: %s"%params)
             sched = ArrivalScheduler(name="ArrivalScheduler"+self.name[-1])
             Sim.activate(sched, sched.schedule_arrival(self.transducer, params, position_query()))
 
@@ -243,15 +253,31 @@ class ArrivalScheduler(Sim.Process):
     """
 
     def schedule_arrival(self, transducer, params, pos):
+        packet = params['packet']
+        if debug:    transducer.logger.debug("Scheduling Arrival of packet %s from %s at %s"%\
+                                              (packet.data,
+                                               packet.source,
+                                               pos)
+                                              )
         distance_to = distance(pos, params['pos'])
 
         if distance_to > 0.01:  # I should not receive my own transmissions
-            receive_power = params["power"] - Attenuation(params["frequency"], distance_to)
+            attenuation_loss = Attenuation(params["frequency"], distance_to)
+
+            receive_power_db = Linear2DB(params["power"]) - attenuation_loss
             travel_time = distance_to/speed_of_sound  # Speed of sound in water = 1482.0 m/s
+
+            receive_power = DB2Linear(receive_power_db)
+
+            transducer.logger.debug("Packet %s will take %s to cover %s" % (packet.data, travel_time, distance_to))
 
             yield Sim.hold, self, travel_time
 
-            new_incoming_packet = PHYPacket(transducer.phy, power=DB2Linear(receive_power), packet = params["packet"])
-            Sim.activate(new_incoming_packet, new_incoming_packet.recv(duration=params["duration"]))
+            if debug:
+                transducer.logger.debug("Scheduled arrival of Packet :%s with power %s will take %s"%(packet.data,receive_power, params["duration"]))
+            new_incoming_packet = PHYPacket(packet = packet, power=receive_power)
+            Sim.activate(new_incoming_packet, new_incoming_packet.recv(transducer = transducer, duration=params["duration"]))
+        else:
+            transducer.logger.debug("Transmission too close")
 
 

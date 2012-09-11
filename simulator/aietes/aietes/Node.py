@@ -72,7 +72,7 @@ class Node(Sim.Process):
         self.internalEvent = Sim.SimEvent(self.name)
         ##############################
 
-        self.logger.info('instance created')
+        self.logger.debug('instance created')
 
     def activate(self):
         """
@@ -157,7 +157,7 @@ class Node(Sim.Process):
             ##############################
             #Update Node State
             ##############################
-            self.logger.debug('updating behaviour')
+            if debug: self.logger.debug('updating behaviour')
             self.behaviour.process()
 
             yield Sim.release, self,self.simulation.process_flag
@@ -167,13 +167,13 @@ class Node(Sim.Process):
             ##############################
             #Move Fleet
             ##############################
-            self.logger.debug('updating position, then waiting %s'%self.behaviour.update_rate)
+            if debug: self.logger.debug('updating position, then waiting %s'%self.behaviour.update_rate)
             self.move()
 
             ##############################
             #Update Fleet State
             ##############################
-            self.logger.debug('updating map')
+            if debug: self.logger.debug('updating map')
             yield Sim.hold, self, self.behaviour.update_rate
             yield Sim.release, self, self.simulation.move_flag
             self.simulation.environment.update(self.id,self.getPos())

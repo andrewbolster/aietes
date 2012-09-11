@@ -4,6 +4,8 @@ from aietes.Tools.FSM import *
 import logging
 import pydot
 
+debug = True
+
 class MAC():
     '''Generic Class for MAC Algorithms
     The only real difference between MAC's are their packet types and State Machines
@@ -67,8 +69,9 @@ class MAC():
     def transmit(self):
         '''Real Transmission of packet to physical layer
         '''
-        if debug: self.logger.debug("MAC Packet Sent")
-        self.layercake.phy.send(self.outgoing_queue[0])
+        packet = self.outgoing_queue[0]
+        if debug: self.logger.debug("MAC Packet, %s, sent to %s"%(packet.data,packet.next_hop))
+        self.layercake.phy.send( packet )
 
     def onTX_success(self):
         '''When an ACK has been recieved, we can assume it all went well
@@ -85,6 +88,7 @@ class MAC():
     def postTX(self):
         '''Succeeded or given up, either way, tidy up
         '''
+        if debug: self.logger.info("Tidying up packet to "+self.outgoing_queue[0].next_hop)
         self.outgoing_queue.pop(0)
         self.transmission_attempts = 0
 
@@ -98,7 +102,7 @@ class MAC():
         self.incoming_packet = FromBelow.decap()
         if FromBelow.isFor(self.node.name):
             self.sm.process(self.signals[FromBelow.type])
-            if debug: self.logger.info("MAC[%s] Packet Recieved"% FromBelow.type)
+            if debug: self.logger.info("MAC[%s] Packet Recieved: %s"% (FromBelow.type, FromBelow.data))
         else:
             self.overheard()
             self.logger.info("MAC Packet Overheard! For:%s"%self.incoming_packet.destination)
@@ -114,10 +118,12 @@ class MAC():
         origin = self.incoming_packet.last_sender()
         self.logger.info("RX-d packet from %s"%origin)
 
-        if self.layercake.net.explicitACK(self.incoming_packet):
+        if self.layercake.net.explicitACK(self.incoming_packet)\
+           or len(self.outgoing_queue) != 0\
+           or self.layercake.net:
             # Send up to next level in stack
             if debug: self.logger.info("Packet Recieved")
-            self.layercake.net.recv(self.incoming_packet)
+        self.layercake.net.recv(self.incoming_packet)
 
     def onError(self):
         ''' Called via state machine when unexpected input symbol in a determined state

@@ -3,13 +3,14 @@ import math
 import random
 import logging
 import numpy as np
+np.seterr(over='raise')
 #from os import urandom as randomstr #Provides unicode random String
 from operator import itemgetter,attrgetter
 
 logging.basicConfig(level=logging.DEBUG)
 baselogger = logging.getLogger('SIM')
 
-debug=False
+debug = False
 
 class ConfigError(Exception):
     """
@@ -104,7 +105,7 @@ def Attenuation(f, d):
 
     f2 = f**2
     k = 1.5 # Practical Spreading, see http://rpsea.org/forums/auto_stojanovic.pdf
-    DistanceInKm = d/1000
+    DistanceInKm = d/1000.0
 
     # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on the frequency
     if f > 1:
@@ -139,6 +140,7 @@ def distance2Bandwidth(I0, f, d, SNR):
     SNR - Signal to noise ratio in dB
     """
 
+    baselogger.info("Computing d2b for "+(I0,f,d,SNR))
     A = Attenuation(f,d)
     N = Noise(f)
 

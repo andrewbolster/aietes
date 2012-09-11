@@ -49,6 +49,7 @@ class Simulation():
         #Initialise simulation environment and configure a global channel event
         Sim.initialize()
         self.channel_event = Sim.SimEvent(self.config.Simulation.channel_event_name)
+        self.duration_intervals = self.config.Simulation.sim_duration/self.config.Simulation.sim_interval
 
         self.environment = self.configureEnvironment(self.config.Environment)
         self.nodes = self.configureNodes()
@@ -64,7 +65,6 @@ class Simulation():
         """
         Initiate the processed Simulation
         """
-        self.duration_intervals = self.config.Simulation.sim_duration/self.config.Simulation.sim_interval
         self.logger.info("Initialising Simulation, to run for %s steps"%self.duration_intervals)
         for fleet in self.fleets:
             fleet.activate()
@@ -75,7 +75,7 @@ class Simulation():
         When all nodes have a move flag and none are processing
         """
         joined=self.move_flag.n == 0 and self.process_flag.n == len(self.nodes)
-        if joined:
+        if joined and debug:
             self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
         return joined
 
@@ -84,9 +84,9 @@ class Simulation():
         When all nodes have a processing flag and none are moving
         """
         joined=self.move_flag.n == len(self.nodes) and self.process_flag.n == 0
-        if joined:
+        if joined and debug:
             self.logger.debug("Joined: %s,%s"%(self.move_flag.n,self.process_flag.n))
-        return joined 
+        return joined
 
     def reverse_node_lookup(self, uuid):
         """Return Node Given UUID

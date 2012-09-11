@@ -25,7 +25,7 @@ class Layercake():
         self.config = config
         self.channel_event = self.host.simulation.channel_event
         self.logger = host.logger
-
+        self.sim_duration = host.simulation.duration_intervals
         ##############################
         # PHY
         ##############################
@@ -45,7 +45,7 @@ class Layercake():
             mac_mod=getattr(MAC,str(config['mac']))
         except AttributeError:
             raise ConfigError("Can't find MAC: %s"%config['mac'])
-        self.mac = mac_mod(self,config['mac'])
+        self.mac = mac_mod(self,config['MAC'])
 
 
         ##############################
@@ -56,7 +56,7 @@ class Layercake():
         except AttributeError:
             raise ConfigError("Can't find Network: %s"%config['net'])
 
-        self.net = net_mod(self,config['net'])
+        self.net = net_mod(self,config['Network'])
 
         ##############################
         # Application
@@ -65,7 +65,7 @@ class Layercake():
             app_mod=getattr(Applications,str(config['app']))
         except AttributeError:
             raise ConfigError("Can't find Application: %s"%config['app'])
-        self.app = app_mod(self,config['app'])
+        self.app = app_mod(self,config['Application'])
 
     def activate(self):
         """

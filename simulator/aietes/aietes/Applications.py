@@ -3,13 +3,15 @@ from numpy.random import poisson
 import logging
 from aietes.Tools import baselogger,debug,randomstr, Sim, broadcast_address
 
-from Packet import AppPacket
+from Layercake.Packet import AppPacket
+
+debug = True
 
 class Application(Sim.Process):
     """
     Generic Class for top level application layers
     """
-    def __init__(self,layercake, config=None):
+    def __init__(self,layercake, config):
         self._start_log(layercake)
         Sim.Process.__init__(self)
         self.stats={'packets_sent':0,
@@ -21,15 +23,18 @@ class Application(Sim.Process):
         self.packet_log={}
         self.config=config
         self.layercake=layercake
-        if hasattr(config,'packet_rate') and getattr(config,'packet_rate') is not None:
+        packet_rate = getattr(config, 'packet_rate')
+        packet_count = getattr(config, 'packet_count')
+        if packet_rate > 0 and packet_count == 0:
             self.packet_rate=getattr(config,'packet_rate')
             self.logger.info("Taking Packet_Rate from config: %s"%self.packet_rate)
-        elif hasattr(config, 'packet_count') and getattr(config, 'packet_rate') > 0:
+        elif packet_count > 0 and packet_rate == 0:
             #If packet count defined, only send our N packets
-            self.packet_rate = getattr(config, 'packet_rate')/self.layercake.config.sim_duration
+            self.packet_rate = packet_count/self.layercake.sim_duration
             self.logger.info("Taking Packet_Count from config: %s"%self.packet_rate)
         else:
-            self.packet_rate = 1
+            self.logger.error("Packet Rate/Count doesn't make sense!")
+            raise NotImplemented
 
 
         self.period = 1/float(self.packet_rate)
@@ -52,9 +57,9 @@ class Application(Sim.Process):
                                            data=randomstr(24),
                                            destination=destination)
             if packet is not None:
+                if debug: self.logger.debug("Generated Payload %s: Waiting %s"%( packet.data, period))
                 self.layercake.net.send(packet)
                 self.stats['packets_sent'] += 1
-                if debug: self.logger.debug("Sending Packet: Waiting %s"%period)
             yield Sim.hold, self, period
 
     def recv(self, FromBelow):
@@ -81,9 +86,9 @@ class Application(Sim.Process):
         #Ignore first hop (source)
         hops = len(packet.route)-1
 
-        self.stats['packets_time']+=delay
-        self.stats['packets_hops']+=hops
-        self.stats['packets_dhops']+=(delay/hops)
+        self.stats['packets_time'] += delay
+        self.stats['packets_hops'] += hops
+        self.stats['packets_dhops'] += (delay/hops)
 
         self.logger.info("Packet recieved from %s over %d hops with a delay of %s (d/h=%s)"%(source,hops,str(delay),str(delay/hops)))
 
@@ -113,6 +118,7 @@ class AccessibilityTest(Application):
 
     def packetRecv(self,packet):
         assert isinstance(packet, AppPacket)
+        del packet
 
 class Listener(Application):
     def packetGen(self,period,destination,data=None):

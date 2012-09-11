@@ -58,7 +58,7 @@ class Packet(dict):
             return self.payload.destination == node_name
 
     def __repr__(self):
-        return str("To: %s, From: %s, at %d, len(%s)"%(self.destination,self.source,self.launch_time, self.length))
+        return str("To: %s, From: %s, at %d, %s"%(self.destination,self.source,self.launch_time, self.data))
 
 #####################################################################
 # Application Packet
@@ -77,7 +77,7 @@ class AppPacket(Packet):
         self.source = source
         self.destination = dest
         self.type = pkt_type
-        self.launch_time=Sim.now()
+        self.launch_time = Sim.now()
         self.route = route
         if data is not None:
             self.data = data
@@ -137,66 +137,70 @@ class PHYPacket(Sim.Process, Packet):
     This is because the transducer and modem are RESOURCES that are used, not
     processing units.
     '''
-    def __init__(self, phy, packet=None, power=None):
+    def __init__(self, packet, power):
         Packet.__init__(self,packet)
         Sim.Process.__init__(self, name=self.__class__.__name__)
-        self.phy=phy
         self.doomed=False
         self.max_interference=None
-        if power is not None:
-            self.power = power
 
-    def send(self, power=None):
-        # Default power if needed
-        if power is None:
-            power = self.phy.transmit_power
+        # POWER is TX power initially on encapsulation of the packet, but is the attenuated received power on decapsulation
+        self.power = power
+
+
+    def send(self, phy):
+        assert phy is not None, "Really Buggered your testing, haven't you!"
+
+        self.logger.debug("Sending Packet :%s with power %s"%(self.data,self.power))
         #Lock Modem
-        yield Sim.request, self, self.phy.modem
+        yield Sim.request, self, phy.modem
 
         #Generate Bandwidth info
-        if self.phy.variable_bandwidth:
-            distance = self.phy.var_power['levelToDistance'][self.packet.p_level] #TODO Packet description
+        if phy.variable_bandwidth:
+            distance = phy.var_power['levelToDistance'][self.packet.p_level] #TODO Packet description
             bandwidth = distance2Bandwidth(self.power,
-                                           self.phy.frequency,
+                                           phy.frequency,
                                            distance,
-                                           self.phy.threshold['SNR']
+                                           phy.threshold['SNR']
                                           )
         else:
-            bandwidth = self.phy.bandwidth
+            bandwidth = phy.bandwidth
 
-        bitrate = self.phy.bandwidth_to_bit(bandwidth)
+        bitrate = phy.bandwidth_to_bit(bandwidth)
         duration = self.length/bitrate
 
-        self.phy.transducer.channel_event.signal({"pos":self.source_position,
-                                                  "power":power,
+        phy.transducer.channel_event.signal({"pos":self.source_position,
+                                                  "power":self.power,
                                                   "duration":duration,
-                                                  "frequency":self.phy.frequency,
+                                                  "frequency":phy.frequency,
                                                   "packet":self
                                                  })
 
         #Lock the transducer for duration of TX
-        self.phy.transducer.onTX()
+        phy.transducer.onTX()
         yield Sim.hold, self, duration
-        self.phy.transducer.postTX()
+        phy.transducer.postTX()
 
         #Release modem
-        yield Sim.release, self, self.phy.modem
+        yield Sim.release, self, phy.modem
 
         #Update power stats
-        power_w = DB2Linear(AcousticPower(power))
-        self.phy.tx_energy += (power_w * duration)
+        power_w = DB2Linear(AcousticPower(self.power))
+        phy.tx_energy += (power_w * duration)
 
         self.logger.debug("PHY Packet Sent")
 
-    def recv(self, duration):
-        if self.power >= self.phy.threshold['listen']:
+    def recv(self, transducer, duration):
+        if self.power >= transducer.threshold['listen']:
             # Otherwise I will not even notice that there are packets in the network
-            yield Sim.request, self, self.phy.transducer
+            yield Sim.request, self, transducer
             yield Sim.hold, self, duration
-            yield Sim.release, self, self.phy.transducer
+            yield Sim.release, self, transducer
 
+            self.logger.debug("Recieved Packet :%s with power %s"%(self.data,self.power))
             # Even if a packet is not received properly, we have consumed power
-            self.phy.rx_energy += DB2Linear(self.phy.receive_power) * duration #TODO shouldn't this be listen power?
+            transducer.phy.rx_energy += DB2Linear(self.power) * duration #TODO shouldn't this be listen power?
+        else:
+            self.logger.debug("Recieved Packet :%s with power %s BELOW LISTENING THRESHOLD"%(self.data,self.power))
 
     def updateInterference(self, interference):
         '''A simple ratchet of interference based on the transducer _request func
