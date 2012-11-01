@@ -18,7 +18,7 @@ class ConfigError(Exception):
     Contains a 'status' with the boolean dict representation of the error
     """
     def __init__(self,value):
-        baselogger.critical("Invalid Config; Dying")
+        baselogger.critical("Invalid Config; Dying: %s" %value)
         self.status=value
     def __str__(self):
         return repr(self.status)

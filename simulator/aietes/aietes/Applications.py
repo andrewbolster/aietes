@@ -3,6 +3,7 @@ from numpy.random import poisson
 import logging
 from aietes.Tools import baselogger,debug,randomstr, Sim, broadcast_address
 
+import Layercake
 from Layercake.Packet import AppPacket
 
 debug = True
@@ -23,6 +24,7 @@ class Application(Sim.Process):
         self.packet_log={}
         self.config=config
         self.layercake=layercake
+        assert isinstance(self.layercake, Layercake.Layercake)
         packet_rate = getattr(config, 'packet_rate')
         packet_count = getattr(config, 'packet_count')
         if packet_rate > 0 and packet_count == 0:
@@ -33,8 +35,8 @@ class Application(Sim.Process):
             self.packet_rate = packet_count/self.layercake.sim_duration
             self.logger.info("Taking Packet_Count from config: %s"%self.packet_rate)
         else:
-            self.logger.error("Packet Rate/Count doesn't make sense!")
-            raise NotImplemented
+            raise Exception("Packet Rate/Count doesn't make sense!")
+            
 
 
         self.period = 1/float(self.packet_rate)
@@ -58,7 +60,7 @@ class Application(Sim.Process):
                                            destination=destination)
             if packet is not None:
                 if debug: self.logger.debug("Generated Payload %s: Waiting %s"%( packet.data, period))
-                self.layercake.net.send(packet)
+                self.layercake.send(packet)
                 self.stats['packets_sent'] += 1
             yield Sim.hold, self, period
 

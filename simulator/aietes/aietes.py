@@ -1,35 +1,9 @@
 #!/usr/bin/env python
-
 """
-SYNOPSIS
+AIETES
+In Greek Mythology, Aietes was son of the sun-god Helios and the Oceanid Perseis, brother to Circe and Pasiphae, and King of Colchis, and was the King that Jason (of Argonaut fame) acquired the Golden Fleese from, after completing a few tasks, mostly involving dragons.
 
-    TODO helloworld [-h] [-v,--verbose] [--version]
-
-DESCRIPTION
-
-    TODO This describes how to use this script.
-    This docstring will be printed by the script if there is an error or
-    if the user requests help (-h or --help).
-
-EXAMPLES
-
-    TODO: Show some examples of how to use this script.
-
-EXIT STATUS
-
-    TODO: List exit codes
-
-AUTHOR
-
-    TODO: Name <name@example.org>
-
-LICENSE
-
-    This script is in the public domain.
-
-VERSION
-
-    
+Oh, and Jason stole his daughter, and killed (and diced) his son. Good times.
 """
 
 import sys
@@ -64,8 +38,8 @@ def main ():
         sim.simulate()
 
     if options.output:
-        print("Storing output in %s"%outfile)
         outfile=dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
+        print("Storing output in %s"%outfile)
         sim.postProcess(inputFile=options.input,outputFile=outfile,dataFile=options.data,movieFile=options.movie, fps=options.fps)
 
     if options.plot:
@@ -100,8 +74,6 @@ if __name__ == '__main__':
                 default='', help='generate simulation from config file')
         (options, args) = parser.parse_args()
         print options
-        #if len(args) < 1:
-        #    parser.error ('missing argument')
         if options.verbose: print time.asctime()
         if options.profile:
             profile.run('print("PROFILING"); exit_code=main(); print("EXIT CODE:%s"%exit_code)')

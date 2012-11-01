@@ -41,7 +41,7 @@ class RoutingTable():
             self.packets.add(packet.id)
             if packet.next_hop == packet.destination:
                 if packet.destination == self.host.name:
-                    self.layercake.app.recv(self.incoming_packet)
+                    self.layercake.recv(self.incoming_packet)
             else:
                 self.logger.error("Don't know what to do with packet "+packet.data+" from "+\
                                   packet.source +" going to "+packet.destination +" with hop "+ packet.next_hop)

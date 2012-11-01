@@ -117,7 +117,7 @@ class Simulation():
 
         if not config_status:
             # If configspec doesn't match the input, bail
-            raise ConfigError(config_status)
+            raise ConfigError("Configspec doesn't match given input structure: %s" % config_status)
 
         config= dotdict(config.dict())
 
@@ -333,8 +333,9 @@ class Simulation():
                 filename = "dat-%s"%outputFile
                 self.logger.info("Writing datafile to %s"%filename)
                 np.savez(filename,(data,names,self.environment.shape))
-                self.config.filename=filename+'.conf'
-                self.config.write()
+                co=ConfigObj(self.config)
+                co.filename=outputFile+'.conf'
+                co.write()
             if movieFile:
                 filename = "ani-%s"%outputFile
                 self.logger.info("Writing animation to %s"%filename)

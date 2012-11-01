@@ -1,5 +1,6 @@
 from Layercake import Layercake
 import Behaviour
+import Applications
 import logging
 import numpy as np
 import uuid
@@ -38,6 +39,15 @@ class Node(Sim.Process):
         # Comms Stack
         ##############################
         self.layercake = Layercake(self,node_config)
+
+        ##############################
+        # Application
+        ##############################
+        try:
+            app_mod=getattr(Applications,str(node_config['app']))
+        except AttributeError:
+            raise ConfigError("Can't find Application: %s"%node_config['app'])
+        self.app = app_mod(self.layercake,node_config['Application'])
 
         ##############################
         #Propultion Capabilities
@@ -79,6 +89,7 @@ class Node(Sim.Process):
         Fired on Sim Start
         """
         Sim.activate(self,self.lifecycle())
+        self.app.activate()
         self.layercake.activate()
 
         #Tell the environment that we are here!

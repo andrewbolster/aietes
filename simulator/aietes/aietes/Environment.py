@@ -54,7 +54,7 @@ class Environment():
 
         return candidate_pos
 
-    def position_around(self,position=None):
+    def position_around(self,position=None, stddev=30):
         """
         Return a nearly-random map entry within the environment volume around a given position
         """
@@ -65,7 +65,7 @@ class Environment():
         else:
             valid = False
             while not valid:
-                candidate_pos=np.random.normal(np.asarray(position),50)
+                candidate_pos=np.random.normal(np.asarray(position),stddev)
                 candidate_pos = tuple(np.asarray(candidate_pos,dtype=int))
                 valid = self.is_empty(candidate_pos)
                 if debug: self.logger.debug("Candidate position: %s:%s"%((candidate_pos),valid))

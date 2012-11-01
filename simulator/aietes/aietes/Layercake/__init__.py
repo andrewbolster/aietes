@@ -1,5 +1,4 @@
 from aietes.Tools import Sim, ConfigError
-from aietes import Applications
 
 import PHY, MAC, Net
 import logging
@@ -58,20 +57,21 @@ class Layercake():
 
         self.net = net_mod(self,config['Network'])
 
-        ##############################
-        # Application
-        ##############################
-        try:
-            app_mod=getattr(Applications,str(config['app']))
-        except AttributeError:
-            raise ConfigError("Can't find Application: %s"%config['app'])
-        self.app = app_mod(self,config['Application'])
-
     def activate(self):
         """
         Fired on Sim Start
         """
         self.mac.activate()
-        self.app.activate()
 
+    def send(self,payload):
+        """
+        Initialise payload transmission down the stack
+        """
+        self.net.send(payload)
+
+    def recv(self,payload):
+        """
+        Trigger reception action from below
+        """
+        self.app.recv()
 
