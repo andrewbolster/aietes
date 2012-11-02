@@ -4,6 +4,23 @@ AIETES
 In Greek Mythology, Aietes was son of the sun-god Helios and the Oceanid Perseis, brother to Circe and Pasiphae, and King of Colchis, and was the King that Jason (of Argonaut fame) acquired the Golden Fleese from, after completing a few tasks, mostly involving dragons.
 
 Oh, and Jason stole his daughter, and killed (and diced) his son. Good times.
+
+# Execute default configuration (see configs/default.conf)
+./aietes.py
+
+# Execute a particual configuration
+./aietes.py -c <configfile.conf>
+
+# Execute default configuration and plot graph of motion
+./aietes.py -p
+
+# Execute default configuration and store data and interpolated configuration file
+./aietes.py -od
+
+# Load a particular data file and generate an mp4 animation of motion
+./aietes.py -i <filename.npz> -om
+
+
 """
 
 import sys
