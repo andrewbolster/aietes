@@ -1,0 +1,332 @@
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Agent/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Agent/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Agent/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Agent/Makefile.am	2012-11-02 13:08:20.772594790 -0700
+@@ -7,9 +7,8 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Agent_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Agent_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Agent_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0 \
+-			-L${SUNSET_PATH}/lib/libSunset_Core_Statistics.so.0.0.0
++libSunset_Core_Agent_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@  -L../Sunset_Debug -L../Sunset_Statistics -L../Sunset_Utilities
++libSunset_Core_Agent_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -lSunset_Core_Debug -lSunset_Core_Statistics -lSunset_Core_Utilities
+ 
+ nodist_libSunset_Core_Agent_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Agent/Sunset_Agent_Emulation/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Agent/Sunset_Agent_Emulation/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Agent/Sunset_Agent_Emulation/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Agent/Sunset_Agent_Emulation/Makefile.am	2012-11-02 13:08:20.772594790 -0700
+@@ -5,8 +5,10 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Agent_Emulation_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Agent_Emulation_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Agent_Emulation_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -L${SUNSET_PATH}/lib/libSunset_Core_Agent.so.0.0.0
++libSunset_Core_Agent_Emulation_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@  -L../../Sunset_Pkt_Converter \
++											 -L../../Sunset_Agent
++libSunset_Core_Agent_Emulation_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -lSunset_Core_PktConverter \
++											 -lSunset_Core_Agent
+ 
+ nodist_libSunset_Core_Agent_Emulation_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Agent/Sunset_Agent_Pkt_Converter/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Agent/Sunset_Agent_Pkt_Converter/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Agent/Sunset_Agent_Pkt_Converter/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Agent/Sunset_Agent_Pkt_Converter/Makefile.am	2012-11-02 13:08:20.772594790 -0700
+@@ -5,8 +5,10 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Agent_PktConverter_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Agent_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Agent_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so -L${SUNSET_PATH}/lib/libSunset_Core_PktConverter.so
++libSunset_Core_Agent_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L.. -L../../Sunset_Debug \
++												-L../../Sunset_Pkt_Converter
++libSunset_Core_Agent_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug \
++												-lSunset_Core_PktConverter -lSunset_Core_Agent
+ 
+ nodist_libSunset_Core_Agent_PktConverter_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Connections/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Connections/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Connections/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Connections/Makefile.am	2012-11-02 13:08:20.772594790 -0700
+@@ -9,8 +9,8 @@
+ 				UDP/sunset_udp_server.cc UDP/sunset_udp_server.h
+ 
+ libSunset_Core_Connection_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Connection_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Connection_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0
++libSunset_Core_Connection_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug
++libSunset_Core_Connection_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -lSunset_Core_Debug
+ 
+ nodist_libSunset_Core_Connection_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Driver/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Driver/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Driver/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Driver/Makefile.am	2012-11-02 13:08:20.772594790 -0700
+@@ -6,8 +6,12 @@
+ 					initlib.cc
+ 
+ libSunset_Core_Driver_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ 
+-libSunset_Core_Driver_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Driver_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread  -L${SUNSET_PATH}/lib/libSunset_Core_Channel_Phy.so.0.0.0
++libSunset_Core_Driver_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Statistics \
++									-L../Sunset_Utilities -L../Sunset_Channel2Phy \
++									-L../Sunset_Connections -L../Sunset_Pkt_Converter
++libSunset_Core_Driver_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -lSunset_Core_Statistics \
++									-lSunset_Core_Utilities -lSunset_Core_Channel_Phy \
++									-lSunset_Core_Connection -lSunset_Core_PktConverter
+ 
+ nodist_libSunset_Core_Driver_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Driver/Sunset_Micro_Modem/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Driver/Sunset_Micro_Modem/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Driver/Sunset_Micro_Modem/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Driver/Sunset_Micro_Modem/Makefile.am	2012-11-02 13:46:58.788089052 -0700
+@@ -9,10 +9,13 @@
+ libSunset_Core_Micro_Modem_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -I${SUNSET_PATH}/LibMicroModem/libumutil-1.0.0 \
+ 	-I${SUNSET_PATH}/LibMicroModem/libnmea-2.1.0 \
+ 	-I${SUNSET_PATH}/LibMicroModem/libphf-1.0.0
+-
+-libSunset_Core_Micro_Modem_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Micro_Modem_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -L${SUNSET_PATH}/sunset_lib/lib/libSunset_Core_Driver.so.0.0.0 -L${SUNSET_PATH}/sunset_lib/lib/ -lphf -lnmea -lumutil
+-
+++libSunset_Core_Micro_Modem_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../../Sunset_Driver -L../../Sunset_Statistics \
++									-L../../Sunset_Utilities -L../../Sunset_Channel2Phy \
++									-L../../Sunset_Connections -L../../Sunset_Pkt_Converter
++libSunset_Core_Micro_Modem_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lpthread -lSunset_Core_Driver -lSunset_Core_Statistics \
++									-lSunset_Core_Utilities -lSunset_Core_Channel_Phy \
++									-lSunset_Core_Connection -lSunset_Core_PktConverter \
++									-L${SUNSET_PATH}/sunset_lib/lib/ -lphf -lnmea -lumutil
+ nodist_libSunset_Core_Micro_Modem_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+ CLEANFILES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Mac/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Mac/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Mac/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Mac/Makefile.am	2012-11-02 13:08:20.772594790 -0700
+@@ -8,9 +8,10 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Mac_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_Mac_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Mac_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@  -L${SUNSET_PATH}/lib/libSunset_Core_Mac_Routing.so.0.0.0 \
+-			 -L${SUNSET_PATH}/lib/libSunset_Core_Phy_Mac.so.0.0.0 -L${SUNSET_PATH}/lib/libSunset_Core_Queue.so.0.0.0 
++libSunset_Core_Mac_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Statistics -L../Sunset_Utilities -L../Sunset_Mac2Rtg \
++								 -L../Sunset_Phy2Mac -L../Sunset_Queue
++libSunset_Core_Mac_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@  -lSunset_Core_Statistics -lSunset_Core_Utilities \
++								 -lSunset_Core_Mac_Routing -lSunset_Core_Phy_Mac -lSunset_Core_Queue
+ 
+ nodist_libSunset_Core_Mac_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Mac/Sunset_Mac_Pkt_Converter/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Mac/Sunset_Mac_Pkt_Converter/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Mac/Sunset_Mac_Pkt_Converter/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Mac/Sunset_Mac_Pkt_Converter/Makefile.am	2012-11-02 13:08:20.772594790 -0700
+@@ -5,9 +5,10 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Mac_PktConverter_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Mac_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Mac_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0 \
+-			-L${SUNSET_PATH}/lib/libSunset_Core_PktConverter.so.0.0.0
++libSunset_Core_Mac_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L.. -L../../Sunset_Debug \
++			-L../../Sunset_Pkt_Converter
++libSunset_Core_Mac_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Mac -lSunset_Core_Debug\
++			-lSunset_Core_PktConverter
+ 
+ nodist_libSunset_Core_Mac_PktConverter_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Mac2Rtg/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Mac2Rtg/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Mac2Rtg/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Mac2Rtg/Makefile.am	2012-11-02 13:08:20.772594790 -0700
+@@ -5,8 +5,8 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Mac_Routing_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Mac_Routing_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Mac_Routing_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0
++libSunset_Core_Mac_Routing_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug
++libSunset_Core_Mac_Routing_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug
+ 
+ nodist_libSunset_Core_Mac_Routing_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Ns_Pkt_Converter/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Ns_Pkt_Converter/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Ns_Pkt_Converter/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Ns_Pkt_Converter/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -5,9 +5,10 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Ns_PktConverter_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Ns_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Ns_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0 \
+-		-L${SUNSET_PATH}/lib/libSunset_Core_PktConverter.so.0.0.0
++libSunset_Core_Ns_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug \
++											-L../Sunset_Pkt_Converter
++libSunset_Core_Ns_PktConverter_la_LIBADD =  @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug \
++											-lSunset_Core_PktConverter
+ 
+ nodist_libSunset_Core_Ns_PktConverter_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Phy/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Phy/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Phy/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Phy/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -5,9 +5,10 @@
+ 							initlib.cc
+ 
+ libSunset_Core_Phy_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_Phy_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Phy_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@   -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0 \
+-		-L${SUNSET_PATH}/lib/libSunset_Core_Channel_Phy.so.0.0.0
++libSunset_Core_Phy_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug -L../Sunset_Utilities \
++								 -L../Sunset_Channel2Phy -L../Sunset_Phy2Mac 
++libSunset_Core_Phy_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@   -lSunset_Core_Debug -lSunset_Core_Utilities \
++																  -lSunset_Core_Channel_Phy -lSunset_Core_Phy_Mac 
+ 
+ nodist_libSunset_Core_Phy_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Phy/Sunset_Phy_Pkt_Converter/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Phy/Sunset_Phy_Pkt_Converter/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Phy/Sunset_Phy_Pkt_Converter/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Phy/Sunset_Phy_Pkt_Converter/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -5,9 +5,10 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Phy_PktConverter_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Phy_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Phy_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0 \
+-		-L${SUNSET_PATH}/lib/libSunset_Core_PktConverter.so.0.0.0
++libSunset_Core_Phy_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../../Sunset_Debug\
++		-L../../Sunset_Pkt_Converter
++libSunset_Core_Phy_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug\
++		-lSunset_Core_PktConverter
+ 
+ nodist_libSunset_Core_Phy_PktConverter_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Pkt_Converter/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Pkt_Converter/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Pkt_Converter/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Pkt_Converter/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -5,8 +5,8 @@
+ 				initlib.cc
+ 
+ libSunset_Core_PktConverter_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0
++libSunset_Core_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug
++libSunset_Core_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug
+ 
+ nodist_libSunset_Core_PktConverter_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Queue/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Queue/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Queue/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Queue/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -4,8 +4,8 @@
+ libSunset_Core_Queue_la_SOURCES = sunset_queue.cc sunset_queue.h initlib.cc
+ 
+ libSunset_Core_Queue_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_Queue_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Queue_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@  -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0
++libSunset_Core_Queue_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug -L../Sunset_Statistics -L../Sunset_Utilities 
++libSunset_Core_Queue_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@  -lSunset_Core_Debug -lSunset_Core_Statistics -lSunset_Core_Utilities 
+ 
+ nodist_libSunset_Core_Queue_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Routing/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Routing/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Routing/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Routing/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -7,8 +7,8 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Routing_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_Routing_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Routing_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@   -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0
++libSunset_Core_Routing_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug -L../Sunset_Utilities 
++libSunset_Core_Routing_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@   -lSunset_Core_Debug -lSunset_Core_Utilities
+ 
+ nodist_libSunset_Core_Routing_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Routing/Sunset_Routing_Pkt_Converter/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Routing/Sunset_Routing_Pkt_Converter/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Routing/Sunset_Routing_Pkt_Converter/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Routing/Sunset_Routing_Pkt_Converter/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -5,9 +5,10 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Routing_PktConverter_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ -ggdb
+-libSunset_Core_Routing_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Routing_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0 \
+-			 -L${SUNSET_PATH}/lib/libSunset_Core_PktConverter.so.0.0.0
++libSunset_Core_Routing_PktConverter_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@  -L../../Sunset_Debug\
++			 -L../../Sunset_Pkt_Converter
++libSunset_Core_Routing_PktConverter_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug\
++			 -lSunset_Core_PktConverter
+ 
+ nodist_libSunset_Core_Routing_PktConverter_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Statistics/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Statistics/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Statistics/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Statistics/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -5,8 +5,8 @@
+ 				 initlib.cc
+ 
+ libSunset_Core_Statistics_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_Statistics_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Statistics_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@  -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0
++libSunset_Core_Statistics_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug
++libSunset_Core_Statistics_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@  -lSunset_Core_Debug
+ 
+ nodist_libSunset_Core_Statistics_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Timing/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Timing/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Timing/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Timing/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -6,8 +6,8 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Timing_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_Timing_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Timing_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@
++libSunset_Core_Timing_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug
++libSunset_Core_Timing_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug
+ 
+ nodist_libSunset_Core_Timing_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Timing_Emulation/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Timing_Emulation/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Timing_Emulation/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Timing_Emulation/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -5,8 +5,8 @@
+ 				initlib.cc
+ 
+ libSunset_Core_Timing_Emulation_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_Timing_Emulation_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libSunset_Core_Timing_Emulation_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@
++libSunset_Core_Timing_Emulation_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug -L../Sunset_Timing
++libSunset_Core_Timing_Emulation_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug -lSunset_Core_Timing
+ 
+ nodist_libSunset_Core_Timing_Emulation_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Utilities/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Utilities/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Utilities/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Utilities/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -6,8 +6,8 @@
+ 				  initlib.cc
+ 
+ libSunset_Core_Utilities_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_Utilities_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@  
+-libSunset_Core_Utilities_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@  -L${SUNSET_PATH}/lib/libSunset_Core_Debug.so.0.0.0
++libSunset_Core_Utilities_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../Sunset_Debug 
++libSunset_Core_Utilities_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lSunset_Core_Debug
+ 
+ nodist_libSunset_Core_Utilities_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc
+diff -Naur SUNSET_v1.0/sunset_core/src/Sunset_Utilities/Sunset_RT_Utilities/Makefile.am SUNSET_v1.0_new/sunset_core/src/Sunset_Utilities/Sunset_RT_Utilities/Makefile.am
+--- SUNSET_v1.0/sunset_core/src/Sunset_Utilities/Sunset_RT_Utilities/Makefile.am	2012-05-10 06:07:14.000000000 -0700
++++ SUNSET_v1.0_new/sunset_core/src/Sunset_Utilities/Sunset_RT_Utilities/Makefile.am	2012-11-02 13:08:20.776594787 -0700
+@@ -5,10 +5,11 @@
+ 				 initlib.cc
+ 
+ libSunset_Core_RT_Utilities_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libSunset_Core_RT_Utilities_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
++libSunset_Core_RT_Utilities_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L.. \
++		-L../../Sunset_RTScheduler -L../../Sunset_Pkt_Converter
+ libSunset_Core_RT_Utilities_la_LIBADD =   @NS_LIBADD@ @NSMIRACLE_LIBADD@  \
+-		-L${UW_PATH_LIB_NEW}/libSunset_Core_Utilities.so.0.0.0 -L${SUNSET_PATH}/lib/libSunset_Core_Real_Scheduler.so.0.0.0 \
+-		-L${SUNSET_PATH}/lib/libSunset_Core_PktConverter.so.0.0.0
++		-lSunset_Core_Utilities -lSunset_Core_Real_Scheduler \
++		-lSunset_Core_PktConverter
+ 
+ nodist_libSunset_Core_RT_Utilities_la_SOURCES = initTcl.cc
+ BUILT_SOURCES = initTcl.cc

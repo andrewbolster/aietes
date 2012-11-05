@@ -1,0 +1,39 @@
+--- nsmiracle-trunk.orig/main/aodv/Makefile.am	2012-07-29 03:45:38.324502698 +0200
++++ nsmiracle-trunk/main/aodv/Makefile.am	2012-07-29 03:48:53.552445412 +0200
+@@ -44,8 +44,8 @@
+ 				aodv-pkt.h initlib.cc
+ 
+ libMiracleAodv_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libMiracleAodv_la_LDFLAGS = @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@
+-libMiracleAodv_la_LIBADD = @NS_LIBADD@ @NSMIRACLE_LIBADD@
++libMiracleAodv_la_LDFLAGS = @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L$(top_srcdir)/routing -L$(top_srcdir)/cbr
++libMiracleAodv_la_LIBADD = @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lMiracleRouting -lmiraclecbr
+ 
+ nodist_libMiracleAodv_la_SOURCES = InitTcl.cc
+ 
+--- nsmiracle-trunk.orig/main/mll/Makefile.am	2012-07-29 07:06:42.597509124 +0200
++++ nsmiracle-trunk/main/mll/Makefile.am	2012-07-29 05:41:33.678927114 +0200
+@@ -13,8 +13,8 @@
+ 		initlib.cc
+ 
+ libmll_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@ 
+-libmll_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ 
+-libmll_la_LIBADD = @NS_LIBADD@ @NSMIRACLE_LIBADD@ 
++libmll_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../mmac -L../ip
++libmll_la_LIBADD = @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lmmac -lMiracleIp
+ 
+ nodist_libmll_la_SOURCES = MllInitTcl.cc
+ 
+--- nsmiracle-trunk.orig/main/mmac/Makefile.am  2012-07-29 17:57:50.338543660 +0200
++++ nsmiracle-trunk/main/mmac/Makefile.am       2012-07-29 17:58:14.742656589 +0200
+@@ -46,8 +46,8 @@
+                 mmac-aloha-adv.h mmac-aloha-adv.cpp 
+ 
+ libmmac_la_CPPFLAGS = @NS_CPPFLAGS@ @NSMIRACLE_CPPFLAGS@
+-libmmac_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@
+-libmmac_la_LIBADD = @NS_LIBADD@ @NSMIRACLE_LIBADD@
++libmmac_la_LDFLAGS =  @NS_LDFLAGS@ @NSMIRACLE_LDFLAGS@ -L../mphy
++libmmac_la_LIBADD = @NS_LIBADD@ @NSMIRACLE_LIBADD@ -lmphy
+ 
+ nodist_libmmac_la_SOURCES = MMacInitTcl.cc
+
