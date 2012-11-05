@@ -92,17 +92,18 @@ vercomp () {
 # Generate Locale
 mkdir -p ${PREFIX}
 
-rm /etc/ld.so.conf.d/sunset.conf /etc/profile.d/sunset.conf
+#rm /etc/ld.so.conf.d/sunset.conf /etc/profile.d/sunset.conf
 
-echo >> /etc/ld.so.conf.d/sunset.conf << END
+cat > /etc/ld.so.conf.d/sunset.conf << END
 $PREFIX/ns-allinone-$NSVER/otcl-$OTCLVER
 $PREFIX/ns-allinone-$NSVER/lib
 $PREFIX/lib
 END
-echo >> /etc/profile.d/sunset.conf << END
+
+cat > /etc/profile.d/sunset.conf << END
 export PATH="$PREFIX/ns-allinone-$NSVER/bin:$PREFIX/ns-allinone-$NSVER/tcl$TCLVER/unix:$PREFIX/ns-allinone-2.35/tk$TKVER/unix:$PATH"
 export TCL_LIBRARY="$PREFIX/ns-allinone-$NSVER/tcl$TCLVER/library,$TCL_LIBRARY"
-export SUNSET_PATH="$PREFIX/SUNSET_v$SUNSERVER"
+export SUNSET_PATH="$PREFIX/SUNSET_v$SUNSETVER"
 END
 
 # Get NS Allinone and Install
@@ -269,8 +270,8 @@ if [ ! -d $PREFIX/SUNSET_v$SUNSETVER ]; then
   #SUNSET Addon
   wget -O - "http://reti.dsi.uniroma1.it/UWSN_Group/framework/download/SUNSETAddOn_v1.0.tar.gz" | tar -xzf - -C $PREFIX/SUNSET_v$SUNSETVER --strip-components 1
   patch --ignore-whitespace -p1 < $MYDIR/patches/patch_sunset_addon.patch
-  sed -i "s|NS_PATH=\"/home/example/\"|NS_PATH=\"$PREFIX/ns-allinone-$NSVER/\"|g" install_sunset_addon.sh
-  sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"$PREFIX/nsmiracle-trunk/main/\"|g" install_sunset_addon.sh 
+  sed -i "s|NS_PATH=\"/home/example/\"|NS_PATH=\"$PREFIX/ns-allinone-$NSVER\"|g" install_sunset_addon.sh
+  sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"$PREFIX/nsmiracle-trunk/main\"|g" install_sunset_addon.sh 
   sed -i "s|SUNSET_PATH=\"\$CURRDIR\"|NS_PATH=\"$PREFIX/SUNSET_v${SUNSETVER}\"|g" install_sunset_addon.sh
   ./install_sunset_addon.sh || (make clean && exit 1)
 
@@ -280,5 +281,5 @@ if [ ! -d $PREFIX/SUNSET_v$SUNSETVER ]; then
 fi
 
 #Clean up the bashrc messing
-sed -i "/SUNSET_PATH/d" ~/.bashrc
+#sed -i "/SUNSET_PATH/d" ~/.bashrc
 
