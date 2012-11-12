@@ -51,10 +51,12 @@ def interactive_plot(data):
     Generate the MPL data browser for the flock data
     """
     fig = plt.figure()
-    ax = axes3.Axes3D(fig)
+    ax = fig.add_subplot(111, projection='3d')
     lines = [ ax.plot( xs, ys, zs)[0] for xs,ys,zs in data.d ]
+    for n,line in enumerate(lines):
+        line.set_label(data.names[n])
 
-    timeax = plt.axes([0.25, 0.1, 0.65, 0.03])
+    timeax = plt.axes([0.2, 0.0, 0.65, 0.03])
     timeslider = Slider(timeax, 'Time', 0, data.tmax, valinit=0)
 
     def update(val):
@@ -71,6 +73,7 @@ def interactive_plot(data):
     timeslider.on_changed(update)
 
     shape = data.environment
+    ax.legend()
     ax.set_xlim3d((0,shape[0]))
     ax.set_ylim3d((0,shape[1]))
     ax.set_zlim3d((0,shape[2]))
