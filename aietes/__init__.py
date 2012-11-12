@@ -304,7 +304,10 @@ class Simulation():
         shape = []
         if inputFile is not None:
             self.logger.info("Retrieving data from file: %s"%inputFile)
-            (data,names,shape) = (np.load(inputFile).items())[0][1]
+            source = np.load(inputFile)
+            data = source['data']
+            names = source['names']
+            shape = source['environment']
             assert len(data)==len(names), 'Array Sizes don\'t match!'
         else:
             if log is None and inputFile is None:
@@ -332,7 +335,7 @@ class Simulation():
             if dataFile:
                 filename = "dat-%s"%outputFile
                 self.logger.info("Writing datafile to %s"%filename)
-                np.savez(filename,(data,names,self.environment.shape))
+                np.savez(filename,data=data,names=names,environment=self.environment.shape)
                 co=ConfigObj(self.config)
                 co.filename=outputFile+'.conf'
                 co.write()
