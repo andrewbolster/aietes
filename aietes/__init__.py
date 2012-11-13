@@ -277,52 +277,55 @@ class Simulation():
 
     def postProcess(self,log=None,outputFile=None,displayFrames=None,dataFile=False,movieFile=False,inputFile=None,xRes=1024,yRes=768,fps=24):
         """
-        Performs output and data generation for a given simulation
+        Performs output and positions generation for a given simulation
         """
         dpi=80
         ipp=80
         fig = plt.figure(dpi=dpi, figsize=(xRes/ipp,yRes/ipp))
         ax = axes3.Axes3D(fig)
         
-        def updatelines(i,data,lines,displayFrames):
+        def updatelines(i,positions,lines,displayFrames):
             """
-            Update the currently displayed line data
-            data contains [x,y,z],[t] data for each vector
+            Update the currently displayed line positions
+            positions contains [x,y,z],[t] positions for each vector
             displayFrames configures the display cache size
             """
             if isinstance(displayFrames,int):
                 j=max(i-displayFrames,0)
             else:
                 j=0
-            for line,dat in zip(lines,data):
+            for line,dat in zip(lines,positions):
                 line.set_data(dat[0:2, j:i])         #x,y axis
                 line.set_3d_properties(dat[2, j:i])  #z axis
             return lines
 
-        data = []
+        positions = []
+        vectors= []
         names = []
         shape = []
         if inputFile is not None:
-            self.logger.info("Retrieving data from file: %s"%inputFile)
+            self.logger.info("Retrieving positions from file: %s"%inputFile)
             source = np.load(inputFile)
-            data = source['data']
+            positions = source['positions']
+            vectors = source['vectors']
             names = source['names']
             shape = source['environment']
-            assert len(data)==len(names), 'Array Sizes don\'t match!'
+            assert len(positions)==len(names), 'Array Sizes don\'t match!'
         else:
             if log is None and inputFile is None:
                 self.logger.info("Using default postprocessing log")
                 log=self.environment.pos_log
             for node in self.nodes:
-                data.append(node.pos_log)
+                positions.append(node.pos_log)
+                vectors.append(node.vec_log)
                 names.append(node.name)
             shape=self.environment.shape
 
-        n_frames= len(data[0][0])
+        n_frames= len(positions[0][0])
 
-        lines = [ax.plot(dat[0, 0:1], dat[1,0:1], dat[2, 0:1],label=names[i])[0] for i,dat in enumerate(data) ]
+        lines = [ax.plot(dat[0, 0:1], dat[1,0:1], dat[2, 0:1],label=names[i])[0] for i,dat in enumerate(positions) ]
 
-        line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(data, lines, displayFrames), interval=1000/fps, repeat_delay=300,  blit=True,)
+        line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(positions, lines, displayFrames), interval=1000/fps, repeat_delay=300,  blit=True,)
         ax.legend()
         ax.set_xlim3d((0,shape[0]))
         ax.set_ylim3d((0,shape[1]))
@@ -335,7 +338,12 @@ class Simulation():
             if dataFile:
                 filename = "dat-%s"%outputFile
                 self.logger.info("Writing datafile to %s"%filename)
-                np.savez(filename,data=data,names=names,environment=self.environment.shape)
+                np.savez(filename,
+                         positions=positions,
+                         vectors=vectors,
+                         names=names,
+                         environment=self.environment.shape
+                        )
                 co=ConfigObj(self.config)
                 co.filename=outputFile+'.conf'
                 co.write()

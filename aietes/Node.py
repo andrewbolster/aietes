@@ -21,6 +21,7 @@ class Node(Sim.Process):
         self.config=node_config
 
         self.pos_log=np.empty((3,self.simulation.config.Simulation.sim_duration))
+        self.vec_log=np.empty((3,self.simulation.config.Simulation.sim_duration))
 
         ##############################
         # Physical Configuration
@@ -139,6 +140,9 @@ class Node(Sim.Process):
             self.logger.critical("WE'RE OUT OF THE ENVIRONMENT! %s, v=%s"%(self.position,attempted_vector))
             raise Exception("%s Crashed out of the environment at %s m/s"%(self.name,mag(attempted_vector)))
         self.pos_log[:,self._lastupdate]=self.position.copy()
+
+        self.vec_log[:,self._lastupdate]=attempted_vector
+
         self.highest_attained_speed = max(self.highest_attained_speed,mag(attempted_vector))
         self._lastupdate = Sim.now()
 

@@ -12,6 +12,7 @@ install_requires = [
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
+    "numpy"
 ]
 
 
@@ -34,5 +35,5 @@ setup(name='bounos',
     entry_points={
         'console_scripts':
             ['bounos=bounos:main']
-    }
+    },
 )
