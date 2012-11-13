@@ -13,7 +13,7 @@ if [[ $? -ne 0 ]]; then
 fi
 
 
-PREFIX="/locale/ns"
+PREFIX="/dev/shm/ns"
 if [ $VERSION == 35 ]; then
 TCLVER=8.5.10
 TKVER=8.5.10
@@ -219,7 +219,7 @@ if [ ! -d $PREFIX/nsmiracle-trunk ]; then
 HERE
   ./autogen.sh
   ./configure --with-ns-allinone=$PREFIX/ns-allinone-${NSVER} --prefix=$PREFIX --disable-static --with-dei80211mr=$PREFIX/ns-allinone-${NSVER}/dei80211mr-${DEI80211MRVER}
-  make && make install || (make clean && exit 1)
+  ( make && make install) || (make clean && exit 1)
   ldconfig
 fi
 
