@@ -95,7 +95,7 @@ def interactive_plot(data):
     # Generate Arrangements for viewport + accessory views
     plt.close('all')
     fig = plt.figure()
-    gs = GridSpec(3,4)
+    gs = GridSpec(9,16)
     ax = plt.subplot(gs[:,1:], projection='3d')
     axH = plt.subplot(gs[:,0])
 
