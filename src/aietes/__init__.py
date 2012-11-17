@@ -33,15 +33,20 @@ from pprint import pformat
 
 np.set_printoptions(precision=3)
 
+_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 class Simulation():
     """
     Defines a single simulation
     """
-    def __init__(self,config_file=''):
+    def __init__(self,config_file):
+        self.config_spec='%s/configs/default.conf'%_ROOT
         self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
-        self.logger.info("creating instance from %s"%config_file)
-        self.config_file=config_file
+        self.config_file = config_file
+        if self.config_file is None:
+            self.logger.info("creating instance from default")
+        else:
+            self.logger.info("creating instance from %s"%config_file)
         self.nodes=[]
         self.fleets=[]
 
@@ -105,7 +110,7 @@ class Simulation():
         raise KeyError("Given UUID does not exist in Nodes list")
 
 
-    def validateConfig(self,config_file='', configspec='configs/default.conf'):
+    def validateConfig(self,config_file):
         """
         Generate valid configuration information by interpolating a given config
         file with the defaults
@@ -120,11 +125,11 @@ class Simulation():
         # GENERIC CONFIG ACQUISITION
         ##############################
 
-        config= ConfigObj(config_file,configspec=configspec)
+        config= ConfigObj(config_file,configspec=self.config_spec)
         config_status = config.validate(validate.Validator(),copy=True)
 
         if not config_status:
-            # If configspec doesn't match the input, bail
+            # If config_spec doesn't match the input, bail
             raise ConfigError("Configspec doesn't match given input structure: %s" % config_status)
 
         config= dotdict(config.dict())
@@ -138,7 +143,7 @@ class Simulation():
         nodes_config = dict()
         node_default_config = config.Node.Nodes.pop('__default__')
         # Add the stuff we know whould be there...
-        self.logger.debug("Default Node Config: %s" % pformat(node_default_config))
+        self.logger.debug("Initial Node Config from %s: %s" % (config_file,pformat(node_default_config)))
         node_default_config.update(
             #TODO import PHY,Behaviour, etc into the node config?
         )
@@ -464,6 +469,23 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
 #except IOError:
 #    pass
 #atexit.register(readline.write_history_file, histfile)
+def go(options, args):
+
+    outfile=None
+    sim = Simulation(config_file=options.config)
+
+    if options.input is None:
+        sim.prepare()
+        if not options.noexecution:
+            sim.simulate()
+
+    if options.output:
+        outfile=dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
+        print("Storing output in %s"%outfile)
+        sim.postProcess(inputFile=options.input,outputFile=outfile,dataFile=options.data,movieFile=options.movie, fps=options.fps)
+
+    if options.plot:
+        sim.postProcess(inputFile=options.input, displayFrames=720)
 def main ():
     """
     Everyone knows what the main does; it does everything!
@@ -493,7 +515,7 @@ def main ():
         parser.add_option ('-i', '--input', action='store', dest='input',
                 default=None, help='store input file, this kills the simulation')
         parser.add_option ('-c', '--config', action='store', dest='config',
-                default='', help='generate simulation from config file')
+                default=None, help='generate simulation from config file')
         (options, args) = parser.parse_args()
         print options
         if options.verbose: print time.asctime()
@@ -517,21 +539,4 @@ def main ():
         traceback.print_exc()
         os._exit(1)
 
-def go(options, args):
-
-    outfile=None
-    sim = Simulation(config_file=options.config)
-
-    if options.input is None:
-        sim.prepare()
-        if not options.noexecution:
-            sim.simulate()
-
-    if options.output:
-        outfile=dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
-        print("Storing output in %s"%outfile)
-        sim.postProcess(inputFile=options.input,outputFile=outfile,dataFile=options.data,movieFile=options.movie, fps=options.fps)
-
-    if options.plot:
-        sim.postProcess(inputFile=options.input, displayFrames=720)
 

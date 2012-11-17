@@ -12,28 +12,32 @@ install_requires = [
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
-    "numpy"
 ]
 
 
-setup(name='bounos',
+setup(name='aietes',
     version=version,
-    description="Simulation Visualisation and Analysis Suite for AIETES",
+    description="A Multi-Node behaviour simulator for AUV Comms Research",
     long_description=README + '\n\n' + NEWS,
     classifiers=[
       # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
     ],
-    keywords='auv acoustic behaviour marine visualisation visualization analysis graphing',
+    keywords='AUV Behaviour Research Python simulation simpy numpy communications',
     author='Andrew Bolster',
     author_email='me@andrewbolster.info',
-    url='http://andrewbolster.info/',
-    license='MIT Open Source License',
+    url='http://andrewbolster.info',
+    license='',
     packages=find_packages('src'),
     package_dir = {'': 'src'},include_package_data=True,
+    package_data = {
+        'aietes' : ['configs/*.conf']
+    },
     zip_safe=False,
     install_requires=install_requires,
     entry_points={
         'console_scripts':
-            ['bounos=bounos:main']
-    },
+            ['aietes=aietes:main',
+             'bounos=bounos:main'
+            ]
+    }
 )
