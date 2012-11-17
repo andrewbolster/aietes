@@ -30,21 +30,25 @@ class Layercake():
         ##############################
         try:
             phy_mod = getattr(PHY,str(config['phy']))
+            self.phy = phy_mod(self,
+                               self.channel_event,
+                               self.config['PHY'])
+        except KeyError:
+            logging.warn("No PHY Configured")
         except AttributeError:
             raise ConfigError("Can't find PHY: %s"%config['phy'])
 
-        self.phy = phy_mod(self,
-                           self.channel_event,
-                           self.config['PHY'])
 
         ##############################
         # MAC
         ##############################
         try:
             mac_mod=getattr(MAC,str(config['mac']))
+            self.mac = mac_mod(self,config['MAC'])
+        except KeyError:
+            logging.warn("No MAC Configured, activation is going to go wrong!")
         except AttributeError:
             raise ConfigError("Can't find MAC: %s"%config['mac'])
-        self.mac = mac_mod(self,config['MAC'])
 
 
         ##############################
@@ -52,10 +56,12 @@ class Layercake():
         ##############################
         try:
             net_mod=getattr(Net,str(config['net']))
+            self.net = net_mod(self,config['Network'])
+        except KeyError:
+            logging.warn("No NET Configured")
         except AttributeError:
             raise ConfigError("Can't find Network: %s"%config['net'])
 
-        self.net = net_mod(self,config['Network'])
 
     def activate(self):
         """

@@ -1,6 +1,14 @@
+
+import sys
+import os
+import traceback
+import optparse
+import time
 import logging
 import numpy as np
 import scipy
+import profile
+from datetime import datetime as dt
 
 from configobj import ConfigObj
 import validate
@@ -125,7 +133,7 @@ class Simulation():
         ##############################
         # NODE CONFIGURATION
         ##############################
-        nodes_preconfigured = 0
+        preconfigured_nodes_count = 0
         pre_node_names=[]
         nodes_config = dict()
         node_default_config = config.Node.Nodes.pop('__default__')
@@ -141,9 +149,9 @@ class Simulation():
         if isinstance(config.Node.Nodes, dict) and len(config.Node.Nodes) > 0:
             ###
             #There Are Detailed Config Instances
-            nodes_preconfigured = len(config.Node.Nodes)
+            preconfigured_nodes_count = len(config.Node.Nodes)
             self.logger.info("Have %d nodes from config: %s" % (
-                                    nodes_preconfigured,
+                                    preconfigured_nodes_count,
                                     nodes_config)
             )
             pre_node_names = config.Node.Nodes.keys()
@@ -163,10 +171,9 @@ class Simulation():
 
         # Boundary checks:
         #   len(app)==len(dist)
-        #   len(app) % nodes_count-nodes_preconfigured = 0
-        self.logger.debug("App:%s,Dist:%s" % (app,dist))
+        #   len(app) % nodes_count-preconfigured_nodes_count = 0
         if isinstance(app,list) and isinstance(dist, list):
-            if len(app) == len(dist) and (nodes_count-nodes_preconfigured) % len(app) == 0:
+            if len(app) == len(dist) and (nodes_count-preconfigured_nodes_count) % len(app) == 0:
                 applications = [str(a)
                                 for a,n in zip(app,dist)
                                     for i in range(int(n))
@@ -177,13 +184,13 @@ class Simulation():
                     "Application / Distribution mismatch"
                 )
         else:
-            applications = [str(app) for i in range(int(nodes_count-nodes_preconfigured))]
+            applications = [str(app) for i in range(int(nodes_count-preconfigured_nodes_count))]
             self.logger.info("Using Application:%s" % applications)
 
         ###
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
-            count = config.Node.count - nodes_preconfigured,
+            count = nodes_count - preconfigured_nodes_count,
             naming_convention = config.Node.naming_convention
         )
         node_names = auto_node_names + pre_node_names
@@ -203,11 +210,6 @@ class Simulation():
         for node_name, node_config in config.Node.Nodes.items():
             # Import the magic!
             nodes_config[node_name].update(node_config)
-
-        ###
-        # Generate Per-Vector Node initialisation configs
-        for node_name,node_config in nodes_config.items():
-            self.logger.info("[%s]: %s" % (node_name,node_config))
 
         ##############################
         #Confirm
@@ -453,4 +455,83 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
             proc = Popen(command, shell=False,
                 stdout=PIPE, stderr=PIPE)
             proc.wait()
+
+# Uncomment the following section if you want readline history support.
+#import readline, atexit
+#histfile = os.path.join(os.environ['HOME'], '.TODO_history')
+#try:
+#    readline.read_history_file(histfile)
+#except IOError:
+#    pass
+#atexit.register(readline.write_history_file, histfile)
+def main ():
+    """
+    Everyone knows what the main does; it does everything!
+    """
+    try:
+        start_time = time.time()
+        parser = optparse.OptionParser(
+                formatter=optparse.TitledHelpFormatter(),
+                usage=globals()['__doc__'],
+                version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
+        parser.add_option ('-v', '--verbose', action='store_true',
+                default=False, help='verbose output')
+        parser.add_option ('-P', '--profile', action='store_true',
+                default=False, help='profiled execution')
+        parser.add_option ('-p', '--plot', action='store_true',
+                default=False, help='perform ploting')
+        parser.add_option ('-o', '--output', action='store_true',
+                default=False, help='store output')
+        parser.add_option ('-m', '--movie', action='store_true',
+                default=None, help='generate and store movie (this takes a long time)')
+        parser.add_option ('-f', '--fps', action='store', type="int",
+                default=24, help='set the fps for animation')
+        parser.add_option ('-x', '--noexecution', action='store_true',
+                default=False, help='prepare only, don\' execute simulation')
+        parser.add_option ('-d', '--data', action='store_true',
+                default=None, help='store output to datafile')
+        parser.add_option ('-i', '--input', action='store', dest='input',
+                default=None, help='store input file, this kills the simulation')
+        parser.add_option ('-c', '--config', action='store', dest='config',
+                default='', help='generate simulation from config file')
+        (options, args) = parser.parse_args()
+        print options
+        if options.verbose: print time.asctime()
+        if options.profile:
+            profile.run('print("PROFILING"); exit_code=go(options,args); print("EXIT CODE:%s"%exit_code)')
+        else:
+            exit_code = go(options,args)
+        if exit_code is None:
+            exit_code = 0
+        if options.verbose: print time.asctime()
+        if options.verbose: print 'TOTAL TIME IN MINUTES:',
+        if options.verbose: print (time.time() - start_time) / 60.0
+        sys.exit(exit_code)
+    except KeyboardInterrupt, e: # Ctrl-C
+        raise e
+    except SystemExit, e: # sys.exit()
+        raise e
+    except Exception, e:
+        print 'ERROR, UNEXPECTED EXCEPTION'
+        print str(e)
+        traceback.print_exc()
+        os._exit(1)
+
+def go(options, args):
+
+    outfile=None
+    sim = Simulation(config_file=options.config)
+
+    if options.input is None:
+        sim.prepare()
+        if not options.noexecution:
+            sim.simulate()
+
+    if options.output:
+        outfile=dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
+        print("Storing output in %s"%outfile)
+        sim.postProcess(inputFile=options.input,outputFile=outfile,dataFile=options.data,movieFile=options.movie, fps=options.fps)
+
+    if options.plot:
+        sim.postProcess(inputFile=options.input, displayFrames=720)
 
