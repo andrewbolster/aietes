@@ -18,8 +18,9 @@ def interactive_plot(data):
     plt.close('all')
     fig = plt.figure()
     gs = GridSpec(9,16)
-    ax = plt.subplot(gs[:,1:], projection='3d')
+    ax = plt.subplot(gs[:-1,1:], projection='3d')
     axH = plt.subplot(gs[:,0])
+#    axB = plt.subplot(gs[-1,1:])
 
     # Find initial display state for viewport
     lines = [ ax.plot( xs, ys, zs)[0] for xs,ys,zs in data.p ]
@@ -30,6 +31,9 @@ def interactive_plot(data):
     timeax = plt.axes([0.2, 0.0, 0.65, 0.03])
     timeslider = Slider(timeax, 'Time', 0, data.tmax, valinit=0)
 
+    #Configure the buttons
+    playax = plt.axes([ 0.8, 0.025, 0.1, 0.04])
+    play = Button(playax, 'Play', hovercolor='0.975')
 
     # Set initial Vector Display
     vectors = data.heading_slice(0)

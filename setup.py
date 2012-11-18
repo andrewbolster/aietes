@@ -30,14 +30,16 @@ setup(name='aietes',
     packages=find_packages('src'),
     package_dir = {'': 'src'},include_package_data=True,
     package_data = {
-        'aietes' : ['configs/*.conf']
+        'aietes' : ['configs/*.conf'],
+        'ephyra' : ['icons/*.png']
     },
     zip_safe=False,
     install_requires=install_requires,
     entry_points={
         'console_scripts':
             ['aietes=aietes:main',
-             'bounos=bounos:main'
+             'bounos=bounos:main',
+             'ephyra=ephyra:main'
             ]
     }
 )
