@@ -2,11 +2,17 @@
 
 import wx
 import os
+import logging
+import argparse
 
-from bounos import DataPackage
+logging.basicConfig(level=logging.DEBUG)
 
 import matplotlib
 matplotlib.use('WXAgg')
+
+from bounos import DataPackage
+
+from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 _ROOT=os.path.abspath(os.path.dirname(__file__))
@@ -14,9 +20,33 @@ _ROOT=os.path.abspath(os.path.dirname(__file__))
 
 class EphyraFrame(wx.Frame):
     def __init__(self, *args, **kw):
-        super(EphyraFrame, self).__init__(*args, **kw)
+        super(EphyraFrame, self).__init__(
+                                            id=wx.ID_ANY,
+                                            pos=wx.DefaultPosition,
+                                            size=wx.Size( -1,-1 ),
+                                            style=wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL,
+                                            *args, **kw
+        )
+        self.log = logging.getLogger(self.__module__)
+        parser = argparse.ArgumentParser(description="GUI simulation and Analysis Suite for the Aietes framework")
+
+        parser.add_argument('-o','--open',
+                            dest='data_file', action='store', default=None,
+                            metavar='XXX.npz',
+                            help='Aietes DataPackage to be analysed'
+                           )
+
+        self.args = parser.parse_args()
 
         self.InitUI()
+
+        if self.args.data_file is not None:
+            if os.path.exists(self.args.data_file):
+                self.log.info("Loading data from %s"%self.args.data_file)
+                self.load_data(self.args.data_file)
+            else :
+                self.log.error("File Not Found: %s"%self.args.data_file)
+
 
         self.paused = True
 
@@ -24,16 +54,16 @@ class EphyraFrame(wx.Frame):
         self.CreateMenuBar()
         panel = wx.Panel(self)
 
-        pnl1 = wx.Panel(self)
-        pnl1.SetBackgroundColour(wx.BLACK)
-        pnl2 = wx.Panel(self)
+        self.plot_pnl = wx.Panel(self)
+        self.plot_pnl.SetBackgroundColour(wx.BLACK)
+        self.pnl2 = wx.Panel(self)
 
-        self.time_slider = wx.Slider(pnl2, value=0, minValue=0, maxValue=1)
-        self.pause_btn = wx.Button(pnl2, label="Pause")
-        self.play_btn  = wx.Button(pnl2, label="Play")
-        self.forw_btn  = wx.Button(pnl2, label=">>")
-        self.back_btn  = wx.Button(pnl2, label="<<")
-        self.slider2 = wx.Slider(pnl2, value=1, minValue=0, maxValue=100, 
+        self.time_slider = wx.Slider(self.pnl2, value=0, minValue=0, maxValue=1)
+        self.pause_btn = wx.Button(self.pnl2, label="Pause")
+        self.play_btn  = wx.Button(self.pnl2, label="Play")
+        self.forw_btn  = wx.Button(self.pnl2, label=">>")
+        self.back_btn  = wx.Button(self.pnl2, label="<<")
+        self.slider2 = wx.Slider(self.pnl2, value=1, minValue=0, maxValue=100, 
             size=(120, -1))
 
         self.Bind(wx.EVT_SCROLL, self.on_time_slider, self.time_slider)
@@ -56,11 +86,11 @@ class EphyraFrame(wx.Frame):
 
         vbox.Add(hbox1, flag=wx.EXPAND|wx.BOTTOM, border=10)
         vbox.Add(hbox2, proportion=1, flag=wx.EXPAND)
-        pnl2.SetSizer(vbox)
+        self.pnl2.SetSizer(vbox)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(pnl1, proportion=1, flag=wx.EXPAND)
-        sizer.Add(pnl2, flag=wx.EXPAND|wx.BOTTOM|wx.TOP, border=10)
+        sizer.Add(self.plot_pnl, proportion=1, flag=wx.EXPAND)
+        sizer.Add(self.pnl2, flag=wx.EXPAND|wx.BOTTOM|wx.TOP, border=10)
 
         self.SetMinSize((800, 600))
         self.CreateStatusBar()
@@ -81,9 +111,9 @@ class EphyraFrame(wx.Frame):
         favorites = wx.Menu()
         help = wx.Menu()
 
-        openm = filem.Append(wx.ID_ANY, '&open', 'Open a datafile')
+        openm = filem.Append(wx.NewId(), '&Open \t Ctrl+o', 'Open a datafile')
         self.Bind(wx.EVT_MENU, self.on_open, openm)
-        exitm = filem.Append(wx.ID_ANY, '&quit', 'Quit application')
+        exitm = filem.Append(wx.NewId(), '&Quit', 'Quit application')
         self.Bind(wx.EVT_MENU, self.on_close, exitm)
 
         menubar.Append(filem, '&File')
@@ -93,11 +123,17 @@ class EphyraFrame(wx.Frame):
         menubar.Append(favorites, 'F&avorites')
         menubar.Append(help, '&Help')
 
+        self.accel_tbl = wx.AcceleratorTable(
+            [(wx.ACCEL_CTRL, ord('o'), openm.GetId())]
+        )
+        self.SetAcceleratorTable(self.accel_tbl)
+
         self.SetMenuBar(menubar)
 
     def init_plot(self):
         self.fig = Figure()
-        self.axes = self.fig.add_subplot(111, projection='3d')
+        self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
+        self.axes = self.fig.add_axes([0,0,1,1], projection='3d')
 
         # Find initial display state for viewport
         self.lines = [ self.axes.plot( xs, ys, zs)[0] for xs,ys,zs in self.data.p ]
@@ -139,9 +175,30 @@ class EphyraFrame(wx.Frame):
                         )
 
         if dlg.ShowModal() == wx.ID_OK:
-            self.data = DataPackage(dlg.GetPaths()[0])
-            self.init_plot()
-        #TODO time_slider.setrange(min,max)
+            data_path = dlg.GetPaths()
+            if (len(data_path) > 1):
+                self.log.warn("Too many paths given, only taking the first anyway")
+            data_path = data_path[0]
+            self.load_data(data_path)
+
+    def load_data(self, data_file):
+        """ Load an external data file for plotting and navigation
+
+        :param data_file: Aietes generated data for processing
+        :type data_file: str
+
+        Configures Plot area and adjusts control area
+        """
+
+        self.data = DataPackage(data_file)
+        self.init_plot()
+        self.log.debug("Successfully loaded data from %s, containg %d nodes over %d seconds"%(
+                        self.data.title,
+                        self.data.n,
+                        self.data.tmax
+                        )
+        )
+        self.time_slider.SetRange(0,self.data.tmax)
 
     def on_pause_btn(self, event):
         self.paused = not self.paused
