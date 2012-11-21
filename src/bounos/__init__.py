@@ -42,6 +42,12 @@ class DataPackage():
         """
         return [self.p[node][dimension][time] for dimension in 0,1,2]
 
+    def position_slice(self,time):
+	    """
+	Query the dataset for the [n][x,y,z] position list of all nodes at a given time
+	"""
+	    return [ self.position_of(x,time) for x in range(self.n) ]
+
     def heading_of(self,node,time):
         """
         Query the data set for the x,y,z vector of a node at a given time
@@ -66,6 +72,40 @@ class DataPackage():
             time = self.tmax
 
         return [self.p[node][dimension][0:time] for dimension in 0,1,2]
+
+    def average_heading(self, time):
+	    """
+	    Generate the average heading for the fleet at a given timeslice
+	    :param time: time index to calculate at
+	    :type int
+
+	    :raises ValueError
+	    """
+	    if not (0 <= time <= self.tmax):
+		    raise ValueError("Time must be in the range of the dataset")
+
+	    return sum(self.heading_slice(time))/float(self.n)
+
+    def average_position(self, time):
+	    """
+	    Generate the average position (center) for the fleet at a given
+	    timeslice
+
+	    :param time: time index to calculate at
+	    :type int
+
+	    :raises ValueError
+	    """
+	    if not (0 <= time <= self.tmax):
+		    raise ValueError("Time must be in the range of the dataset")
+
+	    average = np.zeros(3,dype=np.float)
+	    for element in self.position_slice(time):
+		    average += element
+
+	    return average/float(self.n)
+
+
 
 def main():
     """

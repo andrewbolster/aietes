@@ -95,6 +95,7 @@ mkdir -p ${PREFIX}
 #rm /etc/ld.so.conf.d/sunset.conf /etc/profile.d/sunset.conf
 
 cat > /etc/ld.so.conf.d/sunset.conf << END
+$PREFIX/SUNSET_v$SUNSETVER/sunset_lib/lib
 $PREFIX/ns-allinone-$NSVER/otcl-$OTCLVER
 $PREFIX/ns-allinone-$NSVER/lib
 $PREFIX/lib
@@ -290,19 +291,25 @@ HERE
 fi
 
 #SUNSET
-if [ ! -d $PREFIX/SUNSET_v$SUNSETVER ]; then
+if [ ! -d $PREFIX/SUNSET_v$SUNSETVER/sunset_core ]; then
   echo Downloading SUNSET Core
   wget -q -O - "http://reti.dsi.uniroma1.it/UWSN_Group/framework/download/SUNSET_v$SUNSETVER.tar.gz" | tar -xzf - -C $PREFIX/
   cd $PREFIX/SUNSET_v$SUNSETVER/
   patch --ignore-whitespace -p1 < $MYDIR/patches/patch_sunset_core.patch
   sed -i "s|NS_PATH=\"/home/example/\"|NS_PATH=\"$PREFIX/ns-allinone-$NSVER/\"|g" install_*.sh
-  sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"$PREFIX/lib/\"|g" install_*.sh
+  sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"$PREFIX/nsmiracle-trunk/main/\"|g" install_*.sh
+  #sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"$PREFIX/lib/\"|g" install_*.sh
   ./install_all.sh || exit 1
-  sed -i "s|pathMiracle \"insert_miracle_libraries_path_here\"|pathMiracle \"$PREFIX/lib\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
+  sed -i "s|pathMiracle \"insert_miracle_libraries_path_here\"|pathMiracle \"$PREFIX/nsmiracle-trunk/main/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
+  sed -i "s|pathMiracle \"insert_miracle_libraries_path_here\"|pathMiracle \"$PREFIX/lib/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
   sed -i "s|pathWOSS \"insert_woss_libraries_path_here\"|pathWOSS \"$PREFIX/WOSS/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
   sed -i "s|pathSUNSET \"insert_sunset_libraries_path_here\"|pathSUNSET \"$PREFIX/lib\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
+fi
 
+if [ ! -d $PREFIX/SUNSET_v$SUNSETVER/sunset_addon ]; then
+  ldconfig
   echo Downloading SUNSET Addon
+  cd $PREFIX/SUNSET_v$SUNSETVER/
   wget -q -O - "http://reti.dsi.uniroma1.it/UWSN_Group/framework/download/SUNSETAddOn_v1.0.tar.gz" | tar -xzf - -C $PREFIX/SUNSET_v$SUNSETVER --strip-components 1
   patch --ignore-whitespace -p1 < $MYDIR/patches/patch_sunset_addon.patch
   sed -i "s|NS_PATH=\"/home/example/\"|NS_PATH=\"$PREFIX/ns-allinone-$NSVER\"|g" install_sunset_addon.sh
