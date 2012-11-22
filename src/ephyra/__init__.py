@@ -4,6 +4,7 @@ import wx
 import os
 import logging
 import argparse
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 logging.basicConfig(level = logging.DEBUG)
 
@@ -17,6 +18,8 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 
+import numpy as np
+
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
@@ -28,9 +31,17 @@ class EphyraFrame(wx.Frame):
 		parser = argparse.ArgumentParser(description = "GUI simulation and Analysis Suite for the Aietes framework")
 
 		parser.add_argument('-o', '--open',
-		                    dest = 'data_file', action = 'store', default = None,
-		                    metavar = 'XXX.npz',
-		                    help = 'Aietes DataPackage to be analysed'
+							dest = 'data_file', action = 'store', default = None,
+							metavar = 'XXX.npz',
+							help = 'Aietes DataPackage to be analysed'
+		)
+		parser.add_argument('-a', '--autostart',
+			dest = 'autostart', action = 'store_true', default = False,
+			help = 'Automatically launch animation on loading'
+		)
+		parser.add_argument('-l', '--loop',
+			dest = 'loop', action = 'store_true', default = False,
+			help = 'Loop animation'
 		)
 
 		self.args = parser.parse_args()
@@ -50,14 +61,18 @@ class EphyraFrame(wx.Frame):
 		self.gs = GridSpec(9,16) # (height,width)
 		self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
 		self.axes = self.fig.add_axes([0, 0, 1, 1], )
-		self.plot_axes = self.fig.add_subplot(self.gs[:-1,1:], projection = '3d')
+		self.plot_axes = self.fig.add_subplot(self.gs[:-1,2:], projection = '3d')
 		self.tool_axes = self.fig.add_subplot(self.gs[:,0])
-		self.plot_opacity=0.7
+		self.trail_opacity=0.7
+		# Configure Sphere plotting on plot_pnl
 		self.sphere_enabled=True
+		self.sphere_line_collection = None
+		self.sphere_opacity=0.1
 
-		# Configure Control Panel
+
+	# Configure Control Panel
 		self.control_pnl = wx.Panel(self)
-		self.time_slider = wx.Slider(self.control_pnl, value = 1, minValue = 0, maxValue = 1)
+		self.time_slider = wx.Slider(self.control_pnl, value = 0, minValue = 0, maxValue = 1)
 		self.pause_btn = wx.Button(self.control_pnl, label = "Pause")
 		self.play_btn = wx.Button(self.control_pnl, label = "Play")
 		self.faster_btn = wx.Button(self.control_pnl, label = "Rate++")
@@ -139,7 +154,7 @@ class EphyraFrame(wx.Frame):
 
 	def init_plot(self):
 		# Find initial display state for viewport
-		self.lines = [self.plot_axes.plot(xs, ys, zs, alpha=self.plot_opacity)[0] for xs, ys, zs in self.data.p]
+		self.lines = [self.plot_axes.plot(xs, ys, zs, alpha=self.trail_opacity)[0] for xs, ys, zs in self.data.p]
 		for n, line in enumerate(self.lines):
 			line.set_label(self.data.names[n])
 
@@ -162,14 +177,18 @@ class EphyraFrame(wx.Frame):
 				line.set_label(self.data.names[n])
 
 			if self.sphere_enabled:
-				x,y,z = self.data.average_position(self.t)
-				self.log.info("Average position: %s"%(str(x,y,z)))
-				xs,ys,zs = self.sphere(x,y,z,0)
-				self.plot_axes.plot_wireframe()
+				(x,y,z),r,s = self.data.sphere_of_positions_with_stddev(self.t)
+				self.log.info("Average position: %s, Max R: %s, StdDev: %s"%(str((x,y,z)),str(r),str(s)))
+				xs,ys,zs = self.sphere(x,y,z,r)
+				if isinstance(self.sphere_line_collection, Line3DCollection):
+					self.log.info("Removing Collections")
+					self.plot_axes.collections.remove(self.sphere_line_collection)
+
+				self.sphere_line_collection = self.plot_axes.plot_wireframe(xs,ys,zs, alpha=self.sphere_opacity)
 
 			self.canvas.draw()
-		except AttributeError: #When someone has tried to do something without a self.data
-			self.log.error("Someone is trying to be smart and do something without opening a file!")
+		except AttributeError as e: #When someone has tried to do something without a self.data
+			self.log.error("Someone is trying to be smart and do something without opening a file!:%s"%e)
 			self.smartass("You have to open a datapackage first!")
 
 	def resize_panel(self):
@@ -177,7 +196,7 @@ class EphyraFrame(wx.Frame):
 		self.plot_pnl.SetSize(plot_size)
 		self.canvas.SetSize(plot_size)
 		self.fig.set_size_inches(float(plot_size[0]) / self.fig.get_dpi(),
-		                         float(plot_size[0]) / self.fig.get_dpi())
+								 float(plot_size[0]) / self.fig.get_dpi())
 
 	def move_T(self, delta_t = None):
 		""" Seek the visual plot by delta_t while doing bounds checking and redraw
@@ -188,7 +207,19 @@ class EphyraFrame(wx.Frame):
 		"""
 
 		self.t += delta_t if delta_t is not None else self.d_t
-		self.t = min(max(0, self.t), self.data.tmax)
+		# If trying to go over the end, don't, and either stop or loop
+		if self.t >= self.data.tmax-1:
+			if self.args.loop:
+				self.log.debug("Looping")
+				self.t=0
+			else:
+				self.log.debug("End Of The Line")
+				self.paused=True
+				self.t=self.data.tmax-1
+		if self.t < 0:
+			self.log.debug("Tried to reverse, pausing")
+			self.paused=True
+			self.t=0
 		self.time_slider.SetValue(self.t)
 		self.redraw_plot()
 
@@ -213,13 +244,14 @@ class EphyraFrame(wx.Frame):
 		self.time_slider.SetRange(0, self.data.tmax)
 		self.time_slider.SetValue(self.data.tmax)
 		self.d_t = int(self.data.tmax / 100)
-		self.redraw_plot()
+		if self.args.autostart:
+			self.paused = False
 
 	def smartass(self, msg = None):
 		if self.telling_off is False:
 			self.telling_off = True
 			dial = wx.MessageDialog(None, 'Stop it Smartass!' if msg is None else str(msg), "Smartass",
-			                        wx.OK | wx.ICON_EXCLAMATION)
+									wx.OK | wx.ICON_EXCLAMATION)
 			dial.ShowModal()
 			self.telling_off = False
 
@@ -230,8 +262,8 @@ class EphyraFrame(wx.Frame):
 
 	def on_close(self, event):
 		dlg = wx.MessageDialog(self,
-		                       "Do you really want to close this application?",
-		                       "Confirm Exit", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
+							   "Do you really want to close this application?",
+							   "Confirm Exit", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
 		result = dlg.ShowModal()
 		dlg.Destroy()
 		if result == wx.ID_OK:
@@ -259,6 +291,8 @@ class EphyraFrame(wx.Frame):
 		self.pause_btn.SetLabel("Resume" if self.paused else "Pause")
 
 	def on_play_btn(self, event):
+		self.t=0
+		self.paused = False
 		pass
 
 	def on_faster_btn(self, event):
@@ -289,16 +323,16 @@ class EphyraFrame(wx.Frame):
 	####
 	# Plotting Tools
 	###
-	def sphere(self,x,y,z,r):
+	def sphere(self,x,y,z,r=1.0):
 		"""
 		Returns a sphere definition tuple (xs,ys,zs) for use with plot_wireframe
 		"""
 		u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
-		xs=np.cos(u)*np.sin(v)
-		ys=np.sin(u)*np.sin(v)
-		zs=np.cos(v)
-		ax.plot_wireframe(x, y, z, color="r")
+		xs=(r*np.cos(u)*np.sin(v))+x
+		ys=(r*np.sin(u)*np.sin(v))+y
+		zs=(r*np.cos(v))+z
 
+		return (xs,ys,zs)
 
 
 def main():

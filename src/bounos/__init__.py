@@ -8,6 +8,8 @@ import argparse
 import numpy as np
 import scipy as sp
 
+
+
 from Plotting import interactive_plot
 
 class DataPackage():
@@ -99,12 +101,57 @@ class DataPackage():
 	    if not (0 <= time <= self.tmax):
 		    raise ValueError("Time must be in the range of the dataset")
 
-	    average = np.zeros(3,dype=np.float)
+	    average = np.zeros(3,dtype=np.float)
 	    for element in self.position_slice(time):
 		    average += element
 
 	    return average/float(self.n)
 
+    def sphere_of_positions(self, time):
+	    """
+	    Return the x,y,z,r configuration of the fleet encompassing
+	    it's location and size
+
+	    :param time: time index to calculate at
+	    :type int
+
+	    """
+	    x,y,z = self.average_position(time)
+	    max_r = max(self.distances_from_at((x,y,z),time))
+
+	    return (x,y,z,max_r)
+
+    def distances_from_at(self, position, time):
+	    """
+	    Return a one dimensional list of the linear distances from
+	    each node to a given position
+
+	    :param time: time index to calculate at
+	    :type int
+
+	    :param position: (x,y,z) position to compare against
+	    :type tuple
+	    """
+	    return map(
+		    lambda p: np.linalg.norm(
+			    np.array(p)-np.array(position)
+		    ),self.position_slice(time)
+	    )
+
+    def sphere_of_positions_with_stddev(self, time):
+	    """
+	    Return the x,y,z,r configuration of the fleet encompassing
+	    it's location and size
+
+	    :param time: time index to calculate at
+	    :type int
+
+	    """
+	    average = self.average_position(time)
+	    distances = self.distances_from_at(average,time)
+	    r = max(distances)
+
+	    return (average, r, np.std(distances))
 
 
 def main():
