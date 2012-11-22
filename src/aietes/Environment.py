@@ -12,7 +12,7 @@ class Environment():
     / activities within that environment that are not controlled by the
     simulated entities i.e. wind, tides, speed of sound at depth, etc
     """
-    def __init__(self,simulation,shape=[100,100,100],resolution=1,base_depth=-1000,sos_model=None):
+    def __init__(self,simulation,shape=None,resolution=1,base_depth=-1000,sos_model=None):
         """
         Generate a box with points from 0 to (size) in each dimension, where 
         each point represents a cube of side resolution metres:
@@ -22,7 +22,7 @@ class Environment():
         self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
         self.logger.info('creating instance')
         self.map={}
-        self.shape=shape
+        self.shape=shape if shape is not None else [100,100,100]
         self.pos_log=[]
         self.depth=base_depth
         self.sos=1400

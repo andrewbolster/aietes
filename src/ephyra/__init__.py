@@ -17,12 +17,17 @@ from bounos import DataPackage
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
+from matplotlib.colors import Normalize, LogNorm
+import matplotlib.cm as cm
+
+matplotlib.rcParams.update({'font.size': 8})
 
 import numpy as np
 
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
-
+WIDTH,HEIGHT = 8,5
+SIDEBAR_WIDTH = 2
 
 class EphyraFrame(wx.Frame):
 	def __init__(self, *args, **kw):
@@ -58,19 +63,23 @@ class EphyraFrame(wx.Frame):
 		self.plot_pnl = wx.Panel(self)
 		self.plot_pnl.SetBackgroundColour(wx.BLACK)
 		self.fig = Figure()
-		self.gs = GridSpec(9,16) # (height,width)
+		self.gs = GridSpec(HEIGHT,WIDTH) # (height,width)
+		plot_area = self.gs[:-1,SIDEBAR_WIDTH:]
+		metric_areas = [self.gs[x,:SIDEBAR_WIDTH] for x in range(HEIGHT)]
 		self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
 		self.axes = self.fig.add_axes([0, 0, 1, 1], )
-		self.plot_axes = self.fig.add_subplot(self.gs[:-1,2:], projection = '3d')
-		self.tool_axes = self.fig.add_subplot(self.gs[:,0])
+		self.plot_axes = self.fig.add_subplot(plot_area, projection = '3d')
+		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
+		self.metric_xlines =  [None for i in range(HEIGHT)]
 		self.trail_opacity=0.7
+
 		# Configure Sphere plotting on plot_pnl
 		self.sphere_enabled=True
 		self.sphere_line_collection = None
-		self.sphere_opacity=0.1
+		self.sphere_opacity=0.9
 
 
-	# Configure Control Panel
+		# Configure Control Panel
 		self.control_pnl = wx.Panel(self)
 		self.time_slider = wx.Slider(self.control_pnl, value = 0, minValue = 0, maxValue = 1)
 		self.pause_btn = wx.Button(self.control_pnl, label = "Pause")
@@ -78,6 +87,7 @@ class EphyraFrame(wx.Frame):
 		self.faster_btn = wx.Button(self.control_pnl, label = "Rate++")
 		self.slower_btn = wx.Button(self.control_pnl, label = "Rate--")
 		self.slider2 = wx.Slider(self.control_pnl, value = 1, minValue = 0, maxValue = 100, size = (120, -1))
+		self.sphere_chk = wx.CheckBox(self.control_pnl, label = "Sphere")
 
 		self.Bind(wx.EVT_SCROLL, self.on_time_slider, self.time_slider)
 		self.Bind(wx.EVT_BUTTON, self.on_pause_btn, self.pause_btn)
@@ -85,6 +95,7 @@ class EphyraFrame(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.on_play_btn, self.play_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_faster_btn, self.faster_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_slower_btn, self.slower_btn)
+		self.Bind(wx.EVT_CHECKBOX, self.on_sphere_chk, self.sphere_chk)
 
 		vbox = wx.BoxSizer(wx.VERTICAL)
 		hbox1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -96,6 +107,7 @@ class EphyraFrame(wx.Frame):
 		hbox2.Add(self.faster_btn, flag = wx.LEFT, border = 5)
 		hbox2.Add(self.slower_btn)
 		hbox2.Add(self.slider2, flag = wx.TOP | wx.LEFT, border = 5)
+		hbox2.Add(self.sphere_chk)
 
 		vbox.Add(hbox1, flag = wx.EXPAND | wx.BOTTOM, border = 10)
 		vbox.Add(hbox2, proportion = 1, flag = wx.EXPAND)
@@ -158,8 +170,16 @@ class EphyraFrame(wx.Frame):
 		for n, line in enumerate(self.lines):
 			line.set_label(self.data.names[n])
 
+
+		# Initialise Sphere data anyway
+		stddevrange = self.data.stddev_range()
+		self.log.debug("STD: MIN: %f, MAX: %f"%(min(stddevrange),max(stddevrange)))
+		self.plot_lognorm=Normalize(vmin=min(stddevrange), vmax=max(stddevrange))
+		self.log.debug("%s"%str([ self.plot_lognorm(i) for i in range( int(min(stddevrange)), 100, 5)]))
+		self.plot_sphere_cm = cm.Spectral_r
+
+		# Initialse Positional Plot
 		shape = self.data.environment
-		self.plot_axes.legend()
 		self.plot_axes.set_title("Tracking overview of %s" % self.data.title)
 		self.plot_axes.set_xlim3d((0, shape[0]))
 		self.plot_axes.set_ylim3d((0, shape[1]))
@@ -168,35 +188,59 @@ class EphyraFrame(wx.Frame):
 		self.plot_axes.set_ylabel('Y')
 		self.plot_axes.set_zlabel('Z')
 
+
+		# Initialise StdDev Plot
+		self.metric_axes[0].plot(stddevrange)
+		self.metric_axes[0].set_ylabel("StdDev")
+		self.metric_axes[0].get_xaxis().set_visible(False)
+
+
+
+
 	def redraw_plot(self):
+		###
+		# MAIN PLOT AREA
+		###
+		for n, line in enumerate(self.lines):
+			(xs, ys, zs) = self.data.trail_of(n, self.t)
+			line.set_data(xs, ys)
+			line.set_3d_properties(zs)
+			line.set_label(self.data.names[n])
+
+		###
+		# SPHERE OVERLAY TO MAIN PLOT AREA
+		###
+		if self.sphere_enabled:
+			(x,y,z),r,s = self.data.sphere_of_positions_with_stddev(self.t)
+			xs,ys,zs = self.sphere(x,y,z,r)
+			colorval = self.plot_lognorm(s)
+			self.log.info("Average position: %s, Color: %s[%s], StdDev: %s"%(str((x,y,z)),str(self.plot_sphere_cm(colorval)),str(colorval),str(s)))
+
+			self._remove_sphere()
+			self.sphere_line_collection = self.plot_axes.plot_wireframe(xs,ys,zs,
+				alpha=self.sphere_opacity,
+				color=self.plot_sphere_cm(colorval)
+			)
+
+		###
+		# METRIC UPDATES
+		###
 		try:
-			for n, line in enumerate(self.lines):
-				(xs, ys, zs) = self.data.trail_of(n, self.t)
-				line.set_data(xs, ys)
-				line.set_3d_properties(zs)
-				line.set_label(self.data.names[n])
+			self.metric_xlines[0].remove()
+		except AttributeError as e:
+			self.log.debug("Hopefully nothing: %s"%str(e))
+		self.metric_xlines[0]=self.metric_axes[0].axvline(x=self.t, color='r', linestyle=':')
+		self.canvas.draw()
 
-			if self.sphere_enabled:
-				(x,y,z),r,s = self.data.sphere_of_positions_with_stddev(self.t)
-				self.log.info("Average position: %s, Max R: %s, StdDev: %s"%(str((x,y,z)),str(r),str(s)))
-				xs,ys,zs = self.sphere(x,y,z,r)
-				if isinstance(self.sphere_line_collection, Line3DCollection):
-					self.log.info("Removing Collections")
-					self.plot_axes.collections.remove(self.sphere_line_collection)
 
-				self.sphere_line_collection = self.plot_axes.plot_wireframe(xs,ys,zs, alpha=self.sphere_opacity)
-
-			self.canvas.draw()
-		except AttributeError as e: #When someone has tried to do something without a self.data
-			self.log.error("Someone is trying to be smart and do something without opening a file!:%s"%e)
-			self.smartass("You have to open a datapackage first!")
 
 	def resize_panel(self):
 		plot_size = self.sizer.GetChildren()[0].GetSize()
 		self.plot_pnl.SetSize(plot_size)
 		self.canvas.SetSize(plot_size)
 		self.fig.set_size_inches(float(plot_size[0]) / self.fig.get_dpi(),
-								 float(plot_size[0]) / self.fig.get_dpi())
+								 float(plot_size[0]) / self.fig.get_dpi()
+		)
 
 	def move_T(self, delta_t = None):
 		""" Seek the visual plot by delta_t while doing bounds checking and redraw
@@ -235,7 +279,7 @@ class EphyraFrame(wx.Frame):
 
 		self.data = DataPackage(data_file)
 		self.init_plot()
-		self.log.debug("Successfully loaded data from %s, containg %d nodes over %d seconds" % (
+		self.log.debug("Successfully loaded data from %s, containing %d nodes over %d seconds" % (
 			self.data.title,
 			self.data.n,
 			self.data.tmax
@@ -248,6 +292,7 @@ class EphyraFrame(wx.Frame):
 			self.paused = False
 
 	def smartass(self, msg = None):
+		self.paused = True
 		if self.telling_off is False:
 			self.telling_off = True
 			dial = wx.MessageDialog(None, 'Stop it Smartass!' if msg is None else str(msg), "Smartass",
@@ -303,6 +348,8 @@ class EphyraFrame(wx.Frame):
 		self.d_t = int(min(max(1, self.d_t * 0.9), self.data.tmax / 2))
 		self.log.debug("Setting time step to: %s" % self.d_t)
 
+
+
 	def on_time_slider(self, event):
 		event.Skip()
 		self.t = self.time_slider.GetValue()
@@ -319,7 +366,17 @@ class EphyraFrame(wx.Frame):
 		if not self.paused:
 			self.move_T()
 
-
+	###
+	# Metric Selection Tools
+	###
+	def on_sphere_chk(self, event):
+		if not self.sphere_chk.IsChecked():
+			self._remove_sphere()
+			self.log.debug("Sphere Overlay Disabled")
+			self.sphere_enabled = False
+		else:
+			self.log.debug("Sphere Overlay Enabled")
+			self.sphere_enabled = True
 	####
 	# Plotting Tools
 	###
@@ -333,6 +390,12 @@ class EphyraFrame(wx.Frame):
 		zs=(r*np.cos(v))+z
 
 		return (xs,ys,zs)
+
+	def _remove_sphere(self):
+		if isinstance(self.sphere_line_collection, Line3DCollection) \
+		and self.sphere_line_collection in self.plot_axes.collections:
+
+			self.plot_axes.collections.remove(self.sphere_line_collection)
 
 
 def main():

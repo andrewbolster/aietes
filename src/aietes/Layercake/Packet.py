@@ -72,13 +72,13 @@ class AppPacket(Packet):
     data = None
     length = 24 # Default Packet Length
 
-    def __init__(self, source, dest, pkt_type=None, data=None, route=[], logger=None):
+    def __init__(self, source, dest, pkt_type=None, data=None, route=None, logger=None):
         self._start_log(logger=logger)
         self.source = source
         self.destination = dest
         self.type = pkt_type
         self.launch_time = Sim.now()
-        self.route = route
+        self.route = route if route is not None else []
         if data is not None:
             self.data = data
             self.length = len(data)

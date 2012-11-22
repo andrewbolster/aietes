@@ -11,7 +11,7 @@
     <module name="aietes" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$USER_HOME$/.local/bin/ephyra" />
-    <option name="PARAMETERS" value="-a -l -o /dev/shm/dat-2012-11-22-11-35-55.aietes.npz" />
+    <option name="PARAMETERS" value="-o /dev/shm/dat-2012-11-22-11-35-55.aietes.npz" />
     <RunnerSettings RunnerId="PythonRunner" />
     <ConfigurationWrapper RunnerId="PythonRunner" />
     <method />

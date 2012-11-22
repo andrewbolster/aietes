@@ -159,7 +159,7 @@ class FSM:
             return self.state_transitions[(input_symbol, self.current_state)]
         elif self.state_transitions_any.has_key (self.current_state):
             return self.state_transitions_any[self.current_state]
-        elif self.default_transition != None:
+        elif self.default_transition is not None:
             return self.default_transition
         else:
             raise ExceptionFSM ('Transition is undefined: (%s, %s).' %
@@ -180,7 +180,7 @@ class FSM:
         #print "%s(%s) -> %s" % (self.current_state, input_symbol, next_state)
         self.current_state = next_state
 
-        if action != None:
+        if action is not None:
             action()
 
     def process_list (self, s):
