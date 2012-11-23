@@ -7,7 +7,7 @@ import time
 import logging
 import numpy as np
 import scipy
-import profile
+import cProfile
 from datetime import datetime as dt
 
 from configobj import ConfigObj
@@ -529,7 +529,8 @@ def main ():
 		print options
 		if options.verbose: print time.asctime()
 		if options.profile:
-			profile.run('print("PROFILING"); exit_code=go(options,args); print("EXIT CODE:%s"%exit_code)')
+			print "PROFILING"
+			exit_code = cProfile.runctx( """go(options,args)""", globals(), locals(), filename="Aietes.profile" )
 		else:
 			exit_code = go(options,args)
 		if exit_code is None:

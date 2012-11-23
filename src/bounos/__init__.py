@@ -6,7 +6,7 @@ import traceback
 import argparse
 
 import numpy as np
-import scipy as sp
+from scipy.spatial.distance import pdist, squareform
 
 
 
@@ -21,7 +21,9 @@ class DataPackage():
 	"""
 
 	def __init__(self,source,*args,**kwargs):
-		#TODO Try Except this to be safe
+		"""
+		Raises IOError on load failure
+		"""
 		source_dataset = np.load(source)
 		self.p = source_dataset['positions']
 		self.v = source_dataset['vectors']
@@ -61,6 +63,16 @@ class DataPackage():
 		Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
 		"""
 		return [ self.heading_of(x,time) for x in range(self.n) ]
+
+	def heading_mag_range(self):
+		"""
+		Returns an array of overall heading magnitudes across the dataset
+
+		"""
+		magnitudes =[ np.linalg.norm(self.average_heading(time))
+		              for time in range(self.tmax)
+		]
+		return magnitudes
 
 	def heading_stddev_range(self):
 		"""
@@ -102,7 +114,7 @@ class DataPackage():
 		for element in self.heading_slice(time):
 			average += element
 
-		return average/float(self.n)
+		return np.asarray(average)/float(self.n)
 
 	def deviation_from_at(self, heading, time):
 		"""
@@ -138,7 +150,7 @@ class DataPackage():
 		for element in self.position_slice(time):
 			average += element
 
-		return average/float(self.n)
+		return np.asarray(average)/float(self.n)
 
 	def sphere_of_positions(self, time):
 		"""
@@ -191,6 +203,16 @@ class DataPackage():
 		Returns an array of overall stddevs across the dataset
 		"""
 		return [ self.sphere_of_positions_with_stddev(time)[-1] for time in range(self.tmax)]
+
+	def position_matrix(self,time):
+		"""
+		Returns a positional matrix of the distances between all the nodes at a given time.
+		"""
+		return squareform(
+			pdist(
+				self.position_slice(time)
+			)
+		)
 
 
 def main():

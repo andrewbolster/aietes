@@ -165,6 +165,8 @@ class EphyraFrame(wx.Frame):
 				self.load_data(self.args.data_file)
 			else:
 				self.log.error("File Not Found: %s" % self.args.data_file)
+				self.smartass("File Not Found!")
+				self.on_open(None)
 
 	def CreateMenuBar(self):
 		menubar = wx.MenuBar()
@@ -204,15 +206,17 @@ class EphyraFrame(wx.Frame):
 		# Precompute Metric Data
 		position_stddevrange = self.data.position_stddev_range()
 		heading_stddevrange = self.data.heading_stddev_range()
-
+		heading_magrange = self.data.heading_mag_range()
 		assert len(heading_stddevrange) == self.data.tmax, "H-%s"%str(heading_stddevrange)
+
+		self.plot_head_mag_norm=Normalize(vmin=min(heading_magrange), vmax=max(heading_magrange))
+		self.plot_pos_stddev_norm=Normalize(vmin=min(position_stddevrange), vmax=max(position_stddevrange))
+
 
 
 
 	# Initialise Sphere data anyway
 		self.log.debug("STD: MIN: %f, MAX: %f"%(min(position_stddevrange),max(position_stddevrange)))
-		self.plot_lognorm=Normalize(vmin=min(position_stddevrange), vmax=max(position_stddevrange))
-		self.log.debug("%s"%str([ self.plot_lognorm(i) for i in range( int(min(position_stddevrange)), 100, 5)]))
 		self.plot_sphere_cm = cm.Spectral_r
 
 		# Initialse Positional Plot
@@ -230,10 +234,14 @@ class EphyraFrame(wx.Frame):
 		self.metric_axes[0].plot(position_stddevrange)
 		self.metric_axes[0].set_ylabel("Pos-StdDev")
 		self.metric_axes[0].get_xaxis().set_visible(False)
+
 		self.metric_axes[1].plot(heading_stddevrange)
 		self.metric_axes[1].set_ylabel("Head-StdDev")
 		self.metric_axes[1].get_xaxis().set_visible(False)
 
+		self.metric_axes[2].plot(heading_magrange)
+		self.metric_axes[2].set_ylabel("Head-AvgMag")
+		self.metric_axes[2].get_xaxis().set_visible(False)
 
 
 
@@ -255,7 +263,7 @@ class EphyraFrame(wx.Frame):
 		if self.sphere_enabled:
 			(x,y,z),r,s = self.data.sphere_of_positions_with_stddev(self.t)
 			xs,ys,zs = self.sphere(x,y,z,r)
-			colorval = self.plot_lognorm(s)
+			colorval = self.plot_pos_stddev_norm(s)
 			self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s"%(str((x,y,z)),str(self.plot_sphere_cm(colorval)),str(colorval),str(s)))
 
 			self._remove_sphere()
@@ -273,11 +281,15 @@ class EphyraFrame(wx.Frame):
 			for node in range(self.data.n):
 				position = self.data.position_of(node, self.t)
 				heading = self.data.heading_of(node,self.t)
+				mag = np.linalg.norm(np.asarray(heading))
+				colorval = self.plot_head_mag_norm(mag)
+				self.log.debug("Average heading: %s, Color: [%s], Speed: %s"%(str(heading),str(colorval),str(mag)))
+
 				xs,ys,zs = zip(position,np.add(position,(np.asarray(heading)*50)))
 				self.node_vector_collections[node] = Arrow3D(
 					xs,ys,zs,
 					mutation_scale=2, lw=1,
-					arrowstyle="-|>", color="k", alpha=self.vector_opacity
+					arrowstyle="-|>", color=self.plot_sphere_cm(colorval), alpha=self.vector_opacity
 				)
 				self.plot_axes.add_artist(
 					self.node_vector_collections[node],
@@ -339,8 +351,10 @@ class EphyraFrame(wx.Frame):
 
 		Configures Plot area and adjusts control area
 		"""
-
-		self.data = DataPackage(data_file)
+		try:
+			self.data = DataPackage(data_file)
+		except IOError as e:
+			raise e
 		self.init_plot()
 		self.log.debug("Successfully loaded data from %s, containing %d nodes over %d seconds" % (
 			self.data.title,
@@ -430,7 +444,7 @@ class EphyraFrame(wx.Frame):
 			self.move_T()
 
 	###
-	# Metric Selection Tools
+	# Display Selection Tools
 	###
 	def on_sphere_chk(self, event):
 		if not self.sphere_chk.IsChecked():

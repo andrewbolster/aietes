@@ -38,11 +38,9 @@ class Fleet(Sim.Process):
         """
         avgHeading = np.array([0,0,0],dtype=np.float)
         fleetCenter = np.array([0,0,0],dtype=np.float)
-        fleetWaypoints = []
         for node in self.nodes:
             avgHeading+=node.velocity
             fleetCenter+=node.position
-            fleetWaypoints.append(node.behaviour.nextwaypoint.position)
 
 
         avgHeading/=float(len(self.nodes))
@@ -56,8 +54,7 @@ class Fleet(Sim.Process):
             c= np.dot(avgHeading,v)/np.linalg.norm(avgHeading)/np.linalg.norm(v)
             maxDeviation = max(maxDeviation,np.arccos(c))
 
-        commonheading = all(all(fleetWaypoints[0] == waypoint) for waypoint in fleetWaypoints)
 
-        return("V:%s,W:%s,C:%s,D:%s,A:%s"%(avgHeading,commonheading,fleetCenter,maxDistance,maxDeviation))
+        return("V:%s,C:%s,D:%s,A:%s"%(avgHeading,fleetCenter,maxDistance,maxDeviation))
 
 
