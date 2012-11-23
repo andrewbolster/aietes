@@ -1,11 +1,10 @@
-from SimPy import Simulation as Sim
+from SimPy import SimulationStep as Sim
 import math
 import random
 import logging
 import numpy as np
 np.seterr(over='raise')
 #from os import urandom as randomstr #Provides unicode random String
-from operator import itemgetter,attrgetter
 
 logging.basicConfig(level=logging.DEBUG)
 baselogger = logging.getLogger('SIM')

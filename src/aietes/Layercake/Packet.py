@@ -1,6 +1,6 @@
 from aietes.Tools import *
 import uuid
-import logging
+
 """
 Packets have to cope with bi-directional adaptation:
     Downward (eg app->routing) is simple encapsulation, ie the lower level

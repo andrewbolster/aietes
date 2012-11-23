@@ -62,12 +62,18 @@ class EphyraFrame(wx.Frame):
 			dest = 'loop', action = 'store_true', default = False,
 			help = 'Loop animation'
 		)
+		parser.add_argument('-v', '--verbose',
+			dest = 'verbose', action = 'store_true', default = False,
+			help = 'Verbose Debugging Information'
+		)
 
 		self.args = parser.parse_args()
 
 		self.paused = True
+		self.sim_ready = False
 		self.telling_off = False # Used for Smartass Control
 		self.t = 0
+		self.sim_t_max = None
 		self.d_t = 1
 
 		self.CreateMenuBar()
@@ -177,9 +183,11 @@ class EphyraFrame(wx.Frame):
 		favorites = wx.Menu()
 		help = wx.Menu()
 
+		newm = filem.Append(wx.NewId(), '&New \t Ctrl+n', 'Generate a new Simulation')
 		openm = filem.Append(wx.NewId(), '&Open \t Ctrl+o', 'Open a datafile')
-		self.Bind(wx.EVT_MENU, self.on_open, openm)
 		exitm = filem.Append(wx.NewId(), '&Quit', 'Quit application')
+		self.Bind(wx.EVT_MENU, self.on_new, newm)
+		self.Bind(wx.EVT_MENU, self.on_open, openm)
 		self.Bind(wx.EVT_MENU, self.on_close, exitm)
 
 		menubar.Append(filem, '&File')
@@ -245,6 +253,28 @@ class EphyraFrame(wx.Frame):
 
 
 
+	def simulation_cb(self):
+		"""
+		Call back function used by SimulationStep if doing real time simulation
+		Will 'export' DataPackage data from the running simulation up to the requested time (self.t)
+		"""
+		#TODO expand this to allow 'reimagining'
+		#If going down or stopped, stash the data
+		self.sim_t_max=max(self.sim_t_max,self.t)
+
+		if self.sim_t_max<self.simulation.now():
+			self.data=DataPackage(self.simulation.currentState())
+			self.sim_t_max=self.simulation.now()
+			self.reload_data()
+			self.sim_ready=True
+			self.paused = False
+			while self.t<=self.sim_t_max:wx.Yield()
+		else:
+			self.sim_ready = False
+			self.paused = True
+			wx.Yield()
+			return # Continue Simulating
+
 
 
 	def redraw_plot(self):
@@ -264,7 +294,7 @@ class EphyraFrame(wx.Frame):
 			(x,y,z),r,s = self.data.sphere_of_positions_with_stddev(self.t)
 			xs,ys,zs = self.sphere(x,y,z,r)
 			colorval = self.plot_pos_stddev_norm(s)
-			self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s"%(str((x,y,z)),str(self.plot_sphere_cm(colorval)),str(colorval),str(s)))
+			if self.args.verbose: self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s"%(str((x,y,z)),str(self.plot_sphere_cm(colorval)),str(colorval),str(s)))
 
 			self._remove_sphere()
 			self.sphere_line_collection = self.plot_axes.plot_wireframe(xs,ys,zs,
@@ -283,7 +313,7 @@ class EphyraFrame(wx.Frame):
 				heading = self.data.heading_of(node,self.t)
 				mag = np.linalg.norm(np.asarray(heading))
 				colorval = self.plot_head_mag_norm(mag)
-				self.log.debug("Average heading: %s, Color: [%s], Speed: %s"%(str(heading),str(colorval),str(mag)))
+				if self.args.verbose: self.log.debug("Average heading: %s, Color: [%s], Speed: %s"%(str(heading),str(colorval),str(mag)))
 
 				xs,ys,zs = zip(position,np.add(position,(np.asarray(heading)*50)))
 				self.node_vector_collections[node] = Arrow3D(
@@ -357,16 +387,31 @@ class EphyraFrame(wx.Frame):
 			raise e
 		self.init_plot()
 		self.log.debug("Successfully loaded data from %s, containing %d nodes over %d seconds" % (
-			self.data.title,
-			self.data.n,
-			self.data.tmax
-			)
+		self.data.title,
+		self.data.n,
+		self.data.tmax
+		)
 		)
 		self.time_slider.SetRange(0, self.data.tmax)
 		self.time_slider.SetValue(self.data.tmax)
 		self.d_t = int(self.data.tmax / 100)
 		if self.args.autostart:
 			self.paused = False
+
+
+	def reload_data(self):
+		self.init_plot()
+		self.log.debug("Successfully reloaded data from %s, containing %d nodes over %d seconds" % (
+		self.data.title,
+		self.data.n,
+		self.data.tmax
+		)
+		)
+		self.time_slider.SetRange(0, self.data.tmax)
+		self.d_t = int(self.data.tmax / 100)
+		if self.args.autostart:
+			self.paused = False
+
 
 	def smartass(self, msg = None):
 		self.paused = True
@@ -390,6 +435,21 @@ class EphyraFrame(wx.Frame):
 		dlg.Destroy()
 		if result == wx.ID_OK:
 			self.Destroy()
+
+	def on_new(self, event):
+		dlg = wx.MessageDialog(self,
+			message="This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
+			style= wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
+		)
+		result = dlg.ShowModal()
+		dlg.Destroy()
+		if result == wx.ID_OK:
+			from aietes import Simulation
+			self.simulation = Simulation()
+			self.simulation.prepare()
+			self.simulation.simulate(callback=self.simulation_cb)
+
+
 
 	def on_open(self, event):
 		dlg = wx.FileDialog(
@@ -415,7 +475,7 @@ class EphyraFrame(wx.Frame):
 	def on_play_btn(self, event):
 		self.t=0
 		self.paused = False
-		pass
+		event.Skip()
 
 	def on_faster_btn(self, event):
 		self.d_t = int(min(max(1, self.d_t * 1.1), self.data.tmax / 2))
@@ -426,13 +486,11 @@ class EphyraFrame(wx.Frame):
 		self.log.debug("Setting time step to: %s" % self.d_t)
 
 
-
 	def on_time_slider(self, event):
 		event.Skip()
 		self.t = self.time_slider.GetValue()
 		self.log.debug("Slider: Setting time to %d" % self.t)
 		wx.CallAfter(self.redraw_plot)
-		pass
 
 	def on_resize(self, event):
 		event.Skip()

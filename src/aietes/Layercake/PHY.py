@@ -1,9 +1,6 @@
 import math
 from aietes.Tools import *
 from Packet import PHYPacket
-import logging
-
-from copy import deepcopy
 
 debug = True
 

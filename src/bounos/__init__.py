@@ -20,22 +20,35 @@ class DataPackage():
 	information is queriable through the object.
 	"""
 
-	def __init__(self,source,*args,**kwargs):
+	def __init__(self,source=None,
+	             p=None, v=None, names=None, environment=None,
+	             *args,**kwargs):
 		"""
 		Raises IOError on load failure
 		"""
-		source_dataset = np.load(source)
-		self.p = source_dataset['positions']
-		self.v = source_dataset['vectors']
-		self.names = source_dataset['names']
-		self.environment = source_dataset['environment']
+		if source is not None:
+			source_dataset = np.load(source)
+			self.p = source_dataset['positions']
+			self.v = source_dataset['vectors']
+			self.names = source_dataset['names']
+			self.environment = source_dataset['environment']
+			try:
+				self.title = getattr(source_dataset,'title')
+			except AttributeError:
+				# If simulation title not explicitly given, use the filename -npz
+				self.title = os.path.splitext(os.path.basename(source))[0]
+		elif all(x is not None for x in [p,v,names,environment]):
+			self.p=p
+			self.v=v
+			self.names=names
+			self.environment=environment
+			self.title=kwargs.get('title',"")
+		else:
+			raise ValueError("Can't work out what the hell you want!")
+
 		self.tmax = len(self.p[0][0])
 		self.n = len(self.p)
-		try:
-			self.title = getattr(source_dataset,'title')
-		except AttributeError:
-			# If simulation title not explicitly given, use the filename -npz
-			self.title = os.path.splitext(os.path.basename(source))[0]
+
 
 		#Data has the format:
 			# [n][x,y,z][t]

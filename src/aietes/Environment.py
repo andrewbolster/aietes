@@ -1,10 +1,9 @@
 from SimPy import Simulation as Sim
-import logging
-from aietes.Tools import baselogger,dotdict,map_entry,distance,debug
+from aietes.Tools import baselogger, map_entry,distance,debug
 from operator import attrgetter
 from collections import namedtuple
 import numpy as np
-import uuid
+
 Log = namedtuple('Log',['name','object_id','time','position'])
 class Environment():
     """

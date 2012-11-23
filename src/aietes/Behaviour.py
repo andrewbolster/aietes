@@ -1,10 +1,6 @@
-from SimPy import Simulation as Sim
-import logging
 import numpy as np
-import scipy.spatial
-from aietes.Tools import dotdict,map_entry,memory_entry,baselogger,distance,fudge_normal,debug
-from operator import attrgetter,itemgetter
-import copy
+from aietes.Tools import  memory_entry,baselogger,distance,fudge_normal,debug
+from operator import attrgetter
 
 
 class Behaviour():

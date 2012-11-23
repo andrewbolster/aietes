@@ -6,13 +6,11 @@ import optparse
 import time
 import logging
 import numpy as np
-import scipy
 import cProfile
 from datetime import datetime as dt
 
 from configobj import ConfigObj
 import validate
-import random
 
 from Layercake import Layercake
 from Environment import Environment
@@ -27,7 +25,6 @@ from matplotlib import animation as MPLanimation
 
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3
-from operator import itemgetter,attrgetter
 
 from pprint import pformat
 
@@ -39,7 +36,7 @@ class Simulation():
 	"""
 	Defines a single simulation
 	"""
-	def __init__(self,config_file):
+	def __init__(self,config_file=None):
 		self.config_spec='%s/configs/default.conf'%_ROOT
 		self.logger = baselogger.getChild("%s"%(self.__class__.__name__))
 		self.config_file = config_file
@@ -80,15 +77,17 @@ class Simulation():
 		self.move_flag = Sim.Resource(capacity=len(self.nodes))
 		self.process_flag = Sim.Resource(capacity=len(self.nodes))
 
-	def simulate(self):
+	def simulate(self, callback=None):
 		"""
 		Initiate the processed Simulation
 		"""
 		self.logger.info("Initialising Simulation, to run for %s steps"%self.duration_intervals)
 		for fleet in self.fleets:
 			fleet.activate()
-
-		Sim.simulate(until=self.duration_intervals)
+		if callback is not None:
+			self.logger.info("Running with Callback: %s"%str(callback))
+			Sim.startStepping()
+		Sim.simulate(until=self.duration_intervals, callback=callback)
 
 	def inner_join(self):
 		"""
@@ -116,6 +115,20 @@ class Simulation():
 				return n
 		raise KeyError("Given UUID does not exist in Nodes list")
 
+	def now(self):
+		return Sim.now()
+
+	def currentState(self):
+		positions = []
+		vectors= []
+		names = []
+		shape = []
+		for node in self.nodes:
+			positions.append(node.pos_log)
+			vectors.append(node.vec_log)
+			names.append(node.name)
+		shape=self.environment.shape
+		return positions,vectors,names,shape
 
 	def validateConfig(self,config_file):
 		"""

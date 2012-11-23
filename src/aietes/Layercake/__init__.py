@@ -1,4 +1,4 @@
-from aietes.Tools import Sim, ConfigError
+from aietes.Tools import  ConfigError
 
 import PHY, MAC, Net
 import logging
