@@ -171,11 +171,18 @@ class EphyraFrame(wx.Frame):
 			line.set_label(self.data.names[n])
 
 
-		# Initialise Sphere data anyway
-		stddevrange = self.data.stddev_range()
-		self.log.debug("STD: MIN: %f, MAX: %f"%(min(stddevrange),max(stddevrange)))
-		self.plot_lognorm=Normalize(vmin=min(stddevrange), vmax=max(stddevrange))
-		self.log.debug("%s"%str([ self.plot_lognorm(i) for i in range( int(min(stddevrange)), 100, 5)]))
+		# Precompute Metric Data
+		position_stddevrange = self.data.position_stddev_range()
+		heading_stddevrange = self.data.heading_stddev_range()
+
+		assert len(heading_stddevrange) == self.data.tmax, "H-%s"%str(heading_stddevrange)
+
+
+
+	# Initialise Sphere data anyway
+		self.log.debug("STD: MIN: %f, MAX: %f"%(min(position_stddevrange),max(position_stddevrange)))
+		self.plot_lognorm=Normalize(vmin=min(position_stddevrange), vmax=max(position_stddevrange))
+		self.log.debug("%s"%str([ self.plot_lognorm(i) for i in range( int(min(position_stddevrange)), 100, 5)]))
 		self.plot_sphere_cm = cm.Spectral_r
 
 		# Initialse Positional Plot
@@ -189,10 +196,15 @@ class EphyraFrame(wx.Frame):
 		self.plot_axes.set_zlabel('Z')
 
 
-		# Initialise StdDev Plot
-		self.metric_axes[0].plot(stddevrange)
-		self.metric_axes[0].set_ylabel("StdDev")
+		# Initialise StdDev Plots (Postion 0 heading 1)
+		self.metric_axes[0].plot(position_stddevrange)
+		self.metric_axes[0].set_ylabel("Pos-StdDev")
 		self.metric_axes[0].get_xaxis().set_visible(False)
+		self.metric_axes[1].plot(heading_stddevrange)
+		self.metric_axes[1].set_ylabel("Head-StdDev")
+		self.metric_axes[1].get_xaxis().set_visible(False)
+
+
 
 
 
@@ -214,7 +226,7 @@ class EphyraFrame(wx.Frame):
 			(x,y,z),r,s = self.data.sphere_of_positions_with_stddev(self.t)
 			xs,ys,zs = self.sphere(x,y,z,r)
 			colorval = self.plot_lognorm(s)
-			self.log.info("Average position: %s, Color: %s[%s], StdDev: %s"%(str((x,y,z)),str(self.plot_sphere_cm(colorval)),str(colorval),str(s)))
+			self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s"%(str((x,y,z)),str(self.plot_sphere_cm(colorval)),str(colorval),str(s)))
 
 			self._remove_sphere()
 			self.sphere_line_collection = self.plot_axes.plot_wireframe(xs,ys,zs,
@@ -225,11 +237,12 @@ class EphyraFrame(wx.Frame):
 		###
 		# METRIC UPDATES
 		###
-		try:
-			self.metric_xlines[0].remove()
-		except AttributeError as e:
-			self.log.debug("Hopefully nothing: %s"%str(e))
-		self.metric_xlines[0]=self.metric_axes[0].axvline(x=self.t, color='r', linestyle=':')
+		for x in range(HEIGHT):
+			try:
+				self.metric_xlines[x].remove()
+			except AttributeError as e:
+				self.log.debug("Hopefully nothing: %s"%str(e))
+			self.metric_xlines[x]=self.metric_axes[x].axvline(x=self.t, color='r', linestyle=':')
 		self.canvas.draw()
 
 

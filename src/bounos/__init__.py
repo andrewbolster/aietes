@@ -62,6 +62,18 @@ class DataPackage():
 		"""
 		return [ self.heading_of(x,time) for x in range(self.n) ]
 
+	def heading_stddev_range(self):
+		"""
+		Returns an array of overall heading stddevs across the dataset
+
+		"""
+		deviations =[ np.std(
+						self.deviation_from_at(self.average_heading(time),time)
+						)
+		              for time in range(self.tmax)
+					]
+		return deviations
+
 
 	def trail_of(self,node,time=None):
 		"""
@@ -86,7 +98,28 @@ class DataPackage():
 		if not (0 <= time <= self.tmax):
 			raise ValueError("Time must be in the range of the dataset")
 
-		return sum(self.heading_slice(time))/float(self.n)
+		average = np.zeros(3,dtype=np.float)
+		for element in self.heading_slice(time):
+			average += element
+
+		return average/float(self.n)
+
+	def deviation_from_at(self, heading, time):
+		"""
+		Return a one dimensional list of the linear distances from
+		each node to a given position
+
+		:param time: time index to calculate at
+		:type int
+
+		:param position: (x,y,z) position to compare against
+		:type tuple
+		"""
+		return map(
+			lambda v: np.linalg.norm(
+				np.array(v)-np.array(heading)
+			),self.heading_slice(time)
+		)
 
 	def average_position(self, time):
 		"""
@@ -153,7 +186,7 @@ class DataPackage():
 
 		return average, r, np.std(distances)
 
-	def stddev_range(self):
+	def position_stddev_range(self):
 		"""
 		Returns an array of overall stddevs across the dataset
 		"""
