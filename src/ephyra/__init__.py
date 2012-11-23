@@ -20,6 +20,9 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize, LogNorm
 import matplotlib.cm as cm
 
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
+
 matplotlib.rcParams.update({'font.size': 8})
 
 import numpy as np
@@ -28,6 +31,17 @@ import numpy as np
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 WIDTH,HEIGHT = 8,5
 SIDEBAR_WIDTH = 2
+
+class Arrow3D(FancyArrowPatch):
+	def __init__(self, xs, ys, zs, *args, **kwargs):
+		FancyArrowPatch.__init__(self, (0,0), (0,0), *args, **kwargs)
+		self._verts3d = xs, ys, zs
+
+	def draw(self, renderer):
+		xs3d, ys3d, zs3d = self._verts3d
+		xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
+		self.set_positions((xs[0],ys[0]),(xs[1],ys[1]))
+		FancyArrowPatch.draw(self, renderer)
 
 class EphyraFrame(wx.Frame):
 	def __init__(self, *args, **kw):
@@ -61,12 +75,12 @@ class EphyraFrame(wx.Frame):
 
 		# Configure Plotting Panel
 		self.plot_pnl = wx.Panel(self)
-		self.plot_pnl.SetBackgroundColour(wx.BLACK)
 		self.fig = Figure()
 		self.gs = GridSpec(HEIGHT,WIDTH) # (height,width)
 		plot_area = self.gs[:-1,SIDEBAR_WIDTH:]
 		metric_areas = [self.gs[x,:SIDEBAR_WIDTH] for x in range(HEIGHT)]
 		self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
+
 		self.axes = self.fig.add_axes([0, 0, 1, 1], )
 		self.plot_axes = self.fig.add_subplot(plot_area, projection = '3d')
 		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
@@ -76,7 +90,14 @@ class EphyraFrame(wx.Frame):
 		# Configure Sphere plotting on plot_pnl
 		self.sphere_enabled=True
 		self.sphere_line_collection = None
-		self.sphere_opacity=0.9
+		self.sphere_opacity = 0.9
+
+		#Configure Vector Plotting on Plot_pnl
+		self.node_vector_enabled=True
+		self.fleet_vector_enabled=True
+		self.node_vector_collections = None
+		self.fleet_vector_collection = None
+		self.vector_opacity = 0.9
 
 
 		# Configure Control Panel
@@ -87,7 +108,6 @@ class EphyraFrame(wx.Frame):
 		self.faster_btn = wx.Button(self.control_pnl, label = "Rate++")
 		self.slower_btn = wx.Button(self.control_pnl, label = "Rate--")
 		self.slider2 = wx.Slider(self.control_pnl, value = 1, minValue = 0, maxValue = 100, size = (120, -1))
-		self.sphere_chk = wx.CheckBox(self.control_pnl, label = "Sphere")
 
 		self.Bind(wx.EVT_SCROLL, self.on_time_slider, self.time_slider)
 		self.Bind(wx.EVT_BUTTON, self.on_pause_btn, self.pause_btn)
@@ -95,7 +115,8 @@ class EphyraFrame(wx.Frame):
 		self.Bind(wx.EVT_BUTTON, self.on_play_btn, self.play_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_faster_btn, self.faster_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_slower_btn, self.slower_btn)
-		self.Bind(wx.EVT_CHECKBOX, self.on_sphere_chk, self.sphere_chk)
+
+
 
 		vbox = wx.BoxSizer(wx.VERTICAL)
 		hbox1 = wx.BoxSizer(wx.HORIZONTAL)
@@ -107,7 +128,16 @@ class EphyraFrame(wx.Frame):
 		hbox2.Add(self.faster_btn, flag = wx.LEFT, border = 5)
 		hbox2.Add(self.slower_btn)
 		hbox2.Add(self.slider2, flag = wx.TOP | wx.LEFT, border = 5)
+
+		#Metric Buttons
+		self.sphere_chk = wx.CheckBox(self.control_pnl, label = "Sphere")
+		self.vector_chk = wx.CheckBox(self.control_pnl, label = "Vector")
+		self.sphere_chk.SetValue(self.sphere_enabled)
+		self.vector_chk.SetValue(self.node_vector_enabled)
+		self.Bind(wx.EVT_CHECKBOX, self.on_sphere_chk, self.sphere_chk)
+		self.Bind(wx.EVT_CHECKBOX, self.on_vector_chk, self.vector_chk)
 		hbox2.Add(self.sphere_chk)
+		hbox2.Add(self.vector_chk)
 
 		vbox.Add(hbox1, flag = wx.EXPAND | wx.BOTTOM, border = 10)
 		vbox.Add(hbox2, proportion = 1, flag = wx.EXPAND)
@@ -115,7 +145,7 @@ class EphyraFrame(wx.Frame):
 
 		self.sizer = wx.BoxSizer(wx.VERTICAL)
 		self.sizer.Add(self.plot_pnl, proportion = 1, flag = wx.EXPAND)
-		self.sizer.Add(self.control_pnl, flag = wx.EXPAND | wx.BOTTOM | wx.TOP, border = 10)
+		self.sizer.Add(self.control_pnl, flag = wx.EXPAND | wx.BOTTOM | wx.TOP)
 
 		self.Bind(wx.EVT_SIZE, self.on_resize)
 		self.Bind(wx.EVT_IDLE, self.on_idle)
@@ -233,6 +263,26 @@ class EphyraFrame(wx.Frame):
 				alpha=self.sphere_opacity,
 				color=self.plot_sphere_cm(colorval)
 			)
+
+		###
+		# VECTOR OVERLAYS TO MAIN PLOT AREA
+		###
+		# Arrow3D
+		if self.node_vector_enabled:
+			self._remove_vectors()
+			for node in range(self.data.n):
+				position = self.data.position_of(node, self.t)
+				heading = self.data.heading_of(node,self.t)
+				xs,ys,zs = zip(position,np.add(position,(np.asarray(heading)*50)))
+				self.node_vector_collections[node] = Arrow3D(
+					xs,ys,zs,
+					mutation_scale=2, lw=1,
+					arrowstyle="-|>", color="k", alpha=self.vector_opacity
+				)
+				self.plot_axes.add_artist(
+					self.node_vector_collections[node],
+				)
+
 
 		###
 		# METRIC UPDATES
@@ -390,6 +440,15 @@ class EphyraFrame(wx.Frame):
 		else:
 			self.log.debug("Sphere Overlay Enabled")
 			self.sphere_enabled = True
+
+	def on_vector_chk(self, event):
+		if not self.vector_chk.IsChecked():
+			self._remove_vectors()
+			self.log.debug("Vector Overlay Disabled")
+			self.node_vector_enabled = False
+		else:
+			self.log.debug("Vector Overlay Enabled")
+			self.node_vector_enabled = True
 	####
 	# Plotting Tools
 	###
@@ -409,6 +468,15 @@ class EphyraFrame(wx.Frame):
 		and self.sphere_line_collection in self.plot_axes.collections:
 
 			self.plot_axes.collections.remove(self.sphere_line_collection)
+
+	def _remove_vectors(self):
+		if self.node_vector_collections is not None:
+			for arrow in self.node_vector_collections:
+				if arrow is not None:
+					arrow.remove()
+
+		self.node_vector_collections = [ None for i in range(self.data.n)]
+
 
 
 def main():
