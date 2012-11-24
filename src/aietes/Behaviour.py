@@ -1,7 +1,8 @@
 import numpy as np
-from aietes.Tools import  memory_entry,baselogger,distance,fudge_normal,debug
+from aietes.Tools import  memory_entry,baselogger,distance,fudge_normal, debug, unit, mag
 from operator import attrgetter
 
+debug = True
 
 class Behaviour():
 	"""
@@ -47,7 +48,7 @@ class Behaviour():
 		"""
 		self.neighbours = self.neighbour_map()
 		self.nearest_neighbours = self.getNearestNeighbours(self.node.position,n_neighbours=self.n_nearest_neighbours)
-		forceVector = self.responseVector(self.node.position,self.node.velocity)
+		forceVector = self.responseVector(self.node.position,self.node.forceVector)
 		forceVector = fudge_normal(forceVector,0.012)
 		self.node.push(forceVector)
 		return
@@ -77,11 +78,40 @@ class Behaviour():
 		Called on process: Returns desired vector
 		"""
 		forceVector= np.array([0,0,0],dtype=np.float)
+		contributions = {}
 		for behaviour in self.behaviours:
-			forceVector += behaviour(position)
+			contributions[behaviour.__name__] = behaviour(position)
+
+		forceVector = sum(contributions.values())
+		contributions_str = ["%s:%f"%(func,mag(value)) for func, value in contributions.iteritems()]
+		self.logger.info("contributions: %s"%contributions_str)
+
 		forceVector = self.avoidWall(position,velocity,forceVector)
 		if debug: self.logger.debug("Response:%s"%(forceVector))
 		return forceVector
+
+	def repulseFromPosition(self,position,repulsive_position):
+		forceVector=np.array([0,0,0],dtype=np.float)
+		distanceVal=distance(position,repulsive_position)
+		forceVector=(position-repulsive_position)/float(distanceVal)
+		assert distanceVal > 2, "Too close to %s"%(repulsive_position)
+		if debug: self.logger.debug("Repulsion from %s: %s, at range of %s"%(forceVector, repulsive_position,distanceVal))
+		return forceVector
+
+	def attractToPosition(self,position,attractive_position):
+		forceVector=np.array([0,0,0],dtype=np.float)
+		distanceVal=distance(position,attractive_position)
+		forceVector=(attractive_position-position)/float(distanceVal)
+		if debug: self.logger.debug("Attraction to %s: %s, at range of %s"%(forceVector, attractive_position,distanceVal))
+		return forceVector
+
+	def cruisingSpeed(self,position, velocity):
+		"""
+		Attempt to maintain cruising velocity
+		"""
+		unit_vel = unit(velocity) # Direction
+		mag_vel = mag(velocity) #Used as the 'desire' metric
+		delta=self.node.cruising_speed
 
 	def avoidWall(self, position, velocity, forceVector):
 		"""
@@ -129,11 +159,12 @@ class Flock(Behaviour):
 		self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
 		self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
 		self.clumping_factor = self.bev_config.clumping_factor
+		self.repulsive_factor = self.bev_config.repulsive_factor
 		self.schooling_factor = self.bev_config.schooling_factor
 		self.collision_avoidance_d = self.bev_config.collision_avoidance_d
 
 		self.behaviours.append(self.clumpingVector)
-		self.behaviours.append(self.avoidCollisionVector)
+		self.behaviours.append(self.repulsiveVector)
 		self.behaviours.append(self.localHeading)
 
 		assert self.n_nearest_neighbours>0
@@ -164,15 +195,16 @@ class Flock(Behaviour):
 
 	def repulsiveVector(self,position):
 		"""
-		Repesents the Short Range Repulsion behaviour:
+		Represents the Short Range Repulsion behaviour:
 			Steer away from it based on a repulsive desire curve
 		"""
 		forceVector=np.array([0,0,0],dtype=np.float)
 		for neighbour in self.nearest_neighbours:
 			forceVector+=self.repulseFromPosition(position,neighbour.position)
 		# Return an inverse vector to the obstacles
+		forceVector *= self.repulsive_factor
 		if debug: self.logger.debug("Repulse:%s"%(forceVector))
-		return forceVector * self.repulsive_factor
+		return forceVector
 
 	def avoidCollisionVector(self,position):
 		"""
@@ -183,24 +215,11 @@ class Flock(Behaviour):
 		for neighbour in self.nearest_neighbours:
 			if distance(position,neighbour.position) < self.collision_avoidance_d:
 				forceVector+=position-neighbour.position
-			# Return an inverse vector to the obstacles
-		if debug: self.logger.debug("Repulse:%s"%(forceVector))
+				# Return an inverse vector to the obstacles
+				self.logger.debug("Avoiding!")
 		return forceVector
 
-	def repulseFromPosition(self,position,repulsive_position):
-		forceVector=np.array([0,0,0],dtype=np.float)
-		distanceVal=distance(position,repulsive_position)
-		forceVector=(position-repulsive_position)/float(distanceVal)
-		assert distanceVal > 2, "Too close to %s"%(repulsive_position)
-		if debug: self.logger.debug("Repulsion from %s: %s, at range of %s"%(forceVector, repulsive_position,distanceVal))
-		return forceVector
 
-	def attractToPosition(self,position,attractive_position):
-		forceVector=np.array([0,0,0],dtype=np.float)
-		distanceVal=distance(position,attractive_position)
-		forceVector=(attractive_position-position)/float(distanceVal)
-		if debug: self.logger.debug("Attraction to %s: %s, at range of %s"%(forceVector, attractive_position,distanceVal))
-		return forceVector
 
 	def localHeading(self,position):
 		"""
@@ -210,7 +229,7 @@ class Flock(Behaviour):
 		for neighbour in self.simulation.nodes:
 			if neighbour is not self.node:
 				vector+=fudge_normal(neighbour.velocity,max(abs(neighbour.velocity))/3)
-		forceVector = self.schooling_factor * vector / (len(self.simulation.nodes) - 1)
+		forceVector = self.schooling_factor * (vector / (len(self.simulation.nodes) - 1))
 		if debug: self.logger.debug("Schooling:%s"%(forceVector))
 		return forceVector
 
@@ -258,7 +277,7 @@ class Waypoint(Flock):
 				self.logger.info("Moving to Next waypoint:%s"%self.nextwaypoint.position)
 				self.nextwaypoint=self.nextwaypoint.next
 			forceVector=self.attractToPosition(position, self.nextwaypoint.position)
-		return forceVector*0.1
+		return forceVector*self.waypoint_factor
 
 
 class waypoint(object):
@@ -292,10 +311,3 @@ class waypoint(object):
 			self.next = head
 		else:
 			self.next.makeLoop(head)
-
-
-
-
-
-
-

@@ -72,6 +72,15 @@ def mag(vector):
     """
     return np.linalg.norm(vector)
 
+def unit(vector):
+	"""
+	Return the unit vector
+	"""
+	if mag(vector)==0.0:
+		return np.zeros_like(vector)
+	else:
+		return vector / np.linalg.norm(vector)
+
 #####################################################################
 # Lazy Testing functions
 #####################################################################

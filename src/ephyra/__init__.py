@@ -92,6 +92,7 @@ class EphyraFrame(wx.Frame):
 		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
 		self.metric_xlines =  [None for i in range(HEIGHT)]
 		self.trail_opacity=0.7
+		self.trail = 100
 
 		# Configure Sphere plotting on plot_pnl
 		self.sphere_enabled=True
@@ -113,9 +114,10 @@ class EphyraFrame(wx.Frame):
 		self.play_btn = wx.Button(self.control_pnl, label = "Play")
 		self.faster_btn = wx.Button(self.control_pnl, label = "Rate++")
 		self.slower_btn = wx.Button(self.control_pnl, label = "Rate--")
-		self.slider2 = wx.Slider(self.control_pnl, value = 1, minValue = 0, maxValue = 100, size = (120, -1))
+		self.trail_slider = wx.Slider(self.control_pnl, value = self.trail, minValue = 0, maxValue = 100, size = (120, -1))
 
 		self.Bind(wx.EVT_SCROLL, self.on_time_slider, self.time_slider)
+		self.Bind(wx.EVT_SCROLL, self.on_trail_slider, self.trail_slider)
 		self.Bind(wx.EVT_BUTTON, self.on_pause_btn, self.pause_btn)
 		self.Bind(wx.EVT_UPDATE_UI, self.on_update_pause_btn, self.pause_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_play_btn, self.play_btn)
@@ -133,7 +135,7 @@ class EphyraFrame(wx.Frame):
 		hbox2.Add(self.play_btn, flag = wx.RIGHT, border = 5)
 		hbox2.Add(self.faster_btn, flag = wx.LEFT, border = 5)
 		hbox2.Add(self.slower_btn)
-		hbox2.Add(self.slider2, flag = wx.TOP | wx.LEFT, border = 5)
+		hbox2.Add(self.trail_slider, flag = wx.TOP | wx.LEFT, border = 5)
 
 		#Metric Buttons
 		self.sphere_chk = wx.CheckBox(self.control_pnl, label = "Sphere")
@@ -282,7 +284,7 @@ class EphyraFrame(wx.Frame):
 		# MAIN PLOT AREA
 		###
 		for n, line in enumerate(self.lines):
-			(xs, ys, zs) = self.data.trail_of(n, self.t)
+			(xs, ys, zs) = self.data.trail_of(n, self.t, self.trail)
 			line.set_data(xs, ys)
 			line.set_3d_properties(zs)
 			line.set_label(self.data.names[n])
@@ -392,8 +394,8 @@ class EphyraFrame(wx.Frame):
 		self.data.tmax
 		)
 		)
-		self.time_slider.SetRange(0, self.data.tmax)
-		self.time_slider.SetValue(self.data.tmax)
+		self.time_slider.SetRange(0, self.data.tmax-1)
+		self.time_slider.SetValue(self.data.tmax-1)
 		self.d_t = int(self.data.tmax / 100)
 		if self.args.autostart:
 			self.paused = False
@@ -407,7 +409,7 @@ class EphyraFrame(wx.Frame):
 		self.data.tmax
 		)
 		)
-		self.time_slider.SetRange(0, self.data.tmax)
+		self.time_slider.SetRange(0, self.data.tmax-1)
 		self.d_t = int(self.data.tmax / 100)
 		if self.args.autostart:
 			self.paused = False
@@ -521,6 +523,14 @@ class EphyraFrame(wx.Frame):
 		else:
 			self.log.debug("Vector Overlay Enabled")
 			self.node_vector_enabled = True
+
+	def on_trail_slider(self, event):
+		event.Skip()
+		norm_trail = self.trail_slider.GetValue()
+		self.trail = int(norm_trail*(self.data.tmax/100.0))
+		self.log.debug("Slider: Setting trail to %d" % self.trail)
+		wx.CallAfter(self.redraw_plot)
+
 	####
 	# Plotting Tools
 	###

@@ -30,6 +30,8 @@ class Node(Sim.Process):
 		self.position=np.array(vector,dtype=np.float)
 		#Implied six vector velocity
 		self.velocity=np.array([0,0,0],dtype=np.float)
+		self.forceVector=np.array([0,0,0],dtype=np.float)
+
 		self.highest_attained_speed =0.0
 
 		self._lastupdate=Sim.now()
@@ -48,16 +50,23 @@ class Node(Sim.Process):
 		self.app = app_mod(self,node_config['Application'], layercake=self.layercake)
 
 		##############################
-		#Propultion Capabilities
+		# Propultion Capabilities
 		##############################
-		if isinstance(self.config['max_speed'],int):
+		if len(self.config['cruising_speed'])==1:
+			#cruising speed is independent of direction
+			self.cruising_speed=np.asarray([self.config['cruising_speed'][0],self.config['cruising_speed'][0], self.config['cruising_speed'][0]])
+		else:
+			self.cruising_speed = np.asarray(self.config['cruising_speed'])
+		assert len(self.cruising_speed) == 3
+
+		if len(self.config['max_speed'])==1:
 			#Max speed is independent of direction
-			self.max_speed=np.asarray([self.config['max_speed'],self.config['max_speed'], self.config['max_speed']])
+			self.max_speed=np.asarray([self.config['max_speed'][0],self.config['max_speed'][0], self.config['max_speed'][0]])
 		else:
 			self.max_speed = np.asarray(self.config['max_speed'])
 		assert len(self.max_speed) == 3
 
-		if isinstance(self.config['max_turn'],int):
+		if len(self.config['max_speed'])==1:
 			#Max Turn Rate is independent of orientation
 			self.max_turn=[self.config['max_turn'],self.config['max_turn'],self.config['max_turn']]
 		else:
@@ -65,7 +74,7 @@ class Node(Sim.Process):
 		assert len(self.max_turn) == 3
 
 		##############################
-		#Internal Configure Node Behaviour
+		# Internal Configure Node Behaviour
 		##############################
 		try:
 			behaviour = self.config['Behaviour']['protocol']
@@ -76,7 +85,7 @@ class Node(Sim.Process):
 		self.behaviour=behave_mod(node=self,bev_config=self.config['Behaviour'])
 
 		##############################
-		#Simulation Configuration
+		# Simulation Configuration
 		self.internalEvent = Sim.SimEvent(self.name)
 		##############################
 
@@ -101,20 +110,27 @@ class Node(Sim.Process):
 		self.fleet=fleet
 
 	def distanceTo(self,otherNode):
-		assert hasattr(otherNode,position), "Other object has no position"
+		assert hasattr(otherNode,"position"), "Other object has no position"
 		assert len(otherNode.position)==3
-		return distance(self.position,otherVector.position)
+		return distance(self.position,otherNode.position)
 
 	def push(self,forceVector):
 		assert len(forceVector==3), "Out of spec vector: %s,%s"%(forceVector,type(forceVector))
-		new_velocity=np.array(self.velocity+forceVector,dtype=np.float)
-		if any(abs(new_velocity)>self.max_speed):
-			new_velocity/=mag(new_velocity)
-			new_velocity*=mag(self.max_speed)
-			if debug: self.logger.debug("Attempted Velocity: %s, clipped: %s"%(forceVector,new_velocity))
+
+		# Normalize the ForceVector
+		if mag(forceVector) > mag(self.max_speed):
+			forceVector/=mag(forceVector)
+			forceVector*=mag(self.max_speed)
+			if debug: self.logger.debug("Normalized ForceVector: %s, clipped: %s"%(forceVector,new_forceVector))
+
+		new_forceVector=np.array(self.velocity+forceVector,dtype=np.float)
+		if mag(new_forceVector) > mag(self.max_speed):
+			new_forceVector/=mag(new_forceVector)
+			new_forceVector*=mag(self.max_speed)
+			if debug: self.logger.debug("Normalized Velocity: %s, clipped: %s"%(forceVector,new_forceVector))
 		else:
 			if debug: self.logger.debug("Velocity: %s"%forceVector)
-		self.velocity=new_velocity
+		self.forceVector=new_forceVector
 
 	def wallCheck(self):
 		"""
@@ -127,21 +143,21 @@ class Node(Sim.Process):
 		Update node status
 		"""
 		##############################
-		#Positional information
+		# Positional information
 		##############################
 		old_pos = self.position.copy()
 		dT = self.simulation.deltaT(Sim.now(),self._lastupdate)
-		attempted_vector = np.array(self.velocity,dtype=np.float)*dT
-		self.position+=attempted_vector
-		if debug: self.logger.debug("Moving by %s at %s * %f from %s to %s"%(self.velocity,mag(self.velocity),dT,old_pos,self.position))
+		self.velocity = np.array(self.forceVector,dtype=np.float)*dT
+		self.position+=self.velocity
+		if debug: self.logger.debug("Moving by %s at %s * %f from %s to %s"%(self.velocity,mag(self.forceVector),dT,old_pos,self.position))
 		if not self.wallCheck():
-			self.logger.critical("WE'RE OUT OF THE ENVIRONMENT! %s, v=%s"%(self.position,attempted_vector))
-			raise Exception("%s Crashed out of the environment at %s m/s"%(self.name,mag(attempted_vector)))
+			self.logger.critical("WE'RE OUT OF THE ENVIRONMENT! %s, v=%s"%(self.position,self.velocity))
+			raise Exception("%s Crashed out of the environment at %s m/s"%(self.name,mag(self.velocity)))
 		self.pos_log[:,self._lastupdate]=self.position.copy()
 
-		self.vec_log[:,self._lastupdate]=attempted_vector
+		self.vec_log[:,self._lastupdate]=self.velocity
 
-		self.highest_attained_speed = max(self.highest_attained_speed,mag(attempted_vector))
+		self.highest_attained_speed = max(self.highest_attained_speed,mag(self.velocity))
 		self._lastupdate = Sim.now()
 
 	def setPos(self,placeVector):

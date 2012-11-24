@@ -100,7 +100,7 @@ class DataPackage():
 		return deviations
 
 
-	def trail_of(self,node,time=None):
+	def trail_of(self,node,time=None, maxlen=None):
 		"""
 		Return the [X:][Y:][Z:] trail for a given node from sim_start to
 		a particular time
@@ -110,7 +110,9 @@ class DataPackage():
 		if time is None:
 			time = self.tmax
 
-		return [self.p[node][dimension][0:time] for dimension in 0,1,2]
+		mintime = max(0 if maxlen is None else (time-maxlen),0)
+
+		return [self.p[node][dimension][mintime:time] for dimension in 0,1,2]
 
 	def average_heading(self, time):
 		"""
