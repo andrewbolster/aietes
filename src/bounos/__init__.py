@@ -135,7 +135,7 @@ class DataPackage():
 		:raises ValueError
 		"""
 		if not (0 <= time <= self.tmax):
-			raise ValueError("Time must be in the range of the dataset")
+			raise ValueError("Time must be in the range of the dataset: %s, %s"%(time,self.tmax))
 
 		average = np.zeros(3,dtype=np.float)
 		for element in self.heading_slice(time):
@@ -171,7 +171,7 @@ class DataPackage():
 		:raises ValueError
 		"""
 		if not (0 <= time <= self.tmax):
-			raise ValueError("Time must be in the range of the dataset")
+			raise ValueError("Time must be in the range of the dataset: %s, %s"%(time,self.tmax))
 
 		average = np.zeros(3,dtype=np.float)
 		for element in self.position_slice(time):
@@ -240,6 +240,12 @@ class DataPackage():
 				self.position_slice(time)
 			)
 		)
+
+	def inter_distance_average(self,time):
+		"""
+		Returns the average distance between nodes
+		"""
+		return np.average([ self.distances_from_at(position,time) for position in self.position_slice(time)])
 
 
 def main():

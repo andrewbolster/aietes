@@ -77,7 +77,7 @@ class Environment():
         return too_high or too_low
 
 
-    def update(self,object_id,position):
+    def update(self,object_id,position, velocity):
         """
         Update the environment to reflect a movement
         """
@@ -89,10 +89,10 @@ class Environment():
                                                            update_distance,
                                                            self.map[object_id].position,
                                                            position))
-            self.map[object_id]=map_entry(object_id,position,object_name)
+            self.map[object_id]=map_entry(object_id,position,velocity,object_name)
         except KeyError:
             if debug: self.logger.debug("Creating map entry for %s at %s"%(object_name,position))
-            self.map[object_id]=map_entry(object_id,position,object_name)
+            self.map[object_id]=map_entry(object_id,position,velocity,object_name)
         self.pos_log.append(Log(name=object_name,
                                 position=position,
                                 object_id=object_id,

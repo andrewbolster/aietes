@@ -268,18 +268,20 @@ class dotdict(dict):
         return self.keys(),dir(dict(self))
 
 class memory_entry():
-    def __init__(self,object_id,position,distance,name=None):
+    def __init__(self,object_id,position,velocity,distance,name=None):
         self.object_id=object_id
         self.name=name
         self.position=position
+        self.velocity=velocity
         self.distance=distance
     def __repr__(self):
         return "%s:%s:%s"%(self.name,self.position,self.distance)
 
 class map_entry():
-    def __init__(self,object_id,position,name=None):
+    def __init__(self,object_id,position,velocity,name=None):
         self.object_id=object_id
         self.position=position
+        self.velocity=velocity
         self.name=name
         self.time=Sim.now()
     def __repr__(self):
@@ -335,6 +337,6 @@ def listfix(type,value):
 	if isinstance(value,list):
 		return type(value[0])
 	else:
-		return value
+		return type(value)
 
 

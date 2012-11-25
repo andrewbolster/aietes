@@ -36,15 +36,16 @@ class Behaviour():
 
 		for k,v in orig_map.items():
 			orig_map[k].position = fudge_normal(v.position,0.2)
+			orig_map[k].velocity = fudge_normal(v.velocity,0.2)
 
 		return orig_map
 
-	def addMemory(self,object_id,position):
+	def addMemory(self,object_id,position, velocity):
 		"""
 		Called by node lifecycle to update the internal representation of the environment
 		"""
 		#TODO expand this to do SLAM?
-		self.memory+=memory_entry(object_id,position)
+		self.memory+=memory_entry(object_id,position, velocity)
 
 
 	def process(self):
@@ -64,7 +65,7 @@ class Behaviour():
 		"""
 		#Sort and filter Neighbours by distance
 		neighbours_with_distance=[memory_entry(key,
-											   value.position,
+											   value.position, value.velocity,
 											   self.node.distance_to(value.position),
 											   self.simulation.reverse_node_lookup(key).name
 											  ) for key,value in self.neighbours.items()]
@@ -159,9 +160,9 @@ class Flock(Behaviour):
 	"""
 	def __init__(self,*args,**kwargs):
 		Behaviour.__init__(self,*args,**kwargs)
-		self.n_nearest_neighbours = int(self.bev_config.nearest_neighbours)
-		self.neighbourhood_max_rad = self.bev_config.neighbourhood_max_rad
-		self.neighbour_min_rad = self.bev_config.neighbourhood_min_rad
+		self.n_nearest_neighbours = listfix(int,self.bev_config.nearest_neighbours)
+		self.neighbourhood_max_rad = listfix(int,self.bev_config.neighbourhood_max_rad)
+		self.neighbour_min_rad = listfix(int,self.bev_config.neighbourhood_min_rad)
 		self.clumping_factor = listfix(float,self.bev_config.clumping_factor)
 		self.repulsive_factor = listfix(float,self.bev_config.repulsive_factor)
 		self.schooling_factor = listfix(float,self.bev_config.schooling_factor)
@@ -215,10 +216,9 @@ class Flock(Behaviour):
 		Represents Local Average Heading
 		"""
 		vector=np.array([0,0,0])
-		for neighbour in self.simulation.nodes:
-			if neighbour is not self.node:
-				vector+=fudge_normal(unit(neighbour.velocity),max(abs(unit(neighbour.velocity)))/3)
-		forceVector = (vector / (len(self.simulation.nodes) - 1))
+		for neighbour in self.nearest_neighbours:
+			vector+=fudge_normal(unit(neighbour.velocity),max(abs(unit(neighbour.velocity)))/3)
+		forceVector = (vector / (len(self.nearest_neighbours)))
 		if debug: self.logger.debug("Schooling:%s"%(forceVector))
 		return self.normalize_behaviour(forceVector)*self.schooling_factor
 

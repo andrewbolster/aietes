@@ -54,9 +54,9 @@ class Node(Sim.Process):
 		##############################
 		if len(self.config['cruising_speed'])==1:
 			#cruising speed is independent of direction
-			self.cruising_speed=np.asarray([self.config['cruising_speed'][0],self.config['cruising_speed'][0], self.config['cruising_speed'][0]])
+			self.cruising_speed=np.asarray([self.config['cruising_speed'][0],self.config['cruising_speed'][0], self.config['cruising_speed'][0]], dtype=np.float64)
 		else:
-			self.cruising_speed = np.asarray(self.config['cruising_speed'])
+			self.cruising_speed = np.asarray(self.config['cruising_speed'], dtype=np.float64)
 		assert len(self.cruising_speed) == 3
 
 		if len(self.config['max_speed'])==1:
@@ -101,7 +101,7 @@ class Node(Sim.Process):
 			self.layercake.activate()
 
 		#Tell the environment that we are here!
-		self.simulation.environment.update(self.id,self.getPos())
+		self.simulation.environment.update(self.id,self.getPos(), self.getVec())
 
 	def assignFleet(self,fleet):
 		"""
@@ -171,6 +171,9 @@ class Node(Sim.Process):
 	def getPos(self):
 		return self.position.copy()
 
+	def getVec(self):
+		return self.velocity.copy()
+
 	def distance_to(self, their_position):
 		d = distance(self.getPos(),their_position)
 		return d
@@ -207,5 +210,5 @@ class Node(Sim.Process):
 			if debug: self.logger.debug('updating map')
 			yield Sim.hold, self, self.behaviour.update_rate
 			yield Sim.release, self, self.simulation.move_flag
-			self.simulation.environment.update(self.id,self.getPos())
+			self.simulation.environment.update(self.id,self.getPos(), self.getVec())
 

@@ -66,14 +66,20 @@ class EphyraFrame(wx.Frame):
 			dest = 'verbose', action = 'store_true', default = False,
 			help = 'Verbose Debugging Information'
 		)
+		parser.add_argument('-n', '--new-simulation',
+			dest = 'newsim', action = 'store_true', default = False,
+			help = 'Generate a new simulation from default'
+		)
 
 		self.args = parser.parse_args()
 
 		self.paused = True
+		self.simulating = False
 		self.sim_ready = False
 		self.telling_off = False # Used for Smartass Control
 		self.t = 0
-		self.sim_t_max = None
+		self.tmax = None
+		self.sim_tmax = None
 		self.d_t = 1
 
 		self.CreateMenuBar()
@@ -176,6 +182,9 @@ class EphyraFrame(wx.Frame):
 				self.smartass("File Not Found!")
 				self.on_open(None)
 
+		if self.args.newsim:
+			self.new_simulation()
+
 	def CreateMenuBar(self):
 		menubar = wx.MenuBar()
 		filem = wx.Menu()
@@ -224,10 +233,7 @@ class EphyraFrame(wx.Frame):
 		self.plot_head_mag_norm=Normalize(vmin=min(heading_magrange), vmax=max(heading_magrange))
 		self.plot_pos_stddev_norm=Normalize(vmin=min(position_stddevrange), vmax=max(position_stddevrange))
 
-
-
-
-	# Initialise Sphere data anyway
+		# Initialise Sphere data anyway
 		self.log.debug("STD: MIN: %f, MAX: %f"%(min(position_stddevrange),max(position_stddevrange)))
 		self.plot_sphere_cm = cm.Spectral_r
 
@@ -243,26 +249,39 @@ class EphyraFrame(wx.Frame):
 
 
 		# Initialise StdDev Plots (Postion 0 heading 1)
-		self.metric_axes[0].plot(position_stddevrange)
-		self.metric_axes[0].set_ylabel("Pos-StdDev")
-		self.metric_axes[0].get_xaxis().set_visible(False)
+		i=0
+		self.metric_axes[i].plot(position_stddevrange)
+		self.metric_axes[i].set_ylabel("Pos-StdDev")
+		self.metric_axes[i].get_xaxis().set_visible(False)
+		i+=1
+		self.metric_axes[i].plot([self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])
+		self.metric_axes[i].set_ylabel("InterN-Dist")
+		self.metric_axes[i].get_xaxis().set_visible(False)
+		i+=1
+		self.metric_axes[i].plot(heading_stddevrange)
+		self.metric_axes[i].set_ylabel("Head-StdDev")
+		self.metric_axes[i].get_xaxis().set_visible(False)
+		i+=1
+		self.metric_axes[i].plot(heading_magrange)
+		self.metric_axes[i].set_ylabel("Head-MagAvg")
+		self.metric_axes[i].get_xaxis().set_visible(False)
+		i+=1
+		self.metric_axes[i].plot(heading_avg_magrange)
+		self.metric_axes[i].plot([max(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
+		self.metric_axes[i].plot([min(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
+		self.metric_axes[i].set_ylabel("Head-AvgMag")
+		self.metric_axes[i].get_xaxis().set_visible(False)
 
-		self.metric_axes[1].plot(heading_stddevrange)
-		self.metric_axes[1].set_ylabel("Head-StdDev")
-		self.metric_axes[1].get_xaxis().set_visible(False)
 
-		self.metric_axes[2].plot(heading_magrange)
-		self.metric_axes[2].set_ylabel("Head-MagAvg")
-		self.metric_axes[2].get_xaxis().set_visible(False)
-
-		self.metric_axes[3].plot(heading_avg_magrange)
-		self.metric_axes[3].plot([max(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
-		self.metric_axes[3].plot([min(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
-		self.metric_axes[3].set_ylabel("Head-AvgMag")
-		self.metric_axes[3].get_xaxis().set_visible(False)
-
-
-
+	def new_simulation(self):
+		from aietes import Simulation
+		self.simulation = Simulation()
+		sim_info=self.simulation.prepare(waits=True)
+		self.tmax=sim_info['sim_time']
+		self.simulating = True
+		self.sim_ready = False
+		self.sim_tmax=0
+		self.simulation.simulate(callback=self.simulation_cb)
 
 	def simulation_cb(self):
 		"""
@@ -270,25 +289,38 @@ class EphyraFrame(wx.Frame):
 		Will 'export' DataPackage data from the running simulation up to the requested time (self.t)
 		"""
 		#TODO expand this to allow 'reimagining'
-		#If going down or stopped, stash the data
-		self.sim_t_max=max(self.sim_t_max,self.t)
+		# Reload data when fleet is computed fully, simulation has gone for a while, and
+		#     when user has navigated beyond the current sim_tmax
 
-		if self.sim_t_max<self.simulation.now():
-			self.data=DataPackage(self.simulation.currentState())
-			self.sim_t_max=self.simulation.now()
+		if self.t<=self.sim_tmax and not self.simulation.waiting and self.simulation.now()>10:
+
+			(p,v,names,environment)=self.simulation.currentState()
+			self.data=DataPackage(p=p,v=v,names=names,environment=environment)
+			self.sim_tmax=self.simulation.now()-1
+			self.simulation.waiting = False
+			self.log.info("Reloading at %d from tmax:%d and t:%d"%(self.simulation.now(),self.sim_tmax,self.t))
 			self.reload_data()
+			if not hasattr(self,'lines'):
+				self.log.info("First Plot")
+				self.init_plot()
 			self.sim_ready=True
-			self.paused = False
-			while self.t<=self.sim_t_max:wx.Yield()
+			#self.paused = False
+			while self.t<=self.sim_tmax:
+				self.log.info("Yielding %d,%d"%(self.t, self.sim_tmax))
+				wx.Yield()
+				self.log.info("Returned From Yield %d,%d"%(self.t, self.sim_tmax))
+
 		else:
+			self.log.info("Continuing at %d from tmax:%d and t:%d"%(self.simulation.now(),self.sim_tmax,self.t))
+			self.simulation.waiting = False
 			self.sim_ready = False
 			self.paused = True
-			wx.Yield()
 			return # Continue Simulating
 
 
 
 	def redraw_plot(self):
+		wx.Yield()
 		###
 		# MAIN PLOT AREA
 		###
@@ -368,20 +400,23 @@ class EphyraFrame(wx.Frame):
 
 		self.t += delta_t if delta_t is not None else self.d_t
 		# If trying to go over the end, don't, and either stop or loop
-		if self.t >= self.data.tmax-1:
+		if self.t > self.tmax:
 			if self.args.loop:
 				self.log.debug("Looping")
 				self.t=0
 			else:
 				self.log.debug("End Of The Line")
 				self.paused=True
-				self.t=self.data.tmax-1
+				self.t=self.tmax
 		if self.t < 0:
 			self.log.debug("Tried to reverse, pausing")
 			self.paused=True
 			self.t=0
-		self.time_slider.SetValue(self.t)
-		self.redraw_plot()
+		if self.simulating and self.t < self.sim_tmax:
+			wx.Yield()
+		else:
+			self.time_slider.SetValue(self.t)
+			self.redraw_plot()
 
 
 	def load_data(self, data_file):
@@ -403,9 +438,11 @@ class EphyraFrame(wx.Frame):
 		self.data.tmax
 		)
 		)
-		self.time_slider.SetRange(0, self.data.tmax-1)
-		self.time_slider.SetValue(self.data.tmax-1)
-		self.d_t = int(self.data.tmax / 100)
+		self.tmax = self.data.tmax-1
+		self.time_slider.SetRange(0, self.tmax)
+		self.time_slider.SetValue(0)
+		self.d_t = int((self.tmax+1) / 100)
+
 		if self.args.autostart:
 			self.paused = False
 
@@ -418,8 +455,8 @@ class EphyraFrame(wx.Frame):
 		self.data.tmax
 		)
 		)
-		self.time_slider.SetRange(0, self.data.tmax-1)
-		self.d_t = int(self.data.tmax / 100)
+		self.time_slider.SetRange(0, self.tmax)
+		self.d_t = int((self.tmax+1) / 100)
 		if self.args.autostart:
 			self.paused = False
 
@@ -455,10 +492,7 @@ class EphyraFrame(wx.Frame):
 		result = dlg.ShowModal()
 		dlg.Destroy()
 		if result == wx.ID_OK:
-			from aietes import Simulation
-			self.simulation = Simulation()
-			self.simulation.prepare()
-			self.simulation.simulate(callback=self.simulation_cb)
+			self.new_simulation()
 
 	def on_open(self, event):
 		dlg = wx.FileDialog(
@@ -484,7 +518,6 @@ class EphyraFrame(wx.Frame):
 	def on_play_btn(self, event):
 		self.t=0
 		self.paused = False
-		event.Skip()
 
 	def on_faster_btn(self, event):
 		self.d_t = int(min(max(1, self.d_t * 1.1), self.data.tmax / 2))
@@ -496,7 +529,6 @@ class EphyraFrame(wx.Frame):
 
 
 	def on_time_slider(self, event):
-		event.Skip()
 		self.t = self.time_slider.GetValue()
 		self.log.debug("Slider: Setting time to %d" % self.t)
 		wx.CallAfter(self.redraw_plot)
@@ -506,7 +538,7 @@ class EphyraFrame(wx.Frame):
 		wx.CallAfter(self.resize_panel)
 
 	def on_idle(self, event):
-		event.Skip()
+		wx.Yield()
 		if not self.paused:
 			self.move_T()
 

@@ -46,8 +46,10 @@ class Simulation():
 			self.logger.info("creating instance from %s"%config_file)
 		self.nodes=[]
 		self.fleets=[]
+		self.waits=False
+		self.waiting=False
 
-	def prepare(self, options=[]):
+	def prepare(self, options=[], waits=False):
 		#Attempt Validation and construct the simulation from that config.
 		try:
 			self.config=self.validateConfig(self.config_file)
@@ -57,6 +59,7 @@ class Simulation():
 			raise SystemExit(1)
 
 		#Initialise simulation environment and configure a global channel event
+		self.waits=waits
 		Sim.initialize()
 		self.channel_event = Sim.SimEvent(self.config.Simulation.channel_event_name)
 		if options is not None and \
@@ -76,6 +79,7 @@ class Simulation():
 		# Set up 'join-like' operation for nodes
 		self.move_flag = Sim.Resource(capacity=len(self.nodes))
 		self.process_flag = Sim.Resource(capacity=len(self.nodes))
+		return {'sim_time':self.config.Simulation.sim_duration}
 
 	def simulate(self, callback=None):
 		"""
@@ -88,6 +92,7 @@ class Simulation():
 			self.logger.info("Running with Callback: %s"%str(callback))
 			Sim.startStepping()
 		Sim.simulate(until=self.duration_intervals, callback=callback)
+		self.logger.info("Finished Simulation at %s"%Sim.now())
 
 	def inner_join(self):
 		"""
@@ -124,8 +129,8 @@ class Simulation():
 		names = []
 		shape = []
 		for node in self.nodes:
-			positions.append(node.pos_log)
-			vectors.append(node.vec_log)
+			positions.append(node.pos_log[:,:Sim.now()-1])
+			vectors.append(node.vec_log[:,:Sim.now()-1])
 			names.append(node.name)
 		shape=self.environment.shape
 		return positions,vectors,names,shape
@@ -145,7 +150,7 @@ class Simulation():
 		# GENERIC CONFIG ACQUISITION
 		##############################
 
-		config= ConfigObj(config_file,configspec=self.config_spec)
+		config= ConfigObj(config_file,configspec=self.config_spec, stringify=True, interpolation=True)
 		config_status = config.validate(validate.Validator(),copy=True)
 
 		if not config_status:
@@ -371,7 +376,7 @@ class Simulation():
 						 names=names,
 						 environment=self.environment.shape
 						)
-				co=ConfigObj(self.config)
+				co=ConfigObj(self.config, list_values=False)
 				co.filename=outputFile+'.conf'
 				co.write()
 			if movieFile:
