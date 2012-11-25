@@ -331,4 +331,10 @@ def nameGeneration(count, naming_convention = None):
 
     return node_names
 
+def listfix(type,value):
+	if isinstance(value,list):
+		return type(value[0])
+	else:
+		return value
+
 

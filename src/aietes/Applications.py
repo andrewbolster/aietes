@@ -40,7 +40,9 @@ class Application(Sim.Process):
 			self.packet_rate = packet_count/self.layercake.sim_duration
 			self.logger.info("Taking Packet_Count from config: %s"%self.packet_rate)
 		else:
-			raise Exception("Packet Rate/Count doesn't make sense!")
+			self.packet_rate=1
+			self.logger.info("This sure is a weird configuration of Packets!")
+			#raise Exception("Packet Rate/Count doesn't make sense!")
 
 
 

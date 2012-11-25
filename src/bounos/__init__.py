@@ -79,7 +79,19 @@ class DataPackage():
 
 	def heading_mag_range(self):
 		"""
-		Returns an array of overall heading magnitudes across the dataset
+		Returns an array of average heading magnitudes across the dataset
+		i.e. the average speed for each node in the fleet at each time
+
+		"""
+		magnitudes =[ sum(map(np.linalg.norm,self.heading_slice(time)))/self.n
+		              for time in range(self.tmax)
+		]
+		return magnitudes
+
+	def average_heading_mag_range(self):
+		"""
+		Returns an array of average heading magnitudes across the dataset
+		i.e. the average speed for each node in the fleet at each time
 
 		"""
 		magnitudes =[ np.linalg.norm(self.average_heading(time))
@@ -133,13 +145,13 @@ class DataPackage():
 
 	def deviation_from_at(self, heading, time):
 		"""
-		Return a one dimensional list of the linear distances from
-		each node to a given position
+		Return a one dimensional list of the linear deviation from
+		each node to a given heading
 
 		:param time: time index to calculate at
 		:type int
 
-		:param position: (x,y,z) position to compare against
+		:param heading: (x,y,z) heading to compare against
 		:type tuple
 		"""
 		return map(

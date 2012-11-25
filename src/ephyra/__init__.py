@@ -217,6 +217,8 @@ class EphyraFrame(wx.Frame):
 		position_stddevrange = self.data.position_stddev_range()
 		heading_stddevrange = self.data.heading_stddev_range()
 		heading_magrange = self.data.heading_mag_range()
+		heading_avg_magrange = self.data.average_heading_mag_range()
+
 		assert len(heading_stddevrange) == self.data.tmax, "H-%s"%str(heading_stddevrange)
 
 		self.plot_head_mag_norm=Normalize(vmin=min(heading_magrange), vmax=max(heading_magrange))
@@ -250,8 +252,15 @@ class EphyraFrame(wx.Frame):
 		self.metric_axes[1].get_xaxis().set_visible(False)
 
 		self.metric_axes[2].plot(heading_magrange)
-		self.metric_axes[2].set_ylabel("Head-AvgMag")
+		self.metric_axes[2].set_ylabel("Head-MagAvg")
 		self.metric_axes[2].get_xaxis().set_visible(False)
+
+		self.metric_axes[3].plot(heading_avg_magrange)
+		self.metric_axes[3].plot([max(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
+		self.metric_axes[3].plot([min(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
+		self.metric_axes[3].set_ylabel("Head-AvgMag")
+		self.metric_axes[3].get_xaxis().set_visible(False)
+
 
 
 
@@ -451,8 +460,6 @@ class EphyraFrame(wx.Frame):
 			self.simulation.prepare()
 			self.simulation.simulate(callback=self.simulation_cb)
 
-
-
 	def on_open(self, event):
 		dlg = wx.FileDialog(
 			self, message = "Select a DataPackage",
@@ -514,6 +521,7 @@ class EphyraFrame(wx.Frame):
 		else:
 			self.log.debug("Sphere Overlay Enabled")
 			self.sphere_enabled = True
+		wx.CallAfter(self.redraw_plot)
 
 	def on_vector_chk(self, event):
 		if not self.vector_chk.IsChecked():
@@ -523,6 +531,7 @@ class EphyraFrame(wx.Frame):
 		else:
 			self.log.debug("Vector Overlay Enabled")
 			self.node_vector_enabled = True
+		wx.CallAfter(self.redraw_plot)
 
 	def on_trail_slider(self, event):
 		event.Skip()
@@ -538,7 +547,7 @@ class EphyraFrame(wx.Frame):
 		"""
 		Returns a sphere definition tuple (xs,ys,zs) for use with plot_wireframe
 		"""
-		u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+		u, v = np.mgrid[0:2*np.pi:10j, 0:np.pi:10j]
 		xs=(r*np.cos(u)*np.sin(v))+x
 		ys=(r*np.sin(u)*np.sin(v))+y
 		zs=(r*np.cos(v))+z

@@ -109,6 +109,12 @@ class Node(Sim.Process):
 		"""
 		self.fleet=fleet
 
+	def wallCheck(self):
+		"""
+		Are we still in the bloody box?
+		"""
+		return (all(self.position<np.asarray(self.simulation.environment.shape)) and all(np.zeros(3)<self.position))
+
 	def distanceTo(self,otherNode):
 		assert hasattr(otherNode,"position"), "Other object has no position"
 		assert len(otherNode.position)==3
@@ -117,26 +123,22 @@ class Node(Sim.Process):
 	def push(self,forceVector):
 		assert len(forceVector==3), "Out of spec vector: %s,%s"%(forceVector,type(forceVector))
 
-		# Normalize the ForceVector
-		if mag(forceVector) > mag(self.max_speed):
-			forceVector/=mag(forceVector)
-			forceVector*=mag(self.max_speed)
-			if debug: self.logger.debug("Normalized ForceVector: %s, clipped: %s"%(forceVector,new_forceVector))
-
 		new_forceVector=np.array(self.velocity+forceVector,dtype=np.float)
-		if mag(new_forceVector) > mag(self.max_speed):
-			new_forceVector/=mag(new_forceVector)
-			new_forceVector*=mag(self.max_speed)
+		if mag(new_forceVector) > any(self.cruising_speed):
+			new_forceVector=self.cruiseControl(new_forceVector, self.velocity)
 			if debug: self.logger.debug("Normalized Velocity: %s, clipped: %s"%(forceVector,new_forceVector))
 		else:
 			if debug: self.logger.debug("Velocity: %s"%forceVector)
 		self.forceVector=new_forceVector
 
-	def wallCheck(self):
+
+	def cruiseControl(self,velocity, prev_velocity):
 		"""
-		Are we still in the bloody box?
+		Attempt to maintain cruising velocity
 		"""
-		return (all(self.position<np.asarray(self.simulation.environment.shape)) and all(np.zeros(3)<self.position))
+		refactor=1.0/np.exp(-(mag(velocity)-max(self.cruising_speed)))
+		return (velocity/mag(velocity))*refactor
+
 
 	def move(self):
 		"""
