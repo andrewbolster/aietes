@@ -236,7 +236,7 @@ class EphyraFrame(wx.Frame):
 
 		# Start off with all nodes displayed
 		self.displayed_nodes = np.empty(self.data.n, dtype=bool)
-		self.displayed_nodes.fill(False)
+		self.displayed_nodes.fill(True)
 
 		# Find initial display state for viewport
 		self.lines = [self.plot_axes.plot(xs, ys, zs, alpha=self.trail_opacity)[0] for xs, ys, zs in self.data.p]
@@ -648,9 +648,11 @@ class PerNodeGraph_Axes():
 	# Assumes that data is constant and only needs to be selected per node
 	def __init__(self, axes, data, *args, **kw):
 		self.ax = axes
-		self.data = data
+		self.data = np.asarray(data)
 		self.ax.set_ylabel(kw.get('label',"UNDEFINED"))
 		self.ax.get_xaxis().set_visible(False)
+		self.shape=self.data.shape
+
 
 	def plot(self, wanted=None):
 		"""
@@ -661,7 +663,7 @@ class PerNodeGraph_Axes():
 			self.ax.plot(self.data, alpha=0.3)
 		else:
 			logging.info("Printing %s with Wanted:%s"%(self,wanted))
-			self.ax.plot(np.asarray(self.data)[wanted,:],alpha=0.3)
+			self.ax.plot(np.ndarray(buffer=self.data, shape=self.shape)[wanted],alpha=0.3)
 		return self.ax
 
 	def __repr__(self):
