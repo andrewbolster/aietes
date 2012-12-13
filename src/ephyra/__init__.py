@@ -16,7 +16,7 @@ from bounos import DataPackage
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
-from matplotlib.axes import Axes
+import collections
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize, LogNorm
 import matplotlib.cm as cm
@@ -97,6 +97,7 @@ class EphyraFrame(wx.Frame):
 		self.axes = self.fig.add_axes([0, 0, 1, 1], )
 		self.plot_axes = self.fig.add_subplot(plot_area, projection = '3d')
 		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
+		self.metric_plots = []
 		self.metric_xlines =  [None for i in range(HEIGHT)]
 		self.trail_opacity=0.7
 		self.trail = 100
@@ -223,6 +224,16 @@ class EphyraFrame(wx.Frame):
 
 	def init_plot(self):
 
+		# Metrics
+		Metric = collections.namedtuple('Metric', ['label', 'data'], verbose=False)
+		metrics=[]
+		metrics.append(Metric("Dist Stddev",self.data.distance_from_average_stddev_range()))
+		metrics.append(Metric("InterN-Dist",[self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])),
+		metrics.append(Metric("Head-StdDev",self.data.heading_stddev_range())),
+		metrics.append(Metric("Head-MagAvg",self.data.heading_mag_range())),
+		metrics.append(Metric("Head-AvgMag",[map(np.linalg.norm,self.data.heading_slice(time)) for time in range(int(self.data.tmax))])),
+		metrics.append(Metric("Avg",[np.asarray(self.data.distances_from_average_at(time)) for time in range(int(self.data.tmax))]))
+
 		# Start off with all nodes displayed
 		self.displayed_nodes = np.empty(self.data.n, dtype=bool)
 		self.displayed_nodes.fill(False)
@@ -235,7 +246,6 @@ class EphyraFrame(wx.Frame):
 		position_stddevrange = self.data.distance_from_average_stddev_range()
 		heading_stddevrange = self.data.heading_stddev_range()
 		heading_magrange = self.data.heading_mag_range()
-		heading_avg_magrange = self.data.average_heading_mag_range()
 
 		assert len(heading_stddevrange) == self.data.tmax, "H-%s"%str(heading_stddevrange)
 
@@ -256,45 +266,24 @@ class EphyraFrame(wx.Frame):
 		self.plot_axes.set_ylabel('Y')
 		self.plot_axes.set_zlabel('Z')
 
+		for i,metric in enumerate(metrics):
+			self.metric_plots.append(PerNodeGraph_Axes(axes=self.metric_axes[i],
+			                                           data=metric.data,
+			                                           label=metric.label)
+			)
+
+
 		self.plot_analysis()
 
 
 	def  plot_analysis(self):
 
-		for ax in self.metric_axes:
-			ax.clear()
-		# Initialise StdDev Plots (Postion 0 heading 1)
-		i=0
-		self.metric_axes[i].plot(self.data.distance_from_average_stddev_range())
-		self.metric_axes[i].set_ylabel("Pos-StdDev")
-		self.metric_axes[i].get_xaxis().set_visible(False)
-		i+=1
-		#self.metric_axes[i]=PerNodeGraph_Axes(axes=self.metric_axes[i])
-		self.metric_axes[i].plot([self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])
-		self.metric_axes[i].set_ylabel("InterN-Dist")
-		self.metric_axes[i].get_xaxis().set_visible(False)
-		i+=1
-		self.metric_axes[i].plot(self.data.heading_stddev_range())
-		self.metric_axes[i].set_ylabel("Head-StdDev")
-		self.metric_axes[i].get_xaxis().set_visible(False)
-		i+=1
-		self.metric_axes[i].plot(self.data.heading_mag_range())
-		self.metric_axes[i].set_ylabel("Head-MagAvg")
-		self.metric_axes[i].get_xaxis().set_visible(False)
-		i+=1
-		self.metric_axes[i].plot(self.data.average_heading_mag_range())
-		self.metric_axes[i].plot([max(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
-		self.metric_axes[i].plot([min(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
-		self.metric_axes[i].set_ylabel("Head-AvgMag")
-		self.metric_axes[i].get_xaxis().set_visible(False)
-		i+=1
-		if any(self.displayed_nodes):
-			self.metric_axes[i].plot([
-				np.asarray(self.data.distances_from_average_at(time))[self.displayed_nodes]
-				for time in range(int(self.data.tmax))
-			])
-		self.metric_axes[i].set_ylabel("Avg")
-		self.metric_axes[i].get_xaxis().set_visible(False)
+		for i,plot in enumerate(self.metric_plots):
+			if isinstance(plot.data[0],float):
+				#one dimension, no need for wanted filter
+				self.metric_axes[i]=plot.plot()
+			else:
+				self.metric_axes[i]=plot.plot(wanted=np.asarray(self.displayed_nodes))
 
 
 
@@ -610,13 +599,18 @@ class EphyraFrame(wx.Frame):
 		                            "Select nodes",
 		                            "wx.MultiChoiceDialog", lst)
 
-		dlg.SetSelections(list(np.asarray(self.displayed_nodes, dtype=int)))
+		selections = [ i for i in range(self.data.n) if self.displayed_nodes[i]]
+		print selections
+		dlg.SetSelections(selections)
 
 		if (dlg.ShowModal() == wx.ID_OK):
 			selections = dlg.GetSelections()
 			strings = [lst[x] for x in selections]
 			print "You chose:" + str(strings)
-			self.displayed_nodes=np.asarray(selections)
+			self.displayed_nodes.fill(False)
+			for checked in selections:
+				self.displayed_nodes[checked]=True
+
 			self.plot_analysis()
 
 		wx.CallAfter(self.redraw_plot)
@@ -650,14 +644,31 @@ class EphyraFrame(wx.Frame):
 
 		self.node_vector_collections = [ None for i in range(self.data.n)]
 
-class PerNodeGraph_Axes(Axes):
-	def __init__(self, *args, **kw):
-		self = kw.get('axes',None)
-		self.data = kw.get('axes',None)
+class PerNodeGraph_Axes():
+	# Assumes that data is constant and only needs to be selected per node
+	def __init__(self, axes, data, *args, **kw):
+		self.ax = axes
+		self.data = data
+		self.ax.set_ylabel(kw.get('label',"UNDEFINED"))
+		self.ax.get_xaxis().set_visible(False)
 
-		self.plot([self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])
-		self.set_ylabel("InterN-Dist")
-		self.get_xaxis().set_visible(False)
+	def plot(self, wanted=None):
+		"""
+		Update the Plot based on 'new' wanted data
+		"""
+		self.ax.clear()
+		if wanted is None:
+			self.ax.plot(self.data, alpha=0.3)
+		else:
+			logging.info("Printing %s with Wanted:%s"%(self,wanted))
+			self.ax.plot(np.asarray(self.data)[wanted,:],alpha=0.3)
+		return self.ax
+
+	def __repr__(self):
+		return "PerNodeGraph_Axes: %s with %s values"%(
+			self.ax.get_ylabel(),
+		    len(self.data)
+		)
 
 
 def main():
