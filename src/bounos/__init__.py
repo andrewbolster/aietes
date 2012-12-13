@@ -210,6 +210,13 @@ class DataPackage():
 			),self.position_slice(time)
 		)
 
+	def distances_from_average_at(self,time):
+		"""
+		Return a one dimensional list of the linear distances from
+		each node to the current fleet average point
+		"""
+		return self.distances_from_at(self.average_position(time),time)
+
 	def sphere_of_positions_with_stddev(self, time):
 		"""
 		Return the x,y,z,r configuration of the fleet encompassing
@@ -225,11 +232,12 @@ class DataPackage():
 
 		return average, r, np.std(distances)
 
-	def position_stddev_range(self):
+
+	def distance_from_average_stddev_range(self):
 		"""
 		Returns an array of overall stddevs across the dataset
 		"""
-		return [ self.sphere_of_positions_with_stddev(time)[-1] for time in range(self.tmax)]
+		return [ np.std(self.distances_from_average_at(time)) for time in range(self.tmax) ]
 
 	def position_matrix(self,time):
 		"""
@@ -245,7 +253,7 @@ class DataPackage():
 		"""
 		Returns the average distance between nodes
 		"""
-		return np.average([ self.distances_from_at(position,time) for position in self.position_slice(time)])
+		return np.average([ self.distances_from_at(node_pos,time) for node_pos in self.position_slice(time)])
 
 
 def main():

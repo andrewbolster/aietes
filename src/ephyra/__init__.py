@@ -16,6 +16,7 @@ from bounos import DataPackage
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize, LogNorm
 import matplotlib.cm as cm
@@ -29,7 +30,7 @@ import numpy as np
 
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
-WIDTH,HEIGHT = 8,5
+WIDTH,HEIGHT = 8,6
 SIDEBAR_WIDTH = 2
 
 class Arrow3D(FancyArrowPatch):
@@ -200,12 +201,17 @@ class EphyraFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.on_new, newm)
 		self.Bind(wx.EVT_MENU, self.on_open, openm)
 		self.Bind(wx.EVT_MENU, self.on_close, exitm)
-
 		menubar.Append(filem, '&File')
+
 		menubar.Append(play, '&Play')
+		node_selectm = filem.Append(wx.NewId(), '&Select Displayed Nodes \t Ctrl+N', 'Limit the analytics display to selected nodes')
+		self.Bind(wx.EVT_MENU, self.on_node_select, node_selectm)
 		menubar.Append(view, '&View')
+
 		menubar.Append(tools, '&Tools')
+
 		menubar.Append(favorites, 'F&avorites')
+
 		menubar.Append(help, '&Help')
 
 		self.accel_tbl = wx.AcceleratorTable(
@@ -216,14 +222,17 @@ class EphyraFrame(wx.Frame):
 		self.SetMenuBar(menubar)
 
 	def init_plot(self):
+
+		# Start off with all nodes displayed
+		self.displayed_nodes = np.empty(self.data.n, dtype=bool)
+		self.displayed_nodes.fill(False)
+
 		# Find initial display state for viewport
 		self.lines = [self.plot_axes.plot(xs, ys, zs, alpha=self.trail_opacity)[0] for xs, ys, zs in self.data.p]
 		for n, line in enumerate(self.lines):
 			line.set_label(self.data.names[n])
 
-
-		# Precompute Metric Data
-		position_stddevrange = self.data.position_stddev_range()
+		position_stddevrange = self.data.distance_from_average_stddev_range()
 		heading_stddevrange = self.data.heading_stddev_range()
 		heading_magrange = self.data.heading_mag_range()
 		heading_avg_magrange = self.data.average_heading_mag_range()
@@ -247,30 +256,46 @@ class EphyraFrame(wx.Frame):
 		self.plot_axes.set_ylabel('Y')
 		self.plot_axes.set_zlabel('Z')
 
+		self.plot_analysis()
 
+
+	def  plot_analysis(self):
+
+		for ax in self.metric_axes:
+			ax.clear()
 		# Initialise StdDev Plots (Postion 0 heading 1)
 		i=0
-		self.metric_axes[i].plot(position_stddevrange)
+		self.metric_axes[i].plot(self.data.distance_from_average_stddev_range())
 		self.metric_axes[i].set_ylabel("Pos-StdDev")
 		self.metric_axes[i].get_xaxis().set_visible(False)
 		i+=1
+		#self.metric_axes[i]=PerNodeGraph_Axes(axes=self.metric_axes[i])
 		self.metric_axes[i].plot([self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])
 		self.metric_axes[i].set_ylabel("InterN-Dist")
 		self.metric_axes[i].get_xaxis().set_visible(False)
 		i+=1
-		self.metric_axes[i].plot(heading_stddevrange)
+		self.metric_axes[i].plot(self.data.heading_stddev_range())
 		self.metric_axes[i].set_ylabel("Head-StdDev")
 		self.metric_axes[i].get_xaxis().set_visible(False)
 		i+=1
-		self.metric_axes[i].plot(heading_magrange)
+		self.metric_axes[i].plot(self.data.heading_mag_range())
 		self.metric_axes[i].set_ylabel("Head-MagAvg")
 		self.metric_axes[i].get_xaxis().set_visible(False)
 		i+=1
-		self.metric_axes[i].plot(heading_avg_magrange)
+		self.metric_axes[i].plot(self.data.average_heading_mag_range())
 		self.metric_axes[i].plot([max(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
 		self.metric_axes[i].plot([min(map(np.linalg.norm,self.data.heading_slice(time))) for time in range(int(self.data.tmax))])
 		self.metric_axes[i].set_ylabel("Head-AvgMag")
 		self.metric_axes[i].get_xaxis().set_visible(False)
+		i+=1
+		if any(self.displayed_nodes):
+			self.metric_axes[i].plot([
+				np.asarray(self.data.distances_from_average_at(time))[self.displayed_nodes]
+				for time in range(int(self.data.tmax))
+			])
+		self.metric_axes[i].set_ylabel("Avg")
+		self.metric_axes[i].get_xaxis().set_visible(False)
+
 
 
 	def new_simulation(self):
@@ -377,6 +402,8 @@ class EphyraFrame(wx.Frame):
 				self.metric_xlines[x].remove()
 			except AttributeError as e:
 				self.log.debug("Hopefully nothing: %s"%str(e))
+			except ValueError as e:
+				self.log.debug("Hopefully a different nothing: %s"%str(e))
 			self.metric_xlines[x]=self.metric_axes[x].axvline(x=self.t, color='r', linestyle=':')
 		self.canvas.draw()
 
@@ -572,7 +599,30 @@ class EphyraFrame(wx.Frame):
 		self.log.debug("Slider: Setting trail to %d" % self.trail)
 		wx.CallAfter(self.redraw_plot)
 
-	####
+	def on_node_select(self, event):
+		"""
+		Based on the wxPython demo - opens the MultiChoiceDialog
+		and sets that selection as the node entries to be
+		displayed
+		"""
+		lst = list(self.data.names)
+		dlg = wx.MultiChoiceDialog( self,
+		                            "Select nodes",
+		                            "wx.MultiChoiceDialog", lst)
+
+		dlg.SetSelections(list(np.asarray(self.displayed_nodes, dtype=int)))
+
+		if (dlg.ShowModal() == wx.ID_OK):
+			selections = dlg.GetSelections()
+			strings = [lst[x] for x in selections]
+			print "You chose:" + str(strings)
+			self.displayed_nodes=np.asarray(selections)
+			self.plot_analysis()
+
+		wx.CallAfter(self.redraw_plot)
+
+
+####
 	# Plotting Tools
 	###
 	def sphere(self,x,y,z,r=1.0):
@@ -600,6 +650,14 @@ class EphyraFrame(wx.Frame):
 
 		self.node_vector_collections = [ None for i in range(self.data.n)]
 
+class PerNodeGraph_Axes(Axes):
+	def __init__(self, *args, **kw):
+		self = kw.get('axes',None)
+		self.data = kw.get('axes',None)
+
+		self.plot([self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])
+		self.set_ylabel("InterN-Dist")
+		self.get_xaxis().set_visible(False)
 
 
 def main():
