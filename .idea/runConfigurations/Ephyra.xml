@@ -5,14 +5,16 @@
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
-    <option name="SDK_HOME" value="/usr/bin/python2.7" />
+    <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$USER_HOME$/.local/bin" />
-    <option name="IS_MODULE_SDK" value="false" />
+    <option name="IS_MODULE_SDK" value="true" />
     <module name="aietes" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$USER_HOME$/.local/bin/ephyra" />
     <option name="PARAMETERS" value="-o /dev/shm/dat-2012-11-21-11-59-12.aietes.npz" />
+    <RunnerSettings RunnerId="PyDebugRunner" />
     <RunnerSettings RunnerId="PythonRunner" />
+    <ConfigurationWrapper RunnerId="PyDebugRunner" />
     <ConfigurationWrapper RunnerId="PythonRunner" />
     <method />
   </configuration>

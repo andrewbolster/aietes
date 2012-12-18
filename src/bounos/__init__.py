@@ -1,16 +1,17 @@
 # BOUNOS - Heir to the Kingdom of AIETES
 
-import sys
 import os
-import traceback
 import argparse
+import logging
 
 import numpy as np
+
+np.seterr(under = "ignore")
 from scipy.spatial.distance import pdist, squareform
 
-
-
 from Plotting import interactive_plot
+
+from aietes.Tools import mag
 
 class DataPackage():
 	"""
@@ -20,9 +21,9 @@ class DataPackage():
 	information is queriable through the object.
 	"""
 
-	def __init__(self,source=None,
-	             p=None, v=None, names=None, environment=None,
-	             *args,**kwargs):
+	def __init__(self, source = None,
+	             p = None, v = None, names = None, environment = None, tmax = None,
+	             *args, **kwargs):
 		"""
 		Raises IOError on load failure
 		"""
@@ -33,49 +34,58 @@ class DataPackage():
 			self.names = source_dataset['names']
 			self.environment = source_dataset['environment']
 			try:
-				self.title = getattr(source_dataset,'title')
+				self.title = getattr(source_dataset, 'title')
 			except AttributeError:
 				# If simulation title not explicitly given, use the filename -npz
 				self.title = os.path.splitext(os.path.basename(source))[0]
-		elif all(x is not None for x in [p,v,names,environment]):
-			self.p=p
-			self.v=v
-			self.names=names
-			self.environment=environment
-			self.title=kwargs.get('title',"")
+		elif all(x is not None for x in [p, v, names, environment]):
+			self.p = p
+			self.v = v
+			self.names = names
+			self.environment = environment
+			self.title = kwargs.get('title', "")
 		else:
 			raise ValueError("Can't work out what the hell you want!")
 
-		self.tmax = len(self.p[0][0])
+		self.tmax = len(self.p[0][0]) if tmax is None else tmax
 		self.n = len(self.p)
 
 
-		#Data has the format:
-			# [n][x,y,z][t]
+	#Data has the format:
+	# [n][x,y,z][t]
 
-	def position_of(self,node,time):
+	def position_of(self, node, time):
 		"""
 		Query the data set for the x,y,z position of a node at a given time
 		"""
-		return [self.p[node][dimension][time] for dimension in 0,1,2]
+		try:
+			position = [self.p[node][dimension][time] for dimension in 0, 1, 2]
+			if not np.isnan(sum(position)):
+				return position
+			else:
+				raise IndexError("GAHHHH")
 
-	def position_slice(self,time):
+		except IndexError as e:
+			logging.debug("Position Query for n:%d @ %d for position shape %s" % (node, time, self.p[node].shape))
+			raise e
+
+	def position_slice(self, time):
 		"""
 	Query the dataset for the [n][x,y,z] position list of all nodes at a given time
 	"""
-		return [ self.position_of(x,time) for x in range(self.n) ]
+		return [self.position_of(x, time) for x in range(self.n)]
 
-	def heading_of(self,node,time):
+	def heading_of(self, node, time):
 		"""
 		Query the data set for the x,y,z vector of a node at a given time
 		"""
-		return [self.v[node][dimension][time] for dimension in 0,1,2]
+		return [self.v[node][dimension][time] for dimension in 0, 1, 2]
 
-	def heading_slice(self,time):
+	def heading_slice(self, time):
 		"""
 		Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
 		"""
-		return [ self.heading_of(x,time) for x in range(self.n) ]
+		return [self.heading_of(x, time) for x in range(self.n)]
 
 	def heading_mag_range(self):
 		"""
@@ -83,7 +93,7 @@ class DataPackage():
 		i.e. the average speed for each node in the fleet at each time
 
 		"""
-		magnitudes =[ sum(map(np.linalg.norm,self.heading_slice(time)))/self.n
+		magnitudes = [sum(map(mag, self.heading_slice(time))) / self.n
 		              for time in range(self.tmax)
 		]
 		return magnitudes
@@ -94,7 +104,7 @@ class DataPackage():
 		i.e. the average speed for each node in the fleet at each time
 
 		"""
-		magnitudes =[ np.linalg.norm(self.average_heading(time))
+		magnitudes = [mag(self.average_heading(time))
 		              for time in range(self.tmax)
 		]
 		return magnitudes
@@ -104,15 +114,15 @@ class DataPackage():
 		Returns an array of overall heading stddevs across the dataset
 
 		"""
-		deviations =[ np.std(
-						self.deviation_from_at(self.average_heading(time),time)
-						)
+		deviations = [np.std(
+			self.deviation_from_at(self.average_heading(time), time)
+		)
 		              for time in range(self.tmax)
-					]
+		]
 		return deviations
 
 
-	def trail_of(self,node,time=None, maxlen=None):
+	def trail_of(self, node, time = None, maxlen = None):
 		"""
 		Return the [X:][Y:][Z:] trail for a given node from sim_start to
 		a particular time
@@ -122,9 +132,9 @@ class DataPackage():
 		if time is None:
 			time = self.tmax
 
-		mintime = max(0 if maxlen is None else (time-maxlen),0)
+		mintime = max(0 if maxlen is None else (time - maxlen), 0)
 
-		return [self.p[node][dimension][mintime:time] for dimension in 0,1,2]
+		return [self.p[node][dimension][mintime:time] for dimension in 0, 1, 2]
 
 	def average_heading(self, time):
 		"""
@@ -135,13 +145,13 @@ class DataPackage():
 		:raises ValueError
 		"""
 		if not (0 <= time <= self.tmax):
-			raise ValueError("Time must be in the range of the dataset: %s, %s"%(time,self.tmax))
+			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-		average = np.zeros(3,dtype=np.float)
+		average = np.zeros(3, dtype = np.float)
 		for element in self.heading_slice(time):
 			average += element
 
-		return np.asarray(average)/float(self.n)
+		return np.asarray(average) / float(self.n)
 
 	def deviation_from_at(self, heading, time):
 		"""
@@ -156,8 +166,8 @@ class DataPackage():
 		"""
 		return map(
 			lambda v: np.linalg.norm(
-				np.array(v)-np.array(heading)
-			),self.heading_slice(time)
+				np.array(v) - np.array(heading)
+			), self.heading_slice(time)
 		)
 
 	def average_position(self, time):
@@ -171,13 +181,12 @@ class DataPackage():
 		:raises ValueError
 		"""
 		if not (0 <= time <= self.tmax):
-			raise ValueError("Time must be in the range of the dataset: %s, %s"%(time,self.tmax))
+			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-		average = np.zeros(3,dtype=np.float)
+		average = np.zeros(3, dtype = np.float)
 		for element in self.position_slice(time):
 			average += element
-
-		return np.asarray(average)/float(self.n)
+		return np.asarray(average) / float(self.n)
 
 	def sphere_of_positions(self, time):
 		"""
@@ -188,10 +197,10 @@ class DataPackage():
 		:type int
 
 		"""
-		x,y,z = self.average_position(time)
-		max_r = max(self.distances_from_at((x,y,z),time))
+		x, y, z = self.average_position(time)
+		max_r = max(self.distances_from_at((x, y, z), time))
 
-		return (x,y,z,max_r)
+		return (x, y, z, max_r)
 
 	def distances_from_at(self, position, time):
 		"""
@@ -205,17 +214,17 @@ class DataPackage():
 		:type tuple
 		"""
 		return map(
-			lambda p: np.linalg.norm(
-				np.array(p)-np.array(position)
-			),self.position_slice(time)
+			lambda p: mag(
+				np.array(p) - np.array(position)
+			), self.position_slice(time)
 		)
 
-	def distances_from_average_at(self,time):
+	def distances_from_average_at(self, time):
 		"""
 		Return a one dimensional list of the linear distances from
 		each node to the current fleet average point
 		"""
-		return self.distances_from_at(self.average_position(time),time)
+		return self.distances_from_at(self.average_position(time), time)
 
 	def sphere_of_positions_with_stddev(self, time):
 		"""
@@ -227,7 +236,7 @@ class DataPackage():
 
 		"""
 		average = self.average_position(time)
-		distances = self.distances_from_at(average,time)
+		distances = self.distances_from_at(average, time)
 		r = max(distances)
 
 		return average, r, np.std(distances)
@@ -237,9 +246,9 @@ class DataPackage():
 		"""
 		Returns an array of overall stddevs across the dataset
 		"""
-		return [ np.std(self.distances_from_average_at(time)) for time in range(self.tmax) ]
+		return [np.std(self.distances_from_average_at(time)) for time in range(self.tmax)]
 
-	def position_matrix(self,time):
+	def position_matrix(self, time):
 		"""
 		Returns a positional matrix of the distances between all the nodes at a given time.
 		"""
@@ -249,27 +258,26 @@ class DataPackage():
 			)
 		)
 
-	def inter_distance_average(self,time):
+	def inter_distance_average(self, time):
 		"""
 		Returns the average distance between nodes
 		"""
-		return np.average([ self.distances_from_at(node_pos,time) for node_pos in self.position_slice(time)])
+		return np.average([self.distances_from_at(node_pos, time) for node_pos in self.position_slice(time)])
 
 
 def main():
 	"""
 	Initial Entry Point; Does very little other that option parsing
 	"""
-	parser = argparse.ArgumentParser(description="Simulation Visualisation and Analysis Suite for AIETES")
-	parser.add_argument('--source','-s',
-						dest='source', action='store',
-						metavar='XXX.npz',
-						required=True,
-						help='AIETES Simulation Data Package to be analysed'
-					   )
+	parser = argparse.ArgumentParser(description = "Simulation Visualisation and Analysis Suite for AIETES")
+	parser.add_argument('--source', '-s',
+	                    dest = 'source', action = 'store',
+	                    metavar = 'XXX.npz',
+	                    required = True,
+	                    help = 'AIETES Simulation Data Package to be analysed'
+	)
 
-
-	args=parser.parse_args()
+	args = parser.parse_args()
 	interactive_plot(DataPackage(args.source))
 
 
