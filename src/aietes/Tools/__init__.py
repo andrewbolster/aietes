@@ -11,6 +11,7 @@ logging.basicConfig(level = logging.DEBUG)
 baselogger = logging.getLogger('SIM')
 
 debug = False
+FUDGED = True
 
 class ConfigError(Exception):
 	"""
@@ -84,7 +85,7 @@ def unit(vector):
 	if mag(vector) == 0.0:
 		return np.zeros_like(vector)
 	else:
-		return vector / np.linalg.norm(vector)
+		return vector / mag(vector)
 
 #####################################################################
 # Lazy Testing functions
@@ -306,6 +307,10 @@ class map_entry():
 
 
 def fudge_normal(value, stdev):
+	#Override
+	if not FUDGED:
+		return value
+
 	#Deal with multiple inputs
 	if hasattr(value, 'shape'):
 		shape = value.shape
@@ -315,6 +320,7 @@ def fudge_normal(value, stdev):
 		shape = len(value)
 	else:
 		raise ValueError("Cannot process value type %s:%s" % (type(value), value))
+
 	if stdev <= 0:
 		return value
 	else:
@@ -336,7 +342,7 @@ def nameGeneration(count, naming_convention = None):
 		# If the naming convention can't provide unique names, bail
 		raise ConfigError(
 			"Not Enough Names in dictionary for number of nodes requested:%s/%s!" % (
-				count, len(naming_convention))
+			count, len(naming_convention))
 		)
 
 	node_names = []

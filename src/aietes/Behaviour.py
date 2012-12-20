@@ -56,9 +56,26 @@ class Behaviour():
 		self.neighbours = self.neighbour_map()
 		self.nearest_neighbours = self.getNearestNeighbours(self.node.position,
 		                                                    n_neighbours = self.n_nearest_neighbours)
-		forceVector = self.responseVector(self.node.position, self.node.velocity)
-		forceVector = fudge_normal(forceVector, 0.012)
-		self.node.push(forceVector)
+		contributions = {}
+
+		for behaviour in self.behaviours:
+			contributions[behaviour.__name__] = behaviour(self.node.position, self.node.velocity)
+
+		forceVector = sum(contributions.values())
+
+		forceVector = self.avoidWall(self.node.position, self.node.velocity, forceVector)
+		if debug: self.logger.info("Response:%s" % (forceVector))
+		if debug:
+			total = sum(map(mag, contributions.values()))
+
+			self.logger.info("contributions: %s of %3f" % (
+			[
+			"%s:%.f%%" % (func, 100 * mag(value) / total)
+			for func, value in contributions.iteritems()
+			], total)
+			)
+		forceVector = fudge_normal(forceVector, 0.012) #TODO Da Fuck is this?!
+		self.node.push(forceVector, contributions = contributions)
 		return
 
 	def getNearestNeighbours(self, position, n_neighbours = None, distance = np.inf):
@@ -81,35 +98,12 @@ class Behaviour():
 			nearest_neighbours = nearest_neighbours[:n_neighbours]
 		return nearest_neighbours
 
-	def responseVector(self, position, velocity):
-		"""
-		Called on process: Returns desired vector
-		"""
-		forceVector = np.array([0, 0, 0], dtype = np.float)
-		contributions = {}
-		for behaviour in self.behaviours:
-			contributions[behaviour.__name__] = behaviour(position, velocity)
-
-		forceVector = sum(contributions.values())
-
-		forceVector = self.avoidWall(position, velocity, forceVector)
-		if debug: self.logger.info("Response:%s" % (forceVector))
-		if debug:
-			total = sum(map(mag, contributions.values()))
-
-			self.logger.info("contributions: %s of %3f" % (
-			[
-			"%s:%.f%%" % (func, 100 * mag(value) / total)
-			for func, value in contributions.iteritems()
-			], total)
-			)
-		return forceVector
 
 	def repulseFromPosition(self, position, repulsive_position, d_limit):
 		forceVector = np.array([0, 0, 0], dtype = np.float)
 		distanceVal = distance(position, repulsive_position)
 		forceVector = unit(position - repulsive_position) * d_limit / float(distanceVal)
-		assert distanceVal > 2, "Too close to %s" % (repulsive_position)
+		assert distanceVal > 2, "Too close to %s" % (self.getNearestNeighbours(repulsive_position)[0])
 		if debug: self.logger.debug(
 			"Repulsion from %s: %s, at range of %s" % (forceVector, repulsive_position, distanceVal))
 		return forceVector

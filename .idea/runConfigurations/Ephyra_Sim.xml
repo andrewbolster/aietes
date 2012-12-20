@@ -1,20 +1,22 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Ephyra" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="Ephyra Sim" type="PythonConfigurationType" factoryName="Python" singleton="true">
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="" />
-    <option name="WORKING_DIRECTORY" value="$USER_HOME$/.local/bin" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src/ephyra" />
     <option name="IS_MODULE_SDK" value="true" />
     <module name="aietes" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$USER_HOME$/.local/bin/ephyra" />
-    <option name="PARAMETERS" value="-o /dev/shm/dat-2012-11-21-11-59-12.aietes.npz" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/ephyra/__init__.py" />
+    <option name="PARAMETERS" value="-n" />
     <RunnerSettings RunnerId="PyDebugRunner" />
+    <RunnerSettings RunnerId="PythonCover" />
     <RunnerSettings RunnerId="PythonRunner" />
     <ConfigurationWrapper RunnerId="PyDebugRunner" />
+    <ConfigurationWrapper RunnerId="PythonCover" />
     <ConfigurationWrapper RunnerId="PythonRunner" />
     <method />
   </configuration>

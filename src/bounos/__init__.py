@@ -32,6 +32,11 @@ class DataPackage():
 			self.p = source_dataset['positions']
 			self.v = source_dataset['vectors']
 			self.names = source_dataset['names']
+			try:
+				self.contributions = source_dataset['contributions']
+			except KeyError as e:
+				logging.error("Using an old AIETES npz with no contributions")
+				self.contributions = None
 			self.environment = source_dataset['environment']
 			try:
 				self.title = getattr(source_dataset, 'title')

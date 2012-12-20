@@ -39,8 +39,6 @@ class Fleet(Sim.Process):
 			if __debug__ or percent_now % 1 == 0:
 				self.logger.info("Fleet  %d%%: %s" % (percent_now, self.currentStats()))
 			yield Sim.waituntil, self, not_waiting
-			if __debug__ or percent_now % 1 == 0:
-				self.logger.info("Fleet Reactivating")
 			for node in self.nodes:
 				Sim.reactivate(node)
 

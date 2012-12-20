@@ -18,6 +18,7 @@ class Node(Sim.Process):
 
 		self.simulation = simulation
 		self.config = node_config
+		self.mass = 10#kg modeling remus 100
 
 		# Positions Initialised to None to highlight mistakes; as Any position could be a bad position
 		self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
@@ -27,6 +28,9 @@ class Node(Sim.Process):
 		self.vec_log = np.zeros((3, self.simulation.config.Simulation.sim_duration))
 		# However, it does make it easier to debug the behave/move interplay....
 		self.vec_log.fill(None)
+
+		# Store contributions
+		self.contributions_log = []
 
 
 
@@ -132,17 +136,19 @@ class Node(Sim.Process):
 		assert len(otherNode.position) == 3
 		return distance(self.position, otherNode.position)
 
-	def push(self, forceVector):
+	def push(self, forceVector, contributions = None):
 		assert len(forceVector == 3) and not np.isnan(sum(forceVector)), "Out of spec vector: %s,%s" % (
 		forceVector, type(forceVector))
 
-		new_forceVector = np.array(self.velocity + forceVector, dtype = np.float)
+		new_forceVector = np.array(self.velocity + forceVector / self.mass, dtype = np.float)
 		if mag(new_forceVector) > any(self.cruising_speed):
 			new_forceVector = self.cruiseControl(new_forceVector, self.velocity)
-			if debug: self.logger.info("Normalized Velocity: %s, clipped: %s" % (forceVector, new_forceVector))
+			if __debug__: self.logger.info("Normalized Velocity: %s, clipped: %s" % (forceVector, new_forceVector))
 		else:
-			if debug: self.logger.info("Velocity: %s" % forceVector)
+			if __debug__: self.logger.info("Velocity: %s" % forceVector)
 		self.forceVector = new_forceVector
+
+		self.contributions_log.append(contributions)
 
 
 	def cruiseControl(self, velocity, prev_velocity):

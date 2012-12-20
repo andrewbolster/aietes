@@ -121,6 +121,7 @@ class Simulation():
 				return n
 		raise KeyError("Given UUID does not exist in Nodes list")
 
+
 	def now(self):
 		return Sim.now()
 
@@ -340,6 +341,7 @@ class Simulation():
 		positions = []
 		vectors = []
 		names = []
+		contributions = []
 		shape = []
 		if inputFile is not None:
 			self.logger.info("Retrieving positions from file: %s" % inputFile)
@@ -357,6 +359,7 @@ class Simulation():
 				positions.append(node.pos_log)
 				vectors.append(node.vec_log)
 				names.append(node.name)
+				contributions.append(node.contributions_log)
 			shape = self.environment.shape
 
 		n_frames = len(positions[0][0])
@@ -381,7 +384,8 @@ class Simulation():
 				         positions = positions,
 				         vectors = vectors,
 				         names = names,
-				         environment = self.environment.shape
+				         environment = self.environment.shape,
+				         contributions = contributions
 				)
 				co = ConfigObj(self.config, list_values = False)
 				co.filename = outputFile + '.conf'

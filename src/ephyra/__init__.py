@@ -16,10 +16,10 @@ import matplotlib
 matplotlib.use('WXAgg')
 
 from bounos import DataPackage
+from aietes.Tools import mag
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
-import collections
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize
 import matplotlib.cm as cm
@@ -160,8 +160,10 @@ class EphyraFrame(wx.Frame):
 
 		self.axes = self.fig.add_axes([0, 0, 1, 1], )
 		self.plot_axes = self.fig.add_subplot(plot_area, projection = '3d')
+		self.metrics = []
 		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
-		self.metric_plots = []
+		for a in self.metric_axes:
+			a.autoscale_view(scalex = False, tight = True)
 		self.metric_xlines = [None for i in range(HEIGHT)]
 		self.trail_opacity = 0.7
 		self.trail = 100
@@ -230,7 +232,9 @@ class EphyraFrame(wx.Frame):
 		self.Bind(wx.EVT_IDLE, self.on_idle)
 
 		self.SetMinSize((800, 600))
-		self.CreateStatusBar()
+		self.status_bar = self.CreateStatusBar()
+		self.status_bar.SetFieldsCount(3)
+
 		self.SetSizer(self.sizer)
 
 		self.SetSize((350, 200))
@@ -288,17 +292,49 @@ class EphyraFrame(wx.Frame):
 
 	def init_plot(self):
 		# Metrics
-		Metric = collections.namedtuple('Metric', ['label', 'data'], verbose = False)
-		metrics = []
-		metrics.append(Metric("Dist Stddev", self.data.distance_from_average_stddev_range()))
-		metrics.append(
-			Metric("InterN-Dist", [self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])),
-		metrics.append(Metric("Head-StdDev", self.data.heading_stddev_range())),
-		metrics.append(Metric("Head-MagAvg", self.data.heading_mag_range())),
-		metrics.append(Metric("Head-AvgMag", [map(np.linalg.norm, self.data.heading_slice(time)) for time in
-		                                      range(int(self.data.tmax))])),
-		metrics.append(Metric("Avg", [np.asarray(self.data.distances_from_average_at(time)) for time in
-		                              range(int(self.data.tmax))]))
+		self.update_status("Loading metrics")
+
+		self.metrics.append(Metric(
+			axes = self.metric_axes[len(self.metrics)],
+			label = "Dist Stddev",
+			data = self.data.distance_from_average_stddev_range())
+		)
+		self.update_status("Loaded %s" % self.metrics[-1].label)
+		self.metrics.append(Metric(
+			axes = self.metric_axes[len(self.metrics)],
+			label = "InterN-Dist",
+			data = [self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])
+		),
+		self.update_status("Loaded %s" % self.metrics[-1].label)
+
+		self.metrics.append(Metric(
+			axes = self.metric_axes[len(self.metrics)],
+			label = "Head-StdDev",
+			data = self.data.heading_stddev_range())),
+		self.update_status("Loaded %s" % self.metrics[-1].label)
+
+		self.metrics.append(Metric(
+			axes = self.metric_axes[len(self.metrics)],
+			label = "Head-MagAvg",
+			data = self.data.heading_mag_range())
+		)
+		self.update_status("Loaded %s" % self.metrics[-1].label)
+
+		self.metrics.append(Metric(
+			axes = self.metric_axes[len(self.metrics)],
+			label = "Avg Speed",
+			data = [map(mag, self.data.heading_slice(time)) for time in range(int(self.data.tmax))])
+		)
+		self.update_status("Loaded %s" % self.metrics[-1].label)
+
+		self.metrics.append(Metric(
+			axes = self.metric_axes[len(self.metrics)],
+			label = "d(p) from Avg",
+			data = [self.data.distances_from_average_at(time) for time in range(int(self.data.tmax))],
+			highlight_data = [self.data.inter_distance_average(time) for time in range(int(self.data.tmax))]
+		)
+		)
+		self.update_status("Loaded %s" % self.metrics[-1].label)
 
 		# Start off with all nodes displayed
 		self.displayed_nodes = np.empty(self.data.n, dtype = bool)
@@ -332,26 +368,26 @@ class EphyraFrame(wx.Frame):
 		self.plot_axes.set_ylabel('Y')
 		self.plot_axes.set_zlabel('Z')
 
-		self.metric_plots = []
-		for i, metric in enumerate(metrics):
-			self.metric_plots.append(PerNodeGraph_Axes(axes = self.metric_axes[i],
-			                                           data = metric.data,
-			                                           label = metric.label)
-			)
+		self.update_status("Plotting %d metrics" % len(self.metrics))
 
 		self.plot_analysis()
 
 
 	def  plot_analysis(self):
-		for i, plot in enumerate(self.metric_plots):
-			if isinstance(plot.data[0], float):
-				#one dimension, no need for wanted filter
-				try:
-					self.metric_axes[i] = plot.plot()
-				except IndexError as e:
-					self.log.debug("Attempted plot of axes %d" % i)
-			else:
-				self.metric_axes[i] = plot.plot(wanted = np.asarray(self.displayed_nodes))
+		for i, plot in enumerate(self.metrics):
+			self.metric_axes[i] = plot.plot(wanted = np.asarray(self.displayed_nodes))
+			try:
+				self.metric_xlines[i].remove()
+			except AttributeError as e:
+				self.log.debug("Hopefully nothing: %s" % str(e))
+			except ValueError as e:
+				self.log.debug("Hopefully a different nothing: %s" % str(e))
+			self.metric_xlines[i] = self.metric_axes[i].axvline(x = self.t, color = 'r', linestyle = ':')
+			self.metric_axes[i].relim()
+			xlim = (max(0, self.t - 100), max(100, self.t + 100))
+			self.metric_axes[i].set_xlim(xlim)
+			self.metric_axes[i].set_ylim(*plot.ylim(xlim))
+		self.metrics[-1].ax.get_xaxis().set_visible(True)
 
 
 	def new_simulation(self):
@@ -375,8 +411,7 @@ class EphyraFrame(wx.Frame):
 		self.sim_tmax = self.simulation.now() - 1
 
 		while self.t < self.sim_tmax and self.sim_tmax > 10:
-			"""
-			When the simulation has caught up with the GUI; dump the data and yield to the gui again
+			""" When the simulation has caught up with the GUI; dump the data and yield to the gui again
 			"""
 			last_t = self.t
 			self.sim_tmax = self.simulation.now() - 1
@@ -407,7 +442,6 @@ class EphyraFrame(wx.Frame):
 			return # Continue Simulating
 
 
-	@log_and_call()
 	def redraw_plot(self, t = None):
 		###
 		# Update Time!
@@ -471,19 +505,8 @@ class EphyraFrame(wx.Frame):
 				self.plot_axes.add_artist(
 					self.node_vector_collections[node],
 				)
+		self.plot_analysis()
 
-
-		###
-		# METRIC UPDATES
-		###
-		for x in range(HEIGHT):
-			try:
-				self.metric_xlines[x].remove()
-			except AttributeError as e:
-				self.log.debug("Hopefully nothing: %s" % str(e))
-			except ValueError as e:
-				self.log.debug("Hopefully a different nothing: %s" % str(e))
-			self.metric_xlines[x] = self.metric_axes[x].axvline(x = self.t, color = 'r', linestyle = ':')
 		self.canvas.draw()
 
 
@@ -511,7 +534,6 @@ class EphyraFrame(wx.Frame):
 				t = 0
 			else:
 				self.log.debug("End Of The Line")
-				assert not self.simulating
 				self.paused = True
 				t = self.tmax
 
@@ -521,7 +543,8 @@ class EphyraFrame(wx.Frame):
 			t = 0
 
 		self.time_slider.SetValue(t)
-		wx.CallAfter(self.redraw_plot, t = t)
+		self.redraw_plot(t = t)
+		self.update_timing()
 
 
 	def load_data(self, data_file):
@@ -536,6 +559,15 @@ class EphyraFrame(wx.Frame):
 			self.data = DataPackage(data_file)
 		except IOError as e:
 			raise e
+
+		self.tmax = self.data.tmax - 1
+		self.time_slider.SetValue(0)
+		self.d_t = int((self.tmax + 1) / 100)
+		self.reload_data()
+
+
+	def reload_data(self):
+		self.update_status("Initialising Plot")
 		self.init_plot()
 		self.log.debug("Successfully loaded data from %s, containing %d nodes over %d seconds" % (
 		self.data.title,
@@ -543,27 +575,13 @@ class EphyraFrame(wx.Frame):
 		self.data.tmax
 		)
 		)
-		self.tmax = self.data.tmax - 1
 		self.time_slider.SetRange(0, self.tmax)
-		self.time_slider.SetValue(0)
 		self.d_t = int((self.tmax + 1) / 100)
 
 		if self.args.autostart:
 			self.paused = False
 
-
-	def reload_data(self):
-		self.init_plot()
-		self.log.debug("Successfully reloaded data from %s, containing %d nodes over %d seconds" % (
-		self.data.title,
-		self.data.n,
-		self.data.tmax
-		)
-		)
-		self.time_slider.SetRange(0, self.tmax)
-		self.d_t = int((self.tmax + 1) / 100)
-		if self.args.autostart:
-			self.paused = False
+		self.resize_panel()
 
 
 	def smartass(self, msg = None):
@@ -575,11 +593,19 @@ class EphyraFrame(wx.Frame):
 			dial.ShowModal()
 			self.telling_off = False
 
+	###
+	# Status Management
+	###
+	def update_status(self, msg):
+		self.status_bar.SetStatusText(msg, number = 0)
+
+	def update_timing(self):
+		self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.simulating else "REC", self.t, self.tmax), number = 2)
+
 
 	####
 	# Event Operations
 	####
-	@log_and_call()
 	def on_close(self, event):
 		dlg = wx.MessageDialog(self,
 		                       "Do you really want to close this application?",
@@ -589,7 +615,6 @@ class EphyraFrame(wx.Frame):
 		if result == wx.ID_OK:
 			self.Destroy()
 
-	@log_and_call()
 	def on_new(self, event):
 		dlg = wx.MessageDialog(self,
 		                       message = "This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
@@ -600,7 +625,6 @@ class EphyraFrame(wx.Frame):
 		if result == wx.ID_OK:
 			self.new_simulation()
 
-	@log_and_call()
 	def on_open(self, event):
 		dlg = wx.FileDialog(
 			self, message = "Select a DataPackage",
@@ -616,48 +640,42 @@ class EphyraFrame(wx.Frame):
 			data_path = data_path[0]
 			self.load_data(data_path)
 
-	@log_and_call()
 	def on_pause_btn(self, event):
 		self.paused = not self.paused
 
 	def on_update_pause_btn(self, event):
 		self.pause_btn.SetLabel("Resume" if self.paused else "Pause")
 
-	@log_and_call()
 	def on_play_btn(self, event):
 		self.redraw_plot(t = 0)
 		self.paused = False
 
-	@log_and_call()
 	def on_faster_btn(self, event):
 		self.d_t = int(min(max(1, self.d_t * 1.1), self.data.tmax / 2))
 		self.log.debug("Setting time step to: %s" % self.d_t)
 
-	@log_and_call()
 	def on_slower_btn(self, event):
 		self.d_t = int(min(max(1, self.d_t * 0.9), self.data.tmax / 2))
 		self.log.debug("Setting time step to: %s" % self.d_t)
 
 
-	@log_and_call()
 	def on_time_slider(self, event):
 		t = self.time_slider.GetValue()
 		self.log.debug("Slider: Setting time to %d" % t)
 		wx.CallAfter(self.redraw_plot, t = t)
 
-	@log_and_call()
 	def on_resize(self, event):
 		event.Skip()
 		wx.CallAfter(self.resize_panel)
 
 	def on_idle(self, event):
+		self.update_status("Idle")
 		if not self.paused:
-			self.move_T
+			self.move_T()
 
 	###
 	# Display Selection Tools
 	###
-	@log_and_call()
 	def on_sphere_chk(self, event):
 		if not self.sphere_chk.IsChecked():
 			self._remove_sphere()
@@ -668,7 +686,6 @@ class EphyraFrame(wx.Frame):
 			self.sphere_enabled = True
 		wx.CallAfter(self.redraw_plot)
 
-	@log_and_call()
 	def on_vector_chk(self, event):
 		if not self.vector_chk.IsChecked():
 			self._remove_vectors()
@@ -679,7 +696,6 @@ class EphyraFrame(wx.Frame):
 			self.node_vector_enabled = True
 		wx.CallAfter(self.redraw_plot)
 
-	@log_and_call()
 	def on_trail_slider(self, event):
 		event.Skip()
 		norm_trail = self.trail_slider.GetValue()
@@ -687,7 +703,6 @@ class EphyraFrame(wx.Frame):
 		self.log.debug("Slider: Setting trail to %d" % self.trail)
 		wx.CallAfter(self.redraw_plot)
 
-	@log_and_call()
 	def on_node_select(self, event):
 		"""
 		Based on the wxPython demo - opens the MultiChoiceDialog
@@ -744,33 +759,74 @@ class EphyraFrame(wx.Frame):
 		self.node_vector_collections = [None for i in range(self.data.n)]
 
 
-class PerNodeGraph_Axes():
+class Metric():
+	"""	This Axes provides data plotting tools
+
+	data format is array(t,n) where n can be 1 (i.e. linear array)
+
+	The 'wanted' functionality acts as a boolean filter, i.e.
+	w = [010]
+	d = [[111][222][333]]
+	p = d[:,w}
+	"""
 	# Assumes that data is constant and only needs to be selected per node
 	def __init__(self, axes, data, *args, **kw):
 		self.ax = axes
 		self.data = np.asarray(data)
-		self.ax.set_ylabel(kw.get('label', "UNDEFINED"))
-		self.ax.get_xaxis().set_visible(False)
+		self.label = kw.get('label', "UNDEFINED")
+		self.highlight_data = kw.get('highlight_data', None)
 		self.shape = self.data.shape
+		self.ndim = self.data.ndim
+		logging.debug("%s" % self)
 
 
-	def plot(self, wanted = None):
+	def plot(self, wanted = None, time = None):
 		"""
 		Update the Plot based on 'new' wanted data
 		"""
 		self.ax.clear()
-		if wanted is None:
+		self.ax.set_ylabel(self.label)
+		self.ax.get_xaxis().set_visible(True)
+
+		if wanted is None or self.ndim == 1:
 			self.ax.plot(self.data, alpha = 0.3)
 		else:
 			logging.info("Printing %s with Wanted:%s" % (self, wanted))
-			self.ax.plot(np.ndarray(buffer = self.data, shape = self.shape)[wanted], alpha = 0.3)
+			self.ax.plot(np.ndarray(buffer = self.data, shape = self.shape)[:, wanted], alpha = 0.3)
+
+		if self.highlight_data is not None:
+			self.ax.plot(self.highlight_data, color = 'k', linestyle = '--')
 		return self.ax
 
 	def __repr__(self):
-		return "PerNodeGraph_Axes: %s with %s values" % (
+		return "PerNodeGraph_Axes: %s with %s values arranged as %s" % (
 		self.ax.get_ylabel(),
-		len(self.data)
+		len(self.data),
+		self.shape
 		)
+
+	def ylim(self, xlim, margin = None):
+		(xmin, xmax) = xlim
+		if self.highlight_data is not None:
+			data = self.data + [self.highlight_data]
+		else:
+			data = self.data
+		if self.ndim > 1:
+			slice = data[xmin:xmax, :]
+		else:
+			slice = data[xmin:xmax]
+		try:
+			ymin = slice.min()
+			ymax = slice.max()
+			range = ymax - ymin
+			if margin is None:
+				margin = range * 0.1
+
+			ymin -= margin
+			ymax += margin
+		except ValueError as e:
+			raise e
+		return (ymin, ymax)
 
 
 def main():
