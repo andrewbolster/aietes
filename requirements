@@ -3,3 +3,4 @@ python-pydot
 python-scipy
 mencoder #for animation storage
 python-wxgtk2.8
+pubsub

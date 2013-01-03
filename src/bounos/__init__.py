@@ -13,7 +13,7 @@ from Plotting import interactive_plot
 
 from aietes.Tools import mag
 
-class DataPackage():
+class DataPackage(object):
 	"""
 	Data Store for simulation results
 	Replicates a Numpy Array as is directly accessible as an n-vector
@@ -55,6 +55,18 @@ class DataPackage():
 		self.tmax = len(self.p[0][0]) if tmax is None else tmax
 		self.n = len(self.p)
 
+	def update(self, p = None, v = None, names = None, environment = None, **kwargs):
+		logging.debug("Updating from tmax %d" % self.tmax)
+
+		if all(x is not None for x in [p, v, names, environment]):
+			self.p = p
+			self.v = v
+			self.names = names
+			self.environment = environment
+		else:
+			raise ValueError("Can't work out what the hell you want!")
+		self.tmax = len(self.p[0][0])
+		self.n = len(self.p)
 
 	#Data has the format:
 	# [n][x,y,z][t]

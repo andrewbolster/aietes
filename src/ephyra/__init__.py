@@ -5,9 +5,10 @@ import os
 import logging
 import argparse
 import functools
+import cProfile
 import threading
+from pubsub import pub
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
-import sys
 
 logging.basicConfig(level = logging.DEBUG)
 
@@ -35,6 +36,9 @@ import numpy as np
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 WIDTH, HEIGHT = 8, 6
 SIDEBAR_WIDTH = 2
+
+time_change_condition = threading.Condition()
+sim_updated_condition = threading.Condition()
 
 
 class Arrow3D(FancyArrowPatch):
@@ -71,10 +75,17 @@ class AIETESThread(threading.Thread):
 
 		threading.Thread.__init__(self)
 		self._simulation = Simulation()
+		self._info = self._simulation.prepare(waits = True)
+
 		self.gui_time = 0
 		self.sim_time = 0
-		self._info = self._simulation.prepare(waits = True)
 		self.sim_time_max = self._info['sim_time']
+
+		pub.subscribe(self.update_gui_time, 'update_gui_time')
+
+	def update_gui_time(self, t):
+		if __debug__: logging.info("RX time = %d" % t)
+		self.gui_time = t
 
 	def run(self):
 		"""
@@ -83,30 +94,35 @@ class AIETESThread(threading.Thread):
 		self._simulation.simulate(callback = self.callback)
 
 	def callback(self):
-		while self.gui_time < self.sim_time and self.sim_time > 10:
+		time_change_condition.acquire()
+		while self.gui_time < self.sim_time and self.sim_time - self.gui_time > 10:
 			"""
 			When the simulation has caught up with the GUI; dump the data and yield to the gui again
 			"""
-			self.sim_tmax = self.simulation.now() - 1
+			self.sim_time = self._simulation.now() - 1
 
 			(p, v, names, environment) = self._simulation.currentState()
 
 			if len(p[0]) == 0:
 				# No Data Loaded
-				self.log.info("No Data to Load, yielding to simulation: T=%d, Ts=%d" % (self.t, self.sim_tmax))
-				self._simulation.waiting = False
-				return
+				break
 			else:
-				self.data = DataPackage(p = p, v = v, names = names, environment = environment)
-			self.log.info("Yielding to GUI with t=%d" % last_t)
-			wx.Yield()
-			self.log.info("Returned from GUI with t=%d" % self.t)
+				pub.sendMessage('update_data', p = p, v = v, names = names, environment = environment,
+				                now = self._simulation.now())
+				time_change_condition.wait()
 
 		else:
-			self.log.info("Continuing at %d from tmax:%d and t:%d" % (self.simulation.now(), self.sim_tmax, self.t))
-			self.simulation.waiting = False
-			self.paused = True
-			return # Continue Simulating
+			self.sim_time = self._simulation.now() - 1
+
+		self._simulation.waiting = False
+		time_change_condition.release()
+		sim_updated_condition.acquire()
+		sim_updated_condition.notify()
+		sim_updated_condition.release()
+		if __debug__: logging.info(
+			"No Data to Load, yielding to simulation: T=%d, Ts=%d" % (self.gui_time, self.sim_time))
+
+		return # Continue Simulating
 
 
 class EphyraFrame(wx.Frame):
@@ -124,6 +140,10 @@ class EphyraFrame(wx.Frame):
 		                    dest = 'autostart', action = 'store_true', default = False,
 		                    help = 'Automatically launch animation on loading'
 		)
+		parser.add_argument('-x', '--autoexit',
+		                    dest = 'autoexit', action = 'store_true', default = False,
+		                    help = 'Automatically exit after animation'
+		)
 		parser.add_argument('-l', '--loop',
 		                    dest = 'loop', action = 'store_true', default = False,
 		                    help = 'Loop animation'
@@ -140,12 +160,15 @@ class EphyraFrame(wx.Frame):
 		self.args = parser.parse_args()
 
 		self.paused = True
-		self.simulating = False
+		self.simulating = self.args.newsim
 		self.telling_off = False # Used for Smartass Control
+		self._update_needed = False
 		self.t = 0
-		self.tmax = None
-		self.sim_tmax = None
+		self.tmax = None # Not always the same as the data tmax eg simulating
 		self.d_t = 1
+
+		if self.simulating:
+			self.new_simulation()
 
 		self.CreateMenuBar()
 		panel = wx.Panel(self)
@@ -160,11 +183,18 @@ class EphyraFrame(wx.Frame):
 
 		self.axes = self.fig.add_axes([0, 0, 1, 1], )
 		self.plot_axes = self.fig.add_subplot(plot_area, projection = '3d')
-		self.metrics = []
+
+		self.metric_objects = [StdDev_of_Distance, StdDev_of_Heading, Avg_Mag_of_Heading, Avg_of_InterNode_Distances,
+		                       PerNode_Speed, PerNode_Internode_Distance_Avg]
 		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
-		for a in self.metric_axes:
-			a.autoscale_view(scalex = False, tight = True)
+		self.metrics = []
+
+		for ax, ob in zip(self.metric_axes, self.metric_objects):
+			ax.autoscale_view(scalex = False, tight = True)
+			self.metrics.append(ob(ax))
+
 		self.metric_xlines = [None for i in range(HEIGHT)]
+
 		self.trail_opacity = 0.7
 		self.trail = 100
 
@@ -251,8 +281,9 @@ class EphyraFrame(wx.Frame):
 				self.smartass("File Not Found!")
 				self.on_open(None)
 
-		if self.args.newsim:
-			self.new_simulation()
+		if self.simulating:
+			self.sim_thread.start()
+
 
 	def CreateMenuBar(self):
 		menubar = wx.MenuBar()
@@ -290,51 +321,17 @@ class EphyraFrame(wx.Frame):
 
 		self.SetMenuBar(menubar)
 
-	def init_plot(self):
+	def update_metrics(self):
 		# Metrics
-		self.update_status("Loading metrics")
+		self.update_status("Updating metrics")
+		for metric in self.metrics:
+			self.update_status("Loading %s" % metric.label)
+			metric.update(self.data)
 
-		self.metrics.append(Metric(
-			axes = self.metric_axes[len(self.metrics)],
-			label = "Dist Stddev",
-			data = self.data.distance_from_average_stddev_range())
-		)
-		self.update_status("Loaded %s" % self.metrics[-1].label)
-		self.metrics.append(Metric(
-			axes = self.metric_axes[len(self.metrics)],
-			label = "InterN-Dist",
-			data = [self.data.inter_distance_average(time) for time in range(int(self.data.tmax))])
-		),
-		self.update_status("Loaded %s" % self.metrics[-1].label)
+	def init_plot(self):
+		self.update_metrics()
+		assert len(self.metrics) > 1
 
-		self.metrics.append(Metric(
-			axes = self.metric_axes[len(self.metrics)],
-			label = "Head-StdDev",
-			data = self.data.heading_stddev_range())),
-		self.update_status("Loaded %s" % self.metrics[-1].label)
-
-		self.metrics.append(Metric(
-			axes = self.metric_axes[len(self.metrics)],
-			label = "Head-MagAvg",
-			data = self.data.heading_mag_range())
-		)
-		self.update_status("Loaded %s" % self.metrics[-1].label)
-
-		self.metrics.append(Metric(
-			axes = self.metric_axes[len(self.metrics)],
-			label = "Avg Speed",
-			data = [map(mag, self.data.heading_slice(time)) for time in range(int(self.data.tmax))])
-		)
-		self.update_status("Loaded %s" % self.metrics[-1].label)
-
-		self.metrics.append(Metric(
-			axes = self.metric_axes[len(self.metrics)],
-			label = "d(p) from Avg",
-			data = [self.data.distances_from_average_at(time) for time in range(int(self.data.tmax))],
-			highlight_data = [self.data.inter_distance_average(time) for time in range(int(self.data.tmax))]
-		)
-		)
-		self.update_status("Loaded %s" % self.metrics[-1].label)
 
 		# Start off with all nodes displayed
 		self.displayed_nodes = np.empty(self.data.n, dtype = bool)
@@ -355,7 +352,6 @@ class EphyraFrame(wx.Frame):
 		self.plot_pos_stddev_norm = Normalize(vmin = min(position_stddevrange), vmax = max(position_stddevrange))
 
 		# Initialise Sphere data anyway
-		self.log.debug("STD: MIN: %f, MAX: %f" % (min(position_stddevrange), max(position_stddevrange)))
 		self.plot_sphere_cm = cm.Spectral_r
 
 		# Initialse Positional Plot
@@ -376,12 +372,6 @@ class EphyraFrame(wx.Frame):
 	def  plot_analysis(self):
 		for i, plot in enumerate(self.metrics):
 			self.metric_axes[i] = plot.plot(wanted = np.asarray(self.displayed_nodes))
-			try:
-				self.metric_xlines[i].remove()
-			except AttributeError as e:
-				self.log.debug("Hopefully nothing: %s" % str(e))
-			except ValueError as e:
-				self.log.debug("Hopefully a different nothing: %s" % str(e))
 			self.metric_xlines[i] = self.metric_axes[i].axvline(x = self.t, color = 'r', linestyle = ':')
 			self.metric_axes[i].relim()
 			xlim = (max(0, self.t - 100), max(100, self.t + 100))
@@ -391,56 +381,22 @@ class EphyraFrame(wx.Frame):
 
 
 	def new_simulation(self):
-		from aietes import Simulation
+		pub.subscribe(self.update_data_from_sim, 'update_data')
+		self.sim_thread = AIETESThread()
+		self.tmax = self.sim_thread.sim_time_max # record the simulation length for slider / anim config
 
-		self.simulation = Simulation()
-		sim_info = self.simulation.prepare(waits = True)
-		self.tmax = sim_info['sim_time']
-		self.simulating = True
-		self.sim_tmax = 0
-		self.simulation.simulate(callback = self.simulation_cb)
-
-	def simulation_cb(self):
+	def update_data_from_sim(self, p, v, names, environment, now):
 		"""
 		Call back function used by SimulationStep if doing real time simulation
 		Will 'export' DataPackage data from the running simulation up to the requested time (self.t)
 		"""
-		#TODO expand this to allow 'reimagining'
-		# Reload data when fleet is computed fully, simulation has gone for a while, and
-		#     when user has navigated beyond the current sim_tmax
-		self.sim_tmax = self.simulation.now() - 1
-
-		while self.t < self.sim_tmax and self.sim_tmax > 10:
-			""" When the simulation has caught up with the GUI; dump the data and yield to the gui again
-			"""
-			last_t = self.t
-			self.sim_tmax = self.simulation.now() - 1
-
-			(p, v, names, environment) = self.simulation.currentState()
-
-			if len(p[0]) == 0:
-				# No Data Loaded
-				self.log.info("No Data to Load, yielding to simulation: T=%d, Ts=%d" % (self.t, self.sim_tmax))
-				self.simulation.waiting = False
-				return
-			else:
-				self.data = DataPackage(p = p, v = v, names = names, environment = environment)
-				self.log.info("Reloading at %d from tmax:%d and t:%d" % (self.simulation.now(), self.sim_tmax, self.t))
-				self.reload_data()
-				if not hasattr(self, 'lines'):
-					self.log.info("First Plot")
-					self.init_plot()
-				self.paused = False
-			self.log.info("Yielding to GUI with t=%d" % last_t)
-			wx.Yield()
-			self.log.info("Returned from GUI with t=%d" % self.t)
-
+		if hasattr(self, "data"):
+			self.log.debug("Updating data from simulator at %d" % now)
+			self.data.update(p = p, v = v, names = names, environment = environment)
 		else:
-			self.log.info("Continuing at %d from tmax:%d and t:%d" % (self.simulation.now(), self.sim_tmax, self.t))
-			self.simulation.waiting = False
-			self.paused = True
-			return # Continue Simulating
-
+			self.log.debug("Generating data from simulator at %d" % now)
+			self.data = DataPackage(p = p, v = v, names = names, environment = environment)
+		self._update_needed = True
 
 	def redraw_plot(self, t = None):
 		###
@@ -450,12 +406,6 @@ class EphyraFrame(wx.Frame):
 			self.t = t
 			del t
 
-		###
-		# SIM WAIT
-		###
-		if self.simulating and self.t > self.sim_tmax:
-			self.log.info("Returning to Sim from %s" % sys._getframe().f_code.co_name)
-			return
 		###
 		# MAIN PLOT AREA
 		###
@@ -536,11 +486,24 @@ class EphyraFrame(wx.Frame):
 				self.log.debug("End Of The Line")
 				self.paused = True
 				t = self.tmax
+				if self.args.autoexit:
+					self.DestroyChildren()
+					self.Destroy()
 
 		if t < 0:
 			self.log.debug("Tried to reverse, pausing")
 			self.paused = True
 			t = 0
+
+		if self.simulating:
+			time_change_condition.acquire()
+			sim_updated_condition.acquire()
+
+			pub.sendMessage('update_gui_time', t = t)
+			time_change_condition.notify()
+			sim_updated_condition.wait()
+			sim_updated_condition.release()
+			time_change_condition.release()
 
 		self.time_slider.SetValue(t)
 		self.redraw_plot(t = t)
@@ -577,9 +540,6 @@ class EphyraFrame(wx.Frame):
 		)
 		self.time_slider.SetRange(0, self.tmax)
 		self.d_t = int((self.tmax + 1) / 100)
-
-		if self.args.autostart:
-			self.paused = False
 
 		self.resize_panel()
 
@@ -670,6 +630,9 @@ class EphyraFrame(wx.Frame):
 
 	def on_idle(self, event):
 		self.update_status("Idle")
+		if self.simulating and self._update_needed:
+			self._update_needed = False
+			self.reload_data()
 		if not self.paused:
 			self.move_T()
 
@@ -770,15 +733,16 @@ class Metric():
 	p = d[:,w}
 	"""
 	# Assumes that data is constant and only needs to be selected per node
-	def __init__(self, axes, data, *args, **kw):
+	def __init__(self, axes, *args, **kw):
 		self.ax = axes
-		self.data = np.asarray(data)
-		self.label = kw.get('label', "UNDEFINED")
+		self.label = kw.get('label', self.__class__.__name__)
 		self.highlight_data = kw.get('highlight_data', None)
-		self.shape = self.data.shape
-		self.ndim = self.data.ndim
-		logging.debug("%s" % self)
+		self.data = kw.get('data', np.zeros((0, 0)))
+		self.ndim = 0
+		if __debug__: logging.debug("%s" % self)
 
+	def generator(self, data):
+		return data
 
 	def plot(self, wanted = None, time = None):
 		"""
@@ -788,11 +752,11 @@ class Metric():
 		self.ax.set_ylabel(self.label)
 		self.ax.get_xaxis().set_visible(True)
 
-		if wanted is None or self.ndim == 1:
+		if all(wanted == True) or self.ndim == 1:
 			self.ax.plot(self.data, alpha = 0.3)
 		else:
 			logging.info("Printing %s with Wanted:%s" % (self, wanted))
-			self.ax.plot(np.ndarray(buffer = self.data, shape = self.shape)[:, wanted], alpha = 0.3)
+			self.ax.plot(np.ndarray(buffer = self.data, shape = self.data.shape)[:, wanted], alpha = 0.3)
 
 		if self.highlight_data is not None:
 			self.ax.plot(self.highlight_data, color = 'k', linestyle = '--')
@@ -800,19 +764,19 @@ class Metric():
 
 	def __repr__(self):
 		return "PerNodeGraph_Axes: %s with %s values arranged as %s" % (
-		self.ax.get_ylabel(),
+		self.label,
 		len(self.data),
-		self.shape
+		self.data.shape
 		)
 
 	def ylim(self, xlim, margin = None):
 		(xmin, xmax) = xlim
 		if self.highlight_data is not None:
-			data = self.data + [self.highlight_data]
+			data = np.append(self.data, self.highlight_data).reshape((self.data.shape[0], -1))
 		else:
 			data = self.data
 		if self.ndim > 1:
-			slice = data[xmin:xmax, :]
+			slice = data[xmin:xmax][:]
 		else:
 			slice = data[xmin:xmax]
 		try:
@@ -820,13 +784,52 @@ class Metric():
 			ymax = slice.max()
 			range = ymax - ymin
 			if margin is None:
-				margin = range * 0.1
+				margin = range * 0.2
 
 			ymin -= margin
 			ymax += margin
 		except ValueError as e:
 			raise e
 		return (ymin, ymax)
+
+	def update(self, data):
+		self.data = np.asarray(self.generator(data))
+		if hasattr(self.data, 'ndim'):
+			self.ndim = self.data.ndim
+		else:
+			self.ndim = 1
+
+
+class StdDev_of_Distance(Metric):
+	def generator(self, data):
+		return data.distance_from_average_stddev_range()
+
+
+class StdDev_of_Heading(Metric):
+	def generator(self, data):
+		return data.heading_stddev_range()
+
+
+class Avg_Mag_of_Heading(Metric):
+	def generator(self, data):
+		return  data.heading_mag_range()
+
+
+class Avg_of_InterNode_Distances(Metric): #REDUNDANT
+	def generator(self, data):
+		return [data.inter_distance_average(time) for time in range(int(data.tmax))]
+
+
+class PerNode_Speed(Metric):
+	def generator(self, data):
+		self.highlight_data = [map(mag, data.average_heading(time)) for time in range(int(data.tmax))]
+		return [map(mag, data.heading_slice(time)) for time in range(int(data.tmax))]
+
+
+class PerNode_Internode_Distance_Avg(Metric):
+	def generator(self, data):
+		self.highlight_data = [data.inter_distance_average(time) for time in range(int(data.tmax))]
+		return [data.distances_from_average_at(time) for time in range(int(data.tmax))]
 
 
 def main():
@@ -835,5 +838,11 @@ def main():
 	app.frame.Show()
 	app.MainLoop()
 
+
+def debug():
+	cProfile.run('main()')
+
 if __name__ == '__main__':
 	main()
+
+

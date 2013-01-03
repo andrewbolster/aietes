@@ -48,8 +48,7 @@ class Simulation():
 			self.logger.info("creating instance from %s" % config_file)
 		self.nodes = []
 		self.fleets = []
-		self.waits = False
-		self.waiting = False
+
 
 	def prepare(self, options = [], waits = False):
 		#Attempt Validation and construct the simulation from that config.

@@ -7,7 +7,7 @@ import numpy as np
 np.seterr(all = 'raise')
 #from os import urandom as randomstr #Provides unicode random String
 
-logging.basicConfig(level = logging.DEBUG)
+logging.basicConfig(level = logging.INFO)
 baselogger = logging.getLogger('SIM')
 
 debug = False
