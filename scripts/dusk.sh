@@ -101,7 +101,7 @@ $PREFIX/ns-allinone-$NSVER/lib
 $PREFIX/lib
 END
 
-cat > /etc/profile.d/sunset.conf << END
+cat > /etc/profile.d/sunset.sh << END
 export PATH="$PREFIX/ns-allinone-$NSVER/bin:$PREFIX/ns-allinone-$NSVER/tcl$TCLVER/unix:$PREFIX/ns-allinone-2.35/tk$TKVER/unix:$PATH"
 export TCL_LIBRARY="$PREFIX/ns-allinone-$NSVER/tcl$TCLVER/library,$TCL_LIBRARY"
 export SUNSET_PATH="$PREFIX/SUNSET_v$SUNSETVER"
