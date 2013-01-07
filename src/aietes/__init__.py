@@ -19,9 +19,6 @@ import Behaviour
 
 from Tools import *
 
-import matplotlib;
-
-matplotlib.use('wxagg')
 from matplotlib import animation as MPLanimation
 
 import matplotlib.pyplot as plt

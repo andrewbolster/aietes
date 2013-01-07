@@ -7,8 +7,8 @@ import argparse
 import functools
 import cProfile
 import threading
+import time
 from pubsub import pub
-from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 logging.basicConfig(level = logging.DEBUG)
 
@@ -16,22 +16,23 @@ import matplotlib
 
 matplotlib.use('WXAgg')
 
-from bounos import DataPackage
-from aietes.Tools import mag
-
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize
+
 import matplotlib.cm as cm
 
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 matplotlib.rcParams.update({'font.size': 8})
 
 import numpy as np
 
+from bounos import DataPackage
+from bounos.Metrics import *
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 WIDTH, HEIGHT = 8, 6
@@ -156,10 +157,11 @@ class EphyraFrame(wx.Frame):
 		                    dest = 'newsim', action = 'store_true', default = False,
 		                    help = 'Generate a new simulation from default'
 		)
-
 		self.args = parser.parse_args()
 
-		self.paused = True
+		self.log.debug("ARGS: %s" % str(self.args))
+
+		self.paused = not self.args.autostart
 		self.simulating = self.args.newsim
 		self.telling_off = False # Used for Smartass Control
 		self._update_needed = False
@@ -325,8 +327,13 @@ class EphyraFrame(wx.Frame):
 		# Metrics
 		self.update_status("Updating metrics")
 		for metric in self.metrics:
-			self.update_status("Loading %s" % metric.label)
+			t1 = time.time()
 			metric.update(self.data)
+			t2 = time.time()
+			self.update_status(
+				"Loaded %s in %0.3f ms" % (metric.label, (t2 - t1) * 1000.0)
+			)
+
 
 	def init_plot(self):
 		self.update_metrics()
@@ -558,6 +565,8 @@ class EphyraFrame(wx.Frame):
 	###
 	def update_status(self, msg):
 		self.status_bar.SetStatusText(msg, number = 0)
+		if msg is not "Idle":
+			self.log.info(msg)
 
 	def update_timing(self):
 		self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.simulating else "REC", self.t, self.tmax), number = 2)
@@ -630,6 +639,10 @@ class EphyraFrame(wx.Frame):
 
 	def on_idle(self, event):
 		self.update_status("Idle")
+		if self.args.autoexit and not self.args.autostart:
+			self.DestroyChildren()
+			self.Destroy()
+
 		if self.simulating and self._update_needed:
 			self._update_needed = False
 			self.reload_data()
@@ -722,118 +735,9 @@ class EphyraFrame(wx.Frame):
 		self.node_vector_collections = [None for i in range(self.data.n)]
 
 
-class Metric():
-	"""	This Axes provides data plotting tools
-
-	data format is array(t,n) where n can be 1 (i.e. linear array)
-
-	The 'wanted' functionality acts as a boolean filter, i.e.
-	w = [010]
-	d = [[111][222][333]]
-	p = d[:,w}
-	"""
-	# Assumes that data is constant and only needs to be selected per node
-	def __init__(self, axes, *args, **kw):
-		self.ax = axes
-		self.label = kw.get('label', self.__class__.__name__)
-		self.highlight_data = kw.get('highlight_data', None)
-		self.data = kw.get('data', np.zeros((0, 0)))
-		self.ndim = 0
-		if __debug__: logging.debug("%s" % self)
-
-	def generator(self, data):
-		return data
-
-	def plot(self, wanted = None, time = None):
-		"""
-		Update the Plot based on 'new' wanted data
-		"""
-		self.ax.clear()
-		self.ax.set_ylabel(self.label)
-		self.ax.get_xaxis().set_visible(True)
-
-		if all(wanted == True) or self.ndim == 1:
-			self.ax.plot(self.data, alpha = 0.3)
-		else:
-			logging.info("Printing %s with Wanted:%s" % (self, wanted))
-			self.ax.plot(np.ndarray(buffer = self.data, shape = self.data.shape)[:, wanted], alpha = 0.3)
-
-		if self.highlight_data is not None:
-			self.ax.plot(self.highlight_data, color = 'k', linestyle = '--')
-		return self.ax
-
-	def __repr__(self):
-		return "PerNodeGraph_Axes: %s with %s values arranged as %s" % (
-		self.label,
-		len(self.data),
-		self.data.shape
-		)
-
-	def ylim(self, xlim, margin = None):
-		(xmin, xmax) = xlim
-		if self.highlight_data is not None:
-			data = np.append(self.data, self.highlight_data).reshape((self.data.shape[0], -1))
-		else:
-			data = self.data
-		if self.ndim > 1:
-			slice = data[xmin:xmax][:]
-		else:
-			slice = data[xmin:xmax]
-		try:
-			ymin = slice.min()
-			ymax = slice.max()
-			range = ymax - ymin
-			if margin is None:
-				margin = range * 0.2
-
-			ymin -= margin
-			ymax += margin
-		except ValueError as e:
-			raise e
-		return (ymin, ymax)
-
-	def update(self, data):
-		self.data = np.asarray(self.generator(data))
-		if hasattr(self.data, 'ndim'):
-			self.ndim = self.data.ndim
-		else:
-			self.ndim = 1
-
-
-class StdDev_of_Distance(Metric):
-	def generator(self, data):
-		return data.distance_from_average_stddev_range()
-
-
-class StdDev_of_Heading(Metric):
-	def generator(self, data):
-		return data.heading_stddev_range()
-
-
-class Avg_Mag_of_Heading(Metric):
-	def generator(self, data):
-		return  data.heading_mag_range()
-
-
-class Avg_of_InterNode_Distances(Metric): #REDUNDANT
-	def generator(self, data):
-		return [data.inter_distance_average(time) for time in range(int(data.tmax))]
-
-
-class PerNode_Speed(Metric):
-	def generator(self, data):
-		self.highlight_data = [map(mag, data.average_heading(time)) for time in range(int(data.tmax))]
-		return [map(mag, data.heading_slice(time)) for time in range(int(data.tmax))]
-
-
-class PerNode_Internode_Distance_Avg(Metric):
-	def generator(self, data):
-		self.highlight_data = [data.inter_distance_average(time) for time in range(int(data.tmax))]
-		return [data.distances_from_average_at(time) for time in range(int(data.tmax))]
-
-
 def main():
 	app = wx.PySimpleApp()
+
 	app.frame = EphyraFrame(None)
 	app.frame.Show()
 	app.MainLoop()
