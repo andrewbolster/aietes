@@ -16,6 +16,27 @@ from Analyses import *
 
 from aietes.Tools import mag
 
+class BounosModel():
+	def __init__(self):
+		self.data = None
+		self.metrics = []
+
+	def update_data_from_file(self, file):
+		self.data = DataPackage("file")
+
+	def update_data_from_sim(self, p, v, names, environment, now):
+		"""
+		Call back function used by SimulationStep if doing real time simulation
+		Will 'export' DataPackage data from the running simulation up to the requested time (self.t)
+		"""
+		if hasattr(self, "data"):
+			self.log.debug("Updating data from simulator at %d" % now)
+			self.data.update(p = p, v = v, names = names, environment = environment)
+		else:
+			self.log.debug("Generating data from simulator at %d" % now)
+			self.data = DataPackage(p = p, v = v, names = names, environment = environment)
+
+
 class DataPackage(object):
 	"""
 	Data Store for simulation results

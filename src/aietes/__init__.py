@@ -35,14 +35,19 @@ class Simulation():
 	Defines a single simulation
 	"""
 
-	def __init__(self, config_file = None):
+	def __init__(self, config_file = None, config = None):
 		self.config_spec = '%s/configs/default.conf' % _ROOT
 		self.logger = baselogger.getChild("%s" % (self.__class__.__name__))
 		self.config_file = config_file
-		if self.config_file is None:
+		if self.config_file is None and config is None:
 			self.logger.info("creating instance from default")
-		else:
+			self.config = self.validateConfig(None)
+		elif self.config_file is not None:
 			self.logger.info("creating instance from %s" % config_file)
+			self.config = self.validateConfig(self.config_file)
+		elif config is not None:
+			self.config = config
+
 		self.nodes = []
 		self.fleets = []
 
@@ -50,7 +55,6 @@ class Simulation():
 	def prepare(self, options = [], waits = False):
 		#Attempt Validation and construct the simulation from that config.
 		try:
-			self.config = self.validateConfig(self.config_file)
 			baselogger.setLevel(LOGLEVELS.get(self.config.log_level, logging.NOTSET))
 		except ConfigError as err:
 			self.logger.error("Error in configuration, cannot continue: %s" % err)

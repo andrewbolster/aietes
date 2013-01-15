@@ -3,55 +3,20 @@
 import wx
 import os
 import logging
-import argparse
 import functools
 import cProfile
 import threading
-import time
 from pubsub import pub
 
 logging.basicConfig(level = logging.DEBUG)
-
-import matplotlib
-
-matplotlib.use('WXAgg')
-
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-from matplotlib.figure import Figure
-from matplotlib.gridspec import GridSpec
-from matplotlib.colors import Normalize
-
-import matplotlib.cm as cm
-
-from matplotlib.patches import FancyArrowPatch
-from mpl_toolkits.mplot3d import proj3d
-from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
-matplotlib.rcParams.update({'font.size': 8})
-
-import numpy as np
 
 from bounos import DataPackage
 from bounos.Metrics import *
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
-WIDTH, HEIGHT = 8, 6
-SIDEBAR_WIDTH = 2
 
 time_change_condition = threading.Condition()
 sim_updated_condition = threading.Condition()
-
-
-class Arrow3D(FancyArrowPatch):
-	def __init__(self, xs, ys, zs, *args, **kwargs):
-		FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
-		self._verts3d = xs, ys, zs
-
-	def draw(self, renderer):
-		xs3d, ys3d, zs3d = self._verts3d
-		xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
-		self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
-		FancyArrowPatch.draw(self, renderer)
 
 
 def log_and_call():
@@ -68,7 +33,7 @@ def log_and_call():
 
 
 class AIETESThread(threading.Thread):
-	def __init__(self):
+	def __init__(self, config = None):
 		"""
 		@param simulation: the Aieted Simulation instance to control
 		"""
@@ -76,7 +41,7 @@ class AIETESThread(threading.Thread):
 
 		threading.Thread.__init__(self)
 		self._simulation = Simulation()
-		self._info = self._simulation.prepare(waits = True)
+		self._info = self._simulation.prepare(waits = True, config = config)
 
 		self.gui_time = 0
 		self.sim_time = 0
@@ -88,10 +53,11 @@ class AIETESThread(threading.Thread):
 		if __debug__: logging.info("RX time = %d" % t)
 		self.gui_time = t
 
-	def run(self):
+	def run(self, callback = None):
 		"""
 		Launch the simulation
 		"""
+		callback = self.callback if callback is None
 		self._simulation.simulate(callback = self.callback)
 
 	def callback(self):
@@ -126,397 +92,7 @@ class AIETESThread(threading.Thread):
 		return # Continue Simulating
 
 
-class EphyraFrame(wx.Frame):
-	def __init__(self, *args, **kw):
-		super(EphyraFrame, self).__init__(*args, **kw)
-		self.log = logging.getLogger(self.__module__)
-		parser = argparse.ArgumentParser(description = "GUI simulation and Analysis Suite for the Aietes framework")
-
-		parser.add_argument('-o', '--open',
-		                    dest = 'data_file', action = 'store', default = None,
-		                    metavar = 'XXX.npz',
-		                    help = 'Aietes DataPackage to be analysed'
-		)
-		parser.add_argument('-a', '--autostart',
-		                    dest = 'autostart', action = 'store_true', default = False,
-		                    help = 'Automatically launch animation on loading'
-		)
-		parser.add_argument('-x', '--autoexit',
-		                    dest = 'autoexit', action = 'store_true', default = False,
-		                    help = 'Automatically exit after animation'
-		)
-		parser.add_argument('-l', '--loop',
-		                    dest = 'loop', action = 'store_true', default = False,
-		                    help = 'Loop animation'
-		)
-		parser.add_argument('-v', '--verbose',
-		                    dest = 'verbose', action = 'store_true', default = False,
-		                    help = 'Verbose Debugging Information'
-		)
-		parser.add_argument('-n', '--new-simulation',
-		                    dest = 'newsim', action = 'store_true', default = False,
-		                    help = 'Generate a new simulation from default'
-		)
-		self.args = parser.parse_args()
-
-		self.log.debug("ARGS: %s" % str(self.args))
-
-		self.paused = not self.args.autostart
-		self.simulating = self.args.newsim
-		self.telling_off = False # Used for Smartass Control
-		self._update_needed = False
-		self.t = 0
-		self.tmax = None # Not always the same as the data tmax eg simulating
-		self.d_t = 1
-
-		if self.simulating:
-			self.new_simulation()
-
-		self.CreateMenuBar()
-		panel = wx.Panel(self)
-
-		# Configure Plotting Panel
-		self.plot_pnl = wx.Panel(self)
-		self.fig = Figure()
-		self.gs = GridSpec(HEIGHT, WIDTH) # (height,width)
-		plot_area = self.gs[:-1, SIDEBAR_WIDTH:]
-		metric_areas = [self.gs[x, :SIDEBAR_WIDTH] for x in range(HEIGHT)]
-		self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
-
-		self.axes = self.fig.add_axes([0, 0, 1, 1], )
-		self.plot_axes = self.fig.add_subplot(plot_area, projection = '3d')
-
-		self.metric_objects = [StdDev_of_Distance, StdDev_of_Heading, Avg_Mag_of_Heading, Avg_of_InterNode_Distances,
-		                       PerNode_Speed, PerNode_Internode_Distance_Avg]
-		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
-		self.metrics = []
-
-		for ax, ob in zip(self.metric_axes, self.metric_objects):
-			ax.autoscale_view(scalex = False, tight = True)
-			self.metrics.append(ob(ax))
-
-		self.metric_xlines = [None for i in range(HEIGHT)]
-
-		self.trail_opacity = 0.7
-		self.trail = 100
-
-		# Configure Sphere plotting on plot_pnl
-		self.sphere_enabled = True
-		self.sphere_line_collection = None
-		self.sphere_opacity = 0.9
-
-		#Configure Vector Plotting on Plot_pnl
-		self.node_vector_enabled = True
-		self.fleet_vector_enabled = True
-		self.node_vector_collections = None
-		self.fleet_vector_collection = None
-		self.vector_opacity = 0.9
-
-
-		# Configure Control Panel
-		self.control_pnl = wx.Panel(self)
-		self.time_slider = wx.Slider(self.control_pnl, value = 0, minValue = 0, maxValue = 1)
-		self.pause_btn = wx.Button(self.control_pnl, label = "Pause")
-		self.play_btn = wx.Button(self.control_pnl, label = "Play")
-		self.faster_btn = wx.Button(self.control_pnl, label = "Rate++")
-		self.slower_btn = wx.Button(self.control_pnl, label = "Rate--")
-		self.trail_slider = wx.Slider(self.control_pnl, value = self.trail, minValue = 0, maxValue = 100,
-		                              size = (120, -1))
-
-		self.Bind(wx.EVT_SCROLL, self.on_time_slider, self.time_slider)
-		self.Bind(wx.EVT_SCROLL, self.on_trail_slider, self.trail_slider)
-		self.Bind(wx.EVT_BUTTON, self.on_pause_btn, self.pause_btn)
-		self.Bind(wx.EVT_UPDATE_UI, self.on_update_pause_btn, self.pause_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_play_btn, self.play_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_faster_btn, self.faster_btn)
-		self.Bind(wx.EVT_BUTTON, self.on_slower_btn, self.slower_btn)
-
-		vbox = wx.BoxSizer(wx.VERTICAL)
-		hbox1 = wx.BoxSizer(wx.HORIZONTAL)
-		hbox2 = wx.BoxSizer(wx.HORIZONTAL)
-
-		hbox1.Add(self.time_slider, proportion = 1)
-		hbox2.Add(self.pause_btn)
-		hbox2.Add(self.play_btn, flag = wx.RIGHT, border = 5)
-		hbox2.Add(self.faster_btn, flag = wx.LEFT, border = 5)
-		hbox2.Add(self.slower_btn)
-		hbox2.Add(self.trail_slider, flag = wx.TOP | wx.LEFT, border = 5)
-
-		#Metric Buttons
-		self.sphere_chk = wx.CheckBox(self.control_pnl, label = "Sphere")
-		self.vector_chk = wx.CheckBox(self.control_pnl, label = "Vector")
-		self.sphere_chk.SetValue(self.sphere_enabled)
-		self.vector_chk.SetValue(self.node_vector_enabled)
-		self.Bind(wx.EVT_CHECKBOX, self.on_sphere_chk, self.sphere_chk)
-		self.Bind(wx.EVT_CHECKBOX, self.on_vector_chk, self.vector_chk)
-		hbox2.Add(self.sphere_chk)
-		hbox2.Add(self.vector_chk)
-
-		vbox.Add(hbox1, flag = wx.EXPAND | wx.BOTTOM, border = 10)
-		vbox.Add(hbox2, proportion = 1, flag = wx.EXPAND)
-		self.control_pnl.SetSizer(vbox)
-
-		self.sizer = wx.BoxSizer(wx.VERTICAL)
-		self.sizer.Add(self.plot_pnl, proportion = 1, flag = wx.EXPAND)
-		self.sizer.Add(self.control_pnl, flag = wx.EXPAND | wx.BOTTOM | wx.TOP)
-
-		self.Bind(wx.EVT_SIZE, self.on_resize)
-		self.Bind(wx.EVT_IDLE, self.on_idle)
-
-		self.SetMinSize((800, 600))
-		self.status_bar = self.CreateStatusBar()
-		self.status_bar.SetFieldsCount(3)
-
-		self.SetSizer(self.sizer)
-
-		self.SetSize((350, 200))
-		self.SetTitle('Player')
-		self.Centre()
-		self.Show(True)
-
-		if self.args.data_file is not None:
-			if os.path.exists(self.args.data_file):
-				self.log.info("Loading data from %s" % self.args.data_file)
-				self.load_data(self.args.data_file)
-			else:
-				self.log.error("File Not Found: %s" % self.args.data_file)
-				self.smartass("File Not Found!")
-				self.on_open(None)
-
-		if self.simulating:
-			self.sim_thread.start()
-
-
-	def CreateMenuBar(self):
-		menubar = wx.MenuBar()
-		filem = wx.Menu()
-		play = wx.Menu()
-		view = wx.Menu()
-		tools = wx.Menu()
-		favorites = wx.Menu()
-		help = wx.Menu()
-
-		newm = filem.Append(wx.NewId(), '&New \t Ctrl+n', 'Generate a new Simulation')
-		openm = filem.Append(wx.NewId(), '&Open \t Ctrl+o', 'Open a datafile')
-		exitm = filem.Append(wx.NewId(), '&Quit', 'Quit application')
-		self.Bind(wx.EVT_MENU, self.on_new, newm)
-		self.Bind(wx.EVT_MENU, self.on_open, openm)
-		self.Bind(wx.EVT_MENU, self.on_close, exitm)
-		menubar.Append(filem, '&File')
-
-		menubar.Append(play, '&Play')
-		node_selectm = filem.Append(wx.NewId(), '&Select Displayed Nodes \t Ctrl+N',
-		                            'Limit the analytics display to selected nodes')
-		self.Bind(wx.EVT_MENU, self.on_node_select, node_selectm)
-		menubar.Append(view, '&View')
-
-		menubar.Append(tools, '&Tools')
-
-		menubar.Append(favorites, 'F&avorites')
-
-		menubar.Append(help, '&Help')
-
-		self.accel_tbl = wx.AcceleratorTable(
-			[(wx.ACCEL_CTRL, ord('o'), openm.GetId())]
-		)
-		self.SetAcceleratorTable(self.accel_tbl)
-
-		self.SetMenuBar(menubar)
-
-	def update_metrics(self):
-		# Metrics
-		self.update_status("Updating metrics")
-		for metric in self.metrics:
-			t1 = time.time()
-			metric.update(self.data)
-			t2 = time.time()
-			self.update_status(
-				"Loaded %s in %0.3f ms" % (metric.label, (t2 - t1) * 1000.0)
-			)
-
-
-	def init_plot(self):
-		self.update_metrics()
-		assert len(self.metrics) > 1
-
-
-		# Start off with all nodes displayed
-		self.displayed_nodes = np.empty(self.data.n, dtype = bool)
-		self.displayed_nodes.fill(True)
-
-		# Find initial display state for viewport
-		self.lines = [self.plot_axes.plot(xs, ys, zs, alpha = self.trail_opacity)[0] for xs, ys, zs in self.data.p]
-		for n, line in enumerate(self.lines):
-			line.set_label(self.data.names[n])
-
-		position_stddevrange = self.data.distance_from_average_stddev_range()
-		heading_stddevrange = self.data.heading_stddev_range()
-		heading_magrange = self.data.heading_mag_range()
-
-		assert len(heading_stddevrange) == self.data.tmax, "H-%s" % str(heading_stddevrange)
-
-		self.plot_head_mag_norm = Normalize(vmin = min(heading_magrange), vmax = max(heading_magrange))
-		self.plot_pos_stddev_norm = Normalize(vmin = min(position_stddevrange), vmax = max(position_stddevrange))
-
-		# Initialise Sphere data anyway
-		self.plot_sphere_cm = cm.Spectral_r
-
-		# Initialse Positional Plot
-		shape = self.data.environment
-		self.plot_axes.set_title("Tracking overview of %s" % self.data.title)
-		self.plot_axes.set_xlim3d((0, shape[0]))
-		self.plot_axes.set_ylim3d((0, shape[1]))
-		self.plot_axes.set_zlim3d((0, shape[2]))
-		self.plot_axes.set_xlabel('X')
-		self.plot_axes.set_ylabel('Y')
-		self.plot_axes.set_zlabel('Z')
-
-		self.update_status("Plotting %d metrics" % len(self.metrics))
-
-		self.plot_analysis()
-
-
-	def  plot_analysis(self):
-		for i, plot in enumerate(self.metrics):
-			self.metric_axes[i] = plot.plot(wanted = np.asarray(self.displayed_nodes))
-			self.metric_xlines[i] = self.metric_axes[i].axvline(x = self.t, color = 'r', linestyle = ':')
-			self.metric_axes[i].relim()
-			xlim = (max(0, self.t - 100), max(100, self.t + 100))
-			self.metric_axes[i].set_xlim(xlim)
-			self.metric_axes[i].set_ylim(*plot.ylim(xlim))
-		self.metrics[-1].ax.get_xaxis().set_visible(True)
-
-
-	def new_simulation(self):
-		pub.subscribe(self.update_data_from_sim, 'update_data')
-		self.sim_thread = AIETESThread()
-		self.tmax = self.sim_thread.sim_time_max # record the simulation length for slider / anim config
-
-	def update_data_from_sim(self, p, v, names, environment, now):
-		"""
-		Call back function used by SimulationStep if doing real time simulation
-		Will 'export' DataPackage data from the running simulation up to the requested time (self.t)
-		"""
-		if hasattr(self, "data"):
-			self.log.debug("Updating data from simulator at %d" % now)
-			self.data.update(p = p, v = v, names = names, environment = environment)
-		else:
-			self.log.debug("Generating data from simulator at %d" % now)
-			self.data = DataPackage(p = p, v = v, names = names, environment = environment)
-		self._update_needed = True
-
-	def redraw_plot(self, t = None):
-		###
-		# Update Time!
-		###
-		if t is not None:
-			self.t = t
-			del t
-
-		###
-		# MAIN PLOT AREA
-		###
-		for n, line in enumerate(self.lines):
-			(xs, ys, zs) = self.data.trail_of(n, self.t, self.trail)
-
-			line.set_data(xs, ys)
-			line.set_3d_properties(zs)
-			line.set_label(self.data.names[n])
-
-		###
-		# SPHERE OVERLAY TO MAIN PLOT AREA
-		###
-		if self.sphere_enabled:
-			(x, y, z), r, s = self.data.sphere_of_positions_with_stddev(self.t)
-			xs, ys, zs = self.sphere(x, y, z, r)
-			colorval = self.plot_pos_stddev_norm(s)
-			if self.args.verbose: self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s" % (
-			str((x, y, z)), str(self.plot_sphere_cm(colorval)), str(colorval), str(s)))
-
-			self._remove_sphere()
-			self.sphere_line_collection = self.plot_axes.plot_wireframe(xs, ys, zs,
-			                                                            alpha = self.sphere_opacity,
-			                                                            color = self.plot_sphere_cm(colorval)
-			)
-
-		###
-		# VECTOR OVERLAYS TO MAIN PLOT AREA
-		###
-		# Arrow3D
-		if self.node_vector_enabled:
-			self._remove_vectors()
-			for node in range(self.data.n):
-				position = self.data.position_of(node, self.t)
-				heading = self.data.heading_of(node, self.t)
-				mag = np.linalg.norm(np.asarray(heading))
-				colorval = self.plot_head_mag_norm(mag)
-				if self.args.verbose: self.log.debug(
-					"Average heading: %s, Color: [%s], Speed: %s" % (str(heading), str(colorval), str(mag)))
-
-				xs, ys, zs = zip(position, np.add(position, (np.asarray(heading) * 50)))
-				self.node_vector_collections[node] = Arrow3D(
-					xs, ys, zs,
-					mutation_scale = 2, lw = 1,
-					arrowstyle = "-|>", color = self.plot_sphere_cm(colorval), alpha = self.vector_opacity
-				)
-				self.plot_axes.add_artist(
-					self.node_vector_collections[node],
-				)
-		self.plot_analysis()
-
-		self.canvas.draw()
-
-
-	def resize_panel(self):
-		plot_size = self.sizer.GetChildren()[0].GetSize()
-		self.plot_pnl.SetSize(plot_size)
-		self.canvas.SetSize(plot_size)
-		self.fig.set_size_inches(float(plot_size[0]) / self.fig.get_dpi(),
-		                         float(plot_size[0]) / self.fig.get_dpi()
-		)
-
-	def move_T(self, delta_t = None):
-		""" Seek the visual plot by delta_t while doing bounds checking and redraw
-
-		: param delta_t: Positive or negative time shift from current t. If None use t_d
-		: type delta_t: int
-
-		"""
-		t = self.t
-		t += delta_t if delta_t is not None else self.d_t
-		# If trying to go over the end, don't, and either stop or loop
-		if t > self.tmax:
-			if self.args.loop:
-				self.log.debug("Looping")
-				t = 0
-			else:
-				self.log.debug("End Of The Line")
-				self.paused = True
-				t = self.tmax
-				if self.args.autoexit:
-					self.DestroyChildren()
-					self.Destroy()
-
-		if t < 0:
-			self.log.debug("Tried to reverse, pausing")
-			self.paused = True
-			t = 0
-
-		if self.simulating:
-			time_change_condition.acquire()
-			sim_updated_condition.acquire()
-
-			pub.sendMessage('update_gui_time', t = t)
-			time_change_condition.notify()
-			sim_updated_condition.wait()
-			sim_updated_condition.release()
-			time_change_condition.release()
-
-		self.time_slider.SetValue(t)
-		self.redraw_plot(t = t)
-		self.update_timing()
-
-
+class EphyraPanel(wx.Frame):
 	def load_data(self, data_file):
 		""" Load an external data file for plotting and navigation
 
@@ -530,215 +106,74 @@ class EphyraFrame(wx.Frame):
 		except IOError as e:
 			raise e
 
-		self.tmax = self.data.tmax - 1
-		self.time_slider.SetValue(0)
-		self.d_t = int((self.tmax + 1) / 100)
 		self.reload_data()
 
 
 	def reload_data(self):
-		self.update_status("Initialising Plot")
-		self.init_plot()
-		self.log.debug("Successfully loaded data from %s, containing %d nodes over %d seconds" % (
-		self.data.title,
-		self.data.n,
-		self.data.tmax
-		)
-		)
 		self.time_slider.SetRange(0, self.tmax)
 		self.d_t = int((self.tmax + 1) / 100)
 
 		self.resize_panel()
 
 
-	def smartass(self, msg = None):
-		self.paused = True
-		if self.telling_off is False:
-			self.telling_off = True
-			dial = wx.MessageDialog(None, 'Stop it Smartass!' if msg is None else str(msg), "Smartass",
-			                        wx.OK | wx.ICON_EXCLAMATION)
-			dial.ShowModal()
-			self.telling_off = False
+class EphyraController():
+	def __init__(self):
+		self.model = None
+		self.view = None
+		self.metrics = []
 
-	###
-	# Status Management
-	###
-	def update_status(self, msg):
-		self.status_bar.SetStatusText(msg, number = 0)
-		if msg is not "Idle":
-			self.log.info(msg)
-
-	def update_timing(self):
-		self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.simulating else "REC", self.t, self.tmax), number = 2)
+	def load_data_file(self, file_path):
+		self.model.update_data_from_file(file_path)
 
 
-	####
-	# Event Operations
-	####
-	def on_close(self, event):
-		dlg = wx.MessageDialog(self,
-		                       "Do you really want to close this application?",
-		                       "Confirm Exit", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
-		result = dlg.ShowModal()
-		dlg.Destroy()
-		if result == wx.ID_OK:
-			self.Destroy()
+	def set_model(self, model):
+		self.model = model
 
-	def on_new(self, event):
-		dlg = wx.MessageDialog(self,
-		                       message = "This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
-		                       style = wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
-		)
-		result = dlg.ShowModal()
-		dlg.Destroy()
-		if result == wx.ID_OK:
-			self.new_simulation()
+	def update_model(self, *args, **kw):
+		#Update Base Data
+		self.model.update_data_from_sim(*args, **kw)
+		# Update secondary metrics
+		for metric in self.metrics:
+			metric.update(self.model.data)
 
-	def on_open(self, event):
-		dlg = wx.FileDialog(
-			self, message = "Select a DataPackage",
-			defaultDir = os.getcwd(),
-			wildcard = "*.npz",
-			style = wx.OPEN | wx.CHANGE_DIR
-		)
-
-		if dlg.ShowModal() == wx.ID_OK:
-			data_path = dlg.GetPaths()
-			if (len(data_path) > 1):
-				self.log.warn("Too many paths given, only taking the first anyway")
-			data_path = data_path[0]
-			self.load_data(data_path)
-
-	def on_pause_btn(self, event):
-		self.paused = not self.paused
-
-	def on_update_pause_btn(self, event):
-		self.pause_btn.SetLabel("Resume" if self.paused else "Pause")
-
-	def on_play_btn(self, event):
-		self.redraw_plot(t = 0)
-		self.paused = False
-
-	def on_faster_btn(self, event):
-		self.d_t = int(min(max(1, self.d_t * 1.1), self.data.tmax / 2))
-		self.log.debug("Setting time step to: %s" % self.d_t)
-
-	def on_slower_btn(self, event):
-		self.d_t = int(min(max(1, self.d_t * 0.9), self.data.tmax / 2))
-		self.log.debug("Setting time step to: %s" % self.d_t)
-
-
-	def on_time_slider(self, event):
-		t = self.time_slider.GetValue()
-		self.log.debug("Slider: Setting time to %d" % t)
-		wx.CallAfter(self.redraw_plot, t = t)
-
-	def on_resize(self, event):
-		event.Skip()
-		wx.CallAfter(self.resize_panel)
-
-	def on_idle(self, event):
-		self.update_status("Idle")
-		if self.args.autoexit and not self.args.autostart:
-			self.DestroyChildren()
-			self.Destroy()
-
-		if self.simulating and self._update_needed:
-			self._update_needed = False
-			self.reload_data()
-		if not self.paused:
-			self.move_T()
-
-	###
-	# Display Selection Tools
-	###
-	def on_sphere_chk(self, event):
-		if not self.sphere_chk.IsChecked():
-			self._remove_sphere()
-			self.log.debug("Sphere Overlay Disabled")
-			self.sphere_enabled = False
+	def metric_views(self, i = None, *args, **kw):
+		if i is None:
+			return [MetricView(metric, *args, **kw) for metric in self.metrics]
+		elif isinstance(i, int):
+			return MetricView(self.metrics[i], *args, **kw)
 		else:
-			self.log.debug("Sphere Overlay Enabled")
-			self.sphere_enabled = True
-		wx.CallAfter(self.redraw_plot)
+			raise NotImplementedError("Metrics Views must be addressed by int's or nothing! (%s)" % str(i))
 
-	def on_vector_chk(self, event):
-		if not self.vector_chk.IsChecked():
-			self._remove_vectors()
-			self.log.debug("Vector Overlay Disabled")
-			self.node_vector_enabled = False
+	def set_view(self, view):
+		self.view = view
+
+	def run_simulation(self, config):
+		#TODO will raise ConfigError on, well, config errors
+		sim = AIETESThread(config)
+		sim.run(callback = None)
+
+	def get_raw_positions_log(self):
+		return self.model.data.p
+
+	def get_vector_names(self, i = None):
+		return self.model.data.names if i is None else self.model.data.names[:]
+
+	def get_extent(self):
+		return self.model.data.environment()
+
+	def get_final_tmax(self):
+		if self.model.is_simulating():
+			return self.model.simulation.tmax
 		else:
-			self.log.debug("Vector Overlay Enabled")
-			self.node_vector_enabled = True
-		wx.CallAfter(self.redraw_plot)
-
-	def on_trail_slider(self, event):
-		event.Skip()
-		norm_trail = self.trail_slider.GetValue()
-		self.trail = int(norm_trail * (self.data.tmax / 100.0))
-		self.log.debug("Slider: Setting trail to %d" % self.trail)
-		wx.CallAfter(self.redraw_plot)
-
-	def on_node_select(self, event):
-		"""
-		Based on the wxPython demo - opens the MultiChoiceDialog
-		and sets that selection as the node entries to be
-		displayed
-		"""
-		lst = list(self.data.names)
-		dlg = wx.MultiChoiceDialog(self,
-		                           "Select nodes",
-		                           "wx.MultiChoiceDialog", lst)
-
-		selections = [i for i in range(self.data.n) if self.displayed_nodes[i]]
-		print selections
-		dlg.SetSelections(selections)
-
-		if (dlg.ShowModal() == wx.ID_OK):
-			selections = dlg.GetSelections()
-			strings = [lst[x] for x in selections]
-			print "You chose:" + str(strings)
-			self.displayed_nodes.fill(False)
-			for checked in selections:
-				self.displayed_nodes[checked] = True
-
-			self.plot_analysis()
-
-		wx.CallAfter(self.redraw_plot)
-
-
-	####
-	# Plotting Tools
-	###
-	def sphere(self, x, y, z, r = 1.0):
-		"""
-		Returns a sphere definition tuple (xs,ys,zs) for use with plot_wireframe
-		"""
-		u, v = np.mgrid[0:2 * np.pi:10j, 0:np.pi:10j]
-		xs = (r * np.cos(u) * np.sin(v)) + x
-		ys = (r * np.sin(u) * np.sin(v)) + y
-		zs = (r * np.cos(v)) + z
-
-		return (xs, ys, zs)
-
-	def _remove_sphere(self):
-		if isinstance(self.sphere_line_collection, Line3DCollection)\
-		and self.sphere_line_collection in self.plot_axes.collections:
-			self.plot_axes.collections.remove(self.sphere_line_collection)
-
-	def _remove_vectors(self):
-		if self.node_vector_collections is not None:
-			for arrow in self.node_vector_collections:
-				if arrow is not None:
-					arrow.remove()
-
-		self.node_vector_collections = [None for i in range(self.data.n)]
+			return self.model.data.tmax
 
 
 def main():
 	app = wx.PySimpleApp()
 
-	app.frame = EphyraFrame(None)
+	controller = EphyraController(None)
+	view = EphyraView(None)
+
 	app.frame.Show()
 	app.MainLoop()
 
