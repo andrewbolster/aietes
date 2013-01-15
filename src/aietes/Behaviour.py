@@ -1,5 +1,5 @@
 import numpy as np
-from aietes.Tools import  memory_entry, baselogger, distance, fudge_normal, debug, unit, mag, listfix
+from aietes.Tools import  map_entry, baselogger, distance, fudge_normal, debug, unit, mag, listfix
 from operator import attrgetter
 
 
@@ -15,6 +15,7 @@ class Behaviour():
 		#TODO internal representation of the environment
 		self.node = kwargs.get('node')
 		self.bev_config = kwargs.get('bev_config')
+		self.map = kwargs.get('map', None)
 		self.logger = self.node.logger.getChild("%s" % (self.__class__.__name__))
 		self.logger.info('creating instance')
 		if debug: self.logger.debug('from bev_config: %s' % self.bev_config)
@@ -23,6 +24,7 @@ class Behaviour():
 		self.memory = {}
 		self.behaviours = []
 		self.simulation = self.node.simulation
+		self.env_shape = np.asarray(self.simulation.environment.shape)
 		self.neighbours = {}
 
 
@@ -31,9 +33,9 @@ class Behaviour():
 
 	def neighbour_map(self):
 		"""
-		Returns a filtered map pulled from the global environment excluding self
+		Returns a filtered map pulled from the map excluding self
 		"""
-		orig_map = dict((k, v) for k, v in self.simulation.environment.map.items() if v.object_id != self.node.id)
+		orig_map = dict((k, v) for k, v in self.map.items() if v.object_id != self.node.id)
 
 		for k, v in orig_map.items():
 			orig_map[k].position = fudge_normal(v.position, 0.2)
@@ -46,7 +48,7 @@ class Behaviour():
 		Called by node lifecycle to update the internal representation of the environment
 		"""
 		#TODO expand this to do SLAM?
-		self.memory += memory_entry(object_id, position, velocity)
+		self.memory += map_entry(object_id, position, velocity)
 
 
 	def process(self):
@@ -83,10 +85,11 @@ class Behaviour():
 		Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
 		"""
 		#Sort and filter Neighbours by distance
-		neighbours_with_distance = [memory_entry(key,
-		                                         value.position, value.velocity,
-		                                         self.node.distance_to(value.position),
-		                                         self.simulation.reverse_node_lookup(key).name
+		neighbours_with_distance = [map_entry(key,
+		                                      value.position, value.velocity,
+		                                      name = self.simulation.reverse_node_lookup(key).name,
+		                                      distance = self.node.distance_to(value.position)
+
 		) for key, value in self.neighbours.items()]
 		#self.logger.debug("Got Distances: %s"%neighbours_with_distance)
 		nearest_neighbours = sorted(neighbours_with_distance
@@ -130,11 +133,11 @@ class Behaviour():
 			avoiding_position = position.copy()
 			avoiding_position[offending_dim] = float(0.0)
 			avoid = True
-		elif any(position > (np.asarray(self.simulation.environment.shape) - min_dist)):
+		elif any(position > (self.env_shape - min_dist)):
 			if debug: self.logger.debug("Too Close to the Upper-surfaces: %s" % position)
 			offending_dim = position.argmax()
 			avoiding_position = position.copy()
-			avoiding_position[offending_dim] = float(self.simulation.environment.shape[offending_dim])
+			avoiding_position[offending_dim] = float(self.env_shape[offending_dim])
 			avoid = True
 		else:
 			response = forceVector
@@ -247,7 +250,7 @@ class Waypoint(Flock):
 		"""
 		Generates a cubic patrol loop within the environment
 		"""
-		shape = np.asarray(self.simulation.environment.shape)
+		shape = np.asarray(self.env_shape)
 		prox = 50
 		cubedef = np.asarray(
 			[[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],

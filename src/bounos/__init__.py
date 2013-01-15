@@ -11,6 +11,9 @@ from scipy.spatial.distance import pdist, squareform
 
 from Plotting import interactive_plot
 
+from Metrics import *
+from Analyses import *
+
 from aietes.Tools import mag
 
 class DataPackage(object):
@@ -164,11 +167,7 @@ class DataPackage(object):
 		if not (0 <= time <= self.tmax):
 			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-		average = np.zeros(3, dtype = np.float)
-		for element in self.heading_slice(time):
-			average += element
-
-		return np.asarray(average) / float(self.n)
+		return np.average(self.heading_slice(time), axis = 0)
 
 	def deviation_from_at(self, heading, time):
 		"""
@@ -200,10 +199,7 @@ class DataPackage(object):
 		if not (0 <= time <= self.tmax):
 			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-		average = np.zeros(3, dtype = np.float)
-		for element in self.position_slice(time):
-			average += element
-		return np.asarray(average) / float(self.n)
+		return np.average(self.position_slice(time), axis = 0)
 
 	def sphere_of_positions(self, time):
 		"""
@@ -279,7 +275,7 @@ class DataPackage(object):
 		"""
 		Returns the average distance between nodes
 		"""
-		return np.average([self.distances_from_at(node_pos, time) for node_pos in self.position_slice(time)])
+		return np.average(self.position_matrix(time))
 
 
 def main():

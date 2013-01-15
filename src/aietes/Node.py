@@ -98,7 +98,9 @@ class Node(Sim.Process):
 		except AttributeError:
 			raise ConfigError("Can't find Behaviour: %s" % behaviour)
 
-		self.behaviour = behave_mod(node = self, bev_config = self.config['Behaviour'])
+		self.behaviour = behave_mod(node = self,
+		                            bev_config = self.config['Behaviour'],
+		                            map = self.simulation.environment.map)
 
 		##############################
 		# Simulation Configuration

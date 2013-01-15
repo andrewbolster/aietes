@@ -283,7 +283,7 @@ class dotdict(dict):
 
 
 class memory_entry():
-	def __init__(self, object_id, position, velocity, distance, name = None):
+	def __init__(self, object_id, position, velocity, distance = None, name = None):
 		self.object_id = object_id
 		self.name = name
 		self.position = position
@@ -295,9 +295,10 @@ class memory_entry():
 
 
 class map_entry():
-	def __init__(self, object_id, position, velocity, name = None):
+	def __init__(self, object_id, position, velocity, name = None, distance = None):
 		self.object_id = object_id
 		self.position = position
+		self.distance = distance # Not Always Used!
 		self.velocity = velocity
 		self.name = name
 		self.time = Sim.now()
