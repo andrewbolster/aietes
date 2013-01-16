@@ -1,13 +1,14 @@
 __author__ = 'andrewbolster'
 
-import wx, os
+import wx
+import os
 import logging
 import argparse
+import traceback, sys
 
 import numpy as np
 
 import matplotlib
-
 matplotlib.use('WXAgg')
 
 from mpl_toolkits.mplot3d import proj3d
@@ -37,9 +38,10 @@ class Arrow3D(FancyArrowPatch):
 
 
 class Notebook(wx.Frame):
-	def __init__(self, *args, **kw):
+	def __init__(self, controller, *args, **kw):
 		super(Notebook, self).__init__(*args, **kw)
 		self.log = logging.getLogger(self.__module__)
+		self.ctl = controller
 		parser = argparse.ArgumentParser(description = "GUI Simulation and Analysis Suite for the Aietes framework")
 
 		parser.add_argument('-o', '--open',
@@ -78,15 +80,15 @@ class Notebook(wx.Frame):
 		self.Bind(wx.EVT_IDLE, self.on_idle)
 
 		p = wx.Panel(self)
-		nb = wx.Notebook(p)
+		self.nb = wx.Notebook(p)
 
 		pages = [VisualNavigator, Configurator, Simulator]
 
 		for page in pages:
-			nb.AddPage(page(nb), page.__class__.__name__)
+			self.nb.AddPage(page(self.nb, self), page.__class__.__name__)
 
 		sizer = wx.BoxSizer()
-		sizer.Add(nb, 1, wx.EXPAND)
+		sizer.Add(self.nb, 1, wx.EXPAND)
 		p.SetSizer(sizer)
 
 
@@ -108,9 +110,7 @@ class Notebook(wx.Frame):
 		menubar.Append(filem, '&File')
 
 		menubar.Append(play, '&Play')
-		node_selectm = filem.Append(wx.NewId(), '&Select Displayed Nodes \t Ctrl+N',
-		                            'Limit the analytics display to selected nodes')
-		self.Bind(wx.EVT_MENU, self.on_node_select, node_selectm)
+
 		menubar.Append(view, '&View')
 
 		menubar.Append(tools, '&Tools')
@@ -183,18 +183,36 @@ class Notebook(wx.Frame):
 		self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.simulating else "REC", self.t, self.tmax), number = 2)
 
 	def on_idle(self, event):
-		self.nb.GetSelection().on_idle(event)
+		try:
+			self.nb.GetCurrentPage().on_idle(event)
+		except:
+			traceback.print_exc(file=sys.stdout)
+			self.Destroy()
 
 	def on_resize(self, event):
-		self.nb.GetSelection().on_resize(event)
+		try:
+			self.nb.GetCurrentPage().on_resize(event)
+		except:
+			traceback.print_exc(file=sys.stdout)
+			self.Destroy()
 
+class Configurator(wx.Panel):
+	def __init__(self, parent, frame, *args, **kw):
+		super(wx.Panel, self).__init__(parent, *args, **kw)
+
+		self.Show(True)
+
+class Simulator(wx.Panel):
+	def __init__(self, parent, frame, *args, **kw):
+		super(wx.Panel, self).__init__(parent, *args, **kw)
+		self.Show(True)
 
 class VisualNavigator(wx.Panel):
-	def __init__(self, parent, *args, **kw):
-		super(VisualNavigator, self).__init__(parent, *args, **kw)
-
-		panel = wx.Panel(self)
-		self.log.debug("ARGS: %s" % str(self.args))
+	def __init__(self, parent, frame, *args, **kw):
+		super(wx.Panel, self).__init__(parent, *args, **kw)
+		self.log = frame.log.getChild(self.__class__.__name__)
+		
+		self.frame = frame
 
 		# Timing and playback defaults
 		self.paused = None
@@ -206,19 +224,7 @@ class VisualNavigator(wx.Panel):
 		self.plot_pnl = wx.Panel(self)
 		self.fig = Figure()
 		self.gs = GridSpec(HEIGHT, WIDTH) # (height,width)
-		metric_areas = [self.gs[x, :SIDEBAR_WIDTH] for x in range(HEIGHT)]
-		self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
 
-		self.axes = self.fig.add_axes([0, 0, 1, 1], )
-
-		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
-
-		#TODO Move
-		for ax, ob in zip(self.metric_axes, self.metric_objects):
-			ax.autoscale_view(scalex = False, tight = True)
-			self.metrics.append(ob(ax))
-
-		self.metric_xlines = [None for i in range(HEIGHT)]
 
 		self.trail_opacity = 0.7
 		self.trail = 100
@@ -293,6 +299,17 @@ class VisualNavigator(wx.Panel):
 	####
 
 	def initialise_3d_plot(self):
+
+		metric_areas = [self.gs[x, :SIDEBAR_WIDTH] for x in range(HEIGHT)]
+		self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
+
+		self.axes = self.fig.add_axes([0, 0, 1, 1], )
+
+		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
+		for ax in self.metric_axes:
+			ax.autoscale_view(scalex = False, tight = True)
+
+		self.metric_xlines = [None for i in range(HEIGHT)]
 		plot_area = self.gs[:-1, SIDEBAR_WIDTH:]
 		self.plot_axes = self.fig.add_subplot(plot_area, projection = '3d')
 
@@ -365,14 +382,14 @@ class VisualNavigator(wx.Panel):
 		t += delta_t if delta_t is not None else self.d_t
 		# If trying to go over the end, don't, and either stop or loop
 		if t > self.tmax:
-			if self.args.loop:
+			if self.frame.args.loop:
 				self.log.debug("Looping")
 				t = 0
 			else:
 				self.log.debug("End Of The Line")
 				self.paused = True
 				t = self.tmax
-				if self.args.autoexit:
+				if self.frame.args.autoexit:
 					self.DestroyChildren()
 					self.Destroy()
 
@@ -382,7 +399,7 @@ class VisualNavigator(wx.Panel):
 			t = 0
 
 		self.time_slider.SetValue(t)
-		self.redraw_plot(t = t)
+		self.redraw_page(t = t)
 
 	def resize_plots(self):
 		plot_size = self.sizer.GetChildren()[0].GetSize()
@@ -407,7 +424,7 @@ class VisualNavigator(wx.Panel):
 		(x, y, z), r, s = self.data.sphere_of_positions_with_stddev(self.t)
 		xs, ys, zs = self.sphere(x, y, z, r)
 		colorval = self.plot_pos_stddev_norm(s)
-		if self.args.verbose: self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s" % (
+		if self.frame.args.verbose: self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s" % (
 		str((x, y, z)), str(self.plot_sphere_cm(colorval)), str(colorval), str(s)))
 
 		self._remove_sphere()
@@ -423,7 +440,7 @@ class VisualNavigator(wx.Panel):
 			heading = self.data.heading_of(node, self.t)
 			mag = np.linalg.norm(np.asarray(heading))
 			colorval = self.plot_head_mag_norm(mag)
-			if self.args.verbose: self.log.debug(
+			if self.frame.args.verbose: self.log.debug(
 				"Average heading: %s, Color: [%s], Speed: %s" % (str(heading), str(colorval), str(mag)))
 
 			xs, ys, zs = zip(position, np.add(position, (np.asarray(heading) * 50)))
@@ -549,3 +566,6 @@ class VisualNavigator(wx.Panel):
 	def on_idle(self, event):
 		if not self.paused:
 			self.move_T()
+
+	def on_resize(self, event):
+		self.resize_plots()

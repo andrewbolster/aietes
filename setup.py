@@ -12,6 +12,11 @@ install_requires = [
     # List your project dependencies here.
     # For more details, see:
     # http://packages.python.org/distribute/setuptools.html#declaring-dependencies
+	"SimPy>=2.3",
+    "numpy>=1.6",
+    "scipy>=0.9",
+    "pydot>=1.0",
+    "wx>=2.8"
 ]
 
 
