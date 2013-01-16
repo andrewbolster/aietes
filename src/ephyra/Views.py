@@ -6,9 +6,8 @@ import logging
 import argparse
 import traceback, sys
 
-import numpy as np
-
 import matplotlib
+
 matplotlib.use('WXAgg')
 
 from mpl_toolkits.mplot3d import proj3d
@@ -18,7 +17,10 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.patches import FancyArrowPatch
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
+from matplotlib.colors import Normalize
 from matplotlib import cm
+
+import numpy as np
 
 matplotlib.rcParams.update({'font.size': 8})
 
@@ -37,59 +39,79 @@ class Arrow3D(FancyArrowPatch):
 		FancyArrowPatch.draw(self, renderer)
 
 
-class Notebook(wx.Frame):
+class GenericFrame(wx.Frame):
 	def __init__(self, controller, *args, **kw):
-		super(Notebook, self).__init__(*args, **kw)
+		wx.Frame.__init__(self, None, title=EphyraNotebook.description, *args, **kw)
 		self.log = logging.getLogger(self.__module__)
 		self.ctl = controller
-		parser = argparse.ArgumentParser(description = "GUI Simulation and Analysis Suite for the Aietes framework")
+		p = VisualNavigator(self, self, wx.ID_ANY)
+		sizer = wx.BoxSizer(wx.VERTICAL)
+		sizer.Add(p, proportion=1, flag=wx.GROW)
+		self.SetMinSize((800, 600))
+		self.SetSizer(sizer)
+		sizer.Fit(p)
+		self.Layout()
+
+
+class EphyraNotebook(wx.Frame):
+	description = "GUI Simulation and Analysis Suite for the Aietes framework"
+
+	def __init__(self, controller, *args, **kw):
+		wx.Frame.__init__(self, None, title=EphyraNotebook.description, *args, **kw)
+		self.log = logging.getLogger(self.__module__)
+		self.ctl = controller
+		parser = argparse.ArgumentParser(description=self.description)
 
 		parser.add_argument('-o', '--open',
-		                    dest = 'data_file', action = 'store', default = None,
-		                    metavar = 'XXX.npz',
-		                    help = 'Aietes DataPackage to be analysed'
+							dest='data_file', action='store', default=None,
+							metavar='XXX.npz',
+							help='Aietes DataPackage to be analysed'
 		)
 		parser.add_argument('-a', '--autostart',
-		                    dest = 'autostart', action = 'store_true', default = False,
-		                    help = 'Automatically launch animation on loading'
+							dest='autostart', action='store_true', default=False,
+							help='Automatically launch animation on loading'
 		)
 		parser.add_argument('-x', '--autoexit',
-		                    dest = 'autoexit', action = 'store_true', default = False,
-		                    help = 'Automatically exit after animation'
+							dest='autoexit', action='store_true', default=False,
+							help='Automatically exit after animation'
 		)
 		parser.add_argument('-l', '--loop',
-		                    dest = 'loop', action = 'store_true', default = False,
-		                    help = 'Loop animation'
+							dest='loop', action='store_true', default=False,
+							help='Loop animation'
 		)
 		parser.add_argument('-v', '--verbose',
-		                    dest = 'verbose', action = 'store_true', default = False,
-		                    help = 'Verbose Debugging Information'
+							dest='verbose', action='store_true', default=False,
+							help='Verbose Debugging Information'
 		)
 		parser.add_argument('-n', '--new-simulation',
-		                    dest = 'newsim', action = 'store_true', default = False,
-		                    help = 'Generate a new simulation from default'
+							dest='newsim', action='store_true', default=False,
+							help='Generate a new simulation from default'
 		)
 		self.args = parser.parse_args()
 
 		# Create a panel and a Notebook on the Panel
+		self.p = wx.Panel(self)
+		self.nb = wx.Notebook(self.p)
 		self.CreateMenuBar()
-		self.status_bar = self.CreateStatusBar()
-		self.status_bar.SetFieldsCount(3)
 
 		self.Bind(wx.EVT_SIZE, self.on_resize)
 		self.Bind(wx.EVT_IDLE, self.on_idle)
 
-		p = wx.Panel(self)
-		self.nb = wx.Notebook(p)
-
 		pages = [VisualNavigator, Configurator, Simulator]
 
 		for page in pages:
-			self.nb.AddPage(page(self.nb, self), page.__class__.__name__)
+			self.log.debug("Adding Page: %s" % page.__name__)
+			self.nb.AddPage(page(self.nb, self), page.__name__)
 
-		sizer = wx.BoxSizer()
-		sizer.Add(self.nb, 1, wx.EXPAND)
-		p.SetSizer(sizer)
+		self.status_bar = self.CreateStatusBar()
+		self.status_bar.SetFieldsCount(3)
+
+		self.sizer = wx.BoxSizer(wx.VERTICAL)
+		self.sizer.Add(self.nb, proportion=1, flag=wx.GROW | wx.ALL)
+		self.p.SetSizer(self.sizer)
+		self.SetMinSize((800, 600))
+		self.Layout()
+		self.Show()
 
 
 	def CreateMenuBar(self):
@@ -132,24 +154,41 @@ class Notebook(wx.Frame):
 	####
 	def on_close(self, event):
 		dlg = wx.MessageDialog(self,
-		                       "Do you really want to close this application?",
-		                       "Confirm Exit", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
+							   "Do you really want to close this application?",
+							   "Confirm Exit", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
 		result = dlg.ShowModal()
 		dlg.Destroy()
 		if result == wx.ID_OK:
 			self.Destroy()
 
+
+	def on_idle(self, event):
+		try:
+			self.nb.GetCurrentPage().on_idle(event)
+		except:
+			traceback.print_exc(file=sys.stdout)
+			self.Destroy()
+
+
 	def on_resize(self, event):
-		event.Skip()
-		wx.CallAfter(self.resize_panel)
+		plot_size = self.GetClientSize()
+		self.log.debug("plotsize:%s" % str(plot_size))
+
+		self.p.SetSize(plot_size)
+
+		try:
+			self.nb.GetCurrentPage().on_resize(event)
+		except:
+			traceback.print_exc(file=sys.stdout)
+			self.Destroy()
 
 	####
 	# File Events
 	####
 	def on_new(self, event):
 		dlg = wx.MessageDialog(self,
-		                       message = "This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
-		                       style = wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
+							   message="This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
+							   style=wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
 		)
 		result = dlg.ShowModal()
 		dlg.Destroy()
@@ -158,10 +197,10 @@ class Notebook(wx.Frame):
 
 	def on_open(self, event):
 		dlg = wx.FileDialog(
-			self, message = "Select a DataPackage",
-			defaultDir = os.getcwd(),
-			wildcard = "*.npz",
-			style = wx.OPEN | wx.CHANGE_DIR
+			self, message="Select a DataPackage",
+			defaultDir=os.getcwd(),
+			wildcard="*.npz",
+			style=wx.OPEN | wx.CHANGE_DIR
 		)
 
 		if dlg.ShowModal() == wx.ID_OK:
@@ -175,44 +214,39 @@ class Notebook(wx.Frame):
 	# Status Management
 	###
 	def update_status(self, msg):
-		self.status_bar.SetStatusText(msg, number = 0)
+		self.status_bar.SetStatusText(msg, number=0)
 		if msg is not "Idle":
 			self.log.info(msg)
 
 	def update_timing(self):
-		self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.simulating else "REC", self.t, self.tmax), number = 2)
+		self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.simulating else "REC", self.t, self.tmax), number=2)
 
-	def on_idle(self, event):
-		try:
-			self.nb.GetCurrentPage().on_idle(event)
-		except:
-			traceback.print_exc(file=sys.stdout)
-			self.Destroy()
-
-	def on_resize(self, event):
-		try:
-			self.nb.GetCurrentPage().on_resize(event)
-		except:
-			traceback.print_exc(file=sys.stdout)
-			self.Destroy()
 
 class Configurator(wx.Panel):
 	def __init__(self, parent, frame, *args, **kw):
 		super(wx.Panel, self).__init__(parent, *args, **kw)
+		wx.StaticText(self, -1, "This is the Configurator", (20, 20))
 
-		self.Show(True)
+	def on_idle(self, event):
+		pass
+
 
 class Simulator(wx.Panel):
 	def __init__(self, parent, frame, *args, **kw):
 		super(wx.Panel, self).__init__(parent, *args, **kw)
-		self.Show(True)
+		wx.StaticText(self, -1, "This is the Simulator", (20, 20))
+
+
+	def on_idle(self, event):
+		pass
+
 
 class VisualNavigator(wx.Panel):
 	def __init__(self, parent, frame, *args, **kw):
-		super(wx.Panel, self).__init__(parent, *args, **kw)
+		wx.Panel.__init__(self, parent, *args, **kw)
 		self.log = frame.log.getChild(self.__class__.__name__)
-		
 		self.frame = frame
+		self.ctl = frame.ctl
 
 		# Timing and playback defaults
 		self.paused = None
@@ -220,14 +254,9 @@ class VisualNavigator(wx.Panel):
 		self.tmax = None # Not always the same as the data tmax eg simulating
 		self.d_t = 1
 
-		# Configure Plotting Panel
-		self.plot_pnl = wx.Panel(self)
-		self.fig = Figure()
-		self.gs = GridSpec(HEIGHT, WIDTH) # (height,width)
-
-
+		# Configure Plot Display
 		self.trail_opacity = 0.7
-		self.trail = 100
+		self.trail_length = 100
 
 		# Configure Sphere plotting on plot_pnl
 		self.sphere_enabled = True
@@ -241,15 +270,39 @@ class VisualNavigator(wx.Panel):
 		self.fleet_vector_collection = None
 		self.vector_opacity = 0.9
 
+		# Configure Plotting Panel (plot_pnl)
+		self._plot_initialised = False
+		self.plot_pnl = wx.Panel(self)
+		self.fig = Figure()
+		self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
+		self.axes = self.fig.add_axes([0, 0, 1, 1], )
+		self.gs = GridSpec(HEIGHT, WIDTH) # (height,width)
+
+		####
+		# Main Plot
+		####
+		plot_area = self.gs[:-1, SIDEBAR_WIDTH:]
+		self.plot_axes = self.fig.add_subplot(plot_area, projection='3d')
+		self.lines = []
+
+		####
+		# Metrics
+		####
+		metric_areas = [self.gs[x, :SIDEBAR_WIDTH] for x in range(HEIGHT)]
+		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
+		for ax in self.metric_axes:
+			ax.autoscale_view(scalex=False, tight=True)
+		self.metric_xlines = [None for i in range(HEIGHT)]
+
 		# Configure Control Panel
 		self.control_pnl = wx.Panel(self)
-		self.time_slider = wx.Slider(self.control_pnl, value = 0, minValue = 0, maxValue = 1)
-		self.pause_btn = wx.Button(self.control_pnl, label = "Pause")
-		self.play_btn = wx.Button(self.control_pnl, label = "Play")
-		self.faster_btn = wx.Button(self.control_pnl, label = "Rate++")
-		self.slower_btn = wx.Button(self.control_pnl, label = "Rate--")
-		self.trail_slider = wx.Slider(self.control_pnl, value = self.trail, minValue = 0, maxValue = 100,
-		                              size = (120, -1))
+		self.time_slider = wx.Slider(self.control_pnl, value=0, minValue=0, maxValue=1)
+		self.pause_btn = wx.Button(self.control_pnl, label="Pause")
+		self.play_btn = wx.Button(self.control_pnl, label="Play")
+		self.faster_btn = wx.Button(self.control_pnl, label="Rate++")
+		self.slower_btn = wx.Button(self.control_pnl, label="Rate--")
+		self.trail_slider = wx.Slider(self.control_pnl, value=self.trail_length, minValue=0, maxValue=100,
+									  size=(120, -1))
 
 		self.Bind(wx.EVT_SCROLL, self.on_time_slider, self.time_slider)
 		self.Bind(wx.EVT_SCROLL, self.on_trail_slider, self.trail_slider)
@@ -259,70 +312,65 @@ class VisualNavigator(wx.Panel):
 		self.Bind(wx.EVT_BUTTON, self.on_faster_btn, self.faster_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_slower_btn, self.slower_btn)
 
-		vbox = wx.BoxSizer(wx.VERTICAL)
-		hbox1 = wx.BoxSizer(wx.HORIZONTAL)
-		hbox2 = wx.BoxSizer(wx.HORIZONTAL)
+		control_sizer = wx.BoxSizer(wx.VERTICAL)
+		time_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		control_btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-		hbox1.Add(self.time_slider, proportion = 1)
-		hbox2.Add(self.pause_btn)
-		hbox2.Add(self.play_btn, flag = wx.RIGHT, border = 5)
-		hbox2.Add(self.faster_btn, flag = wx.LEFT, border = 5)
-		hbox2.Add(self.slower_btn)
-		hbox2.Add(self.trail_slider, flag = wx.TOP | wx.LEFT, border = 5)
+		time_sizer.Add(self.time_slider, proportion=1)
+		control_btn_sizer.Add(self.pause_btn)
+		control_btn_sizer.Add(self.play_btn, flag=wx.RIGHT, border=5)
+		control_btn_sizer.Add(self.faster_btn, flag=wx.LEFT, border=5)
+		control_btn_sizer.Add(self.slower_btn)
+		control_btn_sizer.Add(self.trail_slider, flag=wx.TOP | wx.LEFT, border=5)
 
 		#Metric Buttons
-		self.sphere_chk = wx.CheckBox(self.control_pnl, label = "Sphere")
+		self.sphere_chk = wx.CheckBox(self.control_pnl, label="Sphere")
 		self.sphere_chk.SetValue(self.sphere_enabled)
 		self.Bind(wx.EVT_CHECKBOX, self.on_sphere_chk, self.sphere_chk)
-		hbox2.Add(self.sphere_chk)
+		control_btn_sizer.Add(self.sphere_chk)
 
-		self.vector_chk = wx.CheckBox(self.control_pnl, label = "Vector")
+		self.vector_chk = wx.CheckBox(self.control_pnl, label="Vector")
 		self.vector_chk.SetValue(self.node_vector_enabled)
 		self.Bind(wx.EVT_CHECKBOX, self.on_vector_chk, self.vector_chk)
-		hbox2.Add(self.vector_chk)
+		control_btn_sizer.Add(self.vector_chk)
 
-		vbox.Add(hbox1, flag = wx.EXPAND | wx.BOTTOM, border = 10)
-		vbox.Add(hbox2, proportion = 1, flag = wx.EXPAND)
-		self.control_pnl.SetSizer(vbox)
+		control_sizer.Add(time_sizer, flag=wx.EXPAND | wx.BOTTOM, border=10)
+		control_sizer.Add(control_btn_sizer, proportion=1, flag=wx.EXPAND)
+		self.control_pnl.SetSizer(control_sizer)
 
-		self.sizer = wx.BoxSizer(wx.VERTICAL)
-		self.sizer.Add(self.plot_pnl, proportion = 1, flag = wx.EXPAND)
-		self.sizer.Add(self.control_pnl, flag = wx.EXPAND | wx.BOTTOM | wx.TOP)
+		self.panel_sizer = wx.BoxSizer(wx.VERTICAL)
+		self.panel_sizer.Add(self.plot_pnl, proportion=1, flag=wx.EXPAND | wx.ALL)
+		self.panel_sizer.Add(self.control_pnl, flag=wx.EXPAND | wx.BOTTOM)
 
-		self.SetMinSize((800, 600))
+		self.SetSizer(self.panel_sizer)
 
-		self.SetSizer(self.sizer)
-		self.Show(True)
+		if self.ctl.model_is_ready():
+			self.log.debug("Model is ready, initialising 3D plot")
+			self.initialise_3d_plot()
+		else:
+			self.log.debug("Model not ready yet")
 
 	####
 	# 3D Plot Handling Functions
 	####
-
 	def initialise_3d_plot(self):
-
-		metric_areas = [self.gs[x, :SIDEBAR_WIDTH] for x in range(HEIGHT)]
-		self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
-
-		self.axes = self.fig.add_axes([0, 0, 1, 1], )
-
-		self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
-		for ax in self.metric_axes:
-			ax.autoscale_view(scalex = False, tight = True)
-
-		self.metric_xlines = [None for i in range(HEIGHT)]
-		plot_area = self.gs[:-1, SIDEBAR_WIDTH:]
-		self.plot_axes = self.fig.add_subplot(plot_area, projection = '3d')
-
+		self._plot_initialised = True
 		# Start off with all nodes displayed
-		self.displayed_nodes = np.empty(self.data.n, dtype = bool)
+		self.displayed_nodes = np.empty(self.ctl.get_n_vectors(), dtype=bool)
 		self.displayed_nodes.fill(True)
 
 		# Initialise Sphere data anyway
 		self.plot_sphere_cm = cm.Spectral_r
 
+		# Initialise Vector display data anyway
+		(hmax, hmin) = self.ctl.get_heading_mag_max_min()
+		(pmax, pmin) = self.ctl.get_position_stddev_max_min()
+		self.plot_head_mag_norm = Normalize(vmin=hmin, vmax=hmax)
+		self.plot_pos_stddev_norm = Normalize(vmin=pmin, vmax=pmax)
+
 		# Initialse Positional Plot
 		shape = self.ctl.get_extent()
-		self.plot_axes.set_title("Tracking overview of %s" % self.data.title)
+		self.plot_axes.set_title("Tracking overview of %s" % self.ctl.get_model_title())
 		self.plot_axes.set_xlim3d((0, shape[0]))
 		self.plot_axes.set_ylim3d((0, shape[1]))
 		self.plot_axes.set_zlim3d((0, shape[2]))
@@ -335,9 +383,9 @@ class VisualNavigator(wx.Panel):
 		self.time_slider.SetValue(0)
 		self.d_t = int((self.tmax + 1) / 100)
 
-		self.update_status("Plotting %d metrics" % len(self.metrics))
-
-	def redraw_page(self, t = None):
+	def redraw_page(self, t=None):
+		if not self._plot_initialised:
+			raise RuntimeError("Plot isn't ready yet!")
 		###
 		# Update Time!
 		###
@@ -349,11 +397,11 @@ class VisualNavigator(wx.Panel):
 		# MAIN PLOT AREA
 		###
 		for n, line in enumerate(self.lines):
-			(xs, ys, zs) = self.data.trail_of(n, self.t, self.trail)
+			(xs, ys, zs) = self.ctl.get_3D_trail(node=n, time_start=self.t, length=self.trail_length)
 
 			line.set_data(xs, ys)
 			line.set_3d_properties(zs)
-			line.set_label(self.data.names[n])
+			line.set_label(self.ctl.get_vector_names(i=n))
 
 		###
 		# VECTOR OVERLAYS TO MAIN PLOT AREA
@@ -371,7 +419,7 @@ class VisualNavigator(wx.Panel):
 
 		self.canvas.draw()
 
-	def move_T(self, delta_t = None):
+	def move_T(self, delta_t=None):
 		""" Seek the visual plot by delta_t while doing bounds checking and redraw
 
 		: param delta_t: Positive or negative time shift from current t. If None use t_d
@@ -380,15 +428,20 @@ class VisualNavigator(wx.Panel):
 		"""
 		t = self.t
 		t += delta_t if delta_t is not None else self.d_t
+		if self.ctl.model_is_ready():
+			tmax = self.ctl.get_final_tmax()
+		else:
+			tmax = None
+
 		# If trying to go over the end, don't, and either stop or loop
-		if t > self.tmax:
+		if tmax is not None and  t > tmax:
 			if self.frame.args.loop:
 				self.log.debug("Looping")
 				t = 0
 			else:
 				self.log.debug("End Of The Line")
 				self.paused = True
-				t = self.tmax
+				t = tmax
 				if self.frame.args.autoexit:
 					self.DestroyChildren()
 					self.Destroy()
@@ -399,17 +452,11 @@ class VisualNavigator(wx.Panel):
 			t = 0
 
 		self.time_slider.SetValue(t)
-		self.redraw_page(t = t)
+		if self.ctl.model_is_ready():
+			self.redraw_page(t=t)
 
-	def resize_plots(self):
-		plot_size = self.sizer.GetChildren()[0].GetSize()
-		self.plot_pnl.SetSize(plot_size)
-		self.canvas.SetSize(plot_size)
-		self.fig.set_size_inches(float(plot_size[0]) / self.fig.get_dpi(),
-		                         float(plot_size[0]) / self.fig.get_dpi()
-		)
 
-	def sphere(self, x, y, z, r = 1.0):
+	def sphere(self, x, y, z, r=1.0):
 		"""
 		Returns a sphere definition tuple (xs,ys,zs) for use with plot_wireframe
 		"""
@@ -421,7 +468,12 @@ class VisualNavigator(wx.Panel):
 		return (xs, ys, zs)
 
 	def redraw_fleet_sphere(self):
-		(x, y, z), r, s = self.data.sphere_of_positions_with_stddev(self.t)
+		fleet = self.ctl.get_fleet_configuration(self.t)
+		self.log.debug("fleet['positions']['avg']:%s" % str(fleet['positions']['avg']))
+
+		(x, y, z) = fleet['positions']['avg']
+		(r, s) = (max(fleet['positions']['delta_avg']), fleet['positions']['stddev'])
+
 		xs, ys, zs = self.sphere(x, y, z, r)
 		colorval = self.plot_pos_stddev_norm(s)
 		if self.frame.args.verbose: self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s" % (
@@ -429,25 +481,28 @@ class VisualNavigator(wx.Panel):
 
 		self._remove_sphere()
 		self.sphere_line_collection = self.plot_axes.plot_wireframe(xs, ys, zs,
-		                                                            alpha = self.sphere_opacity,
-		                                                            color = self.plot_sphere_cm(colorval)
+																	alpha=self.sphere_opacity,
+																	color=self.plot_sphere_cm(colorval)
 		)
 
 	def redraw_fleet_heading_vectors(self):
 		self._remove_vectors()
-		for node in range(self.data.n):
-			position = self.data.position_of(node, self.t)
-			heading = self.data.heading_of(node, self.t)
-			mag = np.linalg.norm(np.asarray(heading))
+		fleet = self.ctl.get_fleet_configuration(self.t)
+
+		positions = fleet['positions']['pernode']
+		headings = fleet['headings']['pernode']
+
+		for node in range(self.ctl.get_n_vectors()):
+			mag = np.linalg.norm(np.asarray(headings[node]))
 			colorval = self.plot_head_mag_norm(mag)
 			if self.frame.args.verbose: self.log.debug(
-				"Average heading: %s, Color: [%s], Speed: %s" % (str(heading), str(colorval), str(mag)))
+				"Average heading: %s, Color: [%s], Speed: %s" % (str(headings[node]), str(colorval), str(mag)))
 
-			xs, ys, zs = zip(position, np.add(position, (np.asarray(heading) * 50)))
+			xs, ys, zs = zip(positions[node], np.add(positions[node], (np.asarray(headings[node]) * 50)))
 			self.node_vector_collections[node] = Arrow3D(
 				xs, ys, zs,
-				mutation_scale = 2, lw = 1,
-				arrowstyle = "-|>", color = self.plot_sphere_cm(colorval), alpha = self.vector_opacity
+				mutation_scale=2, lw=1,
+				arrowstyle="-|>", color=self.plot_sphere_cm(colorval), alpha=self.vector_opacity
 			)
 			self.plot_axes.add_artist(
 				self.node_vector_collections[node],
@@ -463,14 +518,14 @@ class VisualNavigator(wx.Panel):
 			for arrow in self.node_vector_collections:
 				if arrow is not None:
 					arrow.remove()
-		self.node_vector_collections = [None for i in range(self.data.n)]
+		self.node_vector_collections = [None for i in range(self.ctl.get_n_vectors())]
 
 	def update_metric_charts(self):
 		self.ctl.update_metrics()
 
 		for i, plot in enumerate(self.metrics.ctl):
-			self.metric_axes[i] = plot.plot(wanted = np.asarray(self.displayed_nodes))
-			self.metric_xlines[i] = self.metric_axes[i].axvline(x = self.t, color = 'r', linestyle = ':')
+			self.metric_axes[i] = plot.plot(wanted=np.asarray(self.displayed_nodes))
+			self.metric_xlines[i] = self.metric_axes[i].axvline(x=self.t, color='r', linestyle=':')
 			self.metric_axes[i].relim()
 			xlim = (max(0, self.t - 100), max(100, self.t + 100))
 			self.metric_axes[i].set_xlim(xlim)
@@ -487,7 +542,7 @@ class VisualNavigator(wx.Panel):
 		self.pause_btn.SetLabel("Resume" if self.paused else "Pause")
 
 	def on_play_btn(self, event):
-		self.redraw_plot(t = 0)
+		self.redraw_plot(t=0)
 		self.paused = False
 
 	def on_faster_btn(self, event):
@@ -501,7 +556,7 @@ class VisualNavigator(wx.Panel):
 	def on_time_slider(self, event):
 		t = self.time_slider.GetValue()
 		self.log.debug("Slider: Setting time to %d" % t)
-		wx.CallAfter(self.redraw_plot, t = t)
+		wx.CallAfter(self.redraw_plot, t=t)
 
 	###
 	# Display Selection Tools
@@ -529,8 +584,8 @@ class VisualNavigator(wx.Panel):
 	def on_trail_slider(self, event):
 		event.Skip()
 		norm_trail = self.trail_slider.GetValue()
-		self.trail = int(norm_trail * (self.data.tmax / 100.0))
-		self.log.debug("Slider: Setting trail to %d" % self.trail)
+		self.trail_length = int(norm_trail * (self.ctl.get_final_tmax() / 100.0))
+		self.log.debug("Slider: Setting trail to %d" % self.trail_length)
 		wx.CallAfter(self.redraw_plot)
 
 	####
@@ -542,12 +597,12 @@ class VisualNavigator(wx.Panel):
 		and sets that selection as the node entries to be
 		displayed
 		"""
-		lst = list(self.data.names)
+		lst = list(self.ctl.get_vector_names())
 		dlg = wx.MultiChoiceDialog(self,
-		                           "Select nodes",
-		                           "wx.MultiChoiceDialog", lst)
+								   "Select nodes",
+								   "wx.MultiChoiceDialog", lst)
 
-		selections = [i for i in range(self.data.n) if self.displayed_nodes[i]]
+		selections = [i for i in range(self.ctl.get_n_vectors()) if self.displayed_nodes[i]]
 		print selections
 		dlg.SetSelections(selections)
 
@@ -565,7 +620,19 @@ class VisualNavigator(wx.Panel):
 
 	def on_idle(self, event):
 		if not self.paused:
-			self.move_T()
+			if self._plot_initialised:
+				self.move_T()
+			elif self.ctl.model_is_ready():
+				self.initialise_3d_plot()
+			else:
+				pass
 
 	def on_resize(self, event):
-		self.resize_plots()
+		plot_size = self.panel_sizer.GetChildren()[0].GetSize()
+		self.log.debug("plotsize:%s" % str(plot_size))
+
+		self.plot_pnl.SetSize(plot_size)
+		self.canvas.SetSize(plot_size)
+		self.fig.set_size_inches(float(plot_size[0]) / self.fig.get_dpi(),
+								 float(plot_size[0]) / self.fig.get_dpi()
+		)
