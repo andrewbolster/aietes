@@ -16,7 +16,8 @@ install_requires = [
     "numpy>=1.6",
     "scipy>=0.9",
     "pydot>=1.0",
-    "wx>=2.8"
+    "wxPython>=2.8",
+    "matplotlib>=1.1"
 ]
 
 
