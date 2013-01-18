@@ -3,9 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="0cda99a7-d04d-4685-afa6-cdab2bfdc92f" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/setup.py" afterPath="$PROJECT_DIR$/setup.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/ephyra/Views.py" afterPath="$PROJECT_DIR$/src/ephyra/Views.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/ephyra/__init__.py" afterPath="$PROJECT_DIR$/src/ephyra/__init__.py" />
     </list>
     <ignored path="aietes.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -27,13 +24,11 @@
     <splitter split-orientation="horizontal" split-proportion="0.49262896">
       <split-first>
         <leaf>
-          <file leaf-file-name="Views.py" pinned="false" current="false" current-in-tab="true">
+          <file leaf-file-name="Views.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/ephyra/Views.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="305" column="16" selection-start="9430" selection-end="9430" vertical-scroll-proportion="0.0147929">
-                  <folding>
-                    <element signature="e#30#39#0" expanded="true" />
-                  </folding>
+                <state line="305" column="16" selection-start="9430" selection-end="9430" vertical-scroll-proportion="0.0">
+                  <folding />
                 </state>
               </provider>
             </entry>
@@ -47,10 +42,10 @@
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="__init__.py" pinned="false" current="false" current-in-tab="false">
+          <file leaf-file-name="__init__.py" pinned="false" current="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/aietes/Tools/__init__.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="76" column="7" selection-start="2449" selection-end="2449" vertical-scroll-proportion="0.0">
+                <state line="76" column="7" selection-start="2449" selection-end="2449" vertical-scroll-proportion="0.024271844">
                   <folding />
                 </state>
               </provider>
@@ -86,7 +81,7 @@
           <file leaf-file-name="setup.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/setup.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+                <state line="3" column="0" selection-start="59" selection-end="59" vertical-scroll-proportion="0.0">
                   <folding />
                 </state>
               </provider>
@@ -96,10 +91,10 @@
       </split-first>
       <split-second>
         <leaf>
-          <file leaf-file-name="__init__.py" pinned="false" current="false" current-in-tab="false">
+          <file leaf-file-name="__init__.py" pinned="false" current="true" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/bounos/__init__.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="2" column="0" selection-start="42" selection-end="42" vertical-scroll-proportion="0.0">
+                <state line="168" column="25" selection-start="4919" selection-end="4919" vertical-scroll-proportion="0.023400936">
                   <folding />
                 </state>
               </provider>
@@ -114,10 +109,10 @@
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="__init__.py" pinned="false" current="true" current-in-tab="true">
+          <file leaf-file-name="__init__.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/ephyra/__init__.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="74" column="28" selection-start="1735" selection-end="1735" vertical-scroll-proportion="0.48393378">
+                <state line="74" column="28" selection-start="1735" selection-end="1735" vertical-scroll-proportion="0.0">
                   <folding />
                 </state>
               </provider>
@@ -186,7 +181,6 @@
       <sortByType />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -297,6 +291,7 @@
           </PATH>
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -490,21 +485,21 @@
     <frame x="64" y="-4" width="1857" height="1205" extended-state="6" />
     <editor active="false" />
     <layout>
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32827324" sideWeight="0.4958932" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32857144" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32976446" sideWeight="0.600572" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="true" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.12941177" sideWeight="0.58285713" order="1" side_tool="true" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.13407202" sideWeight="0.41047618" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.13739613" sideWeight="0.64705884" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="FLOATING" visible="false" weight="0.27809525" sideWeight="0.49571735" order="5" side_tool="false" content_ui="tabs" x="244" y="121" width="1582" height="971" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.12941177" sideWeight="0.5742857" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.35333332" sideWeight="0.4983957" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="true" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.40095237" sideWeight="0.600572" order="9" side_tool="false" content_ui="tabs" x="2087" y="60" width="614" height="1049" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.35333332" sideWeight="0.49786097" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Version Control" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.3529412" sideWeight="0.49786097" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="SLIDING" type="FLOATING" visible="false" weight="0.51428574" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" x="1037" y="142" width="762" height="889" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32857144" sideWeight="0.4958932" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="3" side_tool="false" content_ui="combo" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
@@ -644,26 +639,17 @@
         <state line="84" column="0" selection-start="2170" selection-end="2170" vertical-scroll-proportion="0.0" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/aietes/Tools/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="76" column="7" selection-start="2449" selection-end="2449" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/setup.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+        <state line="3" column="0" selection-start="59" selection-end="59" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/ephyra/Views.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="305" column="16" selection-start="9430" selection-end="9430" vertical-scroll-proportion="0.0147929">
-          <folding>
-            <element signature="e#30#39#0" expanded="true" />
-          </folding>
+        <state line="305" column="16" selection-start="9430" selection-end="9430" vertical-scroll-proportion="0.0">
+          <folding />
         </state>
       </provider>
     </entry>
@@ -674,9 +660,9 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/bounos/__init__.py">
+    <entry file="file://$PROJECT_DIR$/src/ephyra/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="2" column="0" selection-start="42" selection-end="42" vertical-scroll-proportion="0.0">
+        <state line="74" column="28" selection-start="1735" selection-end="1735" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
@@ -688,9 +674,16 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/ephyra/__init__.py">
+    <entry file="file://$PROJECT_DIR$/src/aietes/Tools/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="74" column="28" selection-start="1735" selection-end="1735" vertical-scroll-proportion="0.48393378">
+        <state line="76" column="7" selection-start="2449" selection-end="2449" vertical-scroll-proportion="0.024271844">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/bounos/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="168" column="25" selection-start="4919" selection-end="4919" vertical-scroll-proportion="0.023400936">
           <folding />
         </state>
       </provider>
