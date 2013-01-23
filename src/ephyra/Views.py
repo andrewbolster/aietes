@@ -252,9 +252,38 @@ class EphyraNotebook(wx.Frame):
 
 
 class Configurator(wx.Panel):
+	"""
+	The Configurator panel allows the user to generate aietes-compatible configurations
+
+	The general operation is two fold;
+		*Editing simulation environment
+		*Editing simulation defaults for Nodes
+		*Editing simulation defaults for Behaviours
+		*Editing simulation defaults for Applications
+		*Individually editing modifications to Nodes, Applications, and Behaviours
+
+	The editable Characteristics of Nodes in this are:
+		*Application selection
+		*Behaviour Selection
+		*Speeds (Cruising, Max)
+		*Max Turn rate
+		*Initial Position
+
+	The editible Characteristics of Behaviours in this are:
+		*Factors (Clumping, Repulsion, Schooling, Waypointing)
+		*Distances (Collision Avoidance, Min/Max Neighbourhood)
+		*Nearest Neighbour Count
+		*Update rate
+
+	The editable Characteristics of Applications in this are:
+		*NONE #ToDo
+
+	"""
+
 	def __init__(self, parent, frame, *args, **kw):
 		super(wx.Panel, self).__init__(parent, *args, **kw)
 		wx.StaticText(self, -1, "This is the Configurator", (20, 20))
+
 
 	def on_idle(self, event):
 		pass
