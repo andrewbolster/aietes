@@ -137,9 +137,9 @@ class EphyraController():
 		time_end = max(0 if length is None else (time_start - length), 0)
 
 		if node is None:
-			return [self.model.p[:][dimension][time_start:time_end:-1] for dimension in 0, 1, 2]
+			return self.model.p[:, :, time_start:time_end:-1].swapaxes(0, 1)
 		else:
-			return [self.model.p[node][dimension][time_start:time_end:-1] for dimension in 0, 1, 2]
+			return self.model.p[node, :, time_start:time_end:-1]
 
 	@check_model()
 	def get_fleet_positions(self, time):

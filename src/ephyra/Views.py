@@ -401,6 +401,7 @@ class VisualNavigator(wx.Panel):
 
 		# Initialse Positional Plot
 		shape = self.ctl.get_extent()
+		self.log.info(shape)
 		self.plot_axes.set_title("Tracking overview of %s" % self.ctl.get_model_title())
 		self.plot_axes.set_xlim3d((0, shape[0]))
 		self.plot_axes.set_ylim3d((0, shape[1]))
@@ -408,6 +409,12 @@ class VisualNavigator(wx.Panel):
 		self.plot_axes.set_xlabel('X')
 		self.plot_axes.set_ylabel('Y')
 		self.plot_axes.set_zlabel('Z')
+
+		# Initialise 3D Plot Lines
+		(xs, ys, zs) = self.ctl.get_3D_trail()
+		self.log.info("Got %s" % str(xs.shape))
+
+		self.lines = [self.plot_axes.plot(x, y, z, alpha = self.trail_opacity)[0] for x, y, z in zip(xs, ys, zs)]
 
 		# Initialise Metric Views
 		metrics = self.ctl.get_metrics()

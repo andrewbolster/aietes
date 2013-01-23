@@ -20,6 +20,7 @@ def main():
 
 	parser.add_argument('-o', '--open',
 	                    dest = 'data_file', action = 'store', default = None,
+	                    nargs = '?', const = 'latest_aietes.npz_from_pwd',
 	                    metavar = 'XXX.npz',
 	                    help = 'Aietes DataPackage to be analysed'
 	)
@@ -44,6 +45,18 @@ def main():
 	                    help = 'Generate a new simulation from default'
 	)
 	args = parser.parse_args()
+
+	from bounos import BounosModel as model
+
+	if args.data_file is 'latest_aietes.npz_from_pwd':
+		candidate_data_files = os.listdir(os.getcwd())
+		candidate_data_files = [f for f in candidate_data_files if model.is_valid_aietes_datafile(f)]
+		candidate_data_files.sort(reverse = True)
+		args.data_file = candidate_data_files[0]
+		logging.info("Using Latest AIETES file: %s" % args.data_file)
+	elif args.data_file is not None:
+		if not model.is_valid_aietes_datafile(args.data_file):
+			raise ValueError("Provided data file does not appear to be an aietes dataset:%s" % args.data_file)
 
 	app = wx.PySimpleApp()
 

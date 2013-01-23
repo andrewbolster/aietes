@@ -12,9 +12,9 @@ class DataPackage(object):
 	information is queriable through the object.
 	"""
 
-	def __init__(self, source=None,
-				 p=None, v=None, names=None, environment=None, tmax=None,
-				 *args, **kwargs):
+	def __init__(self, source = None,
+	             p = None, v = None, names = None, environment = None, tmax = None,
+	             *args, **kwargs):
 		"""
 		Raises IOError on load failure
 		"""
@@ -46,7 +46,7 @@ class DataPackage(object):
 		self.tmax = len(self.p[0][0]) if tmax is None else tmax
 		self.n = len(self.p)
 
-	def update(self, p=None, v=None, names=None, environment=None, **kwargs):
+	def update(self, p = None, v = None, names = None, environment = None, **kwargs):
 		logging.debug("Updating from tmax %d" % self.tmax)
 
 		if all(x is not None for x in [p, v, names, environment]):
@@ -67,7 +67,7 @@ class DataPackage(object):
 		Query the data set for the x,y,z position of a node at a given time
 		"""
 		try:
-			position = [self.p[node][dimension][time] for dimension in 0, 1, 2]
+			position = self.p[node, :, time]
 			if not np.isnan(sum(position)):
 				return position
 			else:
@@ -81,19 +81,19 @@ class DataPackage(object):
 		"""
 	Query the dataset for the [n][x,y,z] position list of all nodes at a given time
 	"""
-		return [self.position_of(x, time) for x in range(self.n)]
+		return self.p[:, :, time]
 
 	def heading_of(self, node, time):
 		"""
 		Query the data set for the x,y,z vector of a node at a given time
 		"""
-		return [self.v[node][dimension][time] for dimension in 0, 1, 2]
+		return self.v[node, :, time]
 
 	def heading_slice(self, time):
 		"""
 		Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
 		"""
-		return [self.heading_of(x, time) for x in range(self.n)]
+		return self.v[:, :, time]
 
 	def heading_mag_range(self):
 		"""
@@ -102,7 +102,7 @@ class DataPackage(object):
 
 		"""
 		magnitudes = [sum(map(mag, self.heading_slice(time))) / self.n
-					  for time in range(self.tmax)
+		              for time in range(self.tmax)
 		]
 		return magnitudes
 
@@ -113,7 +113,7 @@ class DataPackage(object):
 
 		"""
 		magnitudes = [mag(self.average_heading(time))
-					  for time in range(self.tmax)
+		              for time in range(self.tmax)
 		]
 		return magnitudes
 
@@ -125,7 +125,7 @@ class DataPackage(object):
 		deviations = [np.std(
 			self.deviation_from_at(self.average_heading(time), time)
 		)
-					  for time in range(self.tmax)
+		              for time in range(self.tmax)
 		]
 		return deviations
 
@@ -140,7 +140,7 @@ class DataPackage(object):
 		if not (0 <= time <= self.tmax):
 			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-		return np.average(self.heading_slice(time), axis=0)
+		return np.average(self.heading_slice(time), axis = 0)
 
 	def deviation_from_at(self, heading, time):
 		"""
@@ -172,7 +172,7 @@ class DataPackage(object):
 		if not (0 <= time <= self.tmax):
 			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-		return np.average(self.position_slice(time), axis=0)
+		return np.average(self.position_slice(time), axis = 0)
 
 	def sphere_of_positions(self, time):
 		"""

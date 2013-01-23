@@ -238,7 +238,7 @@ if [ ! -d $PREFIX/nsmiracle-trunk ]; then
 HERE
   ./autogen.sh
   ./configure --with-ns-allinone=$PREFIX/ns-allinone-${NSVER} --prefix=$PREFIX --disable-static --with-dei80211mr=$PREFIX/ns-allinone-${NSVER}/dei80211mr-${DEI80211MRVER}
-  ( make && make install) || (make clean && exit 1)
+  ( make --quiet && make install) || (make clean && exit 1)
   ldconfig
 fi
 
@@ -260,7 +260,7 @@ if [ ! -d ${PREFIX}/WOSS/at ]; then
   cd $PREFIX/WOSS/at
   sed -i "s|/home/porter/at|/$PREFIX/WOSS/at|g" Makefile
   make clean
-  make install || exit 1
+  make --quiet install || exit 1
   ldconfig
 fi
 
@@ -286,7 +286,7 @@ patch -p 1 --ignore-whitespace << HERE
 HERE
   ./autogen.sh
   ./configure --with-ns-allinone=$PREFIX/ns-allinone-${NSVER} --prefix=$PREFIX --with-pthread --with-nsmiracle=$PREFIX/lib
-  make && make install || (make clean && exit 1)
+  make --quiet && make install || (make clean && exit 1)
   ldconfig
 fi
 
