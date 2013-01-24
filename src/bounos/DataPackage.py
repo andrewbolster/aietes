@@ -41,7 +41,7 @@ class DataPackage(object):
 			self.environment = environment
 			self.title = kwargs.get('title', "")
 		else:
-			raise ValueError("Can't work out what the hell you want!")
+			raise ValueError("Can't work out what the hell you want!: %s" % str(kwargs))
 
 		self.tmax = len(self.p[0][0]) if tmax is None else tmax
 		self.n = len(self.p)

@@ -13,6 +13,12 @@ logging.basicConfig(level = logging.DEBUG)
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
+class EventLoggingApp(wx.PySimpleApp):
+	def FilterEvent(self, evt, *args, **kwargs):
+		logging.info(evt)
+		return -1
+
+
 def main():
 	description = "GUI Simulation and Analysis Suite for the Aietes framework"
 
@@ -58,7 +64,11 @@ def main():
 		if not model.is_valid_aietes_datafile(args.data_file):
 			raise ValueError("Provided data file does not appear to be an aietes dataset:%s" % args.data_file)
 
-	app = wx.PySimpleApp()
+	if True:
+		app = wx.PySimpleApp()
+	else:
+		app = EventLoggingApp()
+		app.SetCallFilterEvent(True)
 
 	from Controller import EphyraController
 	from Views import EphyraNotebook

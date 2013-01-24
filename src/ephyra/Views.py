@@ -1,6 +1,8 @@
 __author__ = 'andrewbolster'
 
 import wx
+from wx.lib.agw.pycollapsiblepane import PyCollapsiblePane as PCP
+
 import os
 import logging
 import traceback, sys
@@ -19,9 +21,9 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize
 from matplotlib import cm
 
-import numpy as np
-
 matplotlib.rcParams.update({'font.size': 8})
+
+import numpy as np
 
 WIDTH, HEIGHT = 8, 6
 SIDEBAR_WIDTH = 2
@@ -192,11 +194,7 @@ class EphyraNotebook(wx.Frame):
 		self.Destroy()
 
 	def on_idle(self, event):
-		try:
-			self.nb.GetCurrentPage().on_idle(event)
-		except:
-			traceback.print_exc(file = sys.stdout)
-			wx.CallAfter(self.exit)
+		self.nb.GetCurrentPage().on_idle(event)
 
 
 	def on_resize(self, event):
@@ -250,7 +248,9 @@ class EphyraNotebook(wx.Frame):
 	def update_timing(self, t, tmax):
 		self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.ctl.is_simulation() else "REC", t, tmax), number = 2)
 
-
+#####################################################################################################
+##
+#####################################################################################################
 class Configurator(wx.Panel):
 	"""
 	The Configurator panel allows the user to generate aietes-compatible configurations
@@ -281,18 +281,83 @@ class Configurator(wx.Panel):
 	"""
 
 	def __init__(self, parent, frame, *args, **kw):
-		super(wx.Panel, self).__init__(parent, *args, **kw)
-		wx.StaticText(self, -1, "This is the Configurator", (20, 20))
+		wx.Panel.__init__(self, parent, *args, **kw)
+		self.v_sizer = wx.BoxSizer(wx.VERTICAL)
+		self.v_sizer.Add(NodeConfigurator(self, title = "Node Configuration"), flag = wx.EXPAND | wx.ALIGN_LEFT)
+		self.SetSizer(self.v_sizer, wx.EXPAND)
+		self.Layout()
+
+	def on_resize(self, event):
+		self.Layout()
+
 
 
 	def on_idle(self, event):
 		pass
 
 
+##########################
+## Configurator Helpers
+##########################
+class NodeConfigurator(wx.Panel):
+	"""
+	This class provides a vertically sized layout of PyCollapsiblePanels to configure Nodes with
+	"""
+
+	def __init__(self, parent, *args, **kw):
+		self.cp_style = wx.CP_DEFAULT_STYLE | wx.CP_NO_TLW_RESIZE
+		title = kw.pop("title", "BOOBIES")
+		wx.Panel.__init__(self, parent, *args, **kw)
+		self.content_sizer = wx.BoxSizer(wx.VERTICAL)
+		self.cp = cp = PCP(self, label = title, style = self.cp_style)
+		self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_toggle, cp)
+		self._custom_position = False
+		self.make_content(cp.GetPane())
+
+	def on_toggle(self, event):
+		self.cp.Collapse(self.cp.IsExpanded())
+
+	def make_content(self, pane):
+		"""
+		Generate the internals of the panel
+			* Initial Position - Custom/random/whatever
+			* Velocity Control - Cruising, Speed, Turn
+			* Behaviour - Another Configurator
+		"""
+		self.sizer = wx.BoxSizer(wx.VERTICAL)
+
+		pos_lbl = wx.StaticText(pane, label = "Initial Position")
+		pos_list = ["Custom", "Random", "Centre"]
+		pos_btn = wx.RadioBox(pane, wx.ID_ANY, "Position", (10, 10), wx.DefaultSize, pos_list, 1, wx.RA_SPECIFY_COLS)
+
+		self.pos_custom_x = wx.TextCtrl(pane, wx.ID_ANY, "500", (20, 20))
+		self.pos_custom_y = wx.TextCtrl(pane, wx.ID_ANY, "500", (20, 20))
+		self.pos_custom_z = wx.TextCtrl(pane, wx.ID_ANY, "500", (20, 20))
+		pos_custom_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		for pos in [self.pos_custom_x, self.pos_custom_y, self.pos_custom_z]:
+			pos.Enable(False)
+			pos_custom_sizer.Add(pos)
+
+		pos_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		pos_sizer.Add(pos_btn)
+		pos_sizer.Add(pos_custom_sizer)
+
+		vel_lbl = wx.StaticText(pane, label = "Velocity Control")
+
+		beh_lbl = wx.StaticText(pane, label = "Behaviour Control")
+
+		self.sizer.Add(pos_lbl, wx.EXPAND)
+		self.sizer.Add(pos_sizer, wx.EXPAND)
+		self.sizer.Add(vel_lbl, wx.EXPAND)
+		self.sizer.Add(beh_lbl, wx.EXPAND)
+
+		pane.SetSizerAndFit(self.sizer)
+
+
 class Simulator(wx.Panel):
 	def __init__(self, parent, frame, *args, **kw):
-		super(wx.Panel, self).__init__(parent, *args, **kw)
-		wx.StaticText(self, -1, "This is the Simulator", (20, 20))
+		wx.Panel.__init__(self, parent, *args, **kw)
+		wx.StaticText(self, wx.ID_ANY, "This is the Simulator", (20, 20))
 
 
 	def on_idle(self, event):
@@ -366,7 +431,6 @@ class VisualNavigator(wx.Panel):
 		self.Bind(wx.EVT_SCROLL, self.on_time_slider, self.time_slider)
 		self.Bind(wx.EVT_SCROLL, self.on_trail_slider, self.trail_slider)
 		self.Bind(wx.EVT_BUTTON, self.on_pause_btn, self.pause_btn)
-		self.Bind(wx.EVT_UPDATE_UI, self.on_update_pause_btn, self.pause_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_play_btn, self.play_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_faster_btn, self.faster_btn)
 		self.Bind(wx.EVT_BUTTON, self.on_slower_btn, self.slower_btn)
@@ -606,8 +670,6 @@ class VisualNavigator(wx.Panel):
 	####
 	def on_pause_btn(self, event):
 		self.paused = not self.paused
-
-	def on_update_pause_btn(self, event):
 		self.pause_btn.SetLabel("Resume" if self.paused else "Pause")
 
 	def on_play_btn(self, event):
