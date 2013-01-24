@@ -13,6 +13,12 @@ logging.basicConfig(level = logging.DEBUG)
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
+class EventLoggingApp(wx.PySimpleApp):
+	def FilterEvent(self, evt, *args, **kwargs):
+		logging.info(evt)
+		return -1
+
+
 def main():
 	description = "GUI Simulation and Analysis Suite for the Aietes framework"
 
@@ -45,7 +51,11 @@ def main():
 	)
 	args = parser.parse_args()
 
-	app = wx.PySimpleApp()
+	if True:
+		app = wx.PySimpleApp()
+	else:
+		app = EventLoggingApp()
+		app.SetCallFilterEvent(True)
 
 	from Controller import EphyraController
 	from Views import EphyraNotebook

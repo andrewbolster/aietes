@@ -12,9 +12,9 @@ class DataPackage(object):
 	information is queriable through the object.
 	"""
 
-	def __init__(self, source=None,
-				 p=None, v=None, names=None, environment=None, tmax=None,
-				 *args, **kwargs):
+	def __init__(self, source = None,
+	             p = None, v = None, names = None, environment = None, tmax = None,
+	             *args, **kwargs):
 		"""
 		Raises IOError on load failure
 		"""
@@ -41,12 +41,12 @@ class DataPackage(object):
 			self.environment = environment
 			self.title = kwargs.get('title', "")
 		else:
-			raise ValueError("Can't work out what the hell you want!")
+			raise ValueError("Can't work out what the hell you want!: %s" % str(kwargs))
 
 		self.tmax = len(self.p[0][0]) if tmax is None else tmax
 		self.n = len(self.p)
 
-	def update(self, p=None, v=None, names=None, environment=None, **kwargs):
+	def update(self, p = None, v = None, names = None, environment = None, **kwargs):
 		logging.debug("Updating from tmax %d" % self.tmax)
 
 		if all(x is not None for x in [p, v, names, environment]):
@@ -102,7 +102,7 @@ class DataPackage(object):
 
 		"""
 		magnitudes = [sum(map(mag, self.heading_slice(time))) / self.n
-					  for time in range(self.tmax)
+		              for time in range(self.tmax)
 		]
 		return magnitudes
 
@@ -113,7 +113,7 @@ class DataPackage(object):
 
 		"""
 		magnitudes = [mag(self.average_heading(time))
-					  for time in range(self.tmax)
+		              for time in range(self.tmax)
 		]
 		return magnitudes
 
@@ -125,7 +125,7 @@ class DataPackage(object):
 		deviations = [np.std(
 			self.deviation_from_at(self.average_heading(time), time)
 		)
-					  for time in range(self.tmax)
+		              for time in range(self.tmax)
 		]
 		return deviations
 
@@ -140,7 +140,7 @@ class DataPackage(object):
 		if not (0 <= time <= self.tmax):
 			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-		return np.average(self.heading_slice(time), axis=0)
+		return np.average(self.heading_slice(time), axis = 0)
 
 	def deviation_from_at(self, heading, time):
 		"""
@@ -172,7 +172,7 @@ class DataPackage(object):
 		if not (0 <= time <= self.tmax):
 			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-		return np.average(self.position_slice(time), axis=0)
+		return np.average(self.position_slice(time), axis = 0)
 
 	def sphere_of_positions(self, time):
 		"""

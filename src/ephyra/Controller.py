@@ -38,7 +38,7 @@ class EphyraController():
 		self._metrics_enabled = self._metrics_availiable
 		self.args = kw.get("exec_args", None)
 
-		if self.args is not None and hasattr(self.args, "data_file"):
+		if self.args is not None and self.args.data_file is not None:
 			self.load_data_file(self.args.data_file)
 
 	def load_data_file(self, file_path):
