@@ -335,7 +335,7 @@ def randomstr(length):
 	return word
 
 
-def nameGeneration(count, naming_convention = None):
+def nameGeneration(count, naming_convention = None, existing_names = None):
 	if naming_convention is None:
 		naming_convention = DEFAULT_CONVENTION
 
@@ -347,11 +347,12 @@ def nameGeneration(count, naming_convention = None):
 		)
 
 	node_names = []
+	existing_names = existing_names if existing_names is not None else []
 
 	for n in range(count):
 		candidate_name = naming_convention[np.random.randint(0, len(naming_convention))]
 
-		while candidate_name in node_names:
+		while candidate_name in node_names or candidate_name in existing_names:
 			candidate_name = naming_convention[np.random.randint(0, len(naming_convention))]
 
 		node_names.append(candidate_name)

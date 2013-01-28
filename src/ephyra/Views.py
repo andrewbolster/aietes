@@ -25,6 +25,8 @@ matplotlib.rcParams.update({'font.size': 8})
 
 import numpy as np
 
+from aietes.Tools import nameGeneration
+
 WIDTH, HEIGHT = 8, 6
 SIDEBAR_WIDTH = 2
 
@@ -136,6 +138,7 @@ class EphyraNotebook(wx.Frame):
 
 		self.sizer = wx.BoxSizer(wx.VERTICAL)
 		self.sizer.Add(self.nb, proportion = 1, flag = wx.GROW | wx.ALL)
+		self.SetAutoLayout(1)
 		self.p.SetSizer(self.sizer)
 		self.SetMinSize((800, 600))
 		self.Layout()
@@ -279,21 +282,56 @@ class Configurator(wx.Panel):
 		*NONE #ToDo
 
 	"""
+	initial_fleets = 1
+	initial_nodes = 8
 
 	def __init__(self, parent, frame, *args, **kw):
 		wx.Panel.__init__(self, parent, *args, **kw)
+		self.tree_panel = wx.Panel(self)
+		self.config_panel = wx.Panel(self)
 		self.v_sizer = wx.BoxSizer(wx.VERTICAL)
-		self.v_sizer.Add(NodeConfigurator(self, title = "Node Configuration"), flag = wx.EXPAND | wx.ALIGN_LEFT)
-		self.SetSizer(self.v_sizer, wx.EXPAND)
+		self.h_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		self.tree = wx.TreeCtrl(self.tree_panel, 1, wx.DefaultPosition, (-1, -1), wx.TR_HIDE_ROOT | wx.TR_HAS_BUTTONS)
+		root = self.tree.AddRoot("Simulation")
+		self.fleets = self.tree.AppendItem(root, "Fleets")
+		self.defaults = self.tree.AppendItem(root, "Defaults")
+		for i in range(self.initial_fleets):
+			self.add_fleet(index = i, nodes = self.initial_nodes)
+
+		self.v_sizer.Add(self.tree, proportion = 1, flag = wx.GROW)
+		self.h_sizer.Add(self.tree_panel, 1, wx.EXPAND)
+		self.h_sizer.Add(self.config_panel, 1, wx.EXPAND)
+		self.tree_panel.SetSizer(self.v_sizer)
+		self.SetSizer(self.h_sizer, wx.EXPAND)
 		self.Layout()
 
 	def on_resize(self, event):
 		self.Layout()
 
 
-
 	def on_idle(self, event):
 		pass
+
+	def add_fleet(self, index, *args, **kw):
+		"""
+		Add a fleet to the simulation
+		"""
+		new_fleet = self.tree.AppendItem(self.fleets, "%s" % kw.get("name", "Fleet %d" % index))
+		nodes = self.tree.AppendItem(new_fleet, "Nodes")
+		behaviours = self.tree.AppendItem(new_fleet, "Behaviour")
+		for i in range(kw.get("nodes", 1)):
+			self.add_node(nodes)
+
+	def add_node(self, fleet_nodes, *args, **kw):
+		node_names = []
+		node, cookie = self.tree.GetFirstChild(fleet_nodes)
+		while node.IsOk():
+			name = str(self.tree.GetItemText(node))
+			node_names.append(name)
+			node = self.tree.GetNextSibling(node)
+
+		myname = str(nameGeneration(1, existing_names = node_names)[0])
+		new_fleet = self.tree.AppendItem(fleet_nodes, "%s" % kw.get("name", myname))
 
 
 ##########################
