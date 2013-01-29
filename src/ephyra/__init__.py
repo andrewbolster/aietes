@@ -5,9 +5,11 @@ wxversion.ensureMinimal("2.8")
 
 import wx
 import os
+import sys
 import logging
 import argparse
 import cProfile
+import traceback
 
 logging.basicConfig(level = logging.DEBUG)
 
@@ -17,6 +19,12 @@ class EventLoggingApp(wx.PySimpleApp):
 	def FilterEvent(self, evt, *args, **kwargs):
 		logging.info(evt)
 		return -1
+
+
+def show_error():
+	message = ''.join(traceback.format_exception(*sys.exc_info()))
+	dialog = wx.MessageDialog(None, message, 'Error!', wx.OK | wx.ICON_ERROR)
+	dialog.ShowModal()
 
 
 def main():
@@ -76,7 +84,10 @@ def main():
 	controller = EphyraController(exec_args = args)
 	app.frame = EphyraNotebook(controller, exec_args = args)
 	app.frame.Show()
-	app.MainLoop()
+	try:
+		app.MainLoop()
+	except:
+		show_error()
 
 
 def debug():

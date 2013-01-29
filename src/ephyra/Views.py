@@ -2,6 +2,7 @@ __author__ = 'andrewbolster'
 
 import wx
 from wx.lib.agw.pycollapsiblepane import PyCollapsiblePane as PCP
+from wx.lib.agw.customtreectrl import CustomTreeCtrl
 
 import os
 import logging
@@ -137,7 +138,7 @@ class EphyraNotebook(wx.Frame):
 		self.status_bar.SetFieldsCount(3)
 
 		self.sizer = wx.BoxSizer(wx.VERTICAL)
-		self.sizer.Add(self.nb, proportion = 1, flag = wx.GROW | wx.ALL)
+		self.sizer.Add(self.nb, proportion = 1, flag = wx.EXPAND | wx.ALL)
 		self.SetAutoLayout(1)
 		self.p.SetSizer(self.sizer)
 		self.SetMinSize((800, 600))
@@ -285,25 +286,110 @@ class Configurator(wx.Panel):
 	initial_fleets = 1
 	initial_nodes = 8
 
+	sim_default = {
+	"Labels": {"test": "test"},
+	"Values": {"test": "test"}
+	}
+	fleet_default = {
+	"Labels": {"test": "test"},
+	"Values": {"test": "test"}
+	}
+	node_default = {
+	"Labels": {"test": "test"},
+	"Values": {"test": "test"}
+	}
+	behaviour_default = {
+	"Labels": {"test": "test"},
+	"Values": {"test": "test"}
+	}
+
 	def __init__(self, parent, frame, *args, **kw):
 		wx.Panel.__init__(self, parent, *args, **kw)
-		self.tree_panel = wx.Panel(self)
-		self.config_panel = wx.Panel(self)
-		self.v_sizer = wx.BoxSizer(wx.VERTICAL)
-		self.h_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		self.tree = wx.TreeCtrl(self.tree_panel, 1, wx.DefaultPosition, (-1, -1), wx.TR_HIDE_ROOT | wx.TR_HAS_BUTTONS)
-		root = self.tree.AddRoot("Simulation")
-		self.fleets = self.tree.AppendItem(root, "Fleets")
-		self.defaults = self.tree.AppendItem(root, "Defaults")
+		self.window = wx.SplitterWindow(self, style = wx.SP_3D | wx.SP_BORDER)
+		self.config_panel = wx.Panel(self.window)
+
+		# Configure Tree Contents before generation
+		self.config_tree = ListNode("Simulation", data = self.sim_default)
+		self.fleets = ListNode("Fleets")
+		self.defaults = ListNode("Defaults", [
+			ListNode("Fleet", data = self.fleet_default),
+			ListNode("Node", data = self.node_default),
+			ListNode("Behaviour", data = self.behaviour_default)
+		])
 		for i in range(self.initial_fleets):
 			self.add_fleet(index = i, nodes = self.initial_nodes)
 
-		self.v_sizer.Add(self.tree, proportion = 1, flag = wx.GROW)
-		self.h_sizer.Add(self.tree_panel, 1, wx.EXPAND)
-		self.h_sizer.Add(self.config_panel, 1, wx.EXPAND)
-		self.tree_panel.SetSizer(self.v_sizer)
-		self.SetSizer(self.h_sizer, wx.EXPAND)
+		self.config_tree.append(self.fleets)
+		self.config_tree.append(self.defaults)
+
+		self.tree = CustomTreeCtrl(self.window)
+		self.root = root = self.tree.AddRoot(self.config_tree.GetLabel())
+		self.build_tree(self.config_tree, self.root)
+
+		self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_click, self.tree)
+		self.tree.ExpandAll()
+
+		sizer = wx.BoxSizer(wx.VERTICAL)
+		self.window.SplitVertically(self.tree, self.config_panel)
+		sizer.Add(self.window, 1, wx.EXPAND, 0)
+		self.SetSizer(sizer)
+		sizer.Fit(parent)
 		self.Layout()
+
+	def on_click(self, evt):
+		self.set_config_panel(evt.GetItem())
+
+	def print_tree(self, item = None, prefix = None):
+		root = item if item is not None else self.config_tree
+		prefix = prefix if prefix is not None else ""
+		for item in root:
+			try:
+				print "%s:" % str([prefix, item.GetLabel()])
+				if len(item):
+					self.print_tree(item, prefix = prefix + "+")
+			except AttributeError:
+				print "%s" % item
+			except TypeError:
+				print "%s" % item
+
+	def build_tree(self, config, tree_node):
+		for config_node in config:
+			new_node = self.tree.AppendItem(tree_node, config_node.GetLabel(), data = config_node.GetData())
+			if not config_node.IsLeaf():
+				self.build_tree(config_node, new_node)
+
+
+	def update_tree(self, item, recurse = None):
+		try:
+			node = self.tree.GetPyData(item)
+		except Exception as e:
+			print("%s:%s" % (item.GetLabel(), e))
+
+		child, boza = self.tree.GetFirstChild(item)
+		for s in node:
+			if child is not None and child.IsOk():
+				ni = child
+				child, boza = self.tree.GetNextChild(item, boza)
+				self.tree.SetItemText(ni, s.GetLabel())
+				self.tree.SetPyData(ni, s)
+				#for wx 2.2.1
+				#self.tree.SetItemData( ni, wxTreeItemData( s ) )
+				self.tree.SetItemHasChildren(ni, len(s))
+				if len(s) and recurse:
+					self.update_tree(ni, recurse)
+			else:
+				ni = self.tree.AppendItem(item, s.GetLabel())
+				self.tree.SetPyData(ni, s)
+				self.tree.SetItemHasChildren(ni, len(s))
+		if child is not None and child.IsOk():
+		# prev list was longer
+			extra = []
+			while child.IsOk():
+				extra.append(child)
+				child, boza = self.tree.GetNextChild(item, boza)
+			map(self.tree.Delete, extra)
+		else:
+			raise RuntimeError, "Child is probably bad: %s:%s" % (node, child)
 
 	def on_resize(self, event):
 		self.Layout()
@@ -316,27 +402,135 @@ class Configurator(wx.Panel):
 		"""
 		Add a fleet to the simulation
 		"""
-		new_fleet = self.tree.AppendItem(self.fleets, "%s" % kw.get("name", "Fleet %d" % index))
-		nodes = self.tree.AppendItem(new_fleet, "Nodes")
-		behaviours = self.tree.AppendItem(new_fleet, "Behaviour")
+
+		fleetid = self.fleets.append(ListNode("%s" % kw.get("name", "Fleet %d" % index), [
+			ListNode("Nodes"),
+			ListNode("Behaviours", kw.get("behaviours", self.defaults[2]))
+		])
+		)
 		for i in range(kw.get("nodes", 1)):
-			self.add_node(nodes)
+			self.add_node(fleetid)
 
-	def add_node(self, fleet_nodes, *args, **kw):
-		node_names = []
-		node, cookie = self.tree.GetFirstChild(fleet_nodes)
-		while node.IsOk():
-			name = str(self.tree.GetItemText(node))
-			node_names.append(name)
-			node = self.tree.GetNextSibling(node)
+	def add_node(self, fleetid, *args, **kw):
+		node_names = [n.GetLabel() for n in self.fleets[fleetid][0]]
+		myname = kw.get("name", str(nameGeneration(1, existing_names = node_names)[0]))
+		logging.info("Added %s to fleet %d" % (myname, fleetid))
+		self.fleets[fleetid][0].append(ListNode("%s" % myname))
 
-		myname = str(nameGeneration(1, existing_names = node_names)[0])
-		new_fleet = self.tree.AppendItem(fleet_nodes, "%s" % kw.get("name", myname))
+	def set_config_panel(self, item):
+		"""
+		Create and layout the widgets in the dialog
+		"""
+		data = self.tree.GetPyData(item)
+		mainSizer = self.config_panel.GetSizer()
+		if mainSizer is None:
+			mainSizer = wx.BoxSizer(wx.VERTICAL)
 
+		widgets = mainSizer.GetChildren()
+
+		for widget in widgets:
+			widget.Remove()
+
+		lblSizer = wx.BoxSizer(wx.VERTICAL)
+		valueSizer = wx.BoxSizer(wx.VERTICAL)
+		btnSizer = wx.StdDialogButtonSizer()
+		colSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+		labels = data["Labels"]
+		values = data["Values"]
+		self.widgetNames = values
+		font = wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD)
+
+		for key, label in labels.iteritems():
+			lbl = wx.StaticText(self.config_panel, label = label)
+			lbl.SetFont(font)
+			lblSizer.Add(lbl, 0, wx.ALL, 5)
+
+		for key, value in values.iteritems():
+			if isinstance(value, list):
+				default = value[0]
+				choices = value[1:]
+				cbo = wx.ComboBox(self.config_panel, value = value[0],
+				                  size = wx.DefaultSize, choices = choices,
+				                  style = wx.CB_DROPDOWN | wx.CB_READONLY,
+				                  name = key)
+				valueSizer.Add(cbo, 0, wx.ALL, 5)
+			else:
+				txt = wx.TextCtrl(self.config_panel, value = value, name = key)
+				valueSizer.Add(txt, 0, wx.ALL | wx.EXPAND, 5)
+
+		saveBtn = wx.Button(self.config_panel, wx.ID_OK, label = "Save")
+		saveBtn.Bind(wx.EVT_BUTTON, self.on_save)
+		btnSizer.AddButton(saveBtn)
+
+		cancelBtn = wx.Button(self.config_panel, wx.ID_CANCEL)
+		btnSizer.AddButton(cancelBtn)
+		btnSizer.Realize()
+
+		colSizer.Add(lblSizer)
+		colSizer.Add(valueSizer, 1, wx.EXPAND)
+		mainSizer.Add(colSizer, 0, wx.EXPAND)
+		mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+		self.config_panel.SetSizer(mainSizer)
+
+	def on_save(self, evt):
+		print(evt)
 
 ##########################
 ## Configurator Helpers
 ##########################
+
+class TreeNode:
+	def __len__(self):
+		return 0
+
+	def __getitem__(self, item):
+		raise IndexError
+
+	def GetLabel(self):
+		raise NotImplementedError
+
+	def __setitem__(self, item):
+		raise IndexError
+
+
+class ListNode:
+	def __init__(self, title, children = None, data = None):
+		self._nl = []
+		if children is not None:
+			if isinstance(children, list):
+				self._nl = children
+			elif isinstance(children, ListNode):
+				self._nl = [children]
+			else:
+				raise RuntimeError, "Unknown Children:%s" % children
+		self._tt = title
+		self._data = data
+
+	def __len__(self):
+		return len(self._nl)
+
+	def __getitem__(self, item):
+		return self._nl[item]
+
+	def __setitem__(self, key, value):
+		self._nl[key] = value
+
+	def append(self, item):
+		print item.GetLabel()
+		self._nl.append(item)
+		return len(self) - 1
+
+	def GetLabel(self):
+		return self._tt
+
+	def GetData(self):
+		return self._data
+
+	def IsLeaf(self):
+		return len(self) == 0
+
+
 class NodeConfigurator(wx.Panel):
 	"""
 	This class provides a vertically sized layout of PyCollapsiblePanels to configure Nodes with
