@@ -3,6 +3,8 @@ __author__ = 'andrewbolster'
 import wx
 from wx.lib.agw.pycollapsiblepane import PyCollapsiblePane as PCP
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
+from wx.lib.intctrl import IntCtrl
+from wx.lib.agw.floatspin import FloatSpin
 
 import os
 import logging
@@ -26,7 +28,8 @@ matplotlib.rcParams.update({'font.size': 8})
 
 import numpy as np
 
-from aietes.Tools import nameGeneration
+from aietes.Tools import nameGeneration, timestamp, itersubclasses
+from aietes.Behaviour import Behaviour
 
 WIDTH, HEIGHT = 8, 6
 SIDEBAR_WIDTH = 2
@@ -144,6 +147,7 @@ class EphyraNotebook(wx.Frame):
 		self.SetMinSize((800, 600))
 		self.Layout()
 		self.Show()
+		self.nb.SetSelection(1)
 
 
 	def CreateMenuBar(self):
@@ -287,20 +291,32 @@ class Configurator(wx.Panel):
 	initial_nodes = 8
 
 	sim_default = {
-	"Labels": {"test": "test"},
-	"Values": {"test": "test"}
+	"Config": {"Duration": 1000,
+	           "Interval": 1,
+	           "Name": timestamp}
 	}
 	fleet_default = {
-	"Labels": {"test": "test"},
-	"Values": {"test": "test"}
+	"Config": {}
 	}
 	node_default = {
-	"Labels": {"test": "test"},
-	"Values": {"test": "test"}
+	"Config": {"Max Speed": 2.3,
+	           "Cruising Speed": 1.4,
+	           "Max Turn Rate": 4.5,
+	           "Initial Position": {"X": 0.0, "Y": 1.0, "Z": 2.0}
+	}
 	}
 	behaviour_default = {
-	"Labels": {"test": "test"},
-	"Values": {"test": "test"}
+	"Config": {"Protocol": [cls.__name__ for cls in itersubclasses(Behaviour)],
+	           "Nearest Neighbours": 4,
+	           "Max Neighbourhood": 100,
+	           "Min Neighbourhood": 10,
+	           "Clumping Factor": 0.125,
+	           "Schooling Factor": 0.01,
+	           "Repulsive Distance": 20,
+	           "Repulsive Factor": 0.01,
+	           "Waypoint Factor*": 0.01,
+	           "Update Rate": 0.3
+	}
 	}
 
 	def __init__(self, parent, frame, *args, **kw):
@@ -323,14 +339,16 @@ class Configurator(wx.Panel):
 		self.config_tree.append(self.defaults)
 
 		self.tree = CustomTreeCtrl(self.window)
-		self.root = root = self.tree.AddRoot(self.config_tree.GetLabel())
+		self.root = root = self.tree.AddRoot(self.config_tree.GetLabel(),
+		                                     data = self.config_tree.GetData())
 		self.build_tree(self.config_tree, self.root)
 
 		self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_click, self.tree)
 		self.tree.ExpandAll()
 
-		sizer = wx.BoxSizer(wx.VERTICAL)
+		self.sizer = sizer = wx.BoxSizer(wx.VERTICAL)
 		self.window.SplitVertically(self.tree, self.config_panel)
+
 		sizer.Add(self.window, 1, wx.EXPAND, 0)
 		self.SetSizer(sizer)
 		sizer.Fit(parent)
@@ -405,7 +423,7 @@ class Configurator(wx.Panel):
 
 		fleetid = self.fleets.append(ListNode("%s" % kw.get("name", "Fleet %d" % index), [
 			ListNode("Nodes"),
-			ListNode("Behaviours", kw.get("behaviours", self.defaults[2]))
+			ListNode("Behaviours", data = kw.get("behaviours", self.defaults[2].GetData()))
 		])
 		)
 		for i in range(kw.get("nodes", 1)):
@@ -415,66 +433,128 @@ class Configurator(wx.Panel):
 		node_names = [n.GetLabel() for n in self.fleets[fleetid][0]]
 		myname = kw.get("name", str(nameGeneration(1, existing_names = node_names)[0]))
 		logging.info("Added %s to fleet %d" % (myname, fleetid))
-		self.fleets[fleetid][0].append(ListNode("%s" % myname))
+		self.fleets[fleetid][0].append(ListNode("%s" % myname, data = self.defaults[1].GetData()))
 
 	def set_config_panel(self, item):
 		"""
 		Create and layout the widgets in the dialog
 		"""
 		data = self.tree.GetPyData(item)
+		logging.info("Clicked on %s" % data)
+		self.current_selection = item
+
 		mainSizer = self.config_panel.GetSizer()
-		if mainSizer is None:
-			mainSizer = wx.BoxSizer(wx.VERTICAL)
+		if mainSizer:
+			widgets = self.config_panel.GetChildren()
+			for widget in widgets:
+				logging.info("Destroying: %s" % (str(widget)))
+				widget.Destroy()
+				self.Layout()
+			logging.info("Removing: MainSizer")
+			self.sizer.Remove(mainSizer)
 
-		widgets = mainSizer.GetChildren()
+		mainSizer = wx.BoxSizer(wx.VERTICAL)
 
-		for widget in widgets:
-			widget.Remove()
+		if item.GetData() is not None:
+			values = data["Config"]
 
-		lblSizer = wx.BoxSizer(wx.VERTICAL)
-		valueSizer = wx.BoxSizer(wx.VERTICAL)
-		btnSizer = wx.StdDialogButtonSizer()
-		colSizer = wx.BoxSizer(wx.HORIZONTAL)
+			gridSizer = wx.FlexGridSizer(rows = len(values), cols = 2)
+			btnSizer = wx.StdDialogButtonSizer()
+			colSizer = wx.BoxSizer(wx.HORIZONTAL)
 
-		labels = data["Labels"]
-		values = data["Values"]
-		self.widgetNames = values
-		font = wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD)
+			self.widgetNames = values
+			font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD)
 
-		for key, label in labels.iteritems():
-			lbl = wx.StaticText(self.config_panel, label = label)
-			lbl.SetFont(font)
-			lblSizer.Add(lbl, 0, wx.ALL, 5)
+			for key, value in values.iteritems():
+				lbl = wx.StaticText(self.config_panel, label = key)
+				lbl.SetFont(font)
 
-		for key, value in values.iteritems():
-			if isinstance(value, list):
-				default = value[0]
-				choices = value[1:]
-				cbo = wx.ComboBox(self.config_panel, value = value[0],
-				                  size = wx.DefaultSize, choices = choices,
-				                  style = wx.CB_DROPDOWN | wx.CB_READONLY,
-				                  name = key)
-				valueSizer.Add(cbo, 0, wx.ALL, 5)
-			else:
-				txt = wx.TextCtrl(self.config_panel, value = value, name = key)
-				valueSizer.Add(txt, 0, wx.ALL | wx.EXPAND, 5)
+				# Deal with funky functions
+				if hasattr(value, '__call__'):
+					value = value()
 
-		saveBtn = wx.Button(self.config_panel, wx.ID_OK, label = "Save")
-		saveBtn.Bind(wx.EVT_BUTTON, self.on_save)
-		btnSizer.AddButton(saveBtn)
+				# LIST VALUES
+				if isinstance(value, list):
+					default = value[0]
+					choices = value[1:]
+					input = wx.ComboBox(self.config_panel, value = default,
+					                    choices = choices,
+					                    style = wx.CB_READONLY,
+					                    name = key)
+				# STRING VALUES
+				elif isinstance(value, (basestring, unicode)):
+					input = wx.TextCtrl(self.config_panel, value = value, name = key)
+				# INTEGER VALUES
+				elif isinstance(value, int):
+					input = IntCtrl(self.config_panel, value = value, name = key)
+				# FLOAT VALUES
+				elif isinstance(value, float):
+					input = FloatSpin(self.config_panel, increment = 0.01, value = value, name = key)
+					input.SetFormat("%f")
+					input.SetDigits(2)
+				# DICT VALUES - Assume position or vector
+				elif isinstance(value, dict):
+					input = wx.FlexGridSizer(rows = len(value), cols = 2)
+					for k, v in sorted(value.iteritems()):
+						i_lbl = wx.StaticText(self.config_panel, label = k)
+						i_lbl.SetFont(font)
 
-		cancelBtn = wx.Button(self.config_panel, wx.ID_CANCEL)
-		btnSizer.AddButton(cancelBtn)
-		btnSizer.Realize()
+						widget = FloatSpin(self.config_panel, increment = 0.01, value = v, name = k)
+						widget.SetFormat("%f")
+						widget.SetDigits(2)
+						input.AddMany([(thing, 0, wx.ALL | wx.EXPAND | wx.ALIGN_RIGHT, 5) for thing in (i_lbl, widget)])
+				else:
+					raise NotImplementedError, "Value (%s, %s) has not been coped with by set_config_panel" % (
+					str(value),
+					type(value)
+					)
+				gridSizer.AddMany([(thing, 0, wx.ALL | wx.ALIGN_RIGHT, 5) for thing in (lbl, input)])
 
-		colSizer.Add(lblSizer)
-		colSizer.Add(valueSizer, 1, wx.EXPAND)
-		mainSizer.Add(colSizer, 0, wx.EXPAND)
-		mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+			saveBtn = wx.Button(self.config_panel, wx.ID_OK, label = "Save")
+			saveBtn.Bind(wx.EVT_BUTTON, self.on_save)
+			btnSizer.AddButton(saveBtn)
+
+			updateBtn = wx.Button(self.config_panel, wx.ID_ANY, label = "Update")
+			updateBtn.Bind(wx.EVT_BUTTON, self.on_update)
+			btnSizer.AddButton(updateBtn)
+
+			cancelBtn = wx.Button(self.config_panel, wx.ID_CANCEL)
+			btnSizer.AddButton(cancelBtn)
+			btnSizer.Realize()
+
+			colSizer.Add(gridSizer, 1, wx.EXPAND)
+			mainSizer.Add(colSizer, 0, wx.EXPAND | wx.ALL | wx.ALIGN_RIGHT)
+			mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+
 		self.config_panel.SetSizer(mainSizer)
+		self.Layout()
+
 
 	def on_save(self, evt):
 		print(evt)
+
+	def on_update(self, evt):
+		"""
+		Save the current values for each object
+		"""
+		print(evt)
+		for name in self.widgetNames:
+			try:
+				widget = wx.FindWindowByName(name)
+				if isinstance(widget, wx.ComboBox):
+					selection = widget.GetValue()
+					choices = widget.GetItems()
+					choices.insert(0, selection)
+					value = choices
+				else:
+					value = widget.GetValue()
+
+				data = self.tree.GetPyData(self.current_selection)
+				data['Config'][name] = value
+				self.tree.SetPyData(self.current_selection, data)
+			except Exception as E:
+				logging.error("%s: %s" % (E, name))
+				raise E
 
 ##########################
 ## Configurator Helpers

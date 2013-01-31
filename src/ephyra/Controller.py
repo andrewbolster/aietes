@@ -3,6 +3,7 @@ import functools
 
 from bounos import  BounosModel
 from bounos.Metrics import *
+from aietes.Tools import itersubclasses
 
 
 def log_and_call():
@@ -34,7 +35,7 @@ class EphyraController():
 	def __init__(self, *args, **kw):
 		self.model = BounosModel()
 		self.view = None
-		self._metrics_availiable = Metric.availiable()
+		self._metrics_availiable = list(itersubclasses(Metric))
 		self._metrics_enabled = self._metrics_availiable
 		self.args = kw.get("exec_args", None)
 

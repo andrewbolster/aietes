@@ -17,10 +17,6 @@ class Metric(object):
 	p = d[:,w}
 	"""
 
-	@classmethod
-	def availiable(cls):
-		return cls.__subclasses__()
-
 	# Assumes that data is constant and only needs to be selected per node
 	def __init__(self, *args, **kw):
 		self.label = kw.get('label', self.__class__.__name__)

@@ -5,7 +5,7 @@ from operator import attrgetter
 
 #debug = True
 
-class Behaviour():
+class Behaviour(object):
 	"""
 	Generic Represnetation of a Nodes behavioural characteristics
 	#TODO should be a state machine?
@@ -224,12 +224,12 @@ class Flock(Behaviour):
 		if debug: self.logger.debug("Schooling:%s" % (forceVector))
 		return self.normalize_behaviour(forceVector) * self.schooling_factor
 
-	def _percieved_vector(self, node_id):
+	def _percieved_vector(self, node_id, time):
 		"""
 		Finite Difference Estimation
 		from http://cim.mcgill.ca/~haptic/pub/FS-VH-CSC-TCST-00.pdf
 		"""
-		node_history = sorted(filter(lambda x: x.object_id == nodeid, self.memory), key = time)
+		node_history = sorted(filter(lambda x: x.object_id == node_id, self.memory), key = time)
 		return (node_history[-1].position - node_history[-2].position) / (node_history[-1].time - node_history[-2].time)
 
 
