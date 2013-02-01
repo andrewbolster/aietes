@@ -1,7 +1,6 @@
 __author__ = 'andrewbolster'
 
 import wx
-from wx.lib.agw.pycollapsiblepane import PyCollapsiblePane as PCP
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
 from wx.lib.intctrl import IntCtrl
 from wx.lib.agw.floatspin import FloatSpin
@@ -352,6 +351,7 @@ class Configurator(wx.Panel):
 		sizer.Add(self.window, 1, wx.EXPAND, 0)
 		self.SetSizer(sizer)
 		sizer.Fit(parent)
+		self.set_config_panel(self.root)
 		self.Layout()
 
 	def on_click(self, evt):
@@ -439,7 +439,12 @@ class Configurator(wx.Panel):
 		"""
 		Create and layout the widgets in the dialog
 		"""
-		data = self.tree.GetPyData(item)
+		logging.info("Setting config for :%s" % item)
+		try:
+			data = self.tree.GetPyData(item)
+		except Exception as e:
+			print("%s:%s" % (item.GetLabel(), e))
+
 		logging.info("Clicked on %s" % data)
 		self.current_selection = item
 
@@ -453,19 +458,21 @@ class Configurator(wx.Panel):
 			logging.info("Removing: MainSizer")
 			self.sizer.Remove(mainSizer)
 
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
+		btnSizer = wx.StdDialogButtonSizer()
 
-		if item.GetData() is not None:
+		if data is not None:
+			logging.info("Item has data")
+
 			values = data["Config"]
-
 			gridSizer = wx.FlexGridSizer(rows = len(values), cols = 2)
-			btnSizer = wx.StdDialogButtonSizer()
 			colSizer = wx.BoxSizer(wx.HORIZONTAL)
 
 			self.widgetNames = values
 			font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD)
 
 			for key, value in values.iteritems():
+				logging.info("Parsing: %s %s" % (key, value))
+
 				lbl = wx.StaticText(self.config_panel, label = key)
 				lbl.SetFont(font)
 
@@ -510,6 +517,8 @@ class Configurator(wx.Panel):
 					)
 				gridSizer.AddMany([(thing, 0, wx.ALL | wx.ALIGN_RIGHT, 5) for thing in (lbl, input)])
 
+			colSizer.Add(gridSizer, 1, wx.EXPAND)
+
 			saveBtn = wx.Button(self.config_panel, wx.ID_OK, label = "Save")
 			saveBtn.Bind(wx.EVT_BUTTON, self.on_save)
 			btnSizer.AddButton(saveBtn)
@@ -522,11 +531,13 @@ class Configurator(wx.Panel):
 			btnSizer.AddButton(cancelBtn)
 			btnSizer.Realize()
 
-			colSizer.Add(gridSizer, 1, wx.EXPAND)
+			mainSizer = wx.BoxSizer(wx.VERTICAL)
 			mainSizer.Add(colSizer, 0, wx.EXPAND | wx.ALL | wx.ALIGN_RIGHT)
 			mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+			self.config_panel.SetSizer(mainSizer)
+		else:
+			logging.info("Item has no data")
 
-		self.config_panel.SetSizer(mainSizer)
 		self.Layout()
 
 
@@ -609,61 +620,6 @@ class ListNode:
 
 	def IsLeaf(self):
 		return len(self) == 0
-
-
-class NodeConfigurator(wx.Panel):
-	"""
-	This class provides a vertically sized layout of PyCollapsiblePanels to configure Nodes with
-	"""
-
-	def __init__(self, parent, *args, **kw):
-		self.cp_style = wx.CP_DEFAULT_STYLE | wx.CP_NO_TLW_RESIZE
-		title = kw.pop("title", "BOOBIES")
-		wx.Panel.__init__(self, parent, *args, **kw)
-		self.content_sizer = wx.BoxSizer(wx.VERTICAL)
-		self.cp = cp = PCP(self, label = title, style = self.cp_style)
-		self.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_toggle, cp)
-		self._custom_position = False
-		self.make_content(cp.GetPane())
-
-	def on_toggle(self, event):
-		self.cp.Collapse(self.cp.IsExpanded())
-
-	def make_content(self, pane):
-		"""
-		Generate the internals of the panel
-			* Initial Position - Custom/random/whatever
-			* Velocity Control - Cruising, Speed, Turn
-			* Behaviour - Another Configurator
-		"""
-		self.sizer = wx.BoxSizer(wx.VERTICAL)
-
-		pos_lbl = wx.StaticText(pane, label = "Initial Position")
-		pos_list = ["Custom", "Random", "Centre"]
-		pos_btn = wx.RadioBox(pane, wx.ID_ANY, "Position", (10, 10), wx.DefaultSize, pos_list, 1, wx.RA_SPECIFY_COLS)
-
-		self.pos_custom_x = wx.TextCtrl(pane, wx.ID_ANY, "500", (20, 20))
-		self.pos_custom_y = wx.TextCtrl(pane, wx.ID_ANY, "500", (20, 20))
-		self.pos_custom_z = wx.TextCtrl(pane, wx.ID_ANY, "500", (20, 20))
-		pos_custom_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		for pos in [self.pos_custom_x, self.pos_custom_y, self.pos_custom_z]:
-			pos.Enable(False)
-			pos_custom_sizer.Add(pos)
-
-		pos_sizer = wx.BoxSizer(wx.HORIZONTAL)
-		pos_sizer.Add(pos_btn)
-		pos_sizer.Add(pos_custom_sizer)
-
-		vel_lbl = wx.StaticText(pane, label = "Velocity Control")
-
-		beh_lbl = wx.StaticText(pane, label = "Behaviour Control")
-
-		self.sizer.Add(pos_lbl, wx.EXPAND)
-		self.sizer.Add(pos_sizer, wx.EXPAND)
-		self.sizer.Add(vel_lbl, wx.EXPAND)
-		self.sizer.Add(beh_lbl, wx.EXPAND)
-
-		pane.SetSizerAndFit(self.sizer)
 
 
 class Simulator(wx.Panel):
