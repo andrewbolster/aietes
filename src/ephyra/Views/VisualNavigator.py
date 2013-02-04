@@ -80,7 +80,7 @@ class VisualNavigator(wx.Panel):
 		self.faster_btn = wx.Button(self.control_pnl, label = "Rate++")
 		self.slower_btn = wx.Button(self.control_pnl, label = "Rate--")
 		self.trail_slider = wx.Slider(self.control_pnl, value = self.trail_length, minValue = 0, maxValue = 100,
-		                              size = (120, -1))
+									  size = (120, -1))
 
 		self.Bind(wx.EVT_SCROLL, self.on_time_slider, self.time_slider)
 		self.Bind(wx.EVT_SCROLL, self.on_trail_slider, self.trail_slider)
@@ -272,8 +272,8 @@ class VisualNavigator(wx.Panel):
 
 		self._remove_sphere()
 		self.sphere_line_collection = self.plot_axes.plot_wireframe(xs, ys, zs,
-		                                                            alpha = self.sphere_opacity,
-		                                                            color = self.plot_sphere_cm(colorval)
+																	alpha = self.sphere_opacity,
+																	color = self.plot_sphere_cm(colorval)
 		)
 
 	def redraw_fleet_heading_vectors(self):
@@ -311,8 +311,11 @@ class VisualNavigator(wx.Panel):
 
 	def update_metric_charts(self):
 		for i, plot in enumerate(self.metric_views):
-			self.metric_axes[i] = plot.plot(wanted = np.asarray(self.displayed_nodes))
-			self.metric_xlines[i] = self.metric_axes[i].axvline(x = self.t, color = 'r', linestyle = ':')
+			self.metric_axes[i] = plot.update(wanted = np.asarray(self.displayed_nodes))
+			if self.metric_xlines[i] is not None:
+				self.metric_xlines[i].set_xdata([self.t, self.t])
+			else:
+				self.metric_xlines[i] = self.metric_axes[i].axvline(x = self.t, color = 'r', linestyle = ':')
 			self.metric_axes[i].relim()
 			xlim = (max(0, self.t - 100), max(100, self.t + 100))
 			self.metric_axes[i].set_xlim(xlim)
@@ -384,8 +387,8 @@ class VisualNavigator(wx.Panel):
 		"""
 		lst = list(self.ctl.get_vector_names())
 		dlg = wx.MultiChoiceDialog(self,
-		                           "Select nodes",
-		                           "wx.MultiChoiceDialog", lst)
+								   "Select nodes",
+								   "wx.MultiChoiceDialog", lst)
 
 		selections = [i for i in range(self.ctl.get_n_vectors()) if self.displayed_nodes[i]]
 		print selections
@@ -419,5 +422,5 @@ class VisualNavigator(wx.Panel):
 		self.plot_pnl.SetSize(plot_size)
 		self.canvas.SetSize(plot_size)
 		self.fig.set_size_inches(float(plot_size[0]) / self.fig.get_dpi(),
-		                         float(plot_size[0]) / self.fig.get_dpi()
+								 float(plot_size[0]) / self.fig.get_dpi()
 		)

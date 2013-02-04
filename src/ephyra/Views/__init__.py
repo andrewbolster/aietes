@@ -30,6 +30,7 @@ class MetricView():
 		self.label = base_metric.label
 		self.highlight_data = base_metric.highlight_data
 		self.ndim = 0
+		self.last_wanted = np.asarray([])
 		if __debug__: logging.debug("%s" % self)
 
 	def plot(self, wanted = None, time = None):
@@ -48,7 +49,19 @@ class MetricView():
 
 		if self.highlight_data is not None:
 			self.ax.plot(self.highlight_data, color = 'k', linestyle = '--')
+
+		self.last_wanted = wanted
 		return self.ax
+
+	def update(self, wanted = None, time = None):
+		if wanted == None: wanted = []
+		if np.array_equiv(wanted, self.last_wanted):
+			#Assume that the ylim will sort scoping out later...
+			return self.ax
+		else:
+			#Something has changed so recalculate
+			self.last_wanted = wanted
+			return self.plot(wanted, time)
 
 	def ylim(self, xlim, margin = None):
 		(xmin, xmax) = xlim
@@ -135,7 +148,7 @@ class EphyraNotebook(wx.Frame):
 		self.SetMinSize((800, 600))
 		self.Layout()
 		self.Show()
-		self.nb.SetSelection(1)
+		self.nb.SetSelection(0)
 
 
 	def CreateMenuBar(self):
@@ -178,8 +191,8 @@ class EphyraNotebook(wx.Frame):
 	####
 	def on_close(self, event):
 		dlg = wx.MessageDialog(self,
-		                       "Do you really want to close this application?",
-		                       "Confirm Exit", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
+							   "Do you really want to close this application?",
+							   "Confirm Exit", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
 		result = dlg.ShowModal()
 		dlg.Destroy()
 		if result == wx.ID_OK:
@@ -210,8 +223,8 @@ class EphyraNotebook(wx.Frame):
 	####
 	def on_new(self, event):
 		dlg = wx.MessageDialog(self,
-		                       message = "This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
-		                       style = wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
+							   message = "This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
+							   style = wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
 		)
 		result = dlg.ShowModal()
 		dlg.Destroy()
