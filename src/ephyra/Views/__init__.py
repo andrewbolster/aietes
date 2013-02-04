@@ -51,6 +51,7 @@ class MetricView():
 			self.ax.plot(self.highlight_data, color = 'k', linestyle = '--')
 
 		self.last_wanted = wanted
+		self.ax.relim()
 		return self.ax
 
 	def update(self, wanted = None, time = None):
@@ -78,7 +79,7 @@ class MetricView():
 			ymax = slice.max()
 			range = ymax - ymin
 			if margin is None:
-				margin = range * 0.2
+				margin = range * 0.3333
 
 			ymin -= margin
 			ymax += margin

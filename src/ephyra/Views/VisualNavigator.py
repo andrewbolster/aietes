@@ -1,7 +1,7 @@
 __author__ = 'andrewbolster'
 
 WIDTH, HEIGHT = 8, 6
-SIDEBAR_WIDTH = 2
+SIDEBAR_WIDTH = 4
 
 import wx
 
@@ -71,6 +71,7 @@ class VisualNavigator(wx.Panel):
 			ax.autoscale_view(scalex = False, tight = True)
 		self.metric_xlines = [None for i in range(HEIGHT)]
 		self.metric_views = [None for i in range(HEIGHT)]
+		self._zoom_metrics = True
 
 		# Configure Control Panel
 		self.control_pnl = wx.Panel(self)
@@ -105,6 +106,11 @@ class VisualNavigator(wx.Panel):
 		self.sphere_chk.SetValue(self.sphere_enabled)
 		self.Bind(wx.EVT_CHECKBOX, self.on_sphere_chk, self.sphere_chk)
 		control_btn_sizer.Add(self.sphere_chk)
+
+		self.metric_zoom_chk = wx.CheckBox(self.control_pnl, label = "Metric Zoom")
+		self.metric_zoom_chk.SetValue(self._zoom_metrics)
+		self.Bind(wx.EVT_CHECKBOX, self.on_metric_zoom_chk, self.metric_zoom_chk)
+		control_btn_sizer.Add(self.metric_zoom_chk)
 
 		self.vector_chk = wx.CheckBox(self.control_pnl, label = "Vector")
 		self.vector_chk.SetValue(self.node_vector_enabled)
@@ -271,6 +277,7 @@ class VisualNavigator(wx.Panel):
 		str((x, y, z)), str(self.plot_sphere_cm(colorval)), str(colorval), str(s)))
 
 		self._remove_sphere()
+		#TODO Update to UPDATE DATA instead of re plotting
 		self.sphere_line_collection = self.plot_axes.plot_wireframe(xs, ys, zs,
 																	alpha = self.sphere_opacity,
 																	color = self.plot_sphere_cm(colorval)
@@ -293,6 +300,7 @@ class VisualNavigator(wx.Panel):
 				mutation_scale = 2, lw = 1,
 				arrowstyle = "-|>", color = self.plot_sphere_cm(colorval), alpha = self.vector_opacity
 			)
+			#TODO Update to UPDATE DATA instead of re plotting
 			self.plot_axes.add_artist(
 				self.node_vector_collections[node],
 			)
@@ -316,10 +324,10 @@ class VisualNavigator(wx.Panel):
 				self.metric_xlines[i].set_xdata([self.t, self.t])
 			else:
 				self.metric_xlines[i] = self.metric_axes[i].axvline(x = self.t, color = 'r', linestyle = ':')
-			self.metric_axes[i].relim()
-			xlim = (max(0, self.t - 100), max(100, self.t + 100))
-			self.metric_axes[i].set_xlim(xlim)
-			self.metric_axes[i].set_ylim(*plot.ylim(xlim))
+			if self._zoom_metrics:
+				xlim = (max(0, self.t - 100), max(100, self.t + 100))
+				self.metric_axes[i].set_xlim(xlim)
+				self.metric_axes[i].set_ylim(*plot.ylim(xlim))
 		self.metric_views[-1].ax.get_xaxis().set_visible(True)
 
 	####
@@ -374,6 +382,20 @@ class VisualNavigator(wx.Panel):
 		norm_trail = self.trail_slider.GetValue()
 		self.trail_length = int(norm_trail * (self.ctl.get_final_tmax() / 100.0))
 		self.log.debug("Slider: Setting trail to %d" % self.trail_length)
+		wx.CallAfter(self.redraw_page)
+
+	def on_metric_zoom_chk(self,event):
+		if self.metric_zoom_chk.IsChecked():
+			for axes in self.metric_axes:
+				axes.autoscale_view(scalex = False, scaley = False, tight = True)
+			self._zoom_metrics=True
+		else:
+			for plt, axes in zip(self.metric_views, self.metric_axes):
+				axes.autoscale_view(scalex = True, scaley = True, tight = False)
+				xlim = (0,self.tmax)
+				axes.set_xlim(xlim)
+				axes.set_ylim(*plt.ylim(xlim))
+			self._zoom_metrics=False
 		wx.CallAfter(self.redraw_page)
 
 	####
