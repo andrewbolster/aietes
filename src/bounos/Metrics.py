@@ -15,13 +15,16 @@ class Metric(object):
 	w = [010]
 	d = [[111][222][333]]
 	p = d[:,w}
+
+	Metrics should always return so that observations are addressable by time primarily
+	i.e. result[0] is the metric state of the system at time zero
 	"""
 
 	# Assumes that data is constant and only needs to be selected per node
 	def __init__(self, *args, **kw):
 		self.label = kw.get('label', self.__class__.__name__)
 		self.highlight_data = kw.get('highlight_data', None)
-		self.data = kw.get('data', np.zeros((0, 0)))
+		self.data = kw.get('data', None)
 		self.ndim = 0
 		if __debug__: logging.debug("%s" % self)
 
@@ -29,14 +32,16 @@ class Metric(object):
 		return data
 
 	def __repr__(self):
-		return "PerNodeGraph_Axes: %s with %s values arranged as %s" % (
+		return "Metric: %s with %s entries" % (
 		self.label,
-		len(self.data),
-		self.data.shape
+		self.data[0] if self.data is not None else None
 		)
 
-	def update(self, data):
-		self.data = np.asarray(self.generator(data))
+	def update(self, data=None):
+		if data is None:
+			self.data = np.asarray(self.generator(self.data))
+		else:
+			self.data = np.asarray(self.generator(data))
 		if hasattr(self.data, 'ndim'):
 			self.ndim = self.data.ndim
 		else:

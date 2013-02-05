@@ -82,6 +82,15 @@ class DataPackage(object):
 	Query the dataset for the [n][x,y,z] position list of all nodes at a given time
 	"""
 		return self.p[:, :, time]
+	def position_slice_of(self, node):
+		"""
+	Query the dataset for the [n][x,y,z] position list of all nodes at a given time
+	"""
+		try:
+			return self.p[node, :, :]
+		except IndexError as e:
+			logging.debug("Position Query for n:%d @ all for position shape %s" % (node, self.p[node].shape))
+			raise e
 
 	def heading_of(self, node, time):
 		"""
@@ -94,6 +103,16 @@ class DataPackage(object):
 		Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
 		"""
 		return self.v[:, :, time]
+
+	def heading_slice_of(self, node):
+		"""
+		Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
+		"""
+		try:
+			return self.v[node, :, :]
+		except IndexError as e:
+			logging.debug("Heading Query for n:%d @ all for heading shape %s" % (node, self.v[node].shape))
+			raise e
 
 	def heading_mag_range(self):
 		"""

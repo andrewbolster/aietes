@@ -37,9 +37,10 @@ class Behaviour(object):
 		"""
 		orig_map = dict((k, v) for k, v in self.map.items() if v.object_id != self.node.id)
 
+		# Internal Map of the neighbourhood based on best-guess of location (circa 5m / 5ms)
 		for k, v in orig_map.items():
-			orig_map[k].position = fudge_normal(v.position, 0.2)
-			orig_map[k].velocity = fudge_normal(v.velocity, 0.2)
+			orig_map[k].position = fudge_normal(v.position, 5)
+			orig_map[k].velocity = fudge_normal(v.velocity, 5)
 
 		return orig_map
 

@@ -3,7 +3,7 @@
 import argparse
 
 import numpy as np
-from bounos.Plotting import interactive_plot
+from Plotting import *
 import re
 
 np.seterr(under = "ignore")
@@ -45,7 +45,7 @@ def main():
 	"""
 	parser = argparse.ArgumentParser(description = "Simulation Visualisation and Analysis Suite for AIETES")
 	parser.add_argument('--source', '-s',
-	                    dest = 'source', action = 'store',
+	                    dest = 'source', action = 'store',nargs='+',
 	                    metavar = 'XXX.npz',
 	                    required = True,
 	                    help = 'AIETES Simulation Data Package to be analysed'
@@ -53,6 +53,13 @@ def main():
 
 	args = parser.parse_args()
 	print args
-	interactive_plot(DataPackage(args.source))
-
-
+	if isinstance(args.source, list):
+		sources = args.source
+	else:
+		sources = [args.source]
+	for source in sources:
+		data=DataPackage(source)
+		#interactive_plot(data)
+		metric = PerNode_Internode_Distance_Avg(data=data)
+		metric.update()
+		KF_metric_plot(metric)

@@ -1,6 +1,9 @@
 __author__ = 'andrewbolster'
 
-from __init__ import DataPackage
+from DataPackage import DataPackage
+import numpy as np
+from pykalman import KalmanFilter
+
 
 
 def Find_Convergence(data, *args, **kwargs):
@@ -10,6 +13,4 @@ def Find_Convergence(data, *args, **kwargs):
 	i.e. the stability of convergence
 	"""
 	assert isinstance(data, DataPackage)
-
-
 

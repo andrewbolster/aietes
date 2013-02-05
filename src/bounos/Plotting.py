@@ -3,8 +3,9 @@ import matplotlib
 matplotlib.use("WXAgg")
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-
 from matplotlib.widgets import Slider, Button
+
+from __init__ import Metric
 
 import numpy as np
 
@@ -106,3 +107,98 @@ def interactive_plot(data):
 
 	plt.show()
 
+def KF_metric_plot(metric):
+	assert isinstance(metric, Metric), "Not a metric: %s"%metric
+	assert hasattr(metric, 'data'), "No Data"
+
+	import numpy as np
+	from bounos import DataPackage
+
+	from pykalman import KalmanFilter
+
+	data = DataPackage("/dev/shm/dat-2013-02-01-13-58-48.aietes.npz")
+
+	rnd = np.random.RandomState(0)
+
+	# generate a noisy sine wave to act as our fake observations
+	n_timesteps = data.tmax
+	x=range(0,n_timesteps)
+	records = metric.data
+
+	try:
+		obs_dim = len(records[0])
+	except TypeError as e:
+		obs_dim = 1
+
+	observations = np.ma.array(records) # to put it as(tmax,3)
+	masked=0
+	for i in x:
+		try:
+			if rnd.normal(2,2) >=0:
+				observations[i]=np.ma.masked
+				masked+=1
+		except BaseException as e:
+			print(i)
+			raise e
+
+	print("%f%% Masked"%((masked*100.0)/data.tmax))
+
+	print("Records: Shape: %s, ndim: %s, type: %s"%(records.shape, records.ndim, type(records)))
+
+	# create a Kalman Filter by hinting at the size of the state and observation
+	# space.  If you already have good guesses for the initial parameters, put them
+	# in here.  The Kalman Filter will try to learn the values of all variables.
+	kf = KalmanFilter(n_dim_obs=obs_dim, n_dim_state=obs_dim)
+
+	# You can use the Kalman Filter immediately without fitting, but its estimates
+	# may not be as good as if you fit first.
+
+	#states_pred = kf.em(observations, n_iter=data.tmax).smooth(observations)
+	#print 'fitted model: %s' % (kf,)
+
+	# Plot lines for the observations without noise, the estimated position of the
+	# target before fitting, and the estimated position after fitting.
+	fig = plt.figure(figsize=(16, 6))
+	ax1 = fig.add_subplot(111)
+	filtered_state_means = np.zeros((n_timesteps, kf.n_dim_state))
+	filtered_state_covariances = np.zeros((n_timesteps, kf.n_dim_state, kf.n_dim_state))
+
+	for t in x:
+		if t ==0:
+			tmp=np.zeros(kf.n_dim_state)
+			tmp.fill(500)
+			filtered_state_means[t]=tmp
+			print(filtered_state_means[t])
+			continue
+
+		if masked and not observations.mask[t].any():
+			ax1.axvline(x=t, linestyle = '-', color = 'r', alpha=0.1)
+		try:
+			filtered_state_means[t], filtered_state_covariances[t] =\
+			kf.filter_update(filtered_state_means[t-1], filtered_state_covariances[t-1],observations[t])
+		except IndexError as e:
+			print(t)
+			raise e
+	(p,v)=(filtered_state_means, filtered_state_covariances)
+	errors=map(np.linalg.norm,p[:]-records[:])
+
+	pred_err = ax1.plot(x, p[:], marker=' ', color='b',
+	                       label='predictions-x')
+	obs_scatter = ax1.plot (x, records, linestyle='-', color='r',
+	                       label='observations-x', alpha=0.8)
+	ax1.set_ylabel(metric.label)
+	ax2 =ax1.twinx()
+	error_plt = ax2.plot(x, errors, linestyle=':', color = 'g', label = "Error Distance")
+	ax2.set_yscale('log')
+	ax2.set_ylabel("Error")
+	lns = pred_err+obs_scatter+error_plt
+	labs = [l.get_label() for l in lns]
+	plt.legend(lns, labs, loc='upper right')
+	plt.xlim(0,500)
+	ax1.set_xlabel('time')
+
+	fig.suptitle(data.title)
+
+	print("Predicted ideal %s: %s"%(metric.label, str(p[-1])))
+
+	plt.show()
