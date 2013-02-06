@@ -34,11 +34,11 @@ class Application(Sim.Process):
 		packet_count = getattr(config, 'packet_count')
 		if packet_rate > 0 and packet_count == 0:
 			self.packet_rate=getattr(config,'packet_rate')
-			self.logger.info("Taking Packet_Rate from config: %s"%self.packet_rate)
+			self.logger.debug("Taking Packet_Rate from config: %s"%self.packet_rate)
 		elif packet_count > 0 and packet_rate == 0:
 			#If packet count defined, only send our N packets
 			self.packet_rate = packet_count/self.layercake.sim_duration
-			self.logger.info("Taking Packet_Count from config: %s"%self.packet_rate)
+			self.logger.debug("Taking Packet_Count from config: %s"%self.packet_rate)
 		else:
 			self.packet_rate=1
 			self.logger.info("This sure is a weird configuration of Packets!")
@@ -49,7 +49,7 @@ class Application(Sim.Process):
 		self.period = 1/float(self.packet_rate)
 
 	def _start_log(self,parent):
-		self.logger = parent.logger.getChild("%s"%(self.__class__.__name__))
+		self.logger = parent.logger.getChild("%s:%s"%(self.__class__.__bases__,self.__class__.__name__))
 		self.logger.info('creating instance')
 
 	def activate(self):
@@ -58,7 +58,7 @@ class Application(Sim.Process):
 	def lifecycle(self,destination=None):
 
 		if destination is None:
-			self.logger.info("No Destination defined, defaulting to \"%s\""%broadcast_address)
+			self.logger.debug("No Destination defined, defaulting to \"%s\""%broadcast_address)
 			destination = broadcast_address
 
 		while True:

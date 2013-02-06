@@ -145,9 +145,9 @@ class Node(Sim.Process):
 		new_forceVector = np.array(self.velocity + forceVector / self.mass, dtype = np.float)
 		if mag(new_forceVector) > any(self.cruising_speed):
 			new_forceVector = self.cruiseControl(new_forceVector, self.velocity)
-			if __debug__: self.logger.info("Normalized Velocity: %s, clipped: %s" % (forceVector, new_forceVector))
+			if __debug__: self.logger.debug("Normalized Velocity: %s, clipped: %s" % (forceVector, new_forceVector))
 		else:
-			if __debug__: self.logger.info("Velocity: %s" % forceVector)
+			if __debug__: self.logger.debug("Velocity: %s" % forceVector)
 		self.forceVector = new_forceVector
 
 		self.contributions_log.append(contributions)
@@ -215,7 +215,7 @@ class Node(Sim.Process):
 		Called to update internal awareness and motion:
 			THESE CALLS ARE NOT GUARANTEED TO BE ALIGNED ACROSS NODES
 		"""
-		self.logger.info("Initialised Node Lifecycle")
+		self.logger.debug("Initialised Node Lifecycle")
 		while(True):
 			##############################
 			#Update Node State

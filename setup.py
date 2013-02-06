@@ -19,8 +19,9 @@ install_requires = [
     "numpy>=1.6",
     "scipy>=0.9",
     "pydot>=1.0",
-    "wxPython>=2.8",
-    "matplotlib>=1.1"
+    "wxPython>=2.8", # Use the python-wxgtk2.8 package
+    "matplotlib>=1.1",
+    "pykalman"
 ]
 
 
