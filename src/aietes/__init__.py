@@ -508,7 +508,6 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
 #    pass
 #atexit.register(readline.write_history_file, histfile)
 def go(options, args):
-    outfile = None
     sim = Simulation(config_file = options.config)
 
     if options.input is None:
@@ -517,12 +516,8 @@ def go(options, args):
             sim.simulate()
 
     if options.output:
-        if options.config is not None:
-            outfile = os.path.splitext(options.config)[0]
-        else:
-            outfile=options.title
-        print("Storing output in %s" % outfile)
-        sim.postProcess(inputFile = options.input, outputFile = outfile, dataFile = options.data,
+        print("Storing output in %s" % options.title)
+        sim.postProcess(inputFile = options.input, outputFile = options.title, dataFile = options.data,
                         movieFile = options.movie, fps = options.fps)
 
     if options.plot:
@@ -562,16 +557,29 @@ def main():
         parser.add_option('-c', '--config', action = 'store', dest = 'config',
                           default = None, help = 'generate simulation from config file')
         parser.add_option('-T', '--title', action = 'store', dest = 'title',
-                          default = dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes'),
+                          default = None,
                           help = 'Override the simulation name')
+        parser.add_option('-r', '--runs', action = 'store', type = "int",
+                          default = 1, help = 'set repeated runs (incompatible with Profiling)')
         (options, args) = parser.parse_args()
         print options
         if options.verbose: print time.asctime()
-        if options.profile:
-            print "PROFILING"
-            exit_code = cProfile.runctx("""go(options,args)""", globals(), locals(), filename = "Aietes.profile")
+        if options.config is not None and options.title is not None:
+            outfile = os.path.splitext(options.config)[0]
         else:
-            exit_code = go(options, args)
+            options.title = dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes'),
+        if options.runs > 1:
+            #During multiple runs, append _x to the run title
+            basetitle=options.title
+            for i in range(options.runs):
+                options.title="%s_%d"%(basetitle,i)
+                exit_code = go(options,args)
+        else:
+            if options.profile:
+                print "PROFILING"
+                exit_code = cProfile.runctx("""go(options,args)""", globals(), locals(), filename = "Aietes.profile")
+            else:
+                exit_code = go(options, args)
         if exit_code is None:
             exit_code = 0
         if options.verbose: print time.asctime()

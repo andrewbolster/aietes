@@ -4,6 +4,7 @@ import random
 import logging
 import numpy as np
 from datetime import datetime as dt
+from inspect import getmembers, isfunction
 
 np.seterr(all = 'raise')
 #from os import urandom as randomstr #Provides unicode random String
@@ -412,3 +413,5 @@ def itersubclasses(cls, _seen = None):
 			for sub in itersubclasses(sub, _seen):
 				yield sub
 
+def list_functions(module):
+    return [o for o in getmembers(module) if isfunction(o[1])]
