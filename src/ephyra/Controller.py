@@ -100,7 +100,7 @@ class EphyraController():
 
 	@check_model()
 	def get_vector_names(self, i = None):
-		return self.model.names if i is None else self.model.names[:]
+		return self.model.names if i is None else self.model.names[i]
 
 	def get_n_vectors(self):
 		try:

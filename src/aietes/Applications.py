@@ -50,7 +50,7 @@ class Application(Sim.Process):
 
 	def _start_log(self,parent):
 		self.logger = parent.logger.getChild("Application:%s"%(self.__class__.__name__))
-		self.logger.info('creating instance')
+		self.logger.debug('creating instance')
 
 	def activate(self):
 		Sim.activate(self,self.lifecycle())

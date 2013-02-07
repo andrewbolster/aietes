@@ -28,7 +28,7 @@ class Behaviour(object):
 
     def _start_log(self,parent):
         self.logger = parent.logger.getChild("Behaviour:%s"%(self.__class__.__name__))
-        self.logger.info('creating instance')
+        self.logger.debug('creating instance')
 
     def normalize_behaviour(self, forceVector):
         return (forceVector)

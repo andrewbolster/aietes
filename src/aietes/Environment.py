@@ -21,7 +21,7 @@ class Environment():
 			Map is the
 		"""
 		self.logger = baselogger.getChild("%s" % (self.__class__.__name__))
-		self.logger.info('creating instance')
+		self.logger.debug('creating instance')
 		self.map = {}
 		self.shape = shape if shape is not None else [100, 100, 100]
 		self.pos_log = []

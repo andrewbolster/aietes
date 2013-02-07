@@ -70,11 +70,12 @@ class MetricView():
 			data = np.append(self.data, self.highlight_data).reshape((self.data.shape[0], -1))
 		else:
 			data = self.data
-		if self.ndim > 1:
-			slice = data[xmin:xmax][:]
-		else:
-			slice = data[xmin:xmax]
+
 		try:
+			if self.ndim > 1:
+				slice = data[xmin:xmax][:]
+			else:
+				slice = data[xmin:xmax]
 			ymin = slice.min()
 			ymax = slice.max()
 			range = ymax - ymin
@@ -84,6 +85,7 @@ class MetricView():
 			ymin -= margin
 			ymax += margin
 		except ValueError as e:
+			logging.critical("Data:%s, XLim:%s"%(data,xlim))
 			raise e
 		return (ymin, ymax)
 

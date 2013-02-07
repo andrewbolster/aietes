@@ -62,11 +62,15 @@ class Avg_Mag_of_Heading(Metric):
 	def generator(self, data):
 		return  data.heading_mag_range()
 
+class Deviation_Of_Heading(Metric):
+	def generator(self, data):
+		return [ data.deviation_from_at(data.average_heading(time),time) for time in range(int(data.tmax)) ]
 
+"""
 class Avg_of_InterNode_Distances(Metric): #REDUNDANT
 	def generator(self, data):
 		return [data.inter_distance_average(time) for time in range(int(data.tmax))]
-
+"""
 
 class PerNode_Speed(Metric):
 	def generator(self, data):

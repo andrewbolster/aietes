@@ -66,22 +66,27 @@ class DataPackage(object):
 		"""
 		Query the data set for the x,y,z position of a node at a given time
 		"""
-		try:
-			position = self.p[node, :, time]
-			if not np.isnan(sum(position)):
-				return position
-			else:
-				raise IndexError("GAHHHH")
+		return self.p[node, :, time]
 
-		except IndexError as e:
-			logging.debug("Position Query for n:%d @ %d for position shape %s" % (node, time, self.p[node].shape))
-			raise e
+	def heading_of(self, node, time):
+
+		"""
+		Query the data set for the x,y,z vector of a node at a given time
+		"""
+		return self.v[node, :, time]
 
 	def position_slice(self, time):
 		"""
 	Query the dataset for the [n][x,y,z] position list of all nodes at a given time
 	"""
 		return self.p[:, :, time]
+
+	def heading_slice(self, time):
+		"""
+		Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
+		"""
+		return self.v[:, :, time]
+
 	def position_slice_of(self, node):
 		"""
 	Query the dataset for the [n][x,y,z] position list of all nodes at a given time
@@ -92,18 +97,6 @@ class DataPackage(object):
 			logging.debug("Position Query for n:%d @ all for position shape %s" % (node, self.p[node].shape))
 			raise e
 
-	def heading_of(self, node, time):
-		"""
-		Query the data set for the x,y,z vector of a node at a given time
-		"""
-		return self.v[node, :, time]
-
-	def heading_slice(self, time):
-		"""
-		Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
-		"""
-		return self.v[:, :, time]
-
 	def heading_slice_of(self, node):
 		"""
 		Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
@@ -113,6 +106,7 @@ class DataPackage(object):
 		except IndexError as e:
 			logging.debug("Heading Query for n:%d @ all for heading shape %s" % (node, self.v[node].shape))
 			raise e
+
 
 	def heading_mag_range(self):
 		"""
@@ -148,6 +142,21 @@ class DataPackage(object):
 		]
 		return deviations
 
+	def average_position(self, time):
+		"""
+		Generate the average position (center) for the fleet at a given
+		timeslice
+
+		:param time: time index to calculate at
+		:type int
+
+		:raises ValueError
+		"""
+		if not (0 <= time <= self.tmax):
+			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
+
+		return np.average(self.position_slice(time), axis = 0)
+
 	def average_heading(self, time):
 		"""
 		Generate the average heading for the fleet at a given timeslice
@@ -173,25 +182,10 @@ class DataPackage(object):
 		:type tuple
 		"""
 		return map(
-			lambda v: np.linalg.norm(
+			lambda v: mag(
 				np.array(v) - np.array(heading)
 			), self.heading_slice(time)
 		)
-
-	def average_position(self, time):
-		"""
-		Generate the average position (center) for the fleet at a given
-		timeslice
-
-		:param time: time index to calculate at
-		:type int
-
-		:raises ValueError
-		"""
-		if not (0 <= time <= self.tmax):
-			raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
-
-		return np.average(self.position_slice(time), axis = 0)
 
 	def sphere_of_positions(self, time):
 		"""

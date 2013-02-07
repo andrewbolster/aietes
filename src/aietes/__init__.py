@@ -35,24 +35,24 @@ class Simulation():
     Defines a single simulation
     """
 
-    def __init__(self, config_file = None, config = None):
+    def __init__(self, *args, **kwargs):
         self.config_spec = '%s/configs/default.conf' % _ROOT
         self.logger = baselogger.getChild("%s" % (self.__class__.__name__))
-        self.config_file = config_file
-        if self.config_file is None and config is None:
+        self.config_file = kwargs.get("config_file",None)
+        self.config = kwargs.get("config",None)
+        self.title = kwargs.get("title",None)
+        if self.config_file is None and self.config is None:
             self.logger.info("creating instance from default")
             self.config = self.validateConfig(None)
-        elif self.config_file is not None:
-            self.logger.info("creating instance from %s" % config_file)
+        else:
+            self.logger.info("creating instance from %s" % self.config_file)
             self.config = self.validateConfig(self.config_file)
-        elif config is not None:
-            self.config = config
 
         self.nodes = []
         self.fleets = []
 
 
-    def prepare(self, options = [], waits = False):
+    def prepare(self, waits = False, *args, **kwargs):
         #Attempt Validation and construct the simulation from that config.
         try:
             baselogger.setLevel(LOGLEVELS.get(self.config.log_level, logging.NOTSET))
@@ -64,10 +64,9 @@ class Simulation():
         self.waits = waits
         Sim.initialize()
         self.channel_event = Sim.SimEvent(self.config.Simulation.channel_event_name)
-        if options is not None and\
-           hasattr(options, 'sim_time') and\
-           self.options.sim_time is not None:
-            self.config.Simulation.sim_duration = self.options.sim_time
+        sim_time = kwargs.get('sim_time', None)
+        if sim_time is not None:
+            self.config.Simulation.sim_duration = int(sim_time)
 
         self.duration_intervals = self.config.Simulation.sim_duration / self.config.Simulation.sim_interval
 
@@ -86,7 +85,7 @@ class Simulation():
         """
         Initiate the processed Simulation
         """
-        self.logger.info("Initialising Simulation, to run for %s steps" % self.duration_intervals)
+        self.logger.info("Initialising Simulation %s, to run for %s steps" % (self.title,self.duration_intervals))
         for fleet in self.fleets:
             fleet.activate()
         if callback is not None:
@@ -214,7 +213,7 @@ class Simulation():
                                 for a, n in zip(app, dist)
                                 for i in range(int(n))
                 ]
-                self.logger.info("Distributed Applications:%s" % applications)
+                self.logger.debug("Distributed Applications:%s" % applications)
             else:
                 raise ConfigError(
                     "Application / Distribution mismatch"
@@ -377,8 +376,8 @@ class Simulation():
         ax.set_zlabel('Z')
 
         if outputFile is not None:
+            filename = "%s.aietes" % outputFile
             if dataFile:
-                filename = "dat-%s" % outputFile
                 self.logger.info("Writing datafile to %s" % filename)
                 np.savez(filename,
                          positions = positions,
@@ -388,10 +387,9 @@ class Simulation():
                          contributions = contributions
                 )
                 co = ConfigObj(self.config, list_values = False)
-                co.filename = outputFile + '.conf'
+                co.filename = "%s.conf"%filename
                 co.write()
             if movieFile:
-                filename = "ani-%s" % outputFile
                 self.logger.info("Writing animation to %s" % filename)
                 save(line_ani,
                      filename = filename,
@@ -508,10 +506,10 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
 #    pass
 #atexit.register(readline.write_history_file, histfile)
 def go(options, args):
-    sim = Simulation(config_file = options.config)
+    sim = Simulation(config_file = options.config, title=options.title)
 
     if options.input is None:
-        sim.prepare()
+        sim.prepare(sim_time = options.sim_time)
         if not options.noexecution:
             sim.simulate()
 
@@ -564,10 +562,11 @@ def main():
         (options, args) = parser.parse_args()
         print options
         if options.verbose: print time.asctime()
-        if options.config is not None and options.title is not None:
-            outfile = os.path.splitext(options.config)[0]
-        else:
-            options.title = dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes'),
+        if options.title is None:                                 #  and no custom title
+            if options.config is None:                                # If have no config
+                options.title = dt.now().strftime('%Y-%m-%d-%H-%M-%S')#   use default title
+            else:                                                     # if given config
+                options.title = os.path.splitext(os.path.splitext(os.path.basename(options.config))[0])[0]   #   use config title
         if options.runs > 1:
             #During multiple runs, append _x to the run title
             basetitle=options.title

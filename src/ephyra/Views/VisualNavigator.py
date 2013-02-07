@@ -167,13 +167,15 @@ class VisualNavigator(wx.Panel):
 		(xs, ys, zs) = self.ctl.get_3D_trail()
 		self.log.info("Got %s" % str(xs.shape))
 
-		self.lines = [self.plot_axes.plot(x, y, z, alpha = self.trail_opacity)[0] for x, y, z in zip(xs, ys, zs)]
+		self.lines = [self.plot_axes.plot(x, y, z, label = self.ctl.get_vector_names(i=i), alpha = self.trail_opacity)[0] for i, (x, y, z) in enumerate(zip(xs, ys, zs))]
+		self.plot_axes.legend(loc="lower right")
 
-		# Initialise Metric Views
+	# Initialise Metric Views
 		metrics = self.ctl.get_metrics()
 		assert len(metrics) == HEIGHT, str(metrics)
 		for i, (axes, metric) in enumerate(zip(self.metric_axes, self.ctl.get_metrics())):
 			self.metric_views[i] = MetricView(axes, metric)
+
 
 		#Initialise Data-Based timings.
 		self.tmax = max(self.ctl.get_final_tmax() - 1, 1)
