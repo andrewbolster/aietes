@@ -170,7 +170,7 @@ class VisualNavigator(wx.Panel):
 		self.lines = [self.plot_axes.plot(x, y, z, label = self.ctl.get_vector_names(i=i), alpha = self.trail_opacity)[0] for i, (x, y, z) in enumerate(zip(xs, ys, zs))]
 		self.plot_axes.legend(loc="lower right")
 
-	# Initialise Metric Views
+        # Initialise Metric Views
 		metrics = self.ctl.get_metrics()
 		assert len(metrics) == HEIGHT, str(metrics)
 		for i, (axes, metric) in enumerate(zip(self.metric_axes, self.ctl.get_metrics())):
