@@ -5,26 +5,27 @@ from itertools import ifilterfalse
 from heapq import nsmallest
 from operator import itemgetter
 
+
 class Counter(dict):
-	'Mapping where default values are zero'
+	"""Mapping where default values are zero"""
 
 	def __missing__(self, key):
 		return 0
 
 
-def lru_cache(maxsize=100):
-	'''Least-recently-used cache decorator.
+def lru_cache(maxsize = 100):
+	"""Least-recently-used cache decorator.
 
 	Arguments to the cached function must be hashable.
 	Cache performance statistics stored in f.hits and f.misses.
 	Clear the cache with f.clear().
 	http://en.wikipedia.org/wiki/Cache_algorithms#Least_Recently_Used
 
-	'''
+	"""
 	maxqueue = maxsize * 10
 
 	def decorating_function(user_function,
-							len=len, iter=iter, tuple=tuple, sorted=sorted, KeyError=KeyError):
+	                        len = len, iter = iter, tuple = tuple, sorted = sorted, KeyError = KeyError):
 		cache = {}                  # mapping of args to results
 		queue = collections.deque() # order that keys have been used
 		refcount = Counter()        # times each key is in the queue
@@ -70,7 +71,7 @@ def lru_cache(maxsize=100):
 				refcount.clear()
 				queue_appendleft(sentinel)
 				for key in ifilterfalse(refcount.__contains__,
-										iter(queue_pop, sentinel)):
+				                        iter(queue_pop, sentinel)):
 					queue_appendleft(key)
 					refcount[key] = 1
 
@@ -89,15 +90,15 @@ def lru_cache(maxsize=100):
 	return decorating_function
 
 
-def lfu_cache(maxsize=100):
-	'''Least-frequenty-used cache decorator.
+def lfu_cache(maxsize = 100):
+	"""Least-frequenty-used cache decorator.
 
 	Arguments to the cached function must be hashable.
 	Cache performance statistics stored in f.hits and f.misses.
 	Clear the cache with f.clear().
 	http://en.wikipedia.org/wiki/Least_Frequently_Used
 
-	'''
+	"""
 
 	def decorating_function(user_function):
 		cache = {}                      # mapping of args to results
@@ -123,8 +124,8 @@ def lfu_cache(maxsize=100):
 				# purge least frequently used cache entry
 				if len(cache) > maxsize:
 					for key, _ in nsmallest(maxsize // 10,
-											use_count.iteritems(),
-											key=itemgetter(1)):
+					                        use_count.iteritems(),
+					                        key = itemgetter(1)):
 						del cache[key], use_count[key]
 
 			return result
@@ -142,7 +143,7 @@ def lfu_cache(maxsize=100):
 
 
 if __name__ == '__main__':
-	@lru_cache(maxsize=20)
+	@lru_cache(maxsize = 20)
 	def f(x, y):
 		return 3 * x + y
 
@@ -154,7 +155,7 @@ if __name__ == '__main__':
 
 	print(f.hits, f.misses)
 
-	@lfu_cache(maxsize=20)
+	@lfu_cache(maxsize = 20)
 	def f(x, y):
 		return 3 * x + y
 

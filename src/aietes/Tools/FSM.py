@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''This module implements a Finite State Machine (FSM).
+"""This module implements a Finite State Machine (FSM).
 In addition to state this FSM also maintains a user defined "something".
 This "something" is effectively memory, so this FSM could be considered
 a Push-down Automata (PDA) since a PDA is a FSM + memory.
@@ -60,26 +60,30 @@ This may be desirable, but you can always prevent this just by
 defining a default transition.
 
 Noah Spurrier 20020822
-'''
+"""
+
 
 class ExceptionFSM(Exception):
-    '''This is the FSM Exception class.'''
+    """This is the FSM Exception class."""
+
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return `self.value`
 
+
 class FSM:
-    '''This is a Finite State Machine (FSM).
-    '''
+    """This is a Finite State Machine (FSM).
+    """
 
     def __init__(self, initial_state, something):
-        '''This creates the FSM.
+        """This creates the FSM.
         You set the initial state here. The "something" attribute is any
         object that you want to pass along to the action functions.
         It is not used by the FSM. For parsing you would typically pass
         a list to be used as a stack.
-        '''
+        """
         # Map (input_symbol, current_state) --> (action, next_state).
         self.state_transitions = {}
         # Map (current_state) --> (action, next_state).
@@ -91,44 +95,44 @@ class FSM:
         self.current_state = self.initial_state
         self.something = something
 
-    def reset (self):
-        '''This sets the current_state to the initial_state and
+    def reset(self):
+        """This sets the current_state to the initial_state and
         sets input_symbol to None.
         The initial state was set by the constructor __init__().
-        '''
+        """
         self.current_state = self.initial_state
         self.input_symbol = None
 
-    def add_transition (self, input_symbol, state, action, next_state):
-        '''This adds a transition that associates
+    def add_transition(self, input_symbol, state, action, next_state):
+        """This adds a transition that associates
                 (input_symbol, current_state) --> (action, next_state)
         The action may be set to None in which case the process() method
         will ignore the action and only set the next_state.
 
         You can also set transitions for a list of symbols by using
         add_transition_list().
-        '''
+        """
         self.state_transitions[(input_symbol, state)] = (action, next_state)
 
-    def add_transition_list (self, list_input_symbols, state, action, next_state):
-        '''This adds the same transition for lots of different input symbols.
+    def add_transition_list(self, list_input_symbols, state, action, next_state):
+        """This adds the same transition for lots of different input symbols.
         You can pass a list or a string. Note that it is handy to use
         string.digits, string.whitespace, string.letters, etc. to add
         transitions that match character classes.
-        '''
+        """
         for input_symbol in list_input_symbols:
-            self.add_transition (input_symbol, state, action, next_state)
+            self.add_transition(input_symbol, state, action, next_state)
 
-    def add_transition_any (self, state, action, next_state):
-        '''This adds a transition that associates
+    def add_transition_any(self, state, action, next_state):
+        """This adds a transition that associates
                 (current_state) --> (action, next_state)
         The process() method checks these associations if it cannot
         first find a match of an (input_symbol, current_state).
-        '''
-        self.state_transitions_any [state] = (action, next_state)
+        """
+        self.state_transitions_any[state] = (action, next_state)
 
-    def set_default_transition (self, action, next_state):
-        '''This sets the default transition.
+    def set_default_transition(self, action, next_state):
+        """This sets the default transition.
         This defines an action and next_state if the FSM cannot find the
         input symbol and the current state in the transition list and
         if the FSM cannot find the current_state in the transition_any list.
@@ -136,11 +140,11 @@ class FSM:
 
         The default transition can be removed by setting the attribute
         default_transition to None.
-        '''
+        """
         self.default_transition = (action, next_state)
 
-    def get_transition (self, input_symbol, state):
-        '''This returns (action, next state) given an input_symbol and state.
+    def get_transition(self, input_symbol, state):
+        """This returns (action, next state) given an input_symbol and state.
         This leaves the FSM unchanged. This does not update the current state
         nor does it trigger the output action. Normally you do not call
         this method. It is called by process().
@@ -154,19 +158,19 @@ class FSM:
            This catches any input_symbol and any state.
            This is a handler for errors, undefined states, or defaults.
         4. No transition was defined. If we get here then raise an exception.
-        '''
+        """
         if self.state_transitions.has_key((input_symbol, self.current_state)):
             return self.state_transitions[(input_symbol, self.current_state)]
-        elif self.state_transitions_any.has_key (self.current_state):
+        elif self.state_transitions_any.has_key(self.current_state):
             return self.state_transitions_any[self.current_state]
         elif self.default_transition is not None:
             return self.default_transition
         else:
-            raise ExceptionFSM ('Transition is undefined: (%s, %s).' %
-                (str(input_symbol), str(self.current_state)) )
+            raise ExceptionFSM('Transition is undefined: (%s, %s).' %
+                               (str(input_symbol), str(self.current_state)))
 
-    def process (self, input_symbol):
-        '''This is the main method that you call to process input.
+    def process(self, input_symbol):
+        """This is the main method that you call to process input.
         This may cause the FSM to change state and call an action.
         This method calls get_transition() to find the action and next_state
         associated with the input_symbol and current_state.
@@ -174,91 +178,91 @@ class FSM:
         only the current state is changed.
         This method processes one input symbol. You can process a list of
         symbols (or a string) by calling process_list().
-        '''
+        """
         self.input_symbol = input_symbol
-        (action, next_state) = self.get_transition (self.input_symbol, self.current_state)
+        (action, next_state) = self.get_transition(self.input_symbol, self.current_state)
         #print "%s(%s) -> %s" % (self.current_state, input_symbol, next_state)
         self.current_state = next_state
 
         if action is not None:
             action()
 
-    def process_list (self, s):
-        '''This takes a list and sends each element to process().
+    def process_list(self, s):
+        """This takes a list and sends each element to process().
         The list may be a string.
-        '''
+        """
         for c in s:
-            self.process (c)
+            self.process(c)
 
-##########################################################################
-# The following example demonstrates the use of the FSM class in
-# processing RPN expressions. Run this module from the command line.
-# You will get a prompt > for input.
-# Enter an RPN Expression.
-# Numbers may be integers. Operators are * / + -
-# Use the = sign to evaluate and print the expression.
-# For example:
-#    167 3 2 2 * * * 1 - =
-# will print:
-#    2003
-##########################################################################
+        ##########################################################################
+        # The following example demonstrates the use of the FSM class in
+        # processing RPN expressions. Run this module from the command line.
+        # You will get a prompt > for input.
+        # Enter an RPN Expression.
+        # Numbers may be integers. Operators are * / + -
+        # Use the = sign to evaluate and print the expression.
+        # For example:
+        #    167 3 2 2 * * * 1 - =
+        # will print:
+        #    2003
+        ##########################################################################
 
-#import string
+        #import string
 
-#
-# These define the actions.
-# Note that "something" is a list being used as a stack.
-#
-#def BeginBuildNumber (fsm):
-    #fsm.something.append (fsm.input_symbol)
-#def BuildNumber (fsm):
-    #s = fsm.something.pop ()
-    #s = s + fsm.input_symbol
-    #fsm.something.append (s)
-#def EndBuildNumber (fsm):
-    #s = fsm.something.pop ()
-    #fsm.something.append (int(s))
-#def DoOperator (fsm):
-    #ar = fsm.something.pop()
-    #al = fsm.something.pop()
-    #if fsm.input_symbol == '+':
+        #
+        # These define the actions.
+        # Note that "something" is a list being used as a stack.
+        #
+        #def BeginBuildNumber (fsm):
+        #fsm.something.append (fsm.input_symbol)
+        #def BuildNumber (fsm):
+        #s = fsm.something.pop ()
+        #s = s + fsm.input_symbol
+        #fsm.something.append (s)
+        #def EndBuildNumber (fsm):
+        #s = fsm.something.pop ()
+        #fsm.something.append (int(s))
+        #def DoOperator (fsm):
+        #ar = fsm.something.pop()
+        #al = fsm.something.pop()
+        #if fsm.input_symbol == '+':
         #fsm.something.append (al + ar)
-    #elif fsm.input_symbol == '-':
+        #elif fsm.input_symbol == '-':
         #fsm.something.append (al - ar)
-    #elif fsm.input_symbol == '*':
+        #elif fsm.input_symbol == '*':
         #fsm.something.append (al * ar)
-    #elif fsm.input_symbol == '/':
+        #elif fsm.input_symbol == '/':
         #fsm.something.append (al / ar)
-#def DoEqual (fsm):
-    #print str(fsm.something.pop())
-#def Error (fsm):
-    #print 'That does not compute.'
-    #print str(fsm.input_symbol)
+        #def DoEqual (fsm):
+        #print str(fsm.something.pop())
+        #def Error (fsm):
+        #print 'That does not compute.'
+        #print str(fsm.input_symbol)
 
-#
-# This is where the example starts and the FSM state transitions are defined.
-# Note that states (such as 'INIT') are strings. This is not necessary, but
-# it makes the example easier to read.
-#
-#def example ():
-    #f = FSM ('INIT', []) # "something" will be used as a stack.
-    #f.set_default_transition (Error, 'INIT')
-    #f.add_transition_any  ('INIT', None, 'INIT')
-    #f.add_transition      ('=',               'INIT',            DoEqual,          'INIT')
-    #f.add_transition_list (string.digits,     'INIT',            BeginBuildNumber, 'BUILDING_NUMBER')
-    #f.add_transition_list (string.digits,     'BUILDING_NUMBER', BuildNumber,      'BUILDING_NUMBER')
-    #f.add_transition_list (string.whitespace, 'BUILDING_NUMBER', EndBuildNumber,   'INIT')
-    #f.add_transition_list ('+-*/',            'INIT',            DoOperator,       'INIT')
+        #
+        # This is where the example starts and the FSM state transitions are defined.
+        # Note that states (such as 'INIT') are strings. This is not necessary, but
+        # it makes the example easier to read.
+        #
+        #def example ():
+        #f = FSM ('INIT', []) # "something" will be used as a stack.
+        #f.set_default_transition (Error, 'INIT')
+        #f.add_transition_any  ('INIT', None, 'INIT')
+        #f.add_transition      ('=',               'INIT',            DoEqual,          'INIT')
+        #f.add_transition_list (string.digits,     'INIT',            BeginBuildNumber, 'BUILDING_NUMBER')
+        #f.add_transition_list (string.digits,     'BUILDING_NUMBER', BuildNumber,      'BUILDING_NUMBER')
+        #f.add_transition_list (string.whitespace, 'BUILDING_NUMBER', EndBuildNumber,   'INIT')
+        #f.add_transition_list ('+-*/',            'INIT',            DoOperator,       'INIT')
 
-    #print
-    #print 'Enter an RPN Expression.'
-    #print 'Numbers may be integers. Operators are * / + -'
-    #print 'Use the = sign to evaluate and print the expression.'
-    #print 'For example: '
-    #print '    167 3 2 2 * * * 1 - ='
-    #inputs = raw_input ('>')
-    #for s in inputs:
+        #print
+        #print 'Enter an RPN Expression.'
+        #print 'Numbers may be integers. Operators are * / + -'
+        #print 'Use the = sign to evaluate and print the expression.'
+        #print 'For example: '
+        #print '    167 3 2 2 * * * 1 - ='
+        #inputs = raw_input ('>')
+        #for s in inputs:
         #f.process (s)
 
-#if __name__ == '__main__':
-    #example ()
+        #if __name__ == '__main__':
+        #example ()

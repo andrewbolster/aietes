@@ -4,31 +4,29 @@ import traceback
 import optparse
 import time
 import logging
-import numpy as np
 import cProfile
 from datetime import datetime as dt
+from pprint import pformat
 
+import numpy as np
 from configobj import ConfigObj
 import validate
+from matplotlib import animation as MPLanimation
+import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.axes3d as axes3
 
 from Layercake import Layercake
 from Environment import Environment
 from Fleet import Fleet
 from Node import Node
 import Behaviour
-
 from Tools import *
 
-from matplotlib import animation as MPLanimation
-
-import matplotlib.pyplot as plt
-import mpl_toolkits.mplot3d.axes3d as axes3
-
-from pprint import pformat
 
 np.set_printoptions(precision = 3)
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
+
 
 class Simulation():
     """
@@ -37,10 +35,10 @@ class Simulation():
 
     def __init__(self, *args, **kwargs):
         self.config_spec = '%s/configs/default.conf' % _ROOT
-        self.logger = baselogger.getChild("%s" % (self.__class__.__name__))
-        self.config_file = kwargs.get("config_file",None)
-        self.config = kwargs.get("config",None)
-        self.title = kwargs.get("title",None)
+        self.logger = baselogger.getChild("%s" % self.__class__.__name__)
+        self.config_file = kwargs.get("config_file", None)
+        self.config = kwargs.get("config", None)
+        self.title = kwargs.get("title", None)
         if self.config_file is None and self.config is None:
             self.logger.info("creating instance from default")
             self.config = self.validateConfig(None)
@@ -85,7 +83,7 @@ class Simulation():
         """
         Initiate the processed Simulation
         """
-        self.logger.info("Initialising Simulation %s, to run for %s steps" % (self.title,self.duration_intervals))
+        self.logger.info("Initialising Simulation %s, to run for %s steps" % (self.title, self.duration_intervals))
         for fleet in self.fleets:
             fleet.activate()
         if callback is not None:
@@ -186,8 +184,8 @@ class Simulation():
             #There Are Detailed Config Instances
             preconfigured_nodes_count = len(config.Node.Nodes)
             self.logger.info("Have %d nodes from config: %s" % (
-            preconfigured_nodes_count,
-            nodes_config)
+                preconfigured_nodes_count,
+                nodes_config)
             )
             pre_node_names = config.Node.Nodes.keys()
 
@@ -387,15 +385,15 @@ class Simulation():
                          contributions = contributions
                 )
                 co = ConfigObj(self.config, list_values = False)
-                co.filename = "%s.conf"%filename
+                co.filename = "%s.conf" % filename
                 co.write()
             if movieFile:
                 self.logger.info("Writing animation to %s" % filename)
-                save(line_ani,
-                     filename = filename,
-                     fps = fps,
-                     codec = 'mpeg4',
-                     clear_temp = True
+                self.save(line_ani,
+                          filename = filename,
+                          fps = fps,
+                          codec = 'mpeg4',
+                          clear_temp = True
                 )
         else:
             plt.show()
@@ -410,8 +408,8 @@ class Simulation():
 
 class AIETESAnimation(MPLanimation.FuncAnimation):
     def save(self, filename, fps = 5, codec = 'libx264', clear_temp = True,
-             frame_prefix = '_tmp'):
-        '''
+             frame_prefix = '_tmp', *args, **kwargs):
+        """
         Saves a movie file by drawing every frame.
 
         *filename* is the output filename, eg :file:`mymovie.mp4`
@@ -426,7 +424,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
         *frame_prefix* gives the prefix that should be used for individual
         image files.  This prefix will have a frame number (i.e. 0001) appended
         when saving individual frames.
-        '''
+        """
         # Need to disconnect the first draw callback, since we'll be doing
         # draws. Otherwise, we'll end up starting the animation.
         if self._first_draw_id is not None:
@@ -449,7 +447,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
             fnames.append(fname)
             self._fig.savefig(fname)
 
-        _make_movie(self, filename, fps, codec, frame_prefix, cmd_gen = mencoder_cmd)
+        self.make_movie(filename, fps, codec, frame_prefix, cmd_gen = self.mencoder_cmd)
 
         #Delete temporary files
         if clear_temp:
@@ -490,7 +488,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
         from subprocess import Popen, PIPE
 
         if cmd_gen is None:
-            cmd_gen = ffmpeg_cmd
+            cmd_gen = self.ffmpeg_cmd
         command = cmd_gen(self, fname, fps, codec, frame_prefix)
         print command
         proc = Popen(command, shell = False,
@@ -506,7 +504,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
 #    pass
 #atexit.register(readline.write_history_file, histfile)
 def go(options, args):
-    sim = Simulation(config_file = options.config, title=options.title)
+    sim = Simulation(config_file = options.config, title = options.title)
 
     if options.input is None:
         sim.prepare(sim_time = options.sim_time)
@@ -561,26 +559,26 @@ def main():
                           default = 1, help = 'set repeated runs (incompatible with Profiling)')
         (options, args) = parser.parse_args()
         print options
+        exit_code = 0
         if options.verbose: print time.asctime()
         if options.title is None:                                 #  and no custom title
             if options.config is None:                                # If have no config
                 options.title = dt.now().strftime('%Y-%m-%d-%H-%M-%S')#   use default title
             else:                                                     # if given config
-                options.title = os.path.splitext(os.path.splitext(os.path.basename(options.config))[0])[0]   #   use config title
+                options.title = os.path.splitext(os.path.splitext(os.path.basename(options.config))[0])[
+                    0]   #   use config title
         if options.runs > 1:
             #During multiple runs, append _x to the run title
-            basetitle=options.title
+            basetitle = options.title
             for i in range(options.runs):
-                options.title="%s_%d"%(basetitle,i)
-                exit_code = go(options,args)
+                options.title = "%s_%d" % (basetitle, i)
+                exit_code = go(options, args)
         else:
             if options.profile:
                 print "PROFILING"
                 exit_code = cProfile.runctx("""go(options,args)""", globals(), locals(), filename = "Aietes.profile")
             else:
                 exit_code = go(options, args)
-        if exit_code is None:
-            exit_code = 0
         if options.verbose: print time.asctime()
         if options.verbose: print 'TOTAL TIME IN MINUTES:',
         if options.verbose: print (time.time() - start_time) / 60.0

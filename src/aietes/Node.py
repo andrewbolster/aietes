@@ -1,10 +1,12 @@
+import uuid
+
+import numpy as np
+
 from Layercake import Layercake
 import Behaviour
 import Applications
-import numpy as np
-import uuid
-
 from aietes.Tools import *
+
 
 class Node(Sim.Process):
 	"""
@@ -92,6 +94,7 @@ class Node(Sim.Process):
 		##############################
 		# Internal Configure Node Behaviour
 		##############################
+		behaviour = None
 		try:
 			behaviour = self.config['Behaviour']['protocol']
 			behave_mod = getattr(Behaviour, str(behaviour))
@@ -131,7 +134,7 @@ class Node(Sim.Process):
 		"""
 		Are we still in the bloody box?
 		"""
-		return (all(self.position < np.asarray(self.simulation.environment.shape)) and all(np.zeros(3) < self.position))
+		return all(self.position < np.asarray(self.simulation.environment.shape)) and all(np.zeros(3) < self.position)
 
 	def distanceTo(self, otherNode):
 		assert hasattr(otherNode, "position"), "Other object has no position"
@@ -216,7 +219,7 @@ class Node(Sim.Process):
 			THESE CALLS ARE NOT GUARANTEED TO BE ALIGNED ACROSS NODES
 		"""
 		self.logger.debug("Initialised Node Lifecycle")
-		while(True):
+		while True:
 			##############################
 			#Update Node State
 			##############################

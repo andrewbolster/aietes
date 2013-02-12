@@ -15,6 +15,7 @@ logging.basicConfig(level = logging.DEBUG)
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
+
 class EventLoggingApp(wx.PySimpleApp):
 	def FilterEvent(self, evt, *args, **kwargs):
 		logging.info(evt)
@@ -86,12 +87,13 @@ def main():
 	app.frame.Show()
 	try:
 		app.MainLoop()
-	except:
-		show_error()
+	except Exception as e:
+		show_error(e)
 
 
 def debug():
 	cProfile.run('main()')
+
 
 if __name__ == '__main__':
 	main()

@@ -1,15 +1,15 @@
 __author__ = 'andrewbolster'
 
 import logging
-
-import wx
-
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
 from wx.lib.intctrl import IntCtrl
 from wx.lib.agw.floatspin import FloatSpin
 
+import wx
+
 from aietes.Tools import nameGeneration, timestamp, itersubclasses
 from aietes.Behaviour import Behaviour
+
 
 class Configurator(wx.Panel):
 	"""
@@ -131,6 +131,7 @@ class Configurator(wx.Panel):
 
 
 	def update_tree(self, item, recurse = None):
+		node = None
 		try:
 			node = self.tree.GetPyData(item)
 		except Exception as e:
@@ -193,6 +194,7 @@ class Configurator(wx.Panel):
 		Create and layout the widgets in the dialog
 		"""
 		logging.info("Setting config for :%s" % item)
+		data = None
 		try:
 			data = self.tree.GetPyData(item)
 		except Exception as e:

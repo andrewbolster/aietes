@@ -1,10 +1,14 @@
-from SimPy import Simulation as Sim
-from aietes.Tools import baselogger, map_entry, distance, debug
 from operator import attrgetter
 from collections import namedtuple
+
+from SimPy import Simulation as Sim
 import numpy as np
 
+from aietes.Tools import baselogger, map_entry, distance, debug
+
+
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
+
 
 class Environment():
 	"""
@@ -20,7 +24,7 @@ class Environment():
 			Volume is the representation of the physical environment (XYZ)
 			Map is the
 		"""
-		self.logger = baselogger.getChild("%s" % (self.__class__.__name__))
+		self.logger = baselogger.getChild("%s" % self.__class__.__name__)
 		self.logger.debug('creating instance')
 		self.map = {}
 		self.shape = shape if shape is not None else [100, 100, 100]
@@ -28,9 +32,10 @@ class Environment():
 		self.depth = base_depth
 		self.sos = 1400
 		self.simulation = simulation
-		#TODO Random Surface Generation
-		#self.generateSurface()
-		#TODO 'Tidal motion' factor
+
+	#TODO Random Surface Generation
+	#self.generateSurface()
+	#TODO 'Tidal motion' factor
 
 	def is_empty(self, position, tolerance = 1):
 		"""
@@ -60,6 +65,9 @@ class Environment():
 		"""
 		if position is None:
 			position = np.asarray(self.shape) / 2
+
+		candidate_pos = None
+
 		if self.is_outside(position):
 			raise ValueError("Position is not within volume")
 		else:
@@ -68,7 +76,7 @@ class Environment():
 				candidate_pos = np.random.normal(np.asarray(position), stddev)
 				candidate_pos = tuple(np.asarray(candidate_pos, dtype = int))
 				valid = self.is_empty(candidate_pos)
-				if debug: self.logger.debug("Candidate position: %s:%s" % ((candidate_pos), valid))
+				if debug: self.logger.debug("Candidate position: %s:%s" % (candidate_pos, valid))
 		return candidate_pos
 
 
@@ -111,18 +119,18 @@ class Environment():
 		covariant = np.cov(np.asarray(positions - average), rowvar = 0)
 		evecs, evals = np.linalg.eig(covariant)
 		sorted_evecs = evecs[evals.argsort()]
-		return (average, sorted_evecs[index])
+		return average, sorted_evecs[index]
 
 	def normalPlane(self, point, normal):#plot final plane
 		d = np.dot(-point, normal)
 		[xx, yy] = np.meshgrid(np.arange(point[0] - 10, point[0] + 10),
 		                       np.arange(point[1] - 10, point[1] + 10))
 		zz = (-normal[0] * xx - normal[1] * yy - d) / normal[2]
-		return(xx, yy, zz)
+		return xx, yy, zz
 
 	def eigenPlot(self, index = -1):
 		average, normal = self.pointPlane(index)
-		return(self.normalPlane(average, normal))
+		return self.normalPlane(average, normal)
 
 	def export(self, filename = None):
 		"""
