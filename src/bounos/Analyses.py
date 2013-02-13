@@ -27,14 +27,18 @@ def Detect_Misbehaviour(data, *args, **kwargs):
     """
     import bounos.Metrics
 
-    metric_name = kwargs.get("metric", "PerNode_Internode_Distance_Avg")
-    print(type(metric_name))
-    try:
-        metric_class = getattr(bounos.Metrics, metric_name)
-    except Exception as e:
-        print(metric_name)
+    metric_arg = kwargs.get("metric", "PerNode_Internode_Distance_Avg")
+    if not isinstance(metric_arg, str) and issubclass(metric_arg, bounos.Metrics.Metric):
+        metric_class = metric_arg
+    else:
+        metric_name = metric_arg
         print(type(metric_name))
-        raise e
+        try:
+            metric_class = getattr(bounos.Metrics, metric_name)
+        except Exception as e:
+            print(metric_name)
+            print(type(metric_name))
+            raise e
     metric=metric_class()
     if metric is None:
         raise ValueError("No Metric! Cannot Contine")
@@ -44,46 +48,70 @@ def Detect_Misbehaviour(data, *args, **kwargs):
     # IND has the highlight data to be the average of internode distances
     #TODO implement scrolling stddev calc to adjust smearing value (5)
     potential_misbehavers = {}
-    stddevs = []
+    stddev = np.zeros((data.tmax), dtype=np.float64)
+    deviance = np.zeros((data.tmax,data.n), dtype=np.float64)
 
-    rolling_detections = [None] * data.tmax
-    confirmed_detections = [None] * data.tmax
+    rolling_detections = [[]] * data.tmax
+    confirmed_detections = [[]] * data.tmax
     confirmation_envelope = 10
 
+
     for t in range(data.tmax):
-        culprit=None
         try:
-            deltas = metric.data[t] - metric.highlight_data[t]
+            deviance[t] = metric.data[t] - metric.highlight_data[t]
         except TypeError as e:
             raise TypeError("%s:%s"%(metric.__class__.__name__, e))
-        stddev = np.std(deltas)
-        stddevs.append(stddev)
-        # Positive Swing
-        if (metric.data[t] > metric.highlight_data[t] + stddev).any() and metric.signed is not False:
-            culprit = metric.data[t].argmax()
-            try:
-                potential_misbehavers[culprit].append(t)
-            except KeyError:
-                potential_misbehavers[culprit] = [t]
-            finally:
-                rolling_detections[t]= culprit
+
+        stddev[t] = np.std(deviance[t])
+        culprits=[False]
+        if metric.signed is not False:
+            # Positive Swing
+            culprits = (metric.data[t] > (metric.highlight_data[t] + stddev[t]))
+        elif metric.signed is not True:
+            # Negative Swing
+            culprits = (metric.data[t] < (metric.highlight_data[t] - stddev[t]))
+        else:
+            culprits = (metric.data[t] > (metric.highlight_data[t] + stddev[t])) or (metric.data[t] < (metric.highlight_data[t] - stddev[t]))
+
+
+        if culprits.any():
+            for culprit in culprits:
+                try:
+                    potential_misbehavers[culprit].append(t)
+                except KeyError:
+                    potential_misbehavers[culprit] = [t]
+                finally:
+                    rolling_detections[t].append(culprit)
+                    #Check if culprit is in all the last $envelope detection lists
+                    if all( culprit in detection_list for detection_list in rolling_detections[t-confirmation_envelope:t]):
+                        confirmed_detections[t].append(culprit)
             #print("%d:+%s"%(t,data.names[culprit]))
-        # Negative Swing
-        if (metric.data[t] < metric.highlight_data[t] - stddev).any() and metric.signed is not True:
-            culprit = metric.data[t].argmin()
-            try:
-                potential_misbehavers[culprit].append(t)
-            except KeyError:
-                potential_misbehavers[culprit] = [t]
-            finally:
-                rolling_detections[t]= culprit
-            #print("%d:-%s"%(t,data.names[culprit]))
 
-        # $envelope detections in a row triggers confirmation
+    return np.asarray(confirmed_detections), stddev, potential_misbehavers, deviance
 
-        if culprit is not None and all( d == culprit for d in rolling_detections[t-confirmation_envelope:t]):
-            confirmed_detections[t]= culprit
 
-    return np.asarray(confirmed_detections), np.asarray(stddevs), potential_misbehavers
+def Combined_Detection_Rank(data, metrics, *args, **kwargs):
+    # Combine multiple metrics detections into a general trust rating per node over time.
+    if not isinstance(metrics,list):
+        raise ValueError("Should be passed a list of analyses")
+    tmax = kwargs.get("tmax", data.tmax)
+    n_met = len(metrics)
+    n_nodes = data.n
+    deviance_accumulator = np.zeros((n_met, tmax, n_nodes), dtype=np.float64)
+    deviance_accumulator.fill(np.nan)
+    for m,metric in enumerate(metrics):
+        # Get Detections, Stddevs, Misbehavors, Deviance from Detect_MisBehaviour
+        _,stddev,misbehavors,deviance = Detect_Misbehaviour(data, metric=metric)
+
+        for culprit,times in misbehavors.iteritems():
+            deviance_accumulator[m,np.array(times), culprit] = (deviance[np.array(times), culprit] / stddev[np.array(times)])
+
+    detection_sums = np.argmax(deviance_accumulator, axis=2)
+    print(detection_sums)
+    return deviance_accumulator
+
+
+
+
 
 
