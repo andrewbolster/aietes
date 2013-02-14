@@ -28,7 +28,7 @@ class BounosModel(DataPackage):
         self.is_simulating = None
 
     def import_datafile(self, file):
-        super(DataPackage, self).__init__(source = file)
+        super(BounosModel, self).__init__(source = file)
         self.is_ready = True
         self.is_simulating = False
 
@@ -104,6 +104,10 @@ def main():
                         dest = 'attempt_detection', action = 'store_true', default = False,
                         help = 'Attempt Detection and Graphic Annotation for a given analysis'
     )
+    parser.add_argument('--shade-region', '-S', dest = 'shade_region',
+                        action = 'store_true', default = False,
+                        help = "Shade any detection regions"
+    )
 
     args = parser.parse_args()
     print args
@@ -128,15 +132,15 @@ def main():
     else:
         run_overlay(data, args)
 
-def plot_detections(ax, metric, orig_data, shade_region=False):
+def plot_detections(ax, metric, orig_data, shade_region=False, real_culprit=None):
     from aietes.Tools import range_grouper
 
     import Analyses
     (detections, detection_vals, detection_dict, _) = Analyses.Detect_Misbehaviour(data = orig_data, metric=metric.__class__.__name__)
 
-    if True:
-        for culprit, detections in detection_dict.iteritems():
-            for (min,max) in range_grouper(detections):
+    for culprit, detections in detection_dict.iteritems():
+        for (min,max) in range_grouper(detections):
+            if max-min > 20:
                 _x = range(min,max)
                 if metric.signed is not False:
                     #Negative Detection: Scan from the top
@@ -145,22 +149,12 @@ def plot_detections(ax, metric, orig_data, shade_region=False):
                     # Positive or Unsigned: Scan from Bottom
                     _y1 = np.asarray([0]*len(_x))
                 _y2 = metric.data[min:max,culprit]
-                #print("%s:%s:%s"%(orig_data.names[culprit], str((min,max)), str((len(_x), len(_y2)))))
-                ax.fill_between(_x, _y1, _y2 , alpha=0.1, facecolor='red' if culprit != 1 else 'green')
+                print("%s:%s:%s"%(orig_data.names[culprit], str((min,max)), str(max-min)))
+                if real_culprit is not None:
+                    ax.fill_between(_x, _y1, _y2 , alpha=0.1, facecolor='red' if culprit != real_culprit else 'green')
+                else:
+                    ax.fill_between(_x, _y1, _y2 , alpha=0.1, facecolor='red')
 
-    else:
-        _x = np.asarray(range(len(metric.data)))
-
-        if metric.signed is not False:
-
-            #Negative Detection: Scan from the top
-            _y1 = np.asarray([np.max(metric.data)]*len(_x))
-        else:
-            # Positive or Unsigned: Scan from Bottom
-            _y1 = np.asarray([0]*len(_x))
-        _y2 = np.asarray([[metric.data[t, det] if det is not None else metric.data[t].max() for det in det_list] for t,det_list in enumerate(detections)])
-        detected = [ det is not None for det in detections]
-        ax.fill_between(_x, _y1, _y2, where=detected, alpha = 0.1)
 
 
     if shade_region:
@@ -188,7 +182,7 @@ def run_detection_fusion(data, args):
 
     for i, (run, d) in enumerate(data.iteritems()):
         print("One: %d"%i)
-        deviation_fusion = Analyses.Combined_Detection_Rank(d, _metrics)
+        deviation_fusion, deviation_windowed = Analyses.Combined_Detection_Rank(d, _metrics)
         for j, _metric in enumerate(_metrics):
             print("One: %d:%d"%(i,j))
             ax = fig.add_subplot(gs[j, i])
@@ -204,8 +198,6 @@ def run_detection_fusion(data, args):
                 ax.set_title(d.title.replace("_", " "))
                 # Last Metric Behaviour (Legend)
             if j == len(_metrics) - 1:
-                ax.get_xaxis().set_visible(True)
-                ax.set_xlabel("Time")
                 if i == 0:
                     ax.legend(d.names, "lower center", bbox_to_anchor = (0, 0, 1, 1), bbox_transform = fig.transFigure,
                               ncol = len(d.names))
@@ -216,7 +208,10 @@ def run_detection_fusion(data, args):
             axes[i][j] = ax
         j = len(_metrics)
         ax = fig.add_subplot(gs[j, i])
-        ax.plot(np.sum(deviation_fusion,axis=0))
+        ax.plot(deviation_windowed)
+        ax.get_xaxis().set_visible(True)
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Fuzed Trust")
         axes[i][j] = ax
 
         # Now go left to right to adjust the scaling to match
@@ -277,7 +272,7 @@ def run_metric_comparison(data, args):
 
             #if args.attempt_detection and isinstance(metric, Metrics.PerNode_Internode_Distance_Avg):
             if args.attempt_detection:
-                plot_detections(ax, metric, d, shade_region=True)
+                plot_detections(ax, metric, d, shade_region=args.shade_region, real_culprit=1 if i==0 else None)
 
             ax.grid(True, alpha = '0.2')
             ax.autoscale_view(scalex = False, tight = True)

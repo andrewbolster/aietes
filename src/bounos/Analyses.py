@@ -73,19 +73,17 @@ def Detect_Misbehaviour(data, *args, **kwargs):
         else:
             culprits = (metric.data[t] > (metric.highlight_data[t] + stddev[t])) or (metric.data[t] < (metric.highlight_data[t] - stddev[t]))
 
+        for culprit in np.where(culprits)[0]:
+            try:
+                potential_misbehavers[culprit].append(t)
+            except KeyError:
+                potential_misbehavers[culprit] = [t]
+            finally:
+                rolling_detections[t].append(culprit)
 
-        if culprits.any():
-            for culprit in culprits:
-                try:
-                    potential_misbehavers[culprit].append(t)
-                except KeyError:
-                    potential_misbehavers[culprit] = [t]
-                finally:
-                    rolling_detections[t].append(culprit)
-                    #Check if culprit is in all the last $envelope detection lists
-                    if all( culprit in detection_list for detection_list in rolling_detections[t-confirmation_envelope:t]):
-                        confirmed_detections[t].append(culprit)
-            #print("%d:+%s"%(t,data.names[culprit]))
+            #Check if culprit is in all the last $envelope detection lists
+            if all( culprit in detection_list for detection_list in rolling_detections[t-confirmation_envelope:t]) and t>confirmation_envelope:
+                    confirmed_detections[t].append(culprit)
 
     return np.asarray(confirmed_detections), stddev, potential_misbehavers, deviance
 
@@ -98,17 +96,22 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
     n_met = len(metrics)
     n_nodes = data.n
     deviance_accumulator = np.zeros((n_met, tmax, n_nodes), dtype=np.float64)
-    deviance_accumulator.fill(np.nan)
+
+    deviance_accumulator.fill(1.0)
     for m,metric in enumerate(metrics):
         # Get Detections, Stddevs, Misbehavors, Deviance from Detect_MisBehaviour
         _,stddev,misbehavors,deviance = Detect_Misbehaviour(data, metric=metric)
 
-        for culprit,times in misbehavors.iteritems():
-            deviance_accumulator[m,np.array(times), culprit] = (deviance[np.array(times), culprit] / stddev[np.array(times)])
+        for culprit ,times in misbehavors.iteritems():
+            deviance_accumulator[m,np.array(times), culprit] = (np.abs(deviance[np.array(times), culprit] / stddev[np.array(times)]))
+
+    deviance_windowed_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
+    for t in range(tmax):
+        deviance_windowed_accumulator[t]=np.sum(np.prod(deviance_accumulator[:,t-50:t,:],axis = 0), axis = 0)
 
     detection_sums = np.argmax(deviance_accumulator, axis=2)
     print(detection_sums)
-    return deviance_accumulator
+    return deviance_accumulator, deviance_windowed_accumulator
 
 
 
