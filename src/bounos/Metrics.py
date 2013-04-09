@@ -29,6 +29,7 @@ class Metric(object):
         self.data = kw.get('data', None)
         self.signed = kw.get('signed', self.signed) # True is positive, False is Negative, None isn't
         self.ndim = 0
+        self.n = None
         if __debug__: logging.debug("%s" % self)
 
     def generator(self, data):
@@ -36,15 +37,16 @@ class Metric(object):
 
     def __repr__(self):
         return "Metric: %s with %s entries" % (
-        self.label,
-        self.data[0] if self.data is not None else None
+            self.label,
+            self.n if self.n is not None else "Unknown"
         )
 
-    def update(self, data = None):
+    def update(self, data=None):
         if data is None:
             self.data = np.asarray(self.generator(self.data))
         else:
             self.data = np.asarray(self.generator(data))
+        self.n = self.data[0]
         if hasattr(self.data, 'ndim'):
             self.ndim = self.data.ndim
         else:
@@ -73,15 +75,17 @@ class Deviation_Of_Heading(Metric):
     """
     label = "INHD"
     signed = True
-    def generator(self, data):
 
+    def generator(self, data):
         vals = np.asarray([data.deviation_from_at(data.average_heading(time), time) for time in range(int(data.tmax))])
-        self.highlight_data=np.average(vals, axis=1)
+        self.highlight_data = np.average(vals, axis=1)
         return vals
+
 
 class PerNode_Speed(Metric):
     label = "Node Speed"
     signed = False
+
     def generator(self, data):
         self.highlight_data = [mag(data.average_heading(time)) for time in range(int(data.tmax))]
         return [map(mag, data.heading_slice(time)) for time in range(int(data.tmax))]
@@ -90,6 +94,7 @@ class PerNode_Speed(Metric):
 class PerNode_Internode_Distance_Avg(Metric):
     label = "INDD"
     signed = True
+
     def generator(self, data):
         self.highlight_data = [data.inter_distance_average(time) for time in range(int(data.tmax))]
         return [data.distances_from_average_at(time) for time in range(int(data.tmax))]
