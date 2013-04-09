@@ -139,7 +139,7 @@ def plot_detections(ax, metric, orig_data, shade_region=False, real_culprit=None
     import Analyses
 
     results = Analyses.Detect_Misbehaviour(data=orig_data, metric=metric.__class__.__name__)
-    (detections, detection_vals, detection_dict, _) = results['detections', 'stddev', 'suspicions']
+    (detections, detection_vals, detection_dict) = results['detections'], results['stddev'], results['suspicions']
 
     for culprit, detections in detection_dict.iteritems():
         for (min, max) in range_grouper(detections):
