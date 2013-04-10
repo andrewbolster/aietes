@@ -19,6 +19,9 @@ from aietes.Tools import list_functions
 font = {'family': 'normal',
         'weight': 'normal',
         'size': 10}
+_metrics = [Deviation_Of_Heading,
+            PerNode_Speed,
+            PerNode_Internode_Distance_Avg]
 
 
 class BounosModel(DataPackage):
@@ -172,9 +175,6 @@ def run_detection_fusion(data, args):
     from matplotlib.gridspec import GridSpec
     import Metrics
 
-    _metrics = [Metrics.Deviation_Of_Heading,
-                Metrics.PerNode_Speed,
-                Metrics.PerNode_Internode_Distance_Avg]
 
     fig = figure()
     base_ax = fig.add_axes([0, 0, 1, 1], )
@@ -187,7 +187,10 @@ def run_detection_fusion(data, args):
         deviation_fusion, deviation_windowed = Analyses.Combined_Detection_Rank(d, _metrics)
         for j, _metric in enumerate(_metrics):
             print("One: %d:%d" % (i, j))
-            ax = fig.add_subplot(gs[j, i])
+
+            ax = fig.add_subplot(gs[j, i],
+                                 sharex=axes[0][0] if i > 0 or j > 0 else None,
+                                 sharey=axes[i - 1][j] if i > 0 else None)
             ax.plot(deviation_fusion[j])
 
             ax.grid(True, alpha='0.2')
@@ -209,7 +212,9 @@ def run_detection_fusion(data, args):
                 ax = XKCDify(ax)
             axes[i][j] = ax
         j = len(_metrics)
-        ax = fig.add_subplot(gs[j, i])
+        ax = fig.add_subplot(gs[j, i],
+                             sharex=axes[0][0] if i > 0 or j > 0 else None,
+                             sharey=axes[i - 1][j] if i > 0 else None)
         ax.plot(deviation_windowed)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time")
@@ -251,11 +256,6 @@ def run_metric_comparison(data, args):
     plt.rc('font', **font)
     from matplotlib.pyplot import figure, show, savefig
     from matplotlib.gridspec import GridSpec
-    import Metrics
-
-    _metrics = [Metrics.Deviation_Of_Heading,
-                Metrics.PerNode_Speed,
-                Metrics.PerNode_Internode_Distance_Avg]
 
     fig = figure()
     base_ax = fig.add_axes([0, 0, 1, 1], )
@@ -362,6 +362,7 @@ def run_overlay(data, args):
             results = analysis(data=data[source])
         metrics = results['stddev']
         detections = results['detections']
+
         ax.plot(metrics, label=data[source].title.replace("_", " "))
         try:
             if args.attempt_detection:
