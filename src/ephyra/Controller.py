@@ -79,7 +79,7 @@ class EphyraController():
         self.metrics = [metric() for metric in self._metrics_enabled]
 
     @check_model()
-    def get_metrics(self, i = None, *args, **kw):
+    def get_metrics(self, i=None, *args, **kw):
         if i is None:
             return self.metrics
         elif isinstance(i, int):
@@ -99,7 +99,7 @@ class EphyraController():
         return self.model.p
 
     @check_model()
-    def get_vector_names(self, i = None):
+    def get_vector_names(self, i=None):
         return self.model.names if i is None else self.model.names[i]
 
     def get_n_vectors(self):
@@ -127,7 +127,7 @@ class EphyraController():
             return self.model.tmax - 1
 
     @check_model()
-    def get_3D_trail(self, node = None, time_start = None, length = None):
+    def get_3D_trail(self, node=None, time_start=None, length=None):
         """
         Return the [X:][Y:][Z:] trail for a given node from time_start backwards to
         a given length
@@ -149,8 +149,20 @@ class EphyraController():
     def get_fleet_headings(self, time):
         return self.model.heading_slice(time)
 
+    def get_node_contribs(self, node, time=None):
+        return self.model.contribution_slice(node, time)
+
+    def get_max_node_contribs(self):
+        """
+        Used to get consistent colour maps for behaviours
+        """
+        return max(len(c) for c in self.model.contributions[:, 0])
+
+    def get_contrib_keys(self):
+        return self.model.contributions[np.argmax(len(self.model.contributions[:, 0])), 0].keys()
+
     def get_fleet_average_pos(self, time):
-        return np.average(self.model.position_slice(time), axis = 0)
+        return np.average(self.model.position_slice(time), axis=0)
 
     @check_model()
     def get_fleet_configuration(self, time):
@@ -167,23 +179,23 @@ class EphyraController():
         _distances_from_avg_pos = map(lambda v: np.linalg.norm(v - avg_pos), positions)
         stddev_pos = np.std(_distances_from_avg_pos)
         headings = self.get_fleet_headings(time)
-        avg_head = np.average(headings, axis = 0)
+        avg_head = np.average(headings, axis=0)
         _distances_from_avg_head = map(lambda v: np.linalg.norm(v - avg_head), headings)
         stddev_head = np.std(_distances_from_avg_head)
 
         return dict({'positions':
                          {
-                         'pernode': positions,
-                         'avg': avg_pos,
-                         'stddev': stddev_pos,
-                         'delta_avg': _distances_from_avg_pos
+                             'pernode': positions,
+                             'avg': avg_pos,
+                             'stddev': stddev_pos,
+                             'delta_avg': _distances_from_avg_pos
                          },
                      'headings':
                          {
-                         'pernode': headings,
-                         'avg': avg_head,
-                         'stddev': stddev_head,
-                         'delta_avg': _distances_from_avg_head
+                             'pernode': headings,
+                             'avg': avg_head,
+                             'stddev': stddev_head,
+                             'delta_avg': _distances_from_avg_head
                          }
         })
 
