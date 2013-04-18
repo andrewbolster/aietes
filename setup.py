@@ -21,7 +21,7 @@ install_requires = [
     "pydot>=1.0",
     "wxPython>=2.8", # Use the python-wxgtk2.8 package
     "matplotlib>=1.1",
-    "pykalman", 'wx', 'configobj'
+    "pykalman", 'configobj'
 ]
 
 setup(name = 'aietes',
