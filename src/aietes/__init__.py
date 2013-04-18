@@ -221,6 +221,36 @@ class Simulation():
             self.logger.info("Using Application:%s" % applications)
 
         ###
+        # Check and generate behaviour distribution
+        #   i.e. app = ["Bev A","Bev B"]
+        #        dist = [ 4, 5 ]
+        try:
+            app = node_default_config.Behaviour.protocol
+            dist = node_default_config.Behaviour.distribution
+            nodes_count = config.Node.count
+        except AttributeError as e:
+            self.logger.error("Error:%s" % e)
+            self.logger.info("%s" % pformat(node_default_config))
+            raise ConfigError("Something is badly wrong")
+
+        # Boundary checks:
+        #   len(app)==len(dist)
+        #   len(app) % nodes_count-preconfigured_nodes_count = 0
+        if isinstance(app, list) and isinstance(dist, list):
+            if len(app) == len(dist) and (nodes_count - preconfigured_nodes_count) % len(app) == 0:
+                applications = [str(a)
+                                for a, n in zip(app, dist)
+                                for i in range(int(n))
+                ]
+                self.logger.debug("Distributed Applications:%s" % applications)
+            else:
+                raise ConfigError(
+                    "Application / Distribution mismatch"
+                )
+        else:
+            applications = [str(app) for i in range(int(nodes_count - preconfigured_nodes_count))]
+            self.logger.info("Using Application:%s" % applications)
+        ###
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
             count=nodes_count - preconfigured_nodes_count,
