@@ -11,10 +11,10 @@ from SimPy import SimulationStep as Sim
 import numpy as np
 
 
-np.seterr(all = 'raise')
+np.seterr(all='raise')
 #from os import urandom as randomstr #Provides unicode random String
 
-logging.basicConfig(level = logging.INFO)
+logging.basicConfig(level=logging.INFO)
 baselogger = logging.getLogger('SIM')
 
 debug = False
@@ -68,7 +68,7 @@ DEFAULT_CONVENTION = ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo',
 # Measuring functions
 #####################################################################
 
-def distance(pos_a, pos_b, scale = 1):
+def distance(pos_a, pos_b, scale=1):
     """
     Return the distance between two positions
     """
@@ -94,6 +94,19 @@ def unit(vector):
         return np.zeros_like(vector)
     else:
         return vector / mag(vector)
+
+
+def sixvec(xyz):
+    ptsnew = np.hstack((xyz, np.zeros(xyz.shape)))
+    xy = xyz[0] ** 2 + xyz[1] ** 2
+    ptsnew[3] = np.sqrt(xy + xyz[2] ** 2)
+    ptsnew[4] = np.arctan2(np.sqrt(xy), xyz[2]) # for elevation angle defined from Z-axis down
+    ptsnew[5] = np.arctan2(xyz[1], xyz[0])
+    return ptsnew
+
+
+def spherical_distance(sixvec_a, sixvec_b):
+    return np.arccos(np.dot(sixvec_a, sixvec_b))
 
 #####################################################################
 # Lazy Testing functions
@@ -247,7 +260,7 @@ def Linear2DB(Linear):
 class dotdictify(dict):
     marker = object()
 
-    def __init__(self, value = None, **kwargs):
+    def __init__(self, value=None, **kwargs):
         super(dotdictify, self).__init__(**kwargs)
         if value is None:
             pass
@@ -293,7 +306,7 @@ class dotdict(dict):
 
 
 class memory_entry():
-    def __init__(self, object_id, position, velocity, distance = None, name = None):
+    def __init__(self, object_id, position, velocity, distance=None, name=None):
         self.object_id = object_id
         self.name = name
         self.position = position
@@ -305,7 +318,7 @@ class memory_entry():
 
 
 class map_entry():
-    def __init__(self, object_id, position, velocity, name = None, distance = None):
+    def __init__(self, object_id, position, velocity, name=None, distance=None):
         self.object_id = object_id
         self.position = position
         self.distance = distance # Not Always Used!
@@ -345,7 +358,7 @@ def randomstr(length):
     return word
 
 
-def nameGeneration(count, naming_convention = None, existing_names = None):
+def nameGeneration(count, naming_convention=None, existing_names=None):
     if naming_convention is None:
         naming_convention = DEFAULT_CONVENTION
 
@@ -353,7 +366,7 @@ def nameGeneration(count, naming_convention = None, existing_names = None):
         # If the naming convention can't provide unique names, bail
         raise ConfigError(
             "Not Enough Names in dictionary for number of nodes requested:%s/%s!" % (
-            count, len(naming_convention))
+                count, len(naming_convention))
         )
 
     node_names = []
@@ -391,17 +404,17 @@ def grouper(data):
             ranges.append(group[0])
     return ranges
 
+
 def range_grouper(data):
     ranges = []
-    data = filter(lambda( x ): x is not None, data)
-    for k, g in groupby(enumerate(data), lambda (i,x):i-x):
+    data = filter(lambda ( x ): x is not None, data)
+    for k, g in groupby(enumerate(data), lambda (i, x): i - x):
         group = map(itemgetter(1), g)
         ranges.append((group[0], group[-1]))
     return ranges
 
 
-
-def itersubclasses(cls, _seen = None):
+def itersubclasses(cls, _seen=None):
     """
     itersubclasses(cls)
 
@@ -444,3 +457,4 @@ def itersubclasses(cls, _seen = None):
 
 def list_functions(module):
     return [o for o in getmembers(module) if isfunction(o[1])]
+

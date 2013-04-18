@@ -23,7 +23,7 @@ import Behaviour
 from Tools import *
 
 
-np.set_printoptions(precision = 3)
+np.set_printoptions(precision=3)
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
@@ -50,7 +50,7 @@ class Simulation():
         self.fleets = []
 
 
-    def prepare(self, waits = False, *args, **kwargs):
+    def prepare(self, waits=False, *args, **kwargs):
         #Attempt Validation and construct the simulation from that config.
         try:
             baselogger.setLevel(LOGLEVELS.get(self.config.log_level, logging.NOTSET))
@@ -75,11 +75,11 @@ class Simulation():
         self.fleets.append(Fleet(self.nodes, self))
 
         # Set up 'join-like' operation for nodes
-        self.move_flag = Sim.Resource(capacity = len(self.nodes))
-        self.process_flag = Sim.Resource(capacity = len(self.nodes))
+        self.move_flag = Sim.Resource(capacity=len(self.nodes))
+        self.process_flag = Sim.Resource(capacity=len(self.nodes))
         return {'sim_time': self.config.Simulation.sim_duration}
 
-    def simulate(self, callback = None):
+    def simulate(self, callback=None):
         """
         Initiate the processed Simulation
         """
@@ -89,7 +89,7 @@ class Simulation():
         if callback is not None:
             self.logger.info("Running with Callback: %s" % str(callback))
             Sim.startStepping()
-        Sim.simulate(until = self.duration_intervals, callback = callback)
+        Sim.simulate(until=self.duration_intervals, callback=callback)
         self.logger.info("Finished Simulation at %s" % Sim.now())
 
     def inner_join(self):
@@ -153,8 +153,8 @@ class Simulation():
         # GENERIC CONFIG ACQUISITION
         ##############################
 
-        config = ConfigObj(config_file, configspec = self.config_spec, stringify = True, interpolation = True)
-        config_status = config.validate(validate.Validator(), copy = True)
+        config = ConfigObj(config_file, configspec=self.config_spec, stringify=True, interpolation=True)
+        config_status = config.validate(validate.Validator(), copy=True)
 
         if not config_status:
             # If config_spec doesn't match the input, bail
@@ -223,8 +223,8 @@ class Simulation():
         ###
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
-            count = nodes_count - preconfigured_nodes_count,
-            naming_convention = config.Node.naming_convention
+            count=nodes_count - preconfigured_nodes_count,
+            naming_convention=config.Node.naming_convention
         )
         node_names = auto_node_names + pre_node_names
 
@@ -259,9 +259,9 @@ class Simulation():
         """
         return Environment(
             self,
-            shape = env_config.shape,
-            resolution = env_config.resolution,
-            base_depth = env_config.base_depth
+            shape=env_config.shape,
+            resolution=env_config.resolution,
+            base_depth=env_config.base_depth
         )
 
     def configureNodes(self):
@@ -279,7 +279,7 @@ class Simulation():
                 node_name,
                 self,
                 config,
-                vector = self.vectorGen(node_name, config)
+                vector=self.vectorGen(node_name, config)
             )
             node_list.append(new_node)
 
@@ -310,14 +310,14 @@ class Simulation():
 
         return vector
 
-    def postProcess(self, log = None, outputFile = None, displayFrames = None, dataFile = False, movieFile = False,
-                    inputFile = None, xRes = 1024, yRes = 768, fps = 24):
+    def postProcess(self, log=None, outputFile=None, displayFrames=None, dataFile=False, movieFile=False,
+                    inputFile=None, xRes=1024, yRes=768, fps=24):
         """
         Performs output and positions generation for a given simulation
         """
         dpi = 80
         ipp = 80
-        fig = plt.figure(dpi = dpi, figsize = (xRes / ipp, yRes / ipp))
+        fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
         ax = axes3.Axes3D(fig)
 
         def updatelines(i, positions, lines, displayFrames):
@@ -361,10 +361,10 @@ class Simulation():
 
         n_frames = len(positions[0][0])
 
-        lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label = names[i])[0] for i, dat in enumerate(positions)]
+        lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=names[i])[0] for i, dat in enumerate(positions)]
 
-        line_ani = AIETESAnimation(fig, updatelines, frames = int(n_frames), fargs = (positions, lines, displayFrames),
-                                   interval = 1000 / fps, repeat_delay = 300, blit = True, )
+        line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(positions, lines, displayFrames),
+                                   interval=1000 / fps, repeat_delay=300, blit=True, )
         ax.legend()
         ax.set_xlim3d((0, shape[0]))
         ax.set_ylim3d((0, shape[1]))
@@ -378,22 +378,22 @@ class Simulation():
             if dataFile:
                 self.logger.info("Writing datafile to %s" % filename)
                 np.savez(filename,
-                         positions = positions,
-                         vectors = vectors,
-                         names = names,
-                         environment = self.environment.shape,
-                         contributions = contributions
+                         positions=positions,
+                         vectors=vectors,
+                         names=names,
+                         environment=self.environment.shape,
+                         contributions=contributions
                 )
-                co = ConfigObj(self.config, list_values = False)
+                co = ConfigObj(self.config, list_values=False)
                 co.filename = "%s.conf" % filename
                 co.write()
             if movieFile:
                 self.logger.info("Writing animation to %s" % filename)
                 self.save(line_ani,
-                          filename = filename,
-                          fps = fps,
-                          codec = 'mpeg4',
-                          clear_temp = True
+                          filename=filename,
+                          fps=fps,
+                          codec='mpeg4',
+                          clear_temp=True
                 )
         else:
             plt.show()
@@ -407,8 +407,8 @@ class Simulation():
 
 
 class AIETESAnimation(MPLanimation.FuncAnimation):
-    def save(self, filename, fps = 5, codec = 'libx264', clear_temp = True,
-             frame_prefix = '_tmp', *args, **kwargs):
+    def save(self, filename, fps=5, codec='libx264', clear_temp=True,
+             frame_prefix='_tmp', *args, **kwargs):
         """
         Saves a movie file by drawing every frame.
 
@@ -442,12 +442,12 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
         # to allow for this non-existant use case or find a way to make it work.
         for idx, data in enumerate(self.new_saved_frame_seq()):
             #TODO: Need to see if turning off blit is really necessary
-            self._draw_next_frame(data, blit = False)
+            self._draw_next_frame(data, blit=False)
             fname = '%s%04d.png' % (frame_prefix, idx)
             fnames.append(fname)
             self._fig.savefig(fname)
 
-        self.make_movie(filename, fps, codec, frame_prefix, cmd_gen = self.mencoder_cmd)
+        self.make_movie(filename, fps, codec, frame_prefix, cmd_gen=self.mencoder_cmd)
 
         #Delete temporary files
         if clear_temp:
@@ -481,7 +481,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
                 '-mf', 'type=png:fps=24', 'mf://%s%%04d.png' % frame_prefix]
 
 
-    def _make_movie(self, fname, fps, codec, frame_prefix, cmd_gen = None):
+    def _make_movie(self, fname, fps, codec, frame_prefix, cmd_gen=None):
         # Uses subprocess to call the program for assembling frames into a
         # movie file.  *cmd_gen* is a callable that generates the sequence
         # of command line arguments from a few configuration options.
@@ -491,8 +491,8 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
             cmd_gen = self.ffmpeg_cmd
         command = cmd_gen(self, fname, fps, codec, frame_prefix)
         print command
-        proc = Popen(command, shell = False,
-                     stdout = PIPE, stderr = PIPE)
+        proc = Popen(command, shell=False,
+                     stdout=PIPE, stderr=PIPE)
         proc.wait()
 
 # Uncomment the following section if you want readline history support.
@@ -504,20 +504,24 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
 #    pass
 #atexit.register(readline.write_history_file, histfile)
 def go(options, args):
-    sim = Simulation(config_file = options.config, title = options.title)
+    sim = Simulation(config_file=options.config, title=options.title)
 
     if options.input is None:
-        sim.prepare(sim_time = options.sim_time)
+        sim.prepare(sim_time=options.sim_time)
         if not options.noexecution:
-            sim.simulate()
+            try:
+                sim.simulate()
+            except RuntimeError as exp:
+                print(exp)
+                print("Will try to postprocess anyway")
 
     if options.output:
         print("Storing output in %s" % options.title)
-        sim.postProcess(inputFile = options.input, outputFile = options.title, dataFile = options.data,
-                        movieFile = options.movie, fps = options.fps)
+        sim.postProcess(inputFile=options.input, outputFile=options.title, dataFile=options.data,
+                        movieFile=options.movie, fps=options.fps)
 
     if options.plot:
-        sim.postProcess(inputFile = options.input, displayFrames = 720)
+        sim.postProcess(inputFile=options.input, displayFrames=720)
 
 
 def main():
@@ -527,36 +531,36 @@ def main():
     try:
         start_time = time.time()
         parser = optparse.OptionParser(
-            formatter = optparse.TitledHelpFormatter(),
-            usage = globals()['__doc__'],
-            version = '$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
-        parser.add_option('-v', '--verbose', action = 'store_true',
-                          default = False, help = 'verbose output')
-        parser.add_option('-P', '--profile', action = 'store_true',
-                          default = False, help = 'profiled execution')
-        parser.add_option('-p', '--plot', action = 'store_true',
-                          default = False, help = 'perform ploting')
-        parser.add_option('-o', '--output', action = 'store_true',
-                          default = False, help = 'store output')
-        parser.add_option('-m', '--movie', action = 'store_true',
-                          default = None, help = 'generate and store movie (this takes a long time)')
-        parser.add_option('-f', '--fps', action = 'store', type = "int",
-                          default = 24, help = 'set the fps for animation')
-        parser.add_option('-x', '--noexecution', action = 'store_true',
-                          default = False, help = 'prepare only, don\' execute simulation')
-        parser.add_option('-d', '--data', action = 'store_true',
-                          default = None, help = 'store output to datafile')
-        parser.add_option('-i', '--input', action = 'store', dest = 'input',
-                          default = None, help = 'store input file, this kills the simulation')
-        parser.add_option('-t', '--tmax', action = 'store', dest = 'sim_time',
-                          default = None, help = 'Override the simulation duration')
-        parser.add_option('-c', '--config', action = 'store', dest = 'config',
-                          default = None, help = 'generate simulation from config file')
-        parser.add_option('-T', '--title', action = 'store', dest = 'title',
-                          default = None,
-                          help = 'Override the simulation name')
-        parser.add_option('-r', '--runs', action = 'store', type = "int",
-                          default = 1, help = 'set repeated runs (incompatible with Profiling)')
+            formatter=optparse.TitledHelpFormatter(),
+            usage=globals()['__doc__'],
+            version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
+        parser.add_option('-v', '--verbose', action='store_true',
+                          default=False, help='verbose output')
+        parser.add_option('-P', '--profile', action='store_true',
+                          default=False, help='profiled execution')
+        parser.add_option('-p', '--plot', action='store_true',
+                          default=False, help='perform ploting')
+        parser.add_option('-o', '--output', action='store_true',
+                          default=False, help='store output')
+        parser.add_option('-m', '--movie', action='store_true',
+                          default=None, help='generate and store movie (this takes a long time)')
+        parser.add_option('-f', '--fps', action='store', type="int",
+                          default=24, help='set the fps for animation')
+        parser.add_option('-x', '--noexecution', action='store_true',
+                          default=False, help='prepare only, don\' execute simulation')
+        parser.add_option('-d', '--data', action='store_true',
+                          default=None, help='store output to datafile')
+        parser.add_option('-i', '--input', action='store', dest='input',
+                          default=None, help='store input file, this kills the simulation')
+        parser.add_option('-t', '--tmax', action='store', dest='sim_time',
+                          default=None, help='Override the simulation duration')
+        parser.add_option('-c', '--config', action='store', dest='config',
+                          default=None, help='generate simulation from config file')
+        parser.add_option('-T', '--title', action='store', dest='title',
+                          default=None,
+                          help='Override the simulation name')
+        parser.add_option('-r', '--runs', action='store', type="int",
+                          default=1, help='set repeated runs (incompatible with Profiling)')
         (options, args) = parser.parse_args()
         print options
         exit_code = 0
@@ -576,7 +580,7 @@ def main():
         else:
             if options.profile:
                 print "PROFILING"
-                exit_code = cProfile.runctx("""go(options,args)""", globals(), locals(), filename = "Aietes.profile")
+                exit_code = cProfile.runctx("""go(options,args)""", globals(), locals(), filename="Aietes.profile")
             else:
                 exit_code = go(options, args)
         if options.verbose: print time.asctime()

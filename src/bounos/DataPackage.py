@@ -16,8 +16,8 @@ class DataPackage(object):
     information is queriable through the object.
     """
 
-    def __init__(self, source = None,
-                 p = None, v = None, names = None, environment = None, tmax = None,
+    def __init__(self, source=None,
+                 p=None, v=None, names=None, environment=None, tmax=None,
                  *args, **kwargs):
         """
         Raises IOError on load failure
@@ -50,7 +50,7 @@ class DataPackage(object):
         self.tmax = len(self.p[0][0]) if tmax is None else tmax
         self.n = len(self.p)
 
-    def update(self, p = None, v = None, names = None, environment = None, **kwargs):
+    def update(self, p=None, v=None, names=None, environment=None, **kwargs):
         logging.debug("Updating from tmax %d" % self.tmax)
 
         if all(x is not None for x in [p, v, names, environment]):
@@ -81,8 +81,8 @@ class DataPackage(object):
 
     def position_slice(self, time):
         """
-    Query the dataset for the [n][x,y,z] position list of all nodes at a given time
-    """
+        Query the dataset for the [n][x,y,z] position list of all nodes at a given time
+        """
         return self.p[:, :, time]
 
     def heading_slice(self, time):
@@ -93,8 +93,8 @@ class DataPackage(object):
 
     def position_slice_of(self, node):
         """
-    Query the dataset for the [n][x,y,z] position list of all nodes at a given time
-    """
+        Query the dataset for the [n][x,y,z] position list of all nodes at a given time
+        """
         try:
             return self.p[node, :, :]
         except IndexError as e:
@@ -159,7 +159,7 @@ class DataPackage(object):
         if not (0 <= time <= self.tmax):
             raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-        return np.average(self.position_slice(time), axis = 0)
+        return np.average(self.position_slice(time), axis=0)
 
     def average_heading(self, time):
         """
@@ -172,7 +172,7 @@ class DataPackage(object):
         if not (0 <= time <= self.tmax):
             raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
-        return np.average(self.heading_slice(time), axis = 0)
+        return np.average(self.heading_slice(time), axis=0)
 
     def deviation_from_at(self, heading, time):
         """
@@ -245,6 +245,17 @@ class DataPackage(object):
                 self.position_slice(time)
             )
         )
+
+    def contribution_slice(self, node, time):
+        """
+        Query the dataset for the [n][b][x,y,z] contribution list of all nodes at a given time
+        """
+        try:
+            return self.contributions[node, time]
+        except IndexError as e:
+            logging.debug(
+                "Contribution Query for n:%d @ all for position shape %s" % (node, self.contributions[node].shape))
+            raise e
 
     def inter_distance_average(self, time):
         """
