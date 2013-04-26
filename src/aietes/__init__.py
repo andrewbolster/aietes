@@ -219,10 +219,10 @@ class Simulation():
 
         #
         # Check and generate behaviour distribution
-        #   i.e. app = ["Bev A","Bev B"]
+        #   i.e. bev = ["Bev A","Bev B"]
         #        dist = [ 4, 5 ]
         try:
-            app = node_default_config.Behaviour.protocol
+            bev = node_default_config.Behaviour.protocol
             dist = node_default_config.Behaviour.distribution
             nodes_count = config.Node.count
         except AttributeError as e:
@@ -231,22 +231,22 @@ class Simulation():
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
-        #   len(app)==len(dist)
-        #   len(app) % nodes_count-preconfigured_nodes_count = 0
-        if isinstance(app, list) and isinstance(dist, list):
-            if len(app) == len(dist) and (nodes_count - preconfigured_nodes_count) % len(app) == 0:
-                applications = [str(a)
-                                for a, n in zip(app, dist)
-                                for i in range(int(n))
-                                ]
-                self.logger.debug("Distributed Applications:%s" % applications)
+        #   len(bev)==len(dist)
+        #   len(bev) % nodes_count-preconfigured_nodes_count = 0
+        if isinstance(bev, list) and isinstance(dist, list):
+            if len(bev) == len(dist) and (nodes_count - preconfigured_nodes_count) % len(bev) == 0:
+                behaviours = [str(a)
+                              for a, n in zip(bev, dist)
+                              for i in range(int(n))
+                              ]
+                self.logger.debug("Distributed behaviours:%s" % behaviours)
             else:
                 raise ConfigError(
                     "Application / Distribution mismatch"
                 )
         else:
-            applications = [str(app) for i in range(int(nodes_count - preconfigured_nodes_count))]
-            self.logger.info("Using Application:%s" % applications)
+            behaviours = [str(bev) for i in range(int(nodes_count - preconfigured_nodes_count))]
+            self.logger.info("Using Behaviour:%s" % behaviours)
         #
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
