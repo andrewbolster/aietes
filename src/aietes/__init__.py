@@ -29,6 +29,7 @@ _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 class Simulation():
+
     """
     Defines a single simulation
     """
@@ -49,16 +50,15 @@ class Simulation():
         self.nodes = []
         self.fleets = []
 
-
     def prepare(self, waits=False, *args, **kwargs):
-        #Attempt Validation and construct the simulation from that config.
+        # Attempt Validation and construct the simulation from that config.
         try:
             baselogger.setLevel(LOGLEVELS.get(self.config.log_level, logging.NOTSET))
         except ConfigError as err:
             self.logger.error("Error in configuration, cannot continue: %s" % err)
             raise SystemExit(1)
 
-        #Initialise simulation environment and configure a global channel event
+        # Initialise simulation environment and configure a global channel event
         self.waits = waits
         Sim.initialize()
         self.channel_event = Sim.SimEvent(self.config.Simulation.channel_event_name)
@@ -71,7 +71,7 @@ class Simulation():
         self.environment = self.configureEnvironment(self.config.Environment)
         self.nodes = self.configureNodes()
 
-        #Single Fleet to control all
+        # Single Fleet to control all
         self.fleets.append(Fleet(self.nodes, self))
 
         # Set up 'join-like' operation for nodes
@@ -118,7 +118,6 @@ class Simulation():
                 return n
         raise KeyError("Given UUID does not exist in Nodes list")
 
-
     def now(self):
         return Sim.now()
 
@@ -149,9 +148,9 @@ class Simulation():
         I.e. does not check if particular modular behaviour exists or not.
         """
 
-        ##############################
+        #
         # GENERIC CONFIG ACQUISITION
-        ##############################
+        #
 
         config = ConfigObj(config_file, configspec=self.config_spec, stringify=True, interpolation=True)
         config_status = config.validate(validate.Validator(), copy=True)
@@ -162,10 +161,9 @@ class Simulation():
 
         config = dotdict(config.dict())
 
-
-        ##############################
+        #
         # NODE CONFIGURATION
-        ##############################
+        #
         preconfigured_nodes_count = 0
         pre_node_names = []
         nodes_config = dict()
@@ -173,15 +171,14 @@ class Simulation():
         # Add the stuff we know whould be there...
         self.logger.debug("Initial Node Config from %s: %s" % (config_file, pformat(node_default_config)))
         node_default_config.update(
-            #TODO import PHY,Behaviour, etc into the node config?
+            # TODO import PHY,Behaviour, etc into the node config?
         )
 
-
-        ###
+        #
         # Check if there are individually configured nodes
         if isinstance(config.Node.Nodes, dict) and len(config.Node.Nodes) > 0:
-            ###
-            #There Are Detailed Config Instances
+            #
+            # There Are Detailed Config Instances
             preconfigured_nodes_count = len(config.Node.Nodes)
             self.logger.info("Have %d nodes from config: %s" % (
                 preconfigured_nodes_count,
@@ -189,7 +186,7 @@ class Simulation():
             )
             pre_node_names = config.Node.Nodes.keys()
 
-        ###
+        #
         # Check and generate application distribution
         #   i.e. app = ["App A","App B"]
         #        dist = [ 4, 5 ]
@@ -210,7 +207,7 @@ class Simulation():
                 applications = [str(a)
                                 for a, n in zip(app, dist)
                                 for i in range(int(n))
-                ]
+                                ]
                 self.logger.debug("Distributed Applications:%s" % applications)
             else:
                 raise ConfigError(
@@ -220,7 +217,7 @@ class Simulation():
             applications = [str(app) for i in range(int(nodes_count - preconfigured_nodes_count))]
             self.logger.info("Using Application:%s" % applications)
 
-        ###
+        #
         # Check and generate behaviour distribution
         #   i.e. app = ["Bev A","Bev B"]
         #        dist = [ 4, 5 ]
@@ -241,7 +238,7 @@ class Simulation():
                 applications = [str(a)
                                 for a, n in zip(app, dist)
                                 for i in range(int(n))
-                ]
+                                ]
                 self.logger.debug("Distributed Applications:%s" % applications)
             else:
                 raise ConfigError(
@@ -250,7 +247,7 @@ class Simulation():
         else:
             applications = [str(app) for i in range(int(nodes_count - preconfigured_nodes_count))]
             self.logger.info("Using Application:%s" % applications)
-        ###
+        #
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
             count=nodes_count - preconfigured_nodes_count,
@@ -274,9 +271,9 @@ class Simulation():
             # Import the magic!
             nodes_config[node_name].update(node_config)
 
-        ##############################
-        #Confirm
-        ##############################
+        #
+        # Confirm
+        #
         config.Node.Nodes.update(nodes_config)
         self.logger.debug("Built Config: %s" % pformat(config))
 
@@ -300,9 +297,9 @@ class Simulation():
         Fleets are purely logical in this case
         """
         node_list = []
-        ##############################
-        #Configure specified nodes
-        ##############################
+        #
+        # Configure specified nodes
+        #
         for node_name, config in self.config.Node.Nodes.items():
             self.logger.debug("Generating node %s with config %s" % (node_name, config))
             new_node = Node(
@@ -313,7 +310,7 @@ class Simulation():
             )
             node_list.append(new_node)
 
-        #TODO Fleet implementation
+        # TODO Fleet implementation
 
         return node_list
 
@@ -322,7 +319,7 @@ class Simulation():
         If a node is named in the configuration file, use the defined initial vector
         otherwise, use configured behaviour to assign an initial vector
         """
-        try:# If there is an entry, use it
+        try:  # If there is an entry, use it
             vector = node_config['initial_vector']
             self.logger.info("Gave node %s a configured initial vector: %s" % (node_name, str(vector)))
         except KeyError:
@@ -361,8 +358,8 @@ class Simulation():
             else:
                 j = 0
             for line, dat in zip(lines, positions):
-                line.set_data(dat[0:2, j:i])         #x,y axis
-                line.set_3d_properties(dat[2, j:i])  #z axis
+                line.set_data(dat[0:2, j:i])  # x,y axis
+                line.set_3d_properties(dat[2, j:i])  # z axis
             return lines
 
         positions = []
@@ -413,7 +410,7 @@ class Simulation():
                          names=names,
                          environment=self.environment.shape,
                          contributions=contributions
-                )
+                         )
                 co = ConfigObj(self.config, list_values=False)
                 co.filename = "%s.conf" % filename
                 co.write()
@@ -424,10 +421,9 @@ class Simulation():
                           fps=fps,
                           codec='mpeg4',
                           clear_temp=True
-                )
+                          )
         else:
             plt.show()
-
 
     def deltaT(self, now, then):
         """
@@ -437,6 +433,7 @@ class Simulation():
 
 
 class AIETESAnimation(MPLanimation.FuncAnimation):
+
     def save(self, filename, fps=5, codec='libx264', clear_temp=True,
              frame_prefix='_tmp', *args, **kwargs):
         """
@@ -471,7 +468,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
         # work since GUI widgets are gone. Either need to remove extra code
         # to allow for this non-existant use case or find a way to make it work.
         for idx, data in enumerate(self.new_saved_frame_seq()):
-            #TODO: Need to see if turning off blit is really necessary
+            # TODO: Need to see if turning off blit is really necessary
             self._draw_next_frame(data, blit=False)
             fname = '%s%04d.png' % (frame_prefix, idx)
             fnames.append(fname)
@@ -479,7 +476,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
 
         self.make_movie(filename, fps, codec, frame_prefix, cmd_gen=self.mencoder_cmd)
 
-        #Delete temporary files
+        # Delete temporary files
         if clear_temp:
             import os
 
@@ -510,7 +507,6 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
                 '-o', "%s.mp4" % fname,
                 '-mf', 'type=png:fps=24', 'mf://%s%%04d.png' % frame_prefix]
 
-
     def _make_movie(self, fname, fps, codec, frame_prefix, cmd_gen=None):
         # Uses subprocess to call the program for assembling frames into a
         # movie file.  *cmd_gen* is a callable that generates the sequence
@@ -526,13 +522,15 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
         proc.wait()
 
 # Uncomment the following section if you want readline history support.
-#import readline, atexit
-#histfile = os.path.join(os.environ['HOME'], '.TODO_history')
-#try:
+# import readline, atexit
+# histfile = os.path.join(os.environ['HOME'], '.TODO_history')
+# try:
 #    readline.read_history_file(histfile)
-#except IOError:
+# except IOError:
 #    pass
-#atexit.register(readline.write_history_file, histfile)
+# atexit.register(readline.write_history_file, histfile)
+
+
 def go(options, args):
     sim = Simulation(config_file=options.config, title=options.title)
 
@@ -594,15 +592,16 @@ def main():
         (options, args) = parser.parse_args()
         print options
         exit_code = 0
-        if options.verbose: print time.asctime()
-        if options.title is None:                                 #  and no custom title
+        if options.verbose:
+            print time.asctime()
+        if options.title is None:  # and no custom title
             if options.config is None:                                # If have no config
-                options.title = dt.now().strftime('%Y-%m-%d-%H-%M-%S')#   use default title
+                options.title = dt.now().strftime('%Y-%m-%d-%H-%M-%S')  # use default title
             else:                                                     # if given config
                 options.title = os.path.splitext(os.path.splitext(os.path.basename(options.config))[0])[
-                    0]   #   use config title
+                    0]  # use config title
         if options.runs > 1:
-            #During multiple runs, append _x to the run title
+            # During multiple runs, append _x to the run title
             basetitle = options.title
             for i in range(options.runs):
                 options.title = "%s_%d" % (basetitle, i)
@@ -613,13 +612,16 @@ def main():
                 exit_code = cProfile.runctx("""go(options,args)""", globals(), locals(), filename="Aietes.profile")
             else:
                 exit_code = go(options, args)
-        if options.verbose: print time.asctime()
-        if options.verbose: print 'TOTAL TIME IN MINUTES:',
-        if options.verbose: print (time.time() - start_time) / 60.0
+        if options.verbose:
+            print time.asctime()
+        if options.verbose:
+            print 'TOTAL TIME IN MINUTES:',
+        if options.verbose:
+            print (time.time() - start_time) / 60.0
         sys.exit(exit_code)
-    except KeyboardInterrupt, e: # Ctrl-C
+    except KeyboardInterrupt, e:  # Ctrl-C
         raise e
-    except SystemExit, e: # sys.exit()
+    except SystemExit, e:  # sys.exit()
         raise e
     except Exception, e:
         print 'ERROR, UNEXPECTED EXCEPTION'

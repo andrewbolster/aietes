@@ -12,7 +12,7 @@ import numpy as np
 
 
 np.seterr(all='raise')
-#from os import urandom as randomstr #Provides unicode random String
+# from os import urandom as randomstr #Provides unicode random String
 
 logging.basicConfig(level=logging.INFO)
 baselogger = logging.getLogger('SIM')
@@ -22,6 +22,7 @@ FUDGED = True
 
 
 class ConfigError(Exception):
+
     """
     Raised when a configuration cannot be validated through ConfigObj/Validator
     Contains a 'status' with the boolean dict representation of the error
@@ -35,14 +36,15 @@ class ConfigError(Exception):
         return repr(self.status)
 
 
-#####################################################################
+#
 # Magic Numbers
-#####################################################################
-# 170dB re uPa is the sound intensity created over a sphere of 1m by a radiated acoustic power of 1 Watt with the source in the center
+#
+# 170dB re uPa is the sound intensity created over a sphere of 1m by a
+# radiated acoustic power of 1 Watt with the source in the center
 I_ref = 172.0
 # Speed of sound in water (m/s)
 speed_of_sound = 1482
-#Transducer Capacity (Arbitrary)
+# Transducer Capacity (Arbitrary)
 transducer_capacity = 1000
 broadcast_address = 'Any'
 LOGLEVELS = {'debug': logging.DEBUG,
@@ -64,9 +66,9 @@ DEFAULT_CONVENTION = ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo',
                       'Zulu']
 
 
-#####################################################################
+#
 # Measuring functions
-#####################################################################
+#
 
 def distance(pos_a, pos_b, scale=1):
     """
@@ -100,7 +102,7 @@ def sixvec(xyz):
     ptsnew = np.hstack((xyz, np.zeros(xyz.shape)))
     xy = xyz[0] ** 2 + xyz[1] ** 2
     ptsnew[3] = np.sqrt(xy + xyz[2] ** 2)
-    ptsnew[4] = np.arctan2(np.sqrt(xy), xyz[2]) # for elevation angle defined from Z-axis down
+    ptsnew[4] = np.arctan2(np.sqrt(xy), xyz[2])  # for elevation angle defined from Z-axis down
     ptsnew[5] = np.arctan2(xyz[1], xyz[0])
     return ptsnew
 
@@ -108,9 +110,10 @@ def sixvec(xyz):
 def spherical_distance(sixvec_a, sixvec_b):
     return np.arccos(np.dot(sixvec_a, sixvec_b))
 
-#####################################################################
+#
 # Lazy Testing functions
-#####################################################################
+#
+
 
 def recordsCheck(pos_log):
     return [len([entry.time for entry in pos_log if entry.name == superentry.name]) for superentry in pos_log if
@@ -122,15 +125,16 @@ def namedLog(pos_log):
 
 
 def nodeIDs(pos_log):
-    return {entry.object_id for entry in pos_log}
+    return (entry.object_id for entry in pos_log)
 
 
 def objectLog(pos_log, object_id):
     return [(entry.time, entry.position) for entry in pos_log if entry.object_id == object_id]
 
-#####################################################################
+#
 # Propagation functions
-#####################################################################
+#
+
 
 def Attenuation(f, d):
     """Attenuation(P0,f,d)
@@ -143,7 +147,7 @@ def Attenuation(f, d):
     """
 
     f2 = f ** 2
-    k = 1.5 # Practical Spreading, see http://rpsea.org/forums/auto_stojanovic.pdf
+    k = 1.5  # Practical Spreading, see http://rpsea.org/forums/auto_stojanovic.pdf
     DistanceInKm = d / 1000.0
 
     # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on the frequency
@@ -182,7 +186,7 @@ def distance2Bandwidth(I0, f, d, SNR):
     A = Attenuation(f, d)
     N = Noise(f)
 
-    return DB2Linear(I0 - SNR - N - A - 30) #In kHz
+    return DB2Linear(I0 - SNR - N - A - 30)  # In kHz
 
 
 def distance2Intensity(B, f, d, SNR):
@@ -254,9 +258,11 @@ def DB2Linear(dB):
 def Linear2DB(Linear):
     return 10.0 * math.log10(Linear + 0.0)
 
-#####################################################################
+#
 # Helper Classes
-#####################################################################
+#
+
+
 class dotdictify(dict):
     marker = object()
 
@@ -287,6 +293,7 @@ class dotdictify(dict):
 
 
 class dotdict(dict):
+
     def __init__(self, arg, **kwargs):
         super(dotdict, self).__init__(**kwargs)
         for k in arg.keys():
@@ -306,6 +313,7 @@ class dotdict(dict):
 
 
 class memory_entry():
+
     def __init__(self, object_id, position, velocity, distance=None, name=None):
         self.object_id = object_id
         self.name = name
@@ -318,10 +326,11 @@ class memory_entry():
 
 
 class map_entry():
+
     def __init__(self, object_id, position, velocity, name=None, distance=None):
         self.object_id = object_id
         self.position = position
-        self.distance = distance # Not Always Used!
+        self.distance = distance  # Not Always Used!
         self.velocity = velocity
         self.name = name
         self.time = Sim.now()
@@ -331,11 +340,11 @@ class map_entry():
 
 
 def fudge_normal(value, stdev):
-    #Override
+    # Override
     if not FUDGED:
         return value
 
-    #Deal with multiple inputs
+    # Deal with multiple inputs
     if hasattr(value, 'shape'):
         shape = value.shape
     elif isinstance(value, int) or isinstance(value, float):
@@ -407,7 +416,7 @@ def grouper(data):
 
 def range_grouper(data):
     ranges = []
-    data = filter(lambda ( x ): x is not None, data)
+    data = filter(lambda (x): x is not None, data)
     for k, g in groupby(enumerate(data), lambda (i, x): i - x):
         group = map(itemgetter(1), g)
         ranges.append((group[0], group[-1]))
@@ -442,10 +451,11 @@ def itersubclasses(cls, _seen=None):
     if not isinstance(cls, type):
         raise TypeError('itersubclasses must be called with '
                         'new-style classes, not %.100r' % cls)
-    if _seen is None: _seen = set()
+    if _seen is None:
+        _seen = set()
     try:
         subs = cls.__subclasses__()
-    except TypeError: # fails only when cls is type
+    except TypeError:  # fails only when cls is type
         subs = cls.__subclasses__(cls)
     for sub in subs:
         if sub not in _seen:
@@ -457,4 +467,3 @@ def itersubclasses(cls, _seen=None):
 
 def list_functions(module):
     return [o for o in getmembers(module) if isfunction(o[1])]
-

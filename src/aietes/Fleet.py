@@ -6,6 +6,7 @@ from aietes.Tools.ProgressBar import ProgressBar
 
 
 class Fleet(Sim.Process):
+
     """
     Fleets act initially as traffic managers for Nodes
     """
@@ -23,7 +24,6 @@ class Fleet(Sim.Process):
         Sim.activate(self, self.lifecycle())
         for node in self.nodes:
             node.activate()
-
 
     def lifecycle(self):
         def allPassive():
@@ -76,5 +76,3 @@ class Fleet(Sim.Process):
                 maxDeviation = avgHeading
 
         return "V:%s,C:%s,D:%s,A:%s" % (avgHeading, fleetCenter, maxDistance, maxDeviation)
-
-

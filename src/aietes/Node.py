@@ -9,18 +9,19 @@ from aietes.Tools import *
 
 
 class Node(Sim.Process):
+
     """
     Generic Representation of a network node
     """
 
     def __init__(self, name, simulation, node_config, vector=None):
         self.logger = baselogger.getChild("%s[%s]" % (self.__class__.__name__, name))
-        self.id = uuid.uuid4() #Hopefully unique id
+        self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
 
         self.simulation = simulation
         self.config = node_config
-        self.mass = 10#kg modeling remus 100
+        self.mass = 10  # kg modeling remus 100
 
         # Positions Initialised to None to highlight mistakes; as Any position could be a bad position
         self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
@@ -34,16 +35,13 @@ class Node(Sim.Process):
         # Store contributions
         self.contributions_log = []
 
-
-
-        ##############################
+        #
         # Physical Configuration
-        ##############################
-
-        #Extract (X,Y,Z) vector from 6-vector as position
+        #
+        # Extract (X,Y,Z) vector from 6-vector as position
         assert len(vector) == 3, "Malformed Vector%s" % vector
         self.position = np.array(vector, dtype=np.float)
-        #Implied six vector velocity
+        # Implied six vector velocity
         self.velocity = np.array([0, 0, 0], dtype=np.float)
         self.acceleration_force = np.array([0, 0, 0], dtype=np.float)
 
@@ -51,9 +49,9 @@ class Node(Sim.Process):
 
         self._lastupdate = Sim.now()
 
-        ##############################
+        #
         # Application and(or) Comms stack
-        ##############################
+        #
         try:
             app_mod = getattr(Applications, str(node_config['app']))
         except AttributeError:
@@ -64,11 +62,11 @@ class Node(Sim.Process):
             self.layercake = None
         self.app = app_mod(self, node_config['Application'], layercake=self.layercake)
 
-        ##############################
+        #
         # Propultion Capabilities
-        ##############################
+        #
         if len(self.config['cruising_speed']) == 1:
-            #cruising speed is independent of direction
+            # cruising speed is independent of direction
             self.cruising_speed = np.asarray(
                 [self.config['cruising_speed'][0], self.config['cruising_speed'][0], self.config['cruising_speed'][0]],
                 dtype=np.float64)
@@ -77,7 +75,7 @@ class Node(Sim.Process):
         assert len(self.cruising_speed) == 3
 
         if len(self.config['max_speed']) == 1:
-            #Max speed is independent of direction
+            # Max speed is independent of direction
             self.max_speed = np.asarray(
                 [self.config['max_speed'][0], self.config['max_speed'][0], self.config['max_speed'][0]])
         else:
@@ -85,15 +83,15 @@ class Node(Sim.Process):
         assert len(self.max_speed) == 3
 
         if len(self.config['max_speed']) == 1:
-            #Max Turn Rate is independent of orientation
+            # Max Turn Rate is independent of orientation
             self.max_turn = [self.config['max_turn'], self.config['max_turn'], self.config['max_turn']]
         else:
             self.max_turn = self.config['max_turn']
         assert len(self.max_turn) == 3
 
-        ##############################
+        #
         # Internal Configure Node Behaviour
-        ##############################
+        #
         behaviour = None
         try:
             behaviour = self.config['Behaviour']['protocol']
@@ -105,10 +103,10 @@ class Node(Sim.Process):
                                     bev_config=self.config['Behaviour'],
                                     map=self.simulation.environment.map)
 
-        ##############################
+        #
         # Simulation Configuration
         self.internalEvent = Sim.SimEvent(self.name)
-        ##############################
+        #
 
         self.logger.debug('instance created')
 
@@ -121,7 +119,7 @@ class Node(Sim.Process):
         if self.app.layercake:
             self.layercake.activate()
 
-        #Tell the environment that we are here!
+        # Tell the environment that we are here!
         self.simulation.environment.update(self.id, self.getPos(), self.getVec())
 
     def assignFleet(self, fleet):
@@ -147,7 +145,6 @@ class Node(Sim.Process):
         self.acceleration_force = forceVector
         self.contributions_log.append(contributions)
 
-
     def cruiseControl(self, velocity, prev_velocity):
         """
         Attempt to maintain cruising velocity
@@ -159,14 +156,13 @@ class Node(Sim.Process):
                 mag(velocity), mag(self.cruising_speed), refactor, mag(new_V)))
         return new_V
 
-
     def move(self):
         """
         Update node status
         """
-        ##############################
+        #
         # Positional information
-        ##############################
+        #
         old_pos = self.position.copy()
         dT = self.simulation.deltaT(Sim.now(), self._lastupdate)
         # Since you're an idiot and keep forgetting if this is right or not; it is;
@@ -179,15 +175,18 @@ class Node(Sim.Process):
         new_velocity = self.velocity + (self.acceleration_force / self.mass) * dT
         if mag(new_velocity) > any(self.cruising_speed):
             self.velocity = self.cruiseControl(new_velocity, self.velocity)
-            if debug: self.logger.debug("Normalized Velocity: %s, clipped: %s" % (new_velocity, self.velocity))
+            if debug:
+                self.logger.debug("Normalized Velocity: %s, clipped: %s" % (new_velocity, self.velocity))
         else:
-            if debug: self.logger.debug("Velocity: %s" % new_velocity)
+            if debug:
+                self.logger.debug("Velocity: %s" % new_velocity)
             self.velocity = new_velocity
         assert mag(self.velocity) < max(self.max_speed), "Breaking the speed limit: %s, %s" % (
-        mag(self.velocity), self.cruising_speed)
+            mag(self.velocity), self.cruising_speed)
         self.position += self.velocity
-        if debug: self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
-            self.velocity, mag(self.velocity), dT, old_pos, self.position))
+        if debug:
+            self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
+                              self.velocity, mag(self.velocity), dT, old_pos, self.position))
         if not self.wallCheck():
             self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
@@ -219,7 +218,6 @@ class Node(Sim.Process):
         d = distance(self.getPos(), their_position)
         return d
 
-
     def lifecycle(self):
         """
         Called to update internal awareness and motion:
@@ -227,10 +225,11 @@ class Node(Sim.Process):
         """
         self.logger.debug("Initialised Node Lifecycle")
         while True:
-            ##############################
-            #Update Node State
-            ##############################
-            if debug: self.logger.info('updating behaviour')
+            #
+            # Update Node State
+            #
+            if debug:
+                self.logger.info('updating behaviour')
             try:
                 self.behaviour.process()
             except Exception:
@@ -239,25 +238,25 @@ class Node(Sim.Process):
 
             yield Sim.passivate, self
 
-            ##############################
-            #Move Fleet
-            ##############################
-            if debug: self.logger.info('updating position, then waiting %s' % self.behaviour.update_rate)
+            #
+            # Move Fleet
+            #
+            if debug:
+                self.logger.info('updating position, then waiting %s' % self.behaviour.update_rate)
             try:
                 self.move()
             except Exception:
                 self.logger.error("Exception in Move")
                 raise
 
-
-            ##############################
-            #Update Fleet State
-            ##############################
-            if debug: self.logger.info('updating map')
+            #
+            # Update Fleet State
+            #
+            if debug:
+                self.logger.info('updating map')
             yield Sim.hold, self, self.behaviour.update_rate
             try:
                 self.simulation.environment.update(self.id, self.getPos(), self.getVec())
             except Exception:
                 self.logger.error("Exception in Environment Update")
                 raise
-

@@ -64,6 +64,7 @@ Noah Spurrier 20020822
 
 
 class ExceptionFSM(Exception):
+
     """This is the FSM Exception class."""
 
     def __init__(self, value):
@@ -74,6 +75,7 @@ class ExceptionFSM(Exception):
 
 
 class FSM:
+
     """This is a Finite State Machine (FSM).
     """
 
@@ -181,7 +183,7 @@ class FSM:
         """
         self.input_symbol = input_symbol
         (action, next_state) = self.get_transition(self.input_symbol, self.current_state)
-        #print "%s(%s) -> %s" % (self.current_state, input_symbol, next_state)
+        # print "%s(%s) -> %s" % (self.current_state, input_symbol, next_state)
         self.current_state = next_state
 
         if action is not None:
@@ -194,7 +196,7 @@ class FSM:
         for c in s:
             self.process(c)
 
-        ##########################################################################
+        #
         # The following example demonstrates the use of the FSM class in
         # processing RPN expressions. Run this module from the command line.
         # You will get a prompt > for input.
@@ -205,64 +207,64 @@ class FSM:
         #    167 3 2 2 * * * 1 - =
         # will print:
         #    2003
-        ##########################################################################
+        #
 
-        #import string
+        # import string
 
         #
         # These define the actions.
         # Note that "something" is a list being used as a stack.
         #
-        #def BeginBuildNumber (fsm):
-        #fsm.something.append (fsm.input_symbol)
-        #def BuildNumber (fsm):
-        #s = fsm.something.pop ()
-        #s = s + fsm.input_symbol
-        #fsm.something.append (s)
-        #def EndBuildNumber (fsm):
-        #s = fsm.something.pop ()
-        #fsm.something.append (int(s))
-        #def DoOperator (fsm):
-        #ar = fsm.something.pop()
-        #al = fsm.something.pop()
-        #if fsm.input_symbol == '+':
-        #fsm.something.append (al + ar)
-        #elif fsm.input_symbol == '-':
-        #fsm.something.append (al - ar)
-        #elif fsm.input_symbol == '*':
-        #fsm.something.append (al * ar)
-        #elif fsm.input_symbol == '/':
-        #fsm.something.append (al / ar)
-        #def DoEqual (fsm):
-        #print str(fsm.something.pop())
-        #def Error (fsm):
-        #print 'That does not compute.'
-        #print str(fsm.input_symbol)
+        # def BeginBuildNumber (fsm):
+        # fsm.something.append (fsm.input_symbol)
+        # def BuildNumber (fsm):
+        # s = fsm.something.pop ()
+        # s = s + fsm.input_symbol
+        # fsm.something.append (s)
+        # def EndBuildNumber (fsm):
+        # s = fsm.something.pop ()
+        # fsm.something.append (int(s))
+        # def DoOperator (fsm):
+        # ar = fsm.something.pop()
+        # al = fsm.something.pop()
+        # if fsm.input_symbol == '+':
+        # fsm.something.append (al + ar)
+        # elif fsm.input_symbol == '-':
+        # fsm.something.append (al - ar)
+        # elif fsm.input_symbol == '*':
+        # fsm.something.append (al * ar)
+        # elif fsm.input_symbol == '/':
+        # fsm.something.append (al / ar)
+        # def DoEqual (fsm):
+        # print str(fsm.something.pop())
+        # def Error (fsm):
+        # print 'That does not compute.'
+        # print str(fsm.input_symbol)
 
         #
         # This is where the example starts and the FSM state transitions are defined.
         # Note that states (such as 'INIT') are strings. This is not necessary, but
         # it makes the example easier to read.
         #
-        #def example ():
-        #f = FSM ('INIT', []) # "something" will be used as a stack.
-        #f.set_default_transition (Error, 'INIT')
-        #f.add_transition_any  ('INIT', None, 'INIT')
-        #f.add_transition      ('=',               'INIT',            DoEqual,          'INIT')
-        #f.add_transition_list (string.digits,     'INIT',            BeginBuildNumber, 'BUILDING_NUMBER')
-        #f.add_transition_list (string.digits,     'BUILDING_NUMBER', BuildNumber,      'BUILDING_NUMBER')
-        #f.add_transition_list (string.whitespace, 'BUILDING_NUMBER', EndBuildNumber,   'INIT')
-        #f.add_transition_list ('+-*/',            'INIT',            DoOperator,       'INIT')
+        # def example ():
+        # f = FSM ('INIT', []) # "something" will be used as a stack.
+        # f.set_default_transition (Error, 'INIT')
+        # f.add_transition_any  ('INIT', None, 'INIT')
+        # f.add_transition      ('=',               'INIT',            DoEqual,          'INIT')
+        # f.add_transition_list (string.digits,     'INIT',            BeginBuildNumber, 'BUILDING_NUMBER')
+        # f.add_transition_list (string.digits,     'BUILDING_NUMBER', BuildNumber,      'BUILDING_NUMBER')
+        # f.add_transition_list (string.whitespace, 'BUILDING_NUMBER', EndBuildNumber,   'INIT')
+        # f.add_transition_list ('+-*/',            'INIT',            DoOperator,       'INIT')
 
-        #print
-        #print 'Enter an RPN Expression.'
-        #print 'Numbers may be integers. Operators are * / + -'
-        #print 'Use the = sign to evaluate and print the expression.'
-        #print 'For example: '
-        #print '    167 3 2 2 * * * 1 - ='
-        #inputs = raw_input ('>')
-        #for s in inputs:
-        #f.process (s)
+        # print
+        # print 'Enter an RPN Expression.'
+        # print 'Numbers may be integers. Operators are * / + -'
+        # print 'Use the = sign to evaluate and print the expression.'
+        # print 'For example: '
+        # print '    167 3 2 2 * * * 1 - ='
+        # inputs = raw_input ('>')
+        # for s in inputs:
+        # f.process (s)
 
-        #if __name__ == '__main__':
-        #example ()
+        # if __name__ == '__main__':
+        # example ()
