@@ -388,7 +388,6 @@ def nameGeneration(count, naming_convention=None, existing_names=None):
             candidate_name = naming_convention[np.random.randint(0, len(naming_convention))]
 
         node_names.append(candidate_name)
-
     return node_names
 
 

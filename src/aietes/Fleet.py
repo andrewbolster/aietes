@@ -41,7 +41,7 @@ class Fleet(Sim.Process):
             self.simulation.waiting = True
             yield Sim.waituntil, self, allPassive
             percent_now = ((100 * Sim.now()) / self.simulation.duration_intervals)
-            if __debug__ and percent_now % 1 == 0:
+            if __debug__ and percent_now % 5 == 0:
                 self.logger.info("Fleet  %d%%: %s" % (percent_now, self.currentStats()))
             if not __debug__ and percent_now % 1 == 0:
                 progress_bar.render(int(percent_now),

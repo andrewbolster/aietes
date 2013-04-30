@@ -11,7 +11,6 @@ from pprint import pformat
 import numpy as np
 from configobj import ConfigObj
 import validate
-from matplotlib import animation as MPLanimation
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3
 
@@ -20,8 +19,8 @@ from Environment import Environment
 from Fleet import Fleet
 from Node import Node
 import Behaviour
+from Animation import AIETESAnimation
 from Tools import *
-
 
 np.set_printoptions(precision=3)
 
@@ -43,9 +42,22 @@ class Simulation():
         if self.config_file is None and self.config is None:
             self.logger.info("creating instance from default")
             self.config = self.validateConfig(None)
+            self.config = self.generateConfig(self.config)
+        elif self.config_file is None and self.config is not None:
+            self.logger.info("using given config")
+            config = self.validateConfig(self.config, final_check = True)
+            config['Node']['Nodes'].pop('__default__')
+            self.config = dotdict(config.dict())
         else:
             self.logger.info("creating instance from %s" % self.config_file)
             self.config = self.validateConfig(self.config_file)
+            self.config = self.generateConfig(self.config)
+        if "__default__" in self.config.Node.Nodes.keys():
+            raise RuntimeError("Dun fucked up: __default__ node detected")
+        if "__default__" in self.config.Node.Nodes.keys():
+            raise RuntimeError("Dun fucked up: __default__ node detected")
+
+        #Once Validated we've got no reason to hold on to the configobj structure
 
         self.nodes = []
         self.fleets = []
@@ -53,7 +65,7 @@ class Simulation():
     def prepare(self, waits=False, *args, **kwargs):
         # Attempt Validation and construct the simulation from that config.
         try:
-            baselogger.setLevel(LOGLEVELS.get(self.config.log_level, logging.NOTSET))
+            baselogger.setLevel(LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
         except ConfigError as err:
             self.logger.error("Error in configuration, cannot continue: %s" % err)
             raise SystemExit(1)
@@ -137,7 +149,7 @@ class Simulation():
         shape = self.environment.shape
         return positions, vectors, names, shape
 
-    def validateConfig(self, config_file):
+    def validateConfig(self, config = None, final_check = False):
         """
         Generate valid configuration information by interpolating a given config
         file with the defaults
@@ -151,52 +163,56 @@ class Simulation():
         #
         # GENERIC CONFIG ACQUISITION
         #
-
-        config = ConfigObj(config_file, configspec=self.config_spec, stringify=True, interpolation=True)
-        config_status = config.validate(validate.Validator(), copy=True)
+        if not isinstance(config, ConfigObj):
+            config = ConfigObj(config, configspec=self.config_spec, stringify=True, interpolation=not final_check)
+        else:
+            self.logger.info("Skipping configobj for final validation")
+        config_status = config.validate(validate.Validator(), copy= not final_check)
 
         if not config_status:
             # If config_spec doesn't match the input, bail
             raise ConfigError("Configspec doesn't match given input structure: %s" % config_status)
 
-        config = dotdict(config.dict())
+        return config
 
+    def generateConfig(self, config):
         #
         # NODE CONFIGURATION
         #
         preconfigured_nodes_count = 0
         pre_node_names = []
         nodes_config = dict()
-        node_default_config = config.Node.Nodes.pop('__default__')
+        node_default_config_dict = dotdict(config['Node']['Nodes'].pop('__default__').dict())
+        config_dict = dotdict(config.dict())
         # Add the stuff we know whould be there...
-        self.logger.debug("Initial Node Config from %s: %s" % (config_file, pformat(node_default_config)))
-        node_default_config.update(
+        self.logger.debug("Initial Node Config from %s: %s" % (self.config_file, pformat(node_default_config_dict)))
+        node_default_config_dict.update(
             # TODO import PHY,Behaviour, etc into the node config?
         )
 
         #
         # Check if there are individually configured nodes
-        if isinstance(config.Node.Nodes, dict) and len(config.Node.Nodes) > 0:
+        if isinstance(config_dict.Node.Nodes, dict) and len(config_dict.Node.Nodes) > 0:
             #
             # There Are Detailed Config Instances
-            preconfigured_nodes_count = len(config.Node.Nodes)
+            preconfigured_nodes_count = len(config_dict.Node.Nodes)
             self.logger.info("Have %d nodes from config: %s" % (
                 preconfigured_nodes_count,
                 nodes_config)
             )
-            pre_node_names = config.Node.Nodes.keys()
+            pre_node_names = config_dict.Node.Nodes.keys()
 
         #
         # Check and generate application distribution
         #   i.e. app = ["App A","App B"]
         #        dist = [ 4, 5 ]
         try:
-            app = node_default_config.Application.protocol
-            dist = node_default_config.Application.distribution
-            nodes_count = config.Node.count
+            app = node_default_config_dict.Application.protocol
+            dist = node_default_config_dict.Application.distribution
+            nodes_count = config_dict.Node.count
         except AttributeError as e:
             self.logger.error("Error:%s" % e)
-            self.logger.info("%s" % pformat(node_default_config))
+            self.logger.info("%s" % pformat(node_default_config_dict))
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
@@ -222,12 +238,12 @@ class Simulation():
         #   i.e. bev = ["Bev A","Bev B"]
         #        dist = [ 4, 5 ]
         try:
-            bev = node_default_config.Behaviour.protocol
-            dist = node_default_config.Behaviour.distribution
-            nodes_count = config.Node.count
+            bev = node_default_config_dict.Behaviour.protocol
+            dist = node_default_config_dict.Behaviour.distribution
+            nodes_count = config_dict.Node.count
         except AttributeError as e:
             self.logger.error("Error:%s" % e)
-            self.logger.info("%s" % pformat(node_default_config))
+            self.logger.info("%s" % pformat(node_default_config_dict))
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
@@ -251,7 +267,7 @@ class Simulation():
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
             count=nodes_count - preconfigured_nodes_count,
-            naming_convention=config.Node.naming_convention
+            naming_convention=config_dict.Node.naming_convention
         )
         node_names = auto_node_names + pre_node_names
 
@@ -259,7 +275,7 @@ class Simulation():
         for node_name in node_names:
             # Bare Dict/update instead of copy()
             nodes_config[node_name] = dict()
-            nodes_config[node_name].update(node_default_config)
+            nodes_config[node_name].update(node_default_config_dict)
 
         # Give auto-config default
         for node_name, node_app in zip(auto_node_names, applications):
@@ -267,17 +283,16 @@ class Simulation():
             nodes_config[node_name]['app'] = str(node_app)
 
         # Overlay Preconfigured with their own settings
-        for node_name, node_config in config.Node.Nodes.items():
+        for node_name, node_config in config_dict.Node.Nodes.items():
             # Import the magic!
             nodes_config[node_name].update(node_config)
 
         #
         # Confirm
         #
-        config.Node.Nodes.update(nodes_config)
+        config_dict.Node.Nodes.update(nodes_config)
         self.logger.debug("Built Config: %s" % pformat(config))
-
-        return config
+        return config_dict
 
     def configureEnvironment(self, env_config):
         """
@@ -311,6 +326,7 @@ class Simulation():
             node_list.append(new_node)
 
         # TODO Fleet implementation
+
 
         return node_list
 
@@ -431,95 +447,6 @@ class Simulation():
         """
         return (now - then) * self.config.Simulation.sim_interval
 
-
-class AIETESAnimation(MPLanimation.FuncAnimation):
-
-    def save(self, filename, fps=5, codec='libx264', clear_temp=True,
-             frame_prefix='_tmp', *args, **kwargs):
-        """
-        Saves a movie file by drawing every frame.
-
-        *filename* is the output filename, eg :file:`mymovie.mp4`
-
-        *fps* is the frames per second in the movie
-
-        *codec* is the codec to be used,if it is supported by the output method.
-
-        *clear_temp* specifies whether the temporary image files should be
-        deleted.
-
-        *frame_prefix* gives the prefix that should be used for individual
-        image files.  This prefix will have a frame number (i.e. 0001) appended
-        when saving individual frames.
-        """
-        # Need to disconnect the first draw callback, since we'll be doing
-        # draws. Otherwise, we'll end up starting the animation.
-        if self._first_draw_id is not None:
-            self._fig.canvas.mpl_disconnect(self._first_draw_id)
-            reconnect_first_draw = True
-        else:
-            reconnect_first_draw = False
-
-        fnames = []
-        # Create a new sequence of frames for saved data. This is different
-        # from new_frame_seq() to give the ability to save 'live' generated
-        # frame information to be saved later.
-        # TODO: Right now, after closing the figure, saving a movie won't
-        # work since GUI widgets are gone. Either need to remove extra code
-        # to allow for this non-existant use case or find a way to make it work.
-        for idx, data in enumerate(self.new_saved_frame_seq()):
-            # TODO: Need to see if turning off blit is really necessary
-            self._draw_next_frame(data, blit=False)
-            fname = '%s%04d.png' % (frame_prefix, idx)
-            fnames.append(fname)
-            self._fig.savefig(fname)
-
-        self.make_movie(filename, fps, codec, frame_prefix, cmd_gen=self.mencoder_cmd)
-
-        # Delete temporary files
-        if clear_temp:
-            import os
-
-            for fname in fnames:
-                os.remove(fname)
-
-        # Reconnect signal for first draw if necessary
-        if reconnect_first_draw:
-            self._first_draw_id = self._fig.canvas.mpl_connect('draw_event',
-                                                               self._start)
-
-    def ffmpeg_cmd(self, fname, fps, codec, frame_prefix):
-        # Returns the command line parameters for subprocess to use
-        # ffmpeg to create a movie
-        return ['ffmpeg', '-y', '-r', str(fps),
-                '-b', '1800k', '-i', '%s%%04d.png' % frame_prefix,
-                '-vcodec', codec, '-vpre', 'slow', '-vpre', 'baseline',
-                "%s.mp4" % fname]
-
-    def mencoder_cmd(self, fname, fps, codec, frame_prefix):
-        # Returns the command line parameters for subprocess to use
-        # mencoder to create a movie
-        return ['mencoder',
-                '-nosound',
-                '-quiet',
-                '-ovc', 'lavc',
-                '-lavcopts', "vcodec=%s" % codec,
-                '-o', "%s.mp4" % fname,
-                '-mf', 'type=png:fps=24', 'mf://%s%%04d.png' % frame_prefix]
-
-    def _make_movie(self, fname, fps, codec, frame_prefix, cmd_gen=None):
-        # Uses subprocess to call the program for assembling frames into a
-        # movie file.  *cmd_gen* is a callable that generates the sequence
-        # of command line arguments from a few configuration options.
-        from subprocess import Popen, PIPE
-
-        if cmd_gen is None:
-            cmd_gen = self.ffmpeg_cmd
-        command = cmd_gen(self, fname, fps, codec, frame_prefix)
-        print command
-        proc = Popen(command, shell=False,
-                     stdout=PIPE, stderr=PIPE)
-        proc.wait()
 
 # Uncomment the following section if you want readline history support.
 # import readline, atexit
