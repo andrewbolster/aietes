@@ -35,10 +35,13 @@ class Simulation():
 
     def __init__(self, *args, **kwargs):
         self.config_spec = '%s/configs/default.conf' % _ROOT
+        self.title = kwargs.get("title", None)
+        logtofile = kwargs.get("logtofile", None)
+        if logtofile is not None:
+            setlogtofile(logtofile)
         self.logger = baselogger.getChild("%s" % self.__class__.__name__)
         self.config_file = kwargs.get("config_file", None)
         self.config = kwargs.get("config", None)
-        self.title = kwargs.get("title", None)
         if self.config_file is None and self.config is None:
             self.logger.info("creating instance from default")
             self.config = self.validateConfig(None)
@@ -66,6 +69,7 @@ class Simulation():
         # Attempt Validation and construct the simulation from that config.
         try:
             baselogger.setLevel(LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
+            ch.setLevel(LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
         except ConfigError as err:
             self.logger.error("Error in configuration, cannot continue: %s" % err)
             raise SystemExit(1)

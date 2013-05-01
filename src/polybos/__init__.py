@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pprint import pprint
 
 from configobj import ConfigObj
@@ -51,16 +52,18 @@ class Scenario(object):
 
         self.committed = False
 
+        self.tweaks = {}
+
     def run(self, *args, **kwargs):
         """
         Offload this to AIETES
         """
         runcount = kwargs.get("runcount",self._default_run_count )
-        pp_defaults={'outputFile':kwargs.get("title",self.title), 'dataFile':True}
+        pp_defaults={'outputFile':self.title+kwargs.get("title",""), 'dataFile':True}
         if not self.committed: self.commit()
         for run in range(runcount):
             try:
-                sim = Simulation(config = self.config, title = self.title+"-%s"%run)
+                sim = Simulation(config = self.config, title = self.title+"-%s"%run, logtofile=self.title+".log")
                 sim.prepare()
                 sim.simulate()
                 sim.postProcess(**pp_defaults)
@@ -116,9 +119,10 @@ class Scenario(object):
         else:
             raise NotImplementedError("Have no mutable map for %s"%mutable)
 
-    def add_custom_node(self,variable,value,count=1):
+    def add_custom_node(self,variable_map,count=1):
         node_conf = self._default_node_config.copy()
-        self.update_node(node_conf,variable,value)
+        for variable,value in variable_map.iteritems():
+            self.update_node(node_conf,variable,value)
         node_names = nameGeneration(count,existing_names=self.nodes.keys())
         for node_name in node_names:
             self.nodes[node_name]=node_conf
@@ -144,6 +148,7 @@ class ExperimentManager(object):
         Acquire Generic Scenario
         """
         self.scenarios = []
+        self.node_count = None
         self.title = kwargs.get("title",datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
 
     def run(self, *args, **kwargs):
@@ -155,11 +160,23 @@ class ExperimentManager(object):
         self.orig_path = os.path.abspath(os.path.curdir)
         try:
             os.mkdir(self.exp_path)
+        except:
+            self.exp_path = tempfile.mkdtemp()
+        try:
             os.chdir(self.exp_path)
             for scenario in self.scenarios:
                 scenario.run()
         finally:
             os.chdir(self.orig_path)
+            print("Experimental results stored in %s"%self.exp_path)
+
+    def updateNodeCounts(self, new_count):
+        """
+        Updates the node-count makeup; different behaviour ir new_count is list or scalar
+        """
+        if  isinstance(new_count, list) and len(new_count) == len(scenarios):
+            for i,s in enumerate(self.scenarios):
+                s.updateNodeCounts(new_count[i])
 
     def addScenario(self, variable, value_range):
         """
@@ -167,7 +184,7 @@ class ExperimentManager(object):
         """
         for v in value_range:
           s = Scenario(title="%s(%f)"%(variable,v))
-          s.add_custom_node(variable,v)
+          s.add_custom_node({variable:v})
           self.scenarios.append(s)
 
 
