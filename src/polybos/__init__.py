@@ -6,6 +6,7 @@ from configobj import ConfigObj
 import validate
 from datetime import datetime
 
+import logging
 
 from aietes import _ROOT, Simulation # Must use the aietes path to get the config files
 from aietes.Tools import nameGeneration
@@ -32,6 +33,7 @@ class Scenario(object):
       'repulsion':['Behaviour','repulsive_factor'],
       'schooling':['Behaviour','schooling_factor'],
       'clumping':['Behaviour','clumping_factor'],
+      'fudging':['Behaviour','positional_accuracy']
     }
 
     def __init__(self, *args, **kwargs):
@@ -61,14 +63,27 @@ class Scenario(object):
         runcount = kwargs.get("runcount",self._default_run_count )
         pp_defaults={'outputFile':self.title+kwargs.get("title",""), 'dataFile':True}
         if not self.committed: self.commit()
+        self.datarun=[None for _ in range(runcount)]
         for run in range(runcount):
             try:
-                sim = Simulation(config = self.config, title = self.title+"-%s"%run, logtofile=self.title+".log")
-                sim.prepare()
-                sim.simulate()
+                sim = Simulation(config = self.config, 
+                                 title = self.title+"-%s"%run, 
+                                 logtofile=self.title+".log", 
+                                 logtoconsole=logging.INFO,
+                                 progress_display=False
+                                )
+                prep_stats=sim.prepare()
+                sim_stats=sim.simulate()
                 sim.postProcess(**pp_defaults)
+                self.datarun[run] = sim.generateDataPackage()
             except Exception as exp:
-                pass
+                raise
+
+    def generate_simulation_stats(self, sim_run_dataset):
+        """
+        Recieving a bounos.datapackage, generate relevant stats
+        """
+        pass
 
 
     def commit(self):
@@ -158,6 +173,7 @@ class ExperimentManager(object):
         title = kwargs.get("title", self.title)
         self.exp_path = os.path.abspath(os.path.join(os.path.curdir,title))
         self.orig_path = os.path.abspath(os.path.curdir)
+        self.runcount = kwargs.get("runcount",1)
         try:
             os.mkdir(self.exp_path)
         except:
@@ -165,7 +181,7 @@ class ExperimentManager(object):
         try:
             os.chdir(self.exp_path)
             for scenario in self.scenarios:
-                scenario.run()
+                scenario.run(runcount = self.runcount)
         finally:
             os.chdir(self.orig_path)
             print("Experimental results stored in %s"%self.exp_path)

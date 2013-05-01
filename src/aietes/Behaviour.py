@@ -28,6 +28,7 @@ class Behaviour(object):
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
+        self.positional_accuracy = listfix( float, self.bev_config.positional_accuracy)
         self.horizon = 200
 
     def _start_log(self, parent):
@@ -45,8 +46,8 @@ class Behaviour(object):
 
         # Internal Map of the neighbourhood based on best-guess of location (circa 5m / 5ms)
         for k, v in orig_map.items():
-            orig_map[k].position = fudge_normal(v.position, 5)
-            orig_map[k].velocity = fudge_normal(v.velocity, 5)
+            orig_map[k].position = fudge_normal(v.position, self.positional_accuracy)
+            orig_map[k].velocity = fudge_normal(v.velocity, self.positional_accuracy)
 
         return orig_map
 
@@ -71,7 +72,7 @@ class Behaviour(object):
                 contributions[behaviour.__name__] = behaviour(self.node.position, self.node.velocity)
             except Exception as exp:
                 self.logger.error("%s(%s,%s)" % (behaviour.__name__, self.node.position, self.node.velocity))
-                raise exp
+                raise
 
         forceVector = sum(contributions.values())
 

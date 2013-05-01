@@ -14,7 +14,6 @@ import numpy as np
 np.seterr(all='raise')
 # from os import urandom as randomstr #Provides unicode random String
 
-_logfmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 debug = False
 FUDGED = True

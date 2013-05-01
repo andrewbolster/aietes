@@ -36,13 +36,24 @@ class Simulation():
         self._done = False
         self.config_spec = '%s/configs/default.conf' % _ROOT
         self.title = kwargs.get("title", None)
+        self.progress_display = kwargs.get("progress_display", True)
         logtofile = kwargs.get("logtofile", None)
         logtoconsole = kwargs.get("logtoconsole", logging.INFO)
 
-        self.logger = kwargs.get("logger", logging.getLogger(__name__))
+        self.logger = kwargs.get("logger", None)
+        if self.logger is None and __name__ in logging.Logger.manager.loggerDict:
+            #Assume we need to make our own logger with NO preexisting handlers
+            try:
+                _tmplogdict = logging.Logger.manager.loggerDict[__name__]
+                while len(_tmplogdict.handlers)>0:
+                    _tmplogdict.removeHandler(_tmplogdict.handlers[0])
+            except KeyError:
+                """Assumes that this is the first one"""
+                pass
+        self.logger = logging.getLogger(__name__)
         if logtofile is not None:
             hdlr = logging.FileHandler(logtofile)
-            hdlr.setFormatter(_logfmt)
+            hdlr.setFormatter(logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
             hdlr.setLevel(logging.INFO)
             self.logger.addHandler(hdlr)
         if logtoconsole is not None and not self.logger.root.handlers:
@@ -371,6 +382,32 @@ class Simulation():
 
         return vector
 
+    def generateDataPackage(self, *args, **kwargs):
+        """
+        Creates a bounos.DataPackage object from the current sim
+        """
+        from bounos.DataPackage import DataPackage
+        positions = []
+        vectors = []
+        names = []
+        contributions = []
+        shape = self.environment.shape
+        log = self.environment.pos_log
+        for node in self.nodes:
+            positions.append(node.pos_log)
+            vectors.append(node.vec_log)
+            names.append(node.name)
+            contributions.append(node.contributions_log)
+        dp = DataPackage(p=positions,
+                         v=vectors,
+                         names=names,
+                         contributions = contributions,
+                         environment = shape,
+                         title = kwargs.get("title","")
+                        )
+        return dp
+
+
     def postProcess(self, log=None, outputFile=None, displayFrames=None, dataFile=False, movieFile=False,
                     inputFile=None, xRes=1024, yRes=768, fps=24):
         """
@@ -380,6 +417,7 @@ class Simulation():
         ipp = 80
         fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
         ax = axes3.Axes3D(fig)
+        return_dict = {}
 
         def updatelines(i, positions, lines, displayFrames):
             """
@@ -448,6 +486,8 @@ class Simulation():
                 co = ConfigObj(self.config, list_values=False)
                 co.filename = "%s.conf" % filename
                 co.write()
+                return_dict['data_file']="%s.npz"%filename
+                return_dict['config_file']=co.filename
             if movieFile:
                 self.logger.info("Writing animation to %s" % filename)
                 self.save(line_ani,
@@ -456,8 +496,10 @@ class Simulation():
                           codec='mpeg4',
                           clear_temp=True
                           )
+                return_dict['ani_file']="%s.mp4"%filename
         else:
             plt.show()
+        return return_dict
 
     def deltaT(self, now, then):
         """
