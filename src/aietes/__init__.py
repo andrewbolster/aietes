@@ -26,7 +26,6 @@ np.set_printoptions(precision=3)
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
-
 class Simulation():
 
     """
@@ -34,12 +33,27 @@ class Simulation():
     """
 
     def __init__(self, *args, **kwargs):
+        self._done = False
         self.config_spec = '%s/configs/default.conf' % _ROOT
         self.title = kwargs.get("title", None)
         logtofile = kwargs.get("logtofile", None)
+        logtoconsole = kwargs.get("logtoconsole", logging.INFO)
+
+        self.logger = kwargs.get("logger", logging.getLogger(__name__))
         if logtofile is not None:
-            setlogtofile(logtofile)
-        self.logger = baselogger.getChild("%s" % self.__class__.__name__)
+            hdlr = logging.FileHandler(logtofile)
+            hdlr.setFormatter(_logfmt)
+            hdlr.setLevel(logging.INFO)
+            self.logger.addHandler(hdlr)
+        if logtoconsole is not None and not self.logger.root.handlers:
+            #i.e. if logging to console and no handlers enabled
+            ch = logging.StreamHandler()
+            ch.setLevel(logtoconsole)
+            ch.setFormatter(
+                logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+            )
+            self.logger.addHandler(ch)
+
         self.config_file = kwargs.get("config_file", None)
         self.config = kwargs.get("config", None)
         if self.config_file is None and self.config is None:
@@ -68,8 +82,7 @@ class Simulation():
     def prepare(self, waits=False, *args, **kwargs):
         # Attempt Validation and construct the simulation from that config.
         try:
-            baselogger.setLevel(LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
-            ch.setLevel(LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
+            self.logger.setLevel(LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
         except ConfigError as err:
             self.logger.error("Error in configuration, cannot continue: %s" % err)
             raise SystemExit(1)
@@ -107,6 +120,7 @@ class Simulation():
             Sim.startStepping()
         Sim.simulate(until=self.duration_intervals, callback=callback)
         self.logger.info("Finished Simulation at %s" % Sim.now())
+        return Sim.now()
 
     def inner_join(self):
         """
@@ -463,7 +477,8 @@ class Simulation():
 
 
 def go(options, args):
-    sim = Simulation(config_file=options.config, title=options.title)
+    logging.basicConfig(level=logging.INFO)
+    sim = Simulation(config_file=options.config, title=options.title, logger=logging.getLogger('Aietes'))
 
     if options.input is None:
         sim.prepare(sim_time=options.sim_time)

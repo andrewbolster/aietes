@@ -1,7 +1,9 @@
-# -*- coding: latin-1 -*-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import logging
 import numpy as np
 
-from aietes.Tools import Sim, baselogger, distance, mag
+from aietes.Tools import Sim, distance, mag
 from aietes.Tools.ProgressBar import ProgressBar
 
 
@@ -11,8 +13,8 @@ class Fleet(Sim.Process):
     Fleets act initially as traffic managers for Nodes
     """
 
-    def __init__(self, nodes, simulation):
-        self.logger = baselogger.getChild("%s" % self.__class__.__name__)
+    def __init__(self, nodes, simulation, *args, **kwargs):
+        self.logger = kwargs.get("logger", simulation.logger.getChild(__name__))
         self.logger.info("creating instance")
         Sim.Process.__init__(self, name="Fleet")
         self.nodes = nodes

@@ -1,4 +1,6 @@
-# BOUNOS - Heir to the Kingdom of AIETES
+"""
+BOUNOS - Heir to the Kingdom of AIETES
+"""
 
 import re
 

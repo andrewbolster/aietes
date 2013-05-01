@@ -1,10 +1,11 @@
 from operator import attrgetter
 from collections import namedtuple
+import logging
 
 from SimPy import Simulation as Sim
 import numpy as np
 
-from aietes.Tools import baselogger, map_entry, distance, debug
+from aietes.Tools import map_entry, distance, debug
 
 
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
@@ -18,15 +19,14 @@ class Environment():
     simulated entities i.e. wind, tides, speed of sound at depth, etc
     """
 
-    def __init__(self, simulation, shape=None, resolution=1, base_depth=-1000, sos_model=None):
+    def __init__(self, simulation, shape=None, resolution=1, base_depth=-1000, sos_model=None, **kwargs):
         """
         Generate a box with points from 0 to (size) in each dimension, where
         each point represents a cube of side resolution metres:
                 Volume is the representation of the physical environment (XYZ)
                 Map is the
         """
-        self.logger = baselogger.getChild("%s" % self.__class__.__name__)
-        self.logger.debug('creating instance')
+        self._start_log(simulation)
         self.map = {}
         self.shape = shape if shape is not None else [100, 100, 100]
         self.pos_log = []
@@ -37,6 +37,10 @@ class Environment():
     # TODO Random Surface Generation
     # self.generateSurface()
     # TODO 'Tidal motion' factor
+
+    def _start_log(self, parent):
+        self.logger = parent.logger.getChild("%s" % self.__class__.__name__)
+        self.logger.debug('creating instance')
 
     def is_empty(self, position, tolerance=1):
         """

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import wxversion
 
 wxversion.ensureMinimal("2.8")

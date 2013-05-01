@@ -1,4 +1,5 @@
 import uuid
+import logging
 
 import numpy as np
 
@@ -14,10 +15,10 @@ class Node(Sim.Process):
     Generic Representation of a network node
     """
 
-    def __init__(self, name, simulation, node_config, vector=None):
-        self.logger = baselogger.getChild("%s[%s]" % (self.__class__.__name__, name))
+    def __init__(self, name, simulation, node_config, vector=None, **kwargs):
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
+        self.logger = kwargs.get("logger", simulation.logger.getChild(__name__))
 
         self.simulation = simulation
         self.config = node_config

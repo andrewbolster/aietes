@@ -1,8 +1,9 @@
 from operator import attrgetter
+import logging
 
 import numpy as np
 
-from aietes.Tools import map_entry, baselogger, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance
+from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance
 
 
 class Behaviour(object):
@@ -30,7 +31,7 @@ class Behaviour(object):
         self.horizon = 200
 
     def _start_log(self, parent):
-        self.logger = parent.logger.getChild("Behaviour:%s" % self.__class__.__name__)
+        self.logger = parent.logger.getChild("Bev:%s" % self.__class__.__name__)
         self.logger.debug('creating instance')
 
     def normalize_behaviour(self, forceVector):
@@ -80,7 +81,7 @@ class Behaviour(object):
         if debug:
             total = sum(map(mag, contributions.values()))
 
-            self.logger.info("contributions: %s of %3f" % (
+            self.logger.debug("contributions: %s of %3f" % (
                 [
                     "%s:%.f%%" % (func, 100 * mag(value) / total)
                     for func, value in contributions.iteritems()
@@ -89,7 +90,7 @@ class Behaviour(object):
         if debug:
             total = sum(map(mag, contributions.values()))
             for func, value in contributions.iteritems():
-                self.logger.info("%s:%.2f:%s" % (func, 100 * mag(value) / total, sixvec(value)))
+                self.logger.debug("%s:%.2f:%s" % (func, 100 * mag(value) / total, sixvec(value)))
         forceVector = fudge_normal(forceVector, 0.012)  # Random factor
         self.node.push(forceVector, contributions=contributions)
         return
@@ -257,7 +258,7 @@ class Flock(Behaviour):
         if debug:
             self.logger.debug("Schooling:%s" % forceVector)
         if debug:
-            self.logger.info("V:%s,F:%s, %f" % (
+            self.logger.debug("V:%s,F:%s, %f" % (
                              unit(velocity), unit(forceVector), spherical_distance(unit(velocity), unit(forceVector))))
         d = spherical_distance(unit(velocity), unit(forceVector))
         return self.normalize_behaviour(forceVector) * self.schooling_factor
@@ -291,7 +292,7 @@ class AlternativeFlockMixin():
             f = np.log(d) + (self.collision_avoidance_d / float(d))  # force to go
             nforceVector = f * v
             if debug:
-                self.logger.info("PotentialV: %s, for D:%s, F:%s, V:%s" % (nforceVector, d, f, v))
+                self.logger.debug("PotentialV: %s, for D:%s, F:%s, V:%s" % (nforceVector, d, f, v))
             forceVector += nforceVector
         return forceVector * self.clumping_factor
 
@@ -313,7 +314,7 @@ class WaypointMixin():
             generator = attrgetter(str(self.bev_config.waypoint_style))
             g = generator(self)
             if __debug__:
-                self.logger.info("Generating waypoints: %s" % g.__name__)
+                self.logger.debug("Generating waypoints: %s" % g.__name__)
             g()
         self.behaviours.append(self.waypointVector)
 
@@ -359,18 +360,18 @@ class AlternativeWaypoint(AlternativeFlock, Waypoint):
 
 class waypoint(object):
 
-    def __init__(self, positions):
+    def __init__(self, positions, *args, **kwargs):
         """
         Defines waypoint paths:
             positions = [ [ position, proximity ], *]
         """
-        self.logger = baselogger.getChild("%s" % self.__class__.__name__)
+        self.logger = kwargs.get("logger", logging.getLogger(__name__))
         (self.position, self.prox) = positions[0]
         if __debug__:
-            self.logger.info("Waypoint: %s,%s" % (self.position, self.prox))
+            self.logger.debug("Waypoint: %s,%s" % (self.position, self.prox))
         if len(positions) == 1:
             if __debug__:
-                self.logger.info("End of Position List")
+                self.logger.debug("End of Position List")
             self.next = None
         else:
             self.next = waypoint(positions[1:])

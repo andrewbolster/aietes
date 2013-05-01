@@ -14,25 +14,10 @@ import numpy as np
 np.seterr(all='raise')
 # from os import urandom as randomstr #Provides unicode random String
 
-baselogger = logging.getLogger('SIM')
-baselogger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-
-fmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-baselogger.addHandler(ch)
-for handler in baselogger.handlers:
-    handler.setFormatter(fmt)
+_logfmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 debug = False
 FUDGED = True
-
-def setlogtofile(logtofile, level=logging.INFO):
-    ch.setLevel(logging.ERROR)
-    fh = logging.FileHandler(logtofile)
-    fh.setFormatter(fmt)
-    fh.setLevel(level)
-    baselogger.addHandler(fh)
 
 class ConfigError(Exception):
 

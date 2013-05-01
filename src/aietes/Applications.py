@@ -49,7 +49,7 @@ class Application(Sim.Process):
         self.period = 1 / float(self.packet_rate)
 
     def _start_log(self, parent):
-        self.logger = parent.logger.getChild("Application:%s" % self.__class__.__name__)
+        self.logger = parent.logger.getChild("App:%s" % self.__class__.__name__)
         self.logger.debug('creating instance')
 
     def activate(self):
