@@ -71,6 +71,18 @@ class DataPackage(object):
     #Data has the format:
     # [n][x,y,z][t]
 
+    def package_statistics(self):
+        """
+        Generate General Package Statistics, i.e. full simulation statistics
+        """
+
+        stats = dict()
+        """Achievement Statistics"""
+        ach_stat = dict()
+        ach_stat = {'pernode': False}
+        #TODO
+
+
     def position_of(self, node, time):
         """
         Query the data set for the x,y,z position of a node at a given time

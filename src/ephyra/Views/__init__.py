@@ -36,7 +36,7 @@ class MetricView():
         self.last_wanted = np.asarray([])
         if __debug__: logging.debug("%s" % self)
 
-    def plot(self, wanted = None, time = None):
+    def plot(self, wanted=None, time=None):
         """
         Update the Plot based on 'new' wanted data
         """
@@ -45,19 +45,19 @@ class MetricView():
         self.ax.get_xaxis().set_visible(True)
 
         if all(wanted == True) or self.ndim == 1:
-            self.ax.plot(self.data, alpha = 0.3)
+            self.ax.plot(self.data, alpha=0.3)
         else:
             logging.info("Printing %s with Wanted:%s" % (self, wanted))
-            self.ax.plot(np.ndarray(buffer = self.data, shape = self.data.shape)[:, wanted], alpha = 0.3)
+            self.ax.plot(np.ndarray(buffer=self.data, shape=self.data.shape)[:, wanted], alpha=0.3)
 
         if self.highlight_data is not None:
-            self.ax.plot(self.highlight_data, color = 'k', linestyle = '--')
+            self.ax.plot(self.highlight_data, color='k', linestyle='--')
 
         self.last_wanted = wanted
         self.ax.relim()
         return self.ax
 
-    def update(self, wanted = None, time = None):
+    def update(self, wanted=None, time=None):
         if wanted is None: wanted = []
         if np.array_equiv(wanted, self.last_wanted):
             #Assume that the ylim will sort scoping out later...
@@ -67,7 +67,7 @@ class MetricView():
             self.last_wanted = wanted
             return self.plot(wanted, time)
 
-    def ylim(self, xlim, margin = None):
+    def ylim(self, xlim, margin=None):
         (xmin, xmax) = xlim
         if self.highlight_data is not None:
             data = np.append(self.data, self.highlight_data).reshape((self.data.shape[0], -1))
@@ -107,12 +107,12 @@ class Arrow3D(FancyArrowPatch):
 
 class GenericFrame(wx.Frame):
     def __init__(self, controller, *args, **kw):
-        wx.Frame.__init__(self, None, title = EphyraNotebook.description, *args, **kw)
+        wx.Frame.__init__(self, None, title=EphyraNotebook.description, *args, **kw)
         self.log = logging.getLogger(self.__module__)
         self.ctl = controller
         p = VisualNavigator(self, self, wx.ID_ANY)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(p, proportion = 1, flag = wx.GROW)
+        sizer.Add(p, proportion=1, flag=wx.GROW)
         self.SetMinSize((800, 600))
         self.SetSizer(sizer)
         sizer.Fit(p)
@@ -126,7 +126,7 @@ from ephyra.Views.Simulator import Simulator
 
 class EphyraNotebook(wx.Frame):
     def __init__(self, controller, *args, **kw):
-        wx.Frame.__init__(self, None, title = "Ephyra")
+        wx.Frame.__init__(self, None, title="Ephyra")
         self.log = logging.getLogger(self.__module__)
         self.ctl = controller
         self.args = kw.get("exec_args", None)
@@ -149,7 +149,7 @@ class EphyraNotebook(wx.Frame):
         self.status_bar.SetFieldsCount(3)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.Add(self.nb, proportion = 1, flag = wx.EXPAND | wx.ALL)
+        self.sizer.Add(self.nb, proportion=1, flag=wx.EXPAND | wx.ALL)
         self.SetAutoLayout(1)
         self.p.SetSizer(self.sizer)
         self.SetMinSize((800, 600))
@@ -222,7 +222,7 @@ class EphyraNotebook(wx.Frame):
         try:
             self.nb.GetCurrentPage().on_resize(event)
         except Exception as e:
-            traceback.print_exc(file = sys.stdout)
+            traceback.print_exc(file=sys.stdout)
             wx.CallAfter(self.exit)
             raise e
 
@@ -231,8 +231,8 @@ class EphyraNotebook(wx.Frame):
     ####
     def on_new(self, event):
         dlg = wx.MessageDialog(self,
-                               message = "This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
-                               style = wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
+                               message="This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
+                               style=wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
         )
         result = dlg.ShowModal()
         dlg.Destroy()
@@ -241,10 +241,10 @@ class EphyraNotebook(wx.Frame):
 
     def on_open(self, event):
         dlg = wx.FileDialog(
-            self, message = "Select a DataPackage",
-            defaultDir = os.getcwd(),
-            wildcard = "*.npz",
-            style = wx.OPEN | wx.CHANGE_DIR
+            self, message="Select a DataPackage",
+            defaultDir=os.getcwd(),
+            wildcard="*.npz",
+            style=wx.OPEN | wx.CHANGE_DIR
         )
 
         if dlg.ShowModal() == wx.ID_OK:
@@ -258,9 +258,9 @@ class EphyraNotebook(wx.Frame):
     # Status Management
     ###
     def update_status(self, msg):
-        self.status_bar.SetStatusText(msg, number = 0)
+        self.status_bar.SetStatusText(msg, number=0)
         if msg is not "Idle":
             self.log.info(msg)
 
     def update_timing(self, t, tmax):
-        self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.ctl.is_simulation() else "REC", t, tmax), number = 2)
+        self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.ctl.is_simulation() else "REC", t, tmax), number=2)

@@ -19,6 +19,7 @@ from matplotlib import cm
 from ephyra.Views import MetricView, Arrow3D
 
 
+# noinspection PyStringFormat
 class VisualNavigator(wx.Panel):
     def __init__(self, parent, frame, *args, **kw):
         wx.Panel.__init__(self, parent, *args, **kw)

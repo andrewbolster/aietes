@@ -26,12 +26,11 @@ class ConfigError(Exception):
     """
 
     def __init__(self, value):
-        logging.Logger.critical("Invalid Config; Dying: %s" % value)
+        logging.critical("Invalid Config; Dying: %s" % value)
         self.status = value
 
     def __str__(self):
         return repr(self.status)
-
 
 #
 # Magic Numbers

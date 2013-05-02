@@ -9,7 +9,6 @@ debug = True
 
 
 class Application(Sim.Process):
-
     """
     Generic Class for top level application layers
     """
@@ -23,7 +22,7 @@ class Application(Sim.Process):
                       'packets_time': 0,
                       'packets_hops': 0,
                       'packets_dhops': 0
-                      }
+        }
         self.packet_log = {}
         self.config = config
         if self.HAS_LAYERCAKE and layercake is not None:
@@ -44,7 +43,7 @@ class Application(Sim.Process):
         else:
             self.packet_rate = 1
             self.logger.info("This sure is a weird configuration of Packets!")
-        # raise Exception("Packet Rate/Count doesn't make sense!")
+            # raise Exception("Packet Rate/Count doesn't make sense!")
 
         self.period = 1 / float(self.packet_rate)
 
@@ -102,7 +101,7 @@ class Application(Sim.Process):
         self.stats['packets_dhops'] += (delay / hops)
 
         self.logger.info("Packet recieved from %s over %d hops with a delay of %s (d/h=%s)" % (
-                         source, hops, str(delay), str(delay / hops)))
+            source, hops, str(delay), str(delay / hops)))
 
     def packetGen(self, period, destination, *args, **kwargs):
         """
@@ -113,8 +112,7 @@ class Application(Sim.Process):
 
 
 class AccessibilityTest(Application):
-
-    def packetGen(self, period, destination, data=None):
+    def packetGen(self, period, destination, data=None, *args, **kwargs):
         """
         Copy of behaviour from AUVNetSim for default class,
         exhibiting poisson departure behaviour
@@ -137,7 +135,7 @@ class AccessibilityTest(Application):
 class Null(Application):
     HAS_LAYERCAKE = False
 
-    def packetGen(self, period, destination, data=None):
+    def packetGen(self, period, destination, data=None, *args, **kwargs):
         """
         Does Nothing, says nothing
         """
