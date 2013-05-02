@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import logging
 import numpy as np
 
 from aietes.Tools import Sim, distance, mag
@@ -8,7 +7,6 @@ from aietes.Tools.ProgressBar import ProgressBar
 
 
 class Fleet(Sim.Process):
-
     """
     Fleets act initially as traffic managers for Nodes
     """
@@ -37,7 +35,10 @@ class Fleet(Sim.Process):
             else:
                 return True
 
-        progress_bar = ProgressBar('green', width=20, block='▣', empty='□')
+        if self.simulation.progress_display:
+            progress_bar = ProgressBar('green', width=20, block='▣', empty='□')
+        else:
+            progress_bar = None
         self.logger.info("Initialised Node Lifecycle")
         while True:
             self.simulation.waiting = True
@@ -46,7 +47,7 @@ class Fleet(Sim.Process):
                 percent_now = ((100 * Sim.now()) / self.simulation.duration_intervals)
                 if __debug__ and percent_now % 5 == 0:
                     self.logger.info("Fleet  %d%%: %s" % (percent_now, self.currentStats()))
-                if not __debug__ and percent_now % 1 == 0:
+                if not __debug__ and percent_now % 1 == 0 and progress_bar is not None:
                     progress_bar.render(int(percent_now),
                                         'step %s\nProcessing %s...' % (percent_now, self.simulation.title))
             yield Sim.waituntil, self, not_waiting

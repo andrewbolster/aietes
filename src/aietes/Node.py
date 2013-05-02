@@ -1,5 +1,4 @@
 import uuid
-import logging
 
 import numpy as np
 
@@ -10,7 +9,6 @@ from aietes.Tools import *
 
 
 class Node(Sim.Process):
-
     """
     Generic Representation of a network node
     """
@@ -35,6 +33,9 @@ class Node(Sim.Process):
 
         # Store contributions
         self.contributions_log = []
+
+        # Store any achievements
+        self.achievements_log = [[] for _ in range(self.simulation.config.Simulation.sim_duration)]
 
         #
         # Physical Configuration
@@ -141,7 +142,7 @@ class Node(Sim.Process):
         return distance(self.position, otherNode.position)
 
     def push(self, forceVector, contributions=None):
-        assert len(forceVector == 3) and not np.isnan(sum(forceVector)), "Out of spec vector: %s,%s" % (
+        assert len(forceVector) == 3 and not np.isnan(sum(forceVector)), "Out of spec vector: %s,%s" % (
             forceVector, type(forceVector))
         self.acceleration_force = forceVector
         self.contributions_log.append(contributions)
@@ -187,7 +188,7 @@ class Node(Sim.Process):
         self.position += self.velocity
         if debug:
             self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
-                              self.velocity, mag(self.velocity), dT, old_pos, self.position))
+                self.velocity, mag(self.velocity), dT, old_pos, self.position))
         if not self.wallCheck():
             self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
@@ -218,6 +219,15 @@ class Node(Sim.Process):
     def distance_to(self, their_position):
         d = distance(self.getPos(), their_position)
         return d
+
+    def grantAchievement(self, achievement):
+        """
+        Record an achievement for statistics
+        """
+        if isinstance(achievement, tuple):
+            self.achievements_log[self._lastupdate].append(achievement)
+        else:
+            raise RuntimeError("Non standard Achievement passed:%s" % achievement)
 
     def lifecycle(self):
         """

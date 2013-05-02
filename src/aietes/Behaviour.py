@@ -7,7 +7,6 @@ from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, li
 
 
 class Behaviour(object):
-
     """
     Generic Represnetation of a Nodes behavioural characteristics
     #TODO should be a state machine?
@@ -21,14 +20,14 @@ class Behaviour(object):
         self._start_log(self.node)
         if debug:
             self.logger.debug('from bev_config: %s' % self.bev_config)
-        # self.logger.setLevel(logging.DEBUG)
+            # self.logger.setLevel(logging.DEBUG)
         self.update_rate = 1
         self.memory = {}
         self.behaviours = []
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
-        self.positional_accuracy = listfix( float, self.bev_config.positional_accuracy)
+        self.positional_accuracy = listfix(float, self.bev_config.positional_accuracy)
         self.horizon = 200
 
     def _start_log(self, parent):
@@ -106,10 +105,10 @@ class Behaviour(object):
                                               name=self.simulation.reverse_node_lookup(key).name,
                                               distance=self.node.distance_to(value.position)
 
-                                              ) for key, value in self.neighbours.items()]
+        ) for key, value in self.neighbours.items()]
         # self.logger.debug("Got Distances: %s"%neighbours_with_distance)
         nearest_neighbours = sorted(neighbours_with_distance, key=attrgetter('distance')
-                                    )
+        )
         # Select N neighbours in order
         # self.logger.debug("Nearest Neighbours:%s"%nearest_neighbours)
         if n_neighbours is not None:
@@ -128,7 +127,7 @@ class Behaviour(object):
                                 sixvec(self.getNearestNeighbours(repulsive_position)[0].velocity),
                                 self.node.position,
                                 sixvec(self.node.velocity)
-                                ))
+                               ))
         if debug:
             self.logger.debug(
                 "Repulsion from %s: %s, at range of %s" % (forceVector, repulsive_position, distanceVal))
@@ -178,7 +177,6 @@ class Behaviour(object):
 
 
 class Flock(Behaviour):
-
     """
     Flocking Behaviour as modelled by three rules:
         Short Range Repulsion
@@ -218,8 +216,8 @@ class Flock(Behaviour):
             self.neighbourhood_com = vector / len(self.nearest_neighbours)
             if debug:
                 self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s" % (
-                                  self.neighbourhood_com, vector, self.clumping_factor, len(self.nearest_neighbours)))
-            # Return the fudged, relative vector to the centre of the cluster
+                    self.neighbourhood_com, vector, self.clumping_factor, len(self.nearest_neighbours)))
+                # Return the fudged, relative vector to the centre of the cluster
             forceVector = self.attractToPosition(position, self.neighbourhood_com, self.collision_avoidance_d)
         except ZeroDivisionError:
             self.logger.error("Zero Division Error: Returning zero vector")
@@ -240,7 +238,8 @@ class Flock(Behaviour):
                 partVector = self.repulseFromPosition(position, neighbour.position, self.collision_avoidance_d)
                 if debug:
                     self.logger.debug(
-                        "Avoiding %s:%f:%s" % (neighbour.name, distance(position, neighbour.position), sixvec(partVector)))
+                        "Avoiding %s:%f:%s" % (
+                            neighbour.name, distance(position, neighbour.position), sixvec(partVector)))
                 forceVector += partVector
 
                 # Return an inverse vector to the obstacles
@@ -260,7 +259,7 @@ class Flock(Behaviour):
             self.logger.debug("Schooling:%s" % forceVector)
         if debug:
             self.logger.debug("V:%s,F:%s, %f" % (
-                             unit(velocity), unit(forceVector), spherical_distance(unit(velocity), unit(forceVector))))
+                unit(velocity), unit(forceVector), spherical_distance(unit(velocity), unit(forceVector))))
         d = spherical_distance(unit(velocity), unit(forceVector))
         return self.normalize_behaviour(forceVector) * self.schooling_factor
 
@@ -274,7 +273,6 @@ class Flock(Behaviour):
 
 
 class AlternativeFlockMixin():
-
     def __init__(self, *args, **kwargs):
         self.behaviours.remove(self.clumpingVector)
         self.behaviours.remove(self.repulsiveVector)
@@ -299,14 +297,12 @@ class AlternativeFlockMixin():
 
 
 class AlternativeFlock(Flock, AlternativeFlockMixin):
-
     def __init__(self, *args, **kwargs):
         Flock.__init__(self, *args, **kwargs)
         AlternativeFlockMixin.__init__(self, *args, **kwargs)
 
 
 class WaypointMixin():
-
     def __init__(self, *args, **kwargs):
         self.waypoint_factor = listfix(float, self.bev_config.waypoint_factor)
         if not hasattr(self, str(self.bev_config.waypoint_style)):
@@ -337,7 +333,10 @@ class WaypointMixin():
         forceVector = np.array([0, 0, 0], dtype=np.float)
         if self.nextwaypoint is not None:
             neighbourhood_avg = sum(n.position for n in self.nearest_neighbours) / len(self.nearest_neighbours)
-            if distance(neighbourhood_avg, self.nextwaypoint.position) < self.nextwaypoint.prox:
+            real_d = distance(position, self.nextwaypoint.position)
+            neighbourhood_d = distance(neighbourhood_avg, self.nextwaypoint.position)
+            if neighbourhood_d < self.nextwaypoint.prox:
+                self.node.grantAchievement((self.nextwaypoint.position, real_d))
                 if __debug__:
                     self.logger.info("Moving to Next waypoint:%s" % self.nextwaypoint.position)
                 self.nextwaypoint = self.nextwaypoint.next
@@ -346,21 +345,18 @@ class WaypointMixin():
 
 
 class Waypoint(Flock, WaypointMixin):
-
     def __init__(self, *args, **kwargs):
         Flock.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
 class AlternativeWaypoint(AlternativeFlock, Waypoint):
-
     def __init__(self, *args, **kwargs):
         AlternativeFlock.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
 class waypoint(object):
-
     def __init__(self, positions, *args, **kwargs):
         """
         Defines waypoint paths:

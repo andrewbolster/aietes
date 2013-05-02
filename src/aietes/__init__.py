@@ -5,7 +5,6 @@ import optparse
 import time
 import logging
 import cProfile
-from datetime import datetime as dt
 from pprint import pformat
 
 import numpy as np
@@ -14,6 +13,7 @@ import validate
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3
 
+from datetime import datetime as dt
 from Layercake import Layercake
 from Environment import Environment
 from Fleet import Fleet
@@ -22,12 +22,13 @@ import Behaviour
 from Animation import AIETESAnimation
 from Tools import *
 
+
 np.set_printoptions(precision=3)
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 
-class Simulation():
 
+class Simulation():
     """
     Defines a single simulation
     """
@@ -45,7 +46,7 @@ class Simulation():
             #Assume we need to make our own logger with NO preexisting handlers
             try:
                 _tmplogdict = logging.Logger.manager.loggerDict[__name__]
-                while len(_tmplogdict.handlers)>0:
+                while len(_tmplogdict.handlers) > 0:
                     _tmplogdict.removeHandler(_tmplogdict.handlers[0])
             except KeyError:
                 """Assumes that this is the first one"""
@@ -73,7 +74,7 @@ class Simulation():
             self.config = self.generateConfig(self.config)
         elif self.config_file is None and self.config is not None:
             self.logger.info("using given config")
-            config = self.validateConfig(self.config, final_check = True)
+            config = self.validateConfig(self.config, final_check=True)
             config['Node']['Nodes'].pop('__default__')
             self.config = dotdict(config.dict())
         else:
@@ -178,7 +179,7 @@ class Simulation():
         shape = self.environment.shape
         return positions, vectors, names, shape
 
-    def validateConfig(self, config = None, final_check = False):
+    def validateConfig(self, config=None, final_check=False):
         """
         Generate valid configuration information by interpolating a given config
         file with the defaults
@@ -196,7 +197,7 @@ class Simulation():
             config = ConfigObj(config, configspec=self.config_spec, stringify=True, interpolation=not final_check)
         else:
             self.logger.info("Skipping configobj for final validation")
-        config_status = config.validate(validate.Validator(), copy= not final_check)
+        config_status = config.validate(validate.Validator(), copy=not final_check)
 
         if not config_status:
             # If config_spec doesn't match the input, bail
@@ -252,7 +253,7 @@ class Simulation():
                 applications = [str(a)
                                 for a, n in zip(app, dist)
                                 for i in range(int(n))
-                                ]
+                ]
                 self.logger.debug("Distributed Applications:%s" % applications)
             else:
                 raise ConfigError(
@@ -283,7 +284,7 @@ class Simulation():
                 behaviours = [str(a)
                               for a, n in zip(bev, dist)
                               for i in range(int(n))
-                              ]
+                ]
                 self.logger.debug("Distributed behaviours:%s" % behaviours)
             else:
                 raise ConfigError(
@@ -292,7 +293,7 @@ class Simulation():
         else:
             behaviours = [str(bev) for i in range(int(nodes_count - preconfigured_nodes_count))]
             self.logger.info("Using Behaviour:%s" % behaviours)
-        #
+            #
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
             count=nodes_count - preconfigured_nodes_count,
@@ -387,10 +388,13 @@ class Simulation():
         Creates a bounos.DataPackage object from the current sim
         """
         from bounos.DataPackage import DataPackage
+
         positions = []
         vectors = []
         names = []
         contributions = []
+        achievements = []
+        title = kwargs.get("title", "")
         shape = self.environment.shape
         log = self.environment.pos_log
         for node in self.nodes:
@@ -398,13 +402,15 @@ class Simulation():
             vectors.append(node.vec_log)
             names.append(node.name)
             contributions.append(node.contributions_log)
+
         dp = DataPackage(p=positions,
                          v=vectors,
                          names=names,
-                         contributions = contributions,
-                         environment = shape,
-                         title = kwargs.get("title","")
-                        )
+                         contributions=contributions,
+                         achievements=achievements,
+                         environment=shape,
+                         title=title
+        )
         return dp
 
 
@@ -438,6 +444,7 @@ class Simulation():
         vectors = []
         names = []
         contributions = []
+        achievements = []
         shape = []
         if inputFile is not None:
             self.logger.info("Retrieving positions from file: %s" % inputFile)
@@ -456,6 +463,7 @@ class Simulation():
                 vectors.append(node.vec_log)
                 names.append(node.name)
                 contributions.append(node.contributions_log)
+                achievements.append(node.achievements_log)
             shape = self.environment.shape
 
         n_frames = len(positions[0][0])
@@ -481,13 +489,14 @@ class Simulation():
                          vectors=vectors,
                          names=names,
                          environment=self.environment.shape,
-                         contributions=contributions
-                         )
+                         contributions=contributions,
+                         achievements=achievements
+                )
                 co = ConfigObj(self.config, list_values=False)
                 co.filename = "%s.conf" % filename
                 co.write()
-                return_dict['data_file']="%s.npz"%filename
-                return_dict['config_file']=co.filename
+                return_dict['data_file'] = "%s.npz" % filename
+                return_dict['config_file'] = co.filename
             if movieFile:
                 self.logger.info("Writing animation to %s" % filename)
                 self.save(line_ani,
@@ -495,8 +504,8 @@ class Simulation():
                           fps=fps,
                           codec='mpeg4',
                           clear_temp=True
-                          )
-                return_dict['ani_file']="%s.mp4"%filename
+                )
+                return_dict['ani_file'] = "%s.mp4" % filename
         else:
             plt.show()
         return return_dict
@@ -520,7 +529,12 @@ class Simulation():
 
 def go(options, args):
     logging.basicConfig(level=logging.INFO)
-    sim = Simulation(config_file=options.config, title=options.title, logger=logging.getLogger('Aietes'))
+    sim = Simulation(config_file=options.config,
+                     title=options.title,
+                     logger=logging.getLogger('Aietes'),
+                     logtoconsole=logging.ERROR if options.quiet else logging.INFO,
+                     progress_display=not options.quiet
+    )
 
     if options.input is None:
         sim.prepare(sim_time=options.sim_time)
@@ -550,6 +564,8 @@ def main():
             formatter=optparse.TitledHelpFormatter(),
             usage=globals()['__doc__'],
             version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
+        parser.add_option('-q', '--quiet', action='store_true',
+                          default=False, help='quiet output')
         parser.add_option('-v', '--verbose', action='store_true',
                           default=False, help='verbose output')
         parser.add_option('-P', '--profile', action='store_true',

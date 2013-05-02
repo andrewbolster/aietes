@@ -1,14 +1,14 @@
 import math
 import random
 import logging
-from datetime import datetime as dt
 from inspect import getmembers, isfunction
-
 from itertools import groupby
 from operator import itemgetter
 
 from SimPy import SimulationStep as Sim
 import numpy as np
+
+from datetime import datetime as dt
 
 
 np.seterr(all='raise')
@@ -18,15 +18,15 @@ np.seterr(all='raise')
 debug = False
 FUDGED = True
 
-class ConfigError(Exception):
 
+class ConfigError(Exception):
     """
     Raised when a configuration cannot be validated through ConfigObj/Validator
     Contains a 'status' with the boolean dict representation of the error
     """
 
     def __init__(self, value):
-        baselogger.critical("Invalid Config; Dying: %s" % value)
+        logging.Logger.critical("Invalid Config; Dying: %s" % value)
         self.status = value
 
     def __str__(self):
@@ -290,7 +290,6 @@ class dotdictify(dict):
 
 
 class dotdict(dict):
-
     def __init__(self, arg, **kwargs):
         super(dotdict, self).__init__(**kwargs)
         for k in arg.keys():
@@ -310,7 +309,6 @@ class dotdict(dict):
 
 
 class memory_entry():
-
     def __init__(self, object_id, position, velocity, distance=None, name=None):
         self.object_id = object_id
         self.name = name
@@ -323,7 +321,6 @@ class memory_entry():
 
 
 class map_entry():
-
     def __init__(self, object_id, position, velocity, name=None, distance=None):
         self.object_id = object_id
         self.position = position
@@ -385,6 +382,7 @@ def nameGeneration(count, naming_convention=None, existing_names=None):
             candidate_name = naming_convention[np.random.randint(0, len(naming_convention))]
 
         node_names.append(candidate_name)
+    assert len(node_names) == count
     return node_names
 
 

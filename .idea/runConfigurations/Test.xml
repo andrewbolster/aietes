@@ -1,10 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="AIETES Release" type="PythonConfigurationType" factoryName="Python" singleton="true">
-    <option name="INTERPRETER_OPTIONS" value="-O" />
+  <configuration default="false" name="Test" type="tests" factoryName="Unittests">
+    <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
-    <envs>
-      <env name="PYTHONUNBUFFERED" value="1" />
-    </envs>
+    <envs />
     <option name="SDK_HOME" value="/usr/bin/python2.7" />
     <option name="WORKING_DIRECTORY" value="/dev/shm/" />
     <option name="IS_MODULE_SDK" value="false" />
@@ -12,11 +10,17 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <module name="aietes" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$USER_HOME$/.local/bin/aietes" />
-    <option name="PARAMETERS" value="-odq" />
-    <RunnerSettings RunnerId="PyDebugRunner" />
+    <option name="SCRIPT_NAME" value="" />
+    <option name="CLASS_NAME" value="" />
+    <option name="METHOD_NAME" value="" />
+    <option name="FOLDER_NAME" value="$PROJECT_DIR$" />
+    <option name="TEST_TYPE" value="TEST_FOLDER" />
+    <option name="PATTERN" value="" />
+    <option name="USE_PATTERN" value="false" />
+    <option name="PUREUNITTEST" value="true" />
+    <option name="PARAMS" value="" />
+    <option name="USE_PARAM" value="false" />
     <RunnerSettings RunnerId="PythonRunner" />
-    <ConfigurationWrapper RunnerId="PyDebugRunner" />
     <ConfigurationWrapper RunnerId="PythonRunner" />
     <method />
   </configuration>

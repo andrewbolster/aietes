@@ -19,29 +19,35 @@ class DataPackage(object):
     def __init__(self, source=None,
                  p=None, v=None,
                  names=None, environment=None,
-                 contributions = None, tmax=None,
+                 contributions=None, achievements=None,
+                 tmax=None,
                  *args, **kwargs):
         """
         Raises IOError on load failure
         """
         if source is not None:
-            source_dataset = np.load(source)
-            self.p = source_dataset['positions']
-            self.v = source_dataset['vectors']
-            self.names = source_dataset['names']
-            self.contributions = source_dataset['contributions']
-            self.environment = source_dataset['environment']
             try:
-                self.title = getattr(source_dataset, 'title')
-            except AttributeError:
-                # If simulation title not explicitly given, use the filename -npz
-                self.title = os.path.splitext(os.path.basename(source))[0]
-        elif all(x is not None for x in [p, v, names, environment, contributions]):
+                source_dataset = np.load(source)
+                self.p = source_dataset['positions']
+                self.v = source_dataset['vectors']
+                self.names = source_dataset['names']
+                self.contributions = source_dataset['contributions']
+                self.achievements = source_dataset['achievements']
+                self.environment = source_dataset['environment']
+                try:
+                    self.title = getattr(source_dataset, 'title')
+                except AttributeError:
+                    # If simulation title not explicitly given, use the filename -npz
+                    self.title = os.path.splitext(os.path.basename(source))[0]
+            except KeyError:
+                raise
+        elif all(x is not None for x in [p, v, names, environment, contributions, achievements]):
             self.p = np.asarray(p)
             self.v = np.asarray(v)
             self.names = names
             self.environment = np.asarray(environment)
             self.contributions = np.asarray(contributions)
+            self.achievements = np.asarray(achievements)
             self.title = kwargs.get('title', "")
         else:
             raise ValueError("Can't work out what the hell you want!: %s" % str(kwargs))
