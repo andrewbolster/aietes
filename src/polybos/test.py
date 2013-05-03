@@ -1,12 +1,12 @@
+"""Unit tests for Polybos"""
+
 import unittest
 import polybos
 
 
-class PolybosScenarioGeneration(unittest.TestCase):
-    def RatioExperimentGeneration(self):
-        """
-        Basic tests of polybos experiment generation
-        """
+class ScenarioGeneration(unittest.TestCase):
+    def testRatioExperimentGeneration(self):
+        """Basic tests of polybos experiment generation"""
         count = 4
         behaviour = "Flocking"
         e = polybos.ExperimentManager(count=count)

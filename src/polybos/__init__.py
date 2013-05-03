@@ -9,10 +9,18 @@ import numpy as np
 
 from datetime import datetime
 from aietes import _ROOT, Simulation # Must use the aietes path to get the config files
-from aietes.Tools import nameGeneration
+from aietes.Tools import nameGeneration, updateDict
 
 
 _config_spec = '%s/configs/default.conf' % _ROOT
+
+mutable_node_configs = {
+    'behaviour': ['Behaviour', 'protocol'],
+    'repulsion': ['Behaviour', 'repulsive_factor'],
+    'schooling': ['Behaviour', 'schooling_factor'],
+    'clumping': ['Behaviour', 'clumping_factor'],
+    'fudging': ['Behaviour', 'positional_accuracy'],
+}
 
 
 def getConfig(source_config_file=None, config_spec=_config_spec):
@@ -31,20 +39,17 @@ class Scenario(object):
     The Generic Manager Object deals with config management and passthrough, as well as some optional execution characteristics
         The purpose of this manager is to abstract as much as humanly possible
     """
-    mutable_configs = {
-        'behaviour': ['Behaviour', 'protocol'],
-        'repulsion': ['Behaviour', 'repulsive_factor'],
-        'schooling': ['Behaviour', 'schooling_factor'],
-        'clumping': ['Behaviour', 'clumping_factor'],
-        'fudging': ['Behaviour', 'positional_accuracy'],
-    }
-
 
     def __init__(self, *args, **kwargs):
         """
         Builds an initial config and divides it up for convenience later
+            Can take default_config = <ConfigObj> or default_config_file = <path>
         """
-        self._default_config = getConfig()
+
+        self._default_config = kwargs.get("default_config", getConfig(kwargs.get("default_config_file", None)))
+        if not isinstance(self._default_config, ConfigObj):
+            raise RuntimeError(
+                "Given invalid Config of type %s: %s" % (type(self._default_config), self._default_config))
         self._default_config_dict = self._default_config.dict()
         self._default_node_config = self._default_config_dict['Node']['Nodes'].pop("__default__")
         self._default_custom_nodes = self._default_config_dict['Node']['Nodes']
@@ -104,6 +109,11 @@ class Scenario(object):
         config['Node'] = {'Nodes': self.nodes, 'count': len(self.nodes.keys())}
         return config
 
+    def generate_configobj(self):
+        rawconf = self.generate_config()
+        updateDict(rawconf, ['Node', 'Nodes', '__default__'], self._default_node_config)
+        return ConfigObj(rawconf)
+
     def get_behaviour_dict(self):
         default_bev = self._default_node_config['Behaviour']['protocol']
 
@@ -133,19 +143,19 @@ class Scenario(object):
         return behaviours
 
     def set_node_count(self, count):
-        if hasattr("node_count", self):
+        if hasattr(self, "node_count"):
             print("Updating nodecount from %d to %d" % (self.node_count, count))
         self.node_count = count
+
+    def set_duration(self, tmax):
+        self.simulation['sim_duration'] = tmax
 
     def update_node(self, node_conf, mutable, value):
         if mutable is None:
             pass
-        if mutable in self.mutable_configs:
-            keys = self.mutable_configs[mutable]
-            for key in keys[:-1]:
-                node_conf = node_conf.setdefault(key, {})
-            print("Setting:%s(%s) to %s" % (keys[-1], node_conf[keys[-1]], value))
-            node_conf[keys[-1]] = value
+        if mutable in mutable_node_configs:
+            keys = mutable_node_configs[mutable]
+            updateDict(node_conf, keys, value)
         else:
             raise NotImplementedError("Have no mutable map for %s" % mutable)
 
@@ -154,12 +164,10 @@ class Scenario(object):
         count = int(count)
         for variable, value in variable_map.iteritems():
             self.update_node(node_conf, variable, value)
-        print("Creating %d custom nodes" % (count))
         self.add_node(node_conf=node_conf, count=count)
 
     def add_default_node(self, count=1):
         node_conf = deepcopy(self._default_node_config)
-        print("Creating %d default nodes" % (count))
         self.add_node(node_conf, count=count)
 
 
@@ -178,7 +186,6 @@ class Scenario(object):
             raise RuntimeError("Names don't make any sense")
 
         for i, node_name in enumerate(node_names):
-            print("Creating node(%d/%d): %s" % (i, count, node_name))
             self.nodes[node_name] = node_conf
 
     def update_default_node(self, variable, value):
@@ -196,8 +203,13 @@ class ExperimentManager(object):
         Acquire Generic Scenario
         """
         self.scenarios = []
+        self._default_scenario = Scenario(title="__default__")
         self.node_count = kwargs.get("node_count", 4)
         self.title = kwargs.get("title", datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        self._default_scenario.set_node_count(self.node_count)
+
+    def updateBaseBehaviour(self, behaviour):
+        self._default_scenario.update_default_node('behaviour', behaviour)
 
     def run(self, *args, **kwargs):
         """
@@ -227,12 +239,16 @@ class ExperimentManager(object):
             for i, s in enumerate(self.scenarios):
                 s.updateNodeCounts(new_count[i])
 
+    def updateDuration(self, tmax):
+        for s in self.scenarios:
+            s.set_duration(tmax)
+
     def addVariableRangeScenario(self, variable, value_range):
         """
         Add a scenario with a range of configuration values to the experimental run
         """
         for v in value_range:
-            s = Scenario(title="%s(%f)" % (variable, v))
+            s = Scenario(title="%s(%f)" % (variable, v), default_config=self._default_scenario.generate_configobj())
             s.add_custom_node({variable: v}, count=self.node_count)
             self.scenarios.append(s)
 
@@ -245,7 +261,7 @@ class ExperimentManager(object):
         for ratio in np.linspace(start=0.0, stop=1.00, num=self.node_count + 1):
             title = "%s(%.2f%%)" % (badbehaviour, float(ratio) * 100)
             print(title)
-            s = Scenario(title=title)
+            s = Scenario(title=title, default_config=self._default_scenario.generate_configobj())
             count = int(ratio * self.node_count)
             invcount = int((1.0 - ratio) * self.node_count)
             s.add_custom_node({"behaviour": badbehaviour}, count=count)

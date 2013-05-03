@@ -1,8 +1,8 @@
 """ Unit test for aietes """
 
 import unittest
-import logging
 
+import logging
 import aietes
 import bounos
 

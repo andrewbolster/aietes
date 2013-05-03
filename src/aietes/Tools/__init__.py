@@ -458,5 +458,13 @@ def itersubclasses(cls, _seen=None):
                 yield sub
 
 
+def updateDict(d, keys, value, safe=False):
+    for key in keys[:-1]:
+        if not d.has_key(key) and safe:
+            raise KeyError("Attempting to update uninstantiated key")
+        d = d.setdefault(key, {})
+    d[keys[-1]] = value
+
+
 def list_functions(module):
     return [o for o in getmembers(module) if isfunction(o[1])]
