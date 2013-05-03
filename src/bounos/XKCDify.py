@@ -16,15 +16,20 @@ import numpy as np
 import pylab as pl
 import matplotlib.font_manager as fm
 
+from pkg_resources import resource_filename
 
+fpath = resource_filename(__name__, "Humor-Sans.ttf")
 
 # We need a special font for the code below.  It can be downloaded this way:
 import os
 import urllib2
+import tempfile
 
-if not os.path.exists('Humor-Sans.ttf'):
+if not os.path.exists(fpath):
     fhandle = urllib2.urlopen('http://antiyawn.com/uploads/Humor-Sans.ttf')
-    open('Humor-Sans.ttf', 'wb').write(fhandle.read())
+    d = tempfile.mkdtemp()
+    fpath = os.path.join(d, 'Humor-Sans.ttf')
+    open(fpath, 'wb').write(fhandle.read())
 
 
 def xkcd_line(x, y, xlim=None, ylim=None,
@@ -229,7 +234,7 @@ def XKCDify(ax, mag=1.0,
                 color='k', lw=2)
 
     # Change all the fonts to humor-sans.
-    prop = fm.FontProperties(fname='Humor-Sans.ttf', size=16)
+    prop = fm.FontProperties(fname=fpath, size=16)
     for text in ax.texts:
         text.set_fontproperties(prop)
 
