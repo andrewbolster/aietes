@@ -1,6 +1,10 @@
-python-simpy
-python-pydot
-python-scipy
-mencoder #for animation storage
-python-wxgtk2.8
+pykalman
+configobj
+validate
+scipy
+wx
+pydot
+matplotlib
+numpy
+SimPy
 pubsub

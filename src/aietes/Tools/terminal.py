@@ -25,8 +25,8 @@ CONTROLS = {
 
 # List of numeric capabilities
 VALUES = {
-    'COLUMNS': 'cols',  # Width of the terminal (None for unknown)
-    'LINES': 'lines',  # Height of the terminal (None for unknown)
+    'COLUMNS': 'cols', # Width of the terminal (None for unknown)
+    'LINES': 'lines', # Height of the terminal (None for unknown)
     'MAX_COLORS': 'colors',
 }
 
@@ -75,8 +75,10 @@ def render(text):
     """
     return text % MODULE.__dict__
 
+
 try:
     import curses
+
     setup()
 except Exception, e:
     # There is a failure; set all attributes to default

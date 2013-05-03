@@ -1,7 +1,7 @@
-
 from matplotlib import animation as MPLanimation
-class AIETESAnimation(MPLanimation.FuncAnimation):
 
+
+class AIETESAnimation(MPLanimation.FuncAnimation):
     def save(self, filename, fps=5, codec='libx264', clear_temp=True,
              frame_prefix='_tmp', *args, **kwargs):
         """

@@ -13,7 +13,6 @@ import terminal
 
 
 class ProgressBar(object):
-
     """Terminal progress bar class"""
     TEMPLATE = (
         '%(percent)-2s%% %(color)s%(progress)s%(normal)s%(empty)s %(message)s\n'

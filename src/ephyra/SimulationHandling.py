@@ -31,8 +31,8 @@ class WorkerThread(Thread):
                 wx.PostEvent(self._notify_window, wx.ResultEvent(None))
                 return
                 # Here's where the result would be returned (this is an
-            # example fixed result of the number 10, but it could be
-        # any Python object)
+                # example fixed result of the number 10, but it could be
+                # any Python object)
         wx.PostEvent(self._notify_window, wx.ResultEvent(10))
 
     def abort(self):

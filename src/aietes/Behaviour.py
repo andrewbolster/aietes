@@ -150,14 +150,14 @@ class Behaviour(object):
         min_dist = self.neighbour_min_rad * 2
         avoid = False
         avoiding_position = None
-        if any((np.zeros(3) + min_dist) > position):
+        if np.any((np.zeros(3) + min_dist) > position):
             if debug:
                 self.logger.debug("Too Close to the Origin-surfaces: %s" % position)
             offending_dim = position.argmin()
             avoiding_position = position.copy()
             avoiding_position[offending_dim] = float(0.0)
             avoid = True
-        elif any(position > (self.env_shape - min_dist)):
+        elif np.any(position > (self.env_shape - min_dist)):
             if debug:
                 self.logger.debug("Too Close to the Upper-surfaces: %s" % position)
             offending_dim = position.argmax()

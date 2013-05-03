@@ -1,6 +1,5 @@
 from operator import attrgetter
 from collections import namedtuple
-import logging
 
 from SimPy import Simulation as Sim
 import numpy as np
@@ -12,7 +11,6 @@ Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
 
 
 class Environment():
-
     """
     Environment Class representing the physical environment inc any objects
     / activities within that environment that are not controlled by the
@@ -111,7 +109,7 @@ class Environment():
                                 position=position,
                                 object_id=object_id,
                                 time=Sim.now()
-                                ))
+        ))
 
     def pointPlane(self, index=-1):
         """

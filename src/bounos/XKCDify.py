@@ -10,20 +10,23 @@ including axes labels and titles (but not axes tick labels).
 The idea for this comes from work by Damon McDougall
   http://www.mail-archive.com/matplotlib-users@lists.sourceforge.net/msg25499.html
 """
+from scipy import interpolate, signal
+
 import numpy as np
 import pylab as pl
-from scipy import interpolate, signal
 import matplotlib.font_manager as fm
+
 
 
 # We need a special font for the code below.  It can be downloaded this way:
 import os
 import urllib2
+
 if not os.path.exists('Humor-Sans.ttf'):
     fhandle = urllib2.urlopen('http://antiyawn.com/uploads/Humor-Sans.ttf')
     open('Humor-Sans.ttf', 'wb').write(fhandle.read())
 
-    
+
 def xkcd_line(x, y, xlim=None, ylim=None,
               mag=1.0, f1=30, f2=0.05, f3=15):
     """
@@ -49,7 +52,7 @@ def xkcd_line(x, y, xlim=None, ylim=None,
     """
     x = np.asarray(x)
     y = np.asarray(y)
-    
+
     # get limits for rescaling
     if xlim is None:
         xlim = (x.min(), x.max())
@@ -58,7 +61,7 @@ def xkcd_line(x, y, xlim=None, ylim=None,
 
     if xlim[1] == xlim[0]:
         xlim = ylim
-        
+
     if ylim[1] == ylim[0]:
         ylim = xlim
 
@@ -78,7 +81,7 @@ def xkcd_line(x, y, xlim=None, ylim=None,
     # interpolate curve at sampled points
     k = min(3, len(x) - 1)
     res = interpolate.splprep([x_scaled, y_scaled], s=0, k=k)
-    x_int, y_int = interpolate.splev(u, res[0]) 
+    x_int, y_int = interpolate.splev(u, res[0])
 
     # we'll perturb perpendicular to the drawn line
     dx = x_int[2:] - x_int[:-2]
@@ -96,7 +99,7 @@ def xkcd_line(x, y, xlim=None, ylim=None,
     # un-scale data
     x_int = x_int[1:-1] * (xlim[1] - xlim[0]) + xlim[0]
     y_int = y_int[1:-1] * (ylim[1] - ylim[0]) + ylim[0]
-    
+
     return x_int, y_int
 
 
@@ -229,12 +232,12 @@ def XKCDify(ax, mag=1.0,
     prop = fm.FontProperties(fname='Humor-Sans.ttf', size=16)
     for text in ax.texts:
         text.set_fontproperties(prop)
-    
+
     # modify legend
     leg = ax.get_legend()
     if leg is not None:
         leg.set_frame_on(False)
-        
+
         for child in leg.get_children():
             if isinstance(child, pl.Line2D):
                 x, y = child.get_data()
@@ -242,7 +245,7 @@ def XKCDify(ax, mag=1.0,
                 child.set_linewidth(2 * child.get_linewidth())
             if isinstance(child, pl.Text):
                 child.set_fontproperties(prop)
-    
+
     # Set the axis limits
     ax.set_xlim(xax_lim[0] - 0.1 * xspan,
                 xax_lim[1] + 0.1 * xspan)
@@ -251,11 +254,11 @@ def XKCDify(ax, mag=1.0,
 
     # adjust the axes
     ax.set_xticks([])
-    ax.set_yticks([])      
+    ax.set_yticks([])
 
     if expand_axes:
         ax.figure.set_facecolor(bgcolor)
         ax.set_axis_off()
         ax.set_position([0, 0, 1, 1])
-    
+
     return ax
