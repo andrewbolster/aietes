@@ -1,6 +1,7 @@
 import matplotlib
+matplotlib.warn=False
 #matplotlib.use('module://mplh5canvas.backend_h5canvas')
-matplotlib.use("WXAgg")
+import matplotlib.backends.backend_wxagg
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.widgets import Slider, Button

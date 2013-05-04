@@ -7,8 +7,6 @@ import re
 import argparse
 import numpy as np
 
-from Plotting import *
-
 np.seterr(under="ignore")
 
 from Metrics import *
@@ -357,7 +355,6 @@ def run_overlay(data, args):
 
     results = {}
     for source in data.keys():
-        #interactive_plot(data)
         if analysis_args is not None:
             results = analysis(data=data[source], **analysis_args)
         else:

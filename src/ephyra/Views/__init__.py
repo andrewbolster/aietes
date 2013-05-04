@@ -6,10 +6,9 @@ import traceback
 import sys
 
 import wx
+
 import matplotlib
-
-
-matplotlib.use('WXAgg')
+import matplotlib.backends.backend_wxagg
 
 from mpl_toolkits.mplot3d import proj3d
 

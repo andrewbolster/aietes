@@ -10,8 +10,6 @@ from pprint import pformat
 import numpy as np
 from configobj import ConfigObj
 import validate
-import matplotlib.pyplot as plt
-import mpl_toolkits.mplot3d.axes3d as axes3
 
 from datetime import datetime as dt
 from Layercake import Layercake
@@ -408,11 +406,6 @@ class Simulation():
         """
         Performs output and positions generation for a given simulation
         """
-        dpi = 80
-        ipp = 80
-        fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
-        ax = axes3.Axes3D(fig)
-        return_dict = {}
 
         def updatelines(i, positions, lines, displayFrames):
             """
@@ -439,18 +432,28 @@ class Simulation():
         shape = dp.environment
 
         n_frames = len(positions[0][0])
+        return_dict = {}
 
-        lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=names[i])[0] for i, dat in enumerate(positions)]
 
-        line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(positions, lines, displayFrames),
-                                   interval=1000 / fps, repeat_delay=300, blit=True, )
-        ax.legend()
-        ax.set_xlim3d((0, shape[0]))
-        ax.set_ylim3d((0, shape[1]))
-        ax.set_zlim3d((0, shape[2]))
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
+        if movieFile or outputFile is None:
+            import matplotlib.pyplot as plt
+            import mpl_toolkits.mplot3d.axes3d as axes3
+
+            dpi = 80
+            ipp = 80
+            fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
+            ax = axes3.Axes3D(fig)
+            lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=names[i])[0] for i, dat in enumerate(positions)]
+
+            line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(positions, lines, displayFrames),
+                                       interval=1000 / fps, repeat_delay=300, blit=True, )
+            ax.legend()
+            ax.set_xlim3d((0, shape[0]))
+            ax.set_ylim3d((0, shape[1]))
+            ax.set_zlim3d((0, shape[2]))
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
 
         if outputFile is not None:
             filename = "%s.aietes" % outputFile

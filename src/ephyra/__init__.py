@@ -1,10 +1,9 @@
-import wxversion
-
-wxversion.ensureMinimal("2.8")
-
-import wx
 import os
 import sys
+if not sys.modules.has_key("wx"):
+    import wxversion
+    wxversion.ensureMinimal("2.8")
+import wx
 import logging
 import argparse
 import cProfile
@@ -59,8 +58,6 @@ def main():
                         help='Generate a new simulation from default'
     )
     args = parser.parse_args()
-
-    from bounos import BounosModel as model
 
     if args.data_file is 'latest_aietes.npz_from_pwd':
         candidate_data_files = os.listdir(os.getcwd())

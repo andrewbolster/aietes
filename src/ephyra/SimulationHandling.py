@@ -1,5 +1,6 @@
 import time
-import wx
+from ephyra import wx
+
 
 __author__ = 'andrewbolster'
 from threading import *

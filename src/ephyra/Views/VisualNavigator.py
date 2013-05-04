@@ -3,7 +3,7 @@ __author__ = 'andrewbolster'
 WIDTH, HEIGHT = 8, 6
 SIDEBAR_WIDTH = 4
 
-import wx
+from ephyra import wx
 
 import numpy as np
 
