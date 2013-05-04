@@ -106,7 +106,8 @@ class Scenario(object):
         config = dict()
         config['Simulation'] = self.simulation
         config['Environment'] = self.environment
-        config['Node'] = {'Nodes': self.nodes, 'count': len(self.nodes.keys())}
+        config['Node'] = {'Nodes': self.nodes,
+                          'count': len(self.nodes.keys())}
         return config
 
     def generate_configobj(self):
@@ -123,7 +124,8 @@ class Scenario(object):
 
         if self._default_node_config['bev'] != 'Null': #Stupid string comparison stops this from being 'is not'
             raise NotImplementedError(
-                "TODO Deal with parametric behaviour definition:%s" % self._default_node_config['bev'])
+                "TODO Deal with parametric behaviour definition:%s" %
+                self._default_node_config['bev'])
         if self._default_custom_nodes:
             for name, node in self._default_custom_nodes.iteritems():
                 n_bev = node['Behaviour']['protocol']
@@ -233,13 +235,19 @@ class ExperimentManager(object):
 
     def updateNodeCounts(self, new_count):
         """
-        Updates the node-count makeup; different behaviour ir new_count is list or scalar
+        Updates the node-count makeup; different behaviour ie new_count is list or scalar
         """
         if isinstance(new_count, list) and len(new_count) == len(self.scenarios):
             for i, s in enumerate(self.scenarios):
                 s.updateNodeCounts(new_count[i])
+        else:
+            for s in self.scenarios:
+                s.updateNodeCounts(new_count)
 
     def updateDuration(self, tmax):
+        """
+        Update the simulation time of currently configured scenarios
+        """
         for s in self.scenarios:
             s.set_duration(tmax)
 

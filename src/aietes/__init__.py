@@ -167,6 +167,8 @@ class Simulation():
         positions = []
         vectors = []
         names = []
+        contributions = []
+        achievements = []
         for node in self.nodes:
             pos = node.pos_log[:, :Sim.now()]
             vec = node.vec_log[:, :Sim.now()]
@@ -176,8 +178,16 @@ class Simulation():
             positions.append(pos)
             vectors.append(vec)
             names.append(node.name)
+            contributions.append(node.contributions_log)
         shape = self.environment.shape
-        return positions, vectors, names, shape
+        log = self.environment.pos_log
+        return {'p':positions,
+                'v':vectors,
+                'names':names,
+                'environment':shape,
+                'contributions':contributions,
+                'achievements':achievements,
+               }
 
     def validateConfig(self, config=None, final_check=False):
         """
@@ -389,28 +399,7 @@ class Simulation():
         """
         from bounos.DataPackage import DataPackage
 
-        positions = []
-        vectors = []
-        names = []
-        contributions = []
-        achievements = []
-        title = kwargs.get("title", "")
-        shape = self.environment.shape
-        log = self.environment.pos_log
-        for node in self.nodes:
-            positions.append(node.pos_log)
-            vectors.append(node.vec_log)
-            names.append(node.name)
-            contributions.append(node.contributions_log)
-
-        dp = DataPackage(p=positions,
-                         v=vectors,
-                         names=names,
-                         contributions=contributions,
-                         achievements=achievements,
-                         environment=shape,
-                         title=title
-        )
+        dp = DataPackage(**(self.currentState()))
         return dp
 
 
@@ -440,31 +429,14 @@ class Simulation():
                 line.set_3d_properties(dat[2, j:i])  # z axis
             return lines
 
-        positions = []
-        vectors = []
-        names = []
-        contributions = []
-        achievements = []
-        shape = []
-        if inputFile is not None:
-            self.logger.info("Retrieving positions from file: %s" % inputFile)
-            source = np.load(inputFile)
-            positions = source['positions']
-            vectors = source['vectors']
-            names = source['names']
-            shape = source['environment']
-            assert len(positions) == len(names), 'Array Sizes don\'t match!'
-        else:
-            if log is None and inputFile is None:
-                self.logger.info("Using default postprocessing log")
-                log = self.environment.pos_log
-            for node in self.nodes:
-                positions.append(node.pos_log)
-                vectors.append(node.vec_log)
-                names.append(node.name)
-                contributions.append(node.contributions_log)
-                achievements.append(node.achievements_log)
-            shape = self.environment.shape
+        dp = DataPackage(**self.currentStats())
+
+        positions = dp.p
+        vectors = dp.v
+        names = dp.names
+        contributions = dp.contributions
+        achievements = dp.achievements
+        shape = dp.environment
 
         n_frames = len(positions[0][0])
 

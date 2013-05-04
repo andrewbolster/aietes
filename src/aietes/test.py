@@ -15,9 +15,11 @@ class DefaultBehaviour(unittest.TestCase):
         self.sim_time = self.simulation.simulate()
 
     def testDictAndTimeReporting(self):
+        """Simulation time at prep should be same as after simulation"""
         self.assertEqual(self.prep_dict['sim_time'], self.sim_time)
 
     def testDataPackage(self):
+        """Test generation of DataPackage"""
         datapackage = self.simulation.generateDataPackage()
         self.assertIsInstance(datapackage, bounos.DataPackage)
 
