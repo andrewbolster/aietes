@@ -5,7 +5,7 @@ from scipy.spatial.distance import pdist, squareform
 
 import numpy as np
 
-from aietes.Tools import mag
+from aietes.Tools import mag, add_ndarray_to_set
 
 
 class DataPackage(object):
@@ -79,8 +79,63 @@ class DataPackage(object):
         stats = dict()
         """Achievement Statistics"""
         ach_stat = dict()
-        ach_stat = {'pernode': False}
-        #TODO
+        ach_stat = {'pernode': {}}
+
+        ach_pos = list()
+        max_ach = 0
+        min_ach = np.inf
+        max_acher = None
+        min_acher = None
+
+        tot_achs = 0
+        for i, name in enumerate(self.names):
+            n_ach_stat = dict()
+            n_ach = self.achievements[i]
+            for time in np.asarray(n_ach.nonzero()).flatten().tolist():
+                n_ach_stat[time] = n_ach[time]
+                ach_pos = add_ndarray_to_set(n_ach[time][0][0], ach_pos)
+            ach_stat['pernode'][name] = n_ach_stat
+
+            achs_count = len(n_ach_stat)
+            if achs_count > max_ach:
+                max_acher = name
+                max_ach = achs_count
+            if achs_count < min_ach:
+                min_acher = name
+                min_ach = achs_count
+            tot_achs += achs_count
+
+        top_guns = []
+        for name, n_ach_stat in ach_stat['pernode'].iteritems():
+            achs_count = len(n_ach_stat)
+            if achs_count == max_ach:
+                top_guns.append(name)
+
+        ach_stat['max_ach'] = max_ach
+        ach_stat['min_ach'] = min_ach
+        ach_stat['ach_pos'] = ach_pos
+        ach_stat['avg_completion'] = float(tot_achs) / len(ach_stat['pernode'])
+        ach_stat['percent_completion'] = float(len(top_guns)) / len(ach_stat['pernode'])
+
+        stats['achievements'] = ach_stat
+
+        """Volume Statistics"""
+        #TODO The maths for this is insane....
+
+        """Motion Statistics"""
+        mot_stat = dict()
+        #Standard Variation of the Internode Distance Average would represent the variability of the fleet
+        mot_stat["std_of_INDA"] = np.std([self.inter_distance_average(t) for t in xrange(self.tmax)])
+        #Fleet speed (i.e. total distance covered) would represent comparative efficiency
+        mot_f_distance = np.sum(map(mag, self.v))
+        mot_stat["fleet_distance"] = mot_f_distance
+        mot_stat["fleet_efficiency"] = (mot_f_distance / self.tmax) / self.n
+        mot_stat["std_of_INDD"] = np.std(
+            [self.position_matrix(t) / self.inter_distance_average(t) for t in xrange(self.tmax)])
+
+        stats['motion'] = mot_stat
+
+        return stats
 
 
     def position_of(self, node, time):

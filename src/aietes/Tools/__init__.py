@@ -106,6 +106,19 @@ def sixvec(xyz):
 def spherical_distance(sixvec_a, sixvec_b):
     return np.arccos(np.dot(sixvec_a, sixvec_b))
 
+
+def add_ndarray_to_set(ndarray, list):
+    in_list = False
+    for element in list:
+        if np.linalg.norm(ndarray - element) < 0.1:
+            in_list = True
+
+    if not in_list:
+        list.append(ndarray)
+
+    return list
+
+
 #
 # Lazy Testing functions
 #

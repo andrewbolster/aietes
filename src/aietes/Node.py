@@ -223,6 +223,8 @@ class Node(Sim.Process):
     def grantAchievement(self, achievement):
         """
         Record an achievement for statistics
+            Achievements are indexed by time and can contain any object, in a list,
+            although it is assumed to be a three-vector position and distance
         """
         if isinstance(achievement, tuple):
             self.achievements_log[self._lastupdate].append(achievement)

@@ -19,6 +19,7 @@ from Node import Node
 import Behaviour
 from Animation import AIETESAnimation
 from Tools import *
+from bounos import DataPackage
 
 
 np.set_printoptions(precision=3)
@@ -128,8 +129,11 @@ class Simulation():
         if callback is not None:
             self.logger.info("Running with Callback: %s" % str(callback))
             Sim.startStepping()
-        Sim.simulate(until=self.duration_intervals, callback=callback)
-        self.logger.info("Finished Simulation at %s" % Sim.now())
+        try:
+            Sim.simulate(until=self.duration_intervals, callback=callback)
+            self.logger.info("Finished Simulation at %s" % Sim.now())
+        except RuntimeError as err:
+            self.logger.exception("Simulation crashed at %s" % Sim.now())
         return Sim.now()
 
     def inner_join(self):
@@ -177,15 +181,16 @@ class Simulation():
             vectors.append(vec)
             names.append(node.name)
             contributions.append(node.contributions_log)
+            achievements.append(node.achievements_log)
         shape = self.environment.shape
         log = self.environment.pos_log
-        return {'p':positions,
-                'v':vectors,
-                'names':names,
-                'environment':shape,
-                'contributions':contributions,
-                'achievements':achievements,
-               }
+        return {'p': positions,
+                'v': vectors,
+                'names': names,
+                'environment': shape,
+                'contributions': contributions,
+                'achievements': achievements,
+        }
 
     def validateConfig(self, config=None, final_check=False):
         """
@@ -422,7 +427,7 @@ class Simulation():
                 line.set_3d_properties(dat[2, j:i])  # z axis
             return lines
 
-        dp = DataPackage(**self.currentStats())
+        dp = DataPackage(**(self.currentState()))
 
         positions = dp.p
         vectors = dp.v
@@ -434,7 +439,6 @@ class Simulation():
         n_frames = len(positions[0][0])
         return_dict = {}
 
-
         if movieFile or outputFile is None:
             import matplotlib.pyplot as plt
             import mpl_toolkits.mplot3d.axes3d as axes3
@@ -443,7 +447,8 @@ class Simulation():
             ipp = 80
             fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
             ax = axes3.Axes3D(fig)
-            lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=names[i])[0] for i, dat in enumerate(positions)]
+            lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=names[i])[0] for i, dat in
+                     enumerate(positions)]
 
             line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(positions, lines, displayFrames),
                                        interval=1000 / fps, repeat_delay=300, blit=True, )
