@@ -37,6 +37,7 @@ class Simulation():
         self.config_spec = '%s/configs/default.conf' % _ROOT
         self.title = kwargs.get("title", None)
         self.progress_display = kwargs.get("progress_display", True)
+        self.working_directory = kwargs.get("working_directory", "/dev/shm/")
         logtofile = kwargs.get("logtofile", None)
         logtoconsole = kwargs.get("logtoconsole", logging.INFO)
 

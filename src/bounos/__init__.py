@@ -12,7 +12,6 @@ np.seterr(under="ignore")
 from Metrics import *
 import Analyses
 from DataPackage import DataPackage
-from XKCDify import XKCDify
 
 from aietes.Tools import list_functions
 
@@ -123,6 +122,9 @@ def main():
     data = {}
     for source in sources:
         data[source] = DataPackage(source)
+
+    if args.xkcd:
+        from XKCDify import XKCDify
 
     if args.compare:
         if args.analysis is None:

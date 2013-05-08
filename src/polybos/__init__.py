@@ -87,7 +87,6 @@ class Scenario(object):
                 )
                 prep_stats = sim.prepare()
                 sim_stats = sim.simulate()
-                sim.postProcess(**pp_defaults)
                 self.datarun[run] = sim.generateDataPackage()
             except Exception as exp:
                 raise
@@ -120,7 +119,7 @@ class Scenario(object):
             return sim_run_dataset.package_statistics()
         else:
             raise RuntimeError("Cannot process simulation statistics of non-DataPackage: (%s)%s" % (
-            type(sim_run_dataset), sim_run_dataset))
+                type(sim_run_dataset), sim_run_dataset))
 
     def commit(self):
         if self.node_count > len(self.nodes.keys()):
@@ -225,16 +224,20 @@ class ExperimentManager(object):
     """
     The Experiment Manager Object deals with multiple scenarios build around a single or multiple experimental input. (Number of nodes, ratio of behaviours, etc)
         The purpose of this manager is to abstract the per scenario setup
+
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, node_count=4, title=None, *args, **kwargs):
         """
         Acquire Generic Scenario
         """
         self.scenarios = []
         self._default_scenario = Scenario(title="__default__")
-        self.node_count = kwargs.get("node_count", 4)
-        self.title = kwargs.get("title", datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        self.node_count = node_count
+        if title is None:
+            self.title = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        else:
+            self.title = title
         self._default_scenario.setNodeCount(self.node_count)
 
     def updateBaseBehaviour(self, behaviour):
