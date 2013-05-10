@@ -129,7 +129,7 @@ class Scenario(object):
         self.committed = True
 
     def generateConfig(self):
-        config = dict()
+        config = {}
         config['Simulation'] = self.simulation
         config['Environment'] = self.environment
         config['Node'] = {'Nodes': self.nodes,
@@ -145,7 +145,7 @@ class Scenario(object):
         default_bev = self._default_node_config['Behaviour']['protocol']
 
         behaviour_set = set(default_bev)
-        behaviours = dict()
+        behaviours = {}
         behaviours[default_bev] = ['__default__']
 
         if self._default_node_config['bev'] != 'Null': #Stupid string comparison stops this from being 'is not'

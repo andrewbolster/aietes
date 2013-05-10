@@ -76,9 +76,9 @@ class DataPackage(object):
         Generate General Package Statistics, i.e. full simulation statistics
         """
 
-        stats = dict()
+        stats = {}
         """Achievement Statistics"""
-        ach_stat = dict()
+        ach_stat = {}
         ach_stat = {'pernode': {}}
 
         ach_pos = list()
@@ -89,7 +89,7 @@ class DataPackage(object):
 
         tot_achs = 0
         for i, name in enumerate(self.names):
-            n_ach_stat = dict()
+            n_ach_stat = {}
             n_ach = self.achievements[i]
             for time in np.asarray(n_ach.nonzero()).flatten().tolist():
                 n_ach_stat[time] = n_ach[time]
@@ -123,7 +123,7 @@ class DataPackage(object):
         #TODO The maths for this is insane....
 
         """Motion Statistics"""
-        mot_stat = dict()
+        mot_stat = {}
         #Standard Variation of the Internode Distance Average would represent the variability of the fleet
         mot_stat["std_of_INDA"] = np.std([self.inter_distance_average(t) for t in xrange(self.tmax)])
         #Fleet speed (i.e. total distance covered) would represent comparative efficiency

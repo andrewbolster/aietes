@@ -1,6 +1,5 @@
 pykalman
 configobj
-validate
 scipy
 wx
 pydot

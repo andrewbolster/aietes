@@ -225,7 +225,7 @@ class Simulation():
         #
         preconfigured_nodes_count = 0
         pre_node_names = []
-        nodes_config = dict()
+        nodes_config = {}
         node_default_config_dict = dotdict(config['Node']['Nodes'].pop('__default__').dict())
         config_dict = dotdict(config.dict())
         # Add the stuff we know whould be there...
@@ -318,7 +318,7 @@ class Simulation():
         # Give defaults to all
         for node_name in node_names:
             # Bare Dict/update instead of copy()
-            nodes_config[node_name] = dict()
+            nodes_config[node_name] = {}
             nodes_config[node_name].update(node_default_config_dict)
 
         # Give auto-config default

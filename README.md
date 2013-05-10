@@ -10,13 +10,13 @@ Aietes is a motion and behaviour simulator for AUVs (Autonomous Underwater Vehic
 * scipy
 * simpy
 * pydot
-*python-simpy
-*python-pydot
-*python-scipy
-*mencoder #for animation storage
-*python-wxgtk2.8
+* python-simpy
+* python-pydot
+* python-scipy
+* mencoder #for animation storage
+* python-wxgtk2.8
 
 ##Installation
-None
-##Usage
-see 'aietes.py -h' for detailed usage examples
+    sudo apt-get install build-essential python-numpy python-scipy python-matplotlib python-simpy python-pydot python-wxgtk2.8 libfreetype6-dev
+    python setup.py [install / develop --user]
+    python -m unitttests discover
