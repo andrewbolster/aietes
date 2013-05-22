@@ -35,7 +35,7 @@ class Simulation():
     def __init__(self, *args, **kwargs):
         self._done = False
         self.config_spec = '%s/configs/default.conf' % _ROOT
-        self.title = kwargs.get("title", None)
+        self.title = kwargs.get("title", dt.now().strftime('%Y-%m-%d-%H-%M-%S'))
         self.progress_display = kwargs.get("progress_display", True)
         self.working_directory = kwargs.get("working_directory", "/dev/shm/")
         logtofile = kwargs.get("logtofile", None)
@@ -184,13 +184,15 @@ class Simulation():
             contributions.append(node.contributions_log)
             achievements.append(node.achievements_log)
         shape = self.environment.shape
-        log = self.environment.pos_log
-        return {'p': positions,
-                'v': vectors,
+        return {'p': np.asarray(positions),
+                'v': np.asarray(vectors),
                 'names': names,
-                'environment': shape,
-                'contributions': contributions,
-                'achievements': achievements,
+                'environment': self.environment.shape,
+                'contributions': np.asarray(contributions),
+                'achievements': np.asarray(achievements),
+                'config': self.config,
+                'title': self.title
+
         }
 
     def validateConfig(self, config=None, final_check=False):
@@ -465,17 +467,19 @@ class Simulation():
             filename = "%s.aietes" % outputFile
             if dataFile:
                 self.logger.info("Writing datafile to %s" % filename)
+                co = ConfigObj(self.config, list_values=False)
+                co.filename = "%s.conf" % filename
+                co.write()
                 np.savez(filename,
                          positions=positions,
                          vectors=vectors,
                          names=names,
                          environment=self.environment.shape,
                          contributions=contributions,
-                         achievements=achievements
+                         achievements=achievements,
+                         title=filename,
+                         config=co
                 )
-                co = ConfigObj(self.config, list_values=False)
-                co.filename = "%s.conf" % filename
-                co.write()
                 return_dict['data_file'] = "%s.npz" % filename
                 return_dict['config_file'] = co.filename
             if movieFile:
@@ -580,9 +584,7 @@ def main():
         if options.verbose:
             print time.asctime()
         if options.title is None:  # and no custom title
-            if options.config is None:                                # If have no config
-                options.title = dt.now().strftime('%Y-%m-%d-%H-%M-%S')  # use default title
-            else:                                                     # if given config
+            if options.config is not None:                                # If have a config
                 options.title = os.path.splitext(os.path.splitext(os.path.basename(options.config))[0])[
                     0]  # use config title
         if options.runs > 1:

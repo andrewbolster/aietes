@@ -15,44 +15,57 @@ class DataPackage(object):
     [x,y,z,t] array for n simulated nodes positions over time. Additional
     information is queriable through the object.
     """
+    _attrib_map = {'p':'positions',
+                   'v':'vectors',
+                   'names':'names',
+                   'contributions':'contributions',
+                   'achievements':'achievements',
+                   'environment':'environment',
+                   'config':'config',
+                   'title':'title'
+                  }
+    def _handle_mapping_exceptions_(self, source, sink, exp):
+        """
+        Attempts to extract DataPackage data from a source dict
+        """
+        #Per Attrib Fixes in the case of failure
+        if sink is "title":
+            # If simulation title not explicitly given, use the filename -npz
+            self.title = ""
+        else:
+            self.logging.error("Can't find %s in source"%source)
+            raise exp
 
-    def __init__(self, source=None,
-                 p=None, v=None,
-                 names=None, environment=None,
-                 contributions=None, achievements=None,
-                 tmax=None,
-                 *args, **kwargs):
+    def __init__(self, source=None,*args, **kwargs):
         """
         Raises IOError on load failure
         """
         if source is not None:
             try:
                 source_dataset = np.load(source)
-                self.p = source_dataset['positions']
-                self.v = source_dataset['vectors']
-                self.names = source_dataset['names']
-                self.contributions = source_dataset['contributions']
-                self.achievements = source_dataset['achievements']
-                self.environment = source_dataset['environment']
-                try:
-                    self.title = getattr(source_dataset, 'title')
-                except AttributeError:
-                    # If simulation title not explicitly given, use the filename -npz
-                    self.title = os.path.splitext(os.path.basename(source))[0]
+                for sink_attrib, source_attrib in self._attrib_map.iteritems():
+                    try:
+                        self.__dict__[sink_attrib]=source_dataset[source_attrib]
+                    except KeyError as exp:
+                        self._handle_mapping_exceptions_(sink_attrib, source_attrib, exp)
             except KeyError:
                 raise
-        elif all(x is not None for x in [p, v, names, environment, contributions, achievements]):
-            self.p = np.asarray(p)
-            self.v = np.asarray(v)
-            self.names = names
-            self.environment = np.asarray(environment)
-            self.contributions = np.asarray(contributions)
-            self.achievements = np.asarray(achievements)
-            self.title = kwargs.get('title', "")
+        elif all(x is not None for x in [kwargs.get(attr) for attr in self._attrib_map.keys()] ):
+            # kwargs needed
+            for sink_attrib, source_attrib in self._attrib_map.iteritems():
+                try:
+                    self.__dict__[sink_attrib]=kwargs[sink_attrib]
+                except AttributeError as exp:
+                    self._handle_mapping_exceptions_(sink_attrib, source_attrib, exp)
         else:
-            raise ValueError("Can't work out what the hell you want!: %s" % str(kwargs))
+            raise ValueError("Can't work out what the hell you want!: %s missing" % 
+                             str([attr 
+                                  for attr,val in [(attr,kwargs.get(attr))
+                                                   for attr in self._attrib_map.keys()]
+                                  if val is None
+                                 ]))
 
-        self.tmax = len(self.p[0][0]) if tmax is None else tmax
+        self.tmax = kwargs.get("tmax",len(self.p[0][0]))
         self.n = len(self.p)
 
     def update(self, p=None, v=None, names=None, environment=None, **kwargs):
@@ -67,6 +80,21 @@ class DataPackage(object):
             raise ValueError("Can't work out what the hell you want!")
         self.tmax = len(self.p[0][0])
         self.n = len(self.p)
+
+    def write(self, filename=None):
+        #TODO TEST
+
+        np.savez(filename if filename is not None else self.filename,
+                 positions=positions,
+                 vectors=vectors,
+                 names=names,
+                 environment=self.environment.shape,
+                 contributions=contributions,
+                 achievements=achievements
+        )
+        co = ConfigObj(self.config, list_values=False)
+        co.filename = "%s.conf" % filename
+        co.write()
 
     #Data has the format:
     # [n][x,y,z][t]

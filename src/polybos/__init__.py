@@ -41,6 +41,11 @@ class Scenario(object):
     """
     The Generic Manager Object deals with config management and passthrough, as well as some optional execution characteristics
         The purpose of this manager is to abstract as much as humanly possible
+    Takes:
+        default_config_file:str
+        runcount:int
+        title:str
+
     """
 
     def __init__(self, *args, **kwargs):
@@ -63,7 +68,7 @@ class Scenario(object):
         self.nodes = {}
         self._default_behaviour_dict = self.getBehaviourDict()
 
-        self.title = kwargs.get("title", None)
+        self.title = kwargs.get("title", "DefaultScenario")
 
         self.committed = False
 
@@ -90,7 +95,9 @@ class Scenario(object):
                 )
                 prep_stats = sim.prepare()
                 sim_stats = sim.simulate()
+                return_dict = sim.postProcess(**pp_defaults)
                 self.datarun[run] = sim.generateDataPackage()
+                
             except Exception as exp:
                 raise
         print("done")
@@ -228,6 +235,9 @@ class ExperimentManager(object):
     """
     The Experiment Manager Object deals with multiple scenarios build around a single or multiple experimental input. (Number of nodes, ratio of behaviours, etc)
         The purpose of this manager is to abstract the per scenario setup
+    Takes:
+        node_count:int
+        title:str
 
     """
 
@@ -250,6 +260,9 @@ class ExperimentManager(object):
     def run(self, threaded=False, **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
+        Takes:
+            title:int
+            runcount:int
         """
         title = kwargs.get("title", self.title)
         self.exp_path = os.path.abspath(os.path.join(os.path.curdir, title))
@@ -343,5 +356,34 @@ class ExperimentManager(object):
                 s.addDefaultNode(count=invcount)
             self.scenarios.append(s)
 
+    @staticmethod
+    def printStats(exp):
 
+        def avg_of_dict(dict_list, keys):
+            sum = 0
+            count = 0
+            for d in dict_list:
+                count += 1
+                for key in keys[:-1]:
+                    d = d.get(key)
+                sum += d[keys[-1]]
+            return float(sum) / count
+
+        for s in exp.scenarios:
+            stats = s.generateRunStats()
+            print s.title
+            print("\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
+                avg_of_dict(stats, ['motion', 'fleet_distance']), avg_of_dict(stats, ['motion', 'fleet_efficiency']),
+                avg_of_dict(stats, ['motion', 'std_of_INDA']), avg_of_dict(stats, ['motion', 'std_of_INDD']),
+                avg_of_dict(stats, ['achievements', 'max_ach']), avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0
+            )
+            )
+
+            for r in stats:
+                print("\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
+                    r['motion']['fleet_distance'], r['motion']['fleet_efficiency'],
+                    r['motion']['std_of_INDA'], r['motion']['std_of_INDD'],
+                    r['achievements']['max_ach'], r['achievements']['avg_completion'] * 100.0
+                )
+                )
 

@@ -27,7 +27,7 @@ def run_suite(exp):
         print("\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
             avg_of_dict(stats, ['motion', 'fleet_distance']), avg_of_dict(stats, ['motion', 'fleet_efficiency']),
             avg_of_dict(stats, ['motion', 'std_of_INDA']), avg_of_dict(stats, ['motion', 'std_of_INDD']),
-            avg_of_dict(stats, ['achievements', 'max_ach']), avg_of_dict(['achievements', 'avg_completion']) * 100.0
+            avg_of_dict(stats, ['achievements', 'max_ach']), avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0
         )
         )
 

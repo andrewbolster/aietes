@@ -22,7 +22,8 @@ def Detect_Misbehaviour(data, *args, **kwargs):
     Detect and identify if a node / multiple nodes are misbehaving.
     Currently misbehaviour is regarded as where the internode distance is significantly greater
         for any particular node of a significant period of time.
-
+    Takes:
+        metric=Metric
     """
     import bounos.Metrics
 

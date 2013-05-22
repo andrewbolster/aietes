@@ -2,6 +2,7 @@
 BOUNOS - Heir to the Kingdom of AIETES
 """
 
+import sys
 import re
 
 import argparse
@@ -210,7 +211,7 @@ def run_detection_fusion(data, args):
                               ncol=len(d.names))
             else:
                 [l.set_visible(False) for l in ax.get_xticklabels()]
-            if args.xkcd:
+            if 'XKCDify' in sys.modules:
                 ax = XKCDify(ax)
             axes[i][j] = ax
         j = len(_metrics)
@@ -241,12 +242,12 @@ def run_detection_fusion(data, args):
             axes[i][j].set_ylim((m_ymin, m_ymax * 1.1))
             axes[i][j].set_xlim((0, m_xmax))
 
-    if args.dims is not None:
+    if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
     resize(fig, 2)
 
-    if args.output is not None:
+    if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
     else:
         show()
@@ -285,7 +286,7 @@ def run_metric_comparison(data, args):
                 ax.plot(metric.highlight_data, color='k', linestyle='--')
 
             #if args.attempt_detection and isinstance(metric, Metrics.PerNode_Internode_Distance_Avg):
-            if args.attempt_detection:
+            if args is not None and args.attempt_detection:
                 plot_detections(ax, metric, d, shade_region=args.shade_region, real_culprit=1 if i == 0 else None)
 
             ax.grid(True, alpha='0.2')
@@ -305,7 +306,7 @@ def run_metric_comparison(data, args):
                               ncol=len(d.names))
             else:
                 [l.set_visible(False) for l in ax.get_xticklabels()]
-            if args.xkcd:
+            if 'XKCDify' in sys.modules:
                 ax = XKCDify(ax)
             axes[i][j] = ax
 
@@ -326,12 +327,12 @@ def run_metric_comparison(data, args):
             axes[i][j].set_ylim((m_ymin, m_ymax * 1.1))
             axes[i][j].set_xlim((0, m_xmax))
 
-    if args.dims is not None:
+    if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
     resize(fig, 2)
 
-    if args.output is not None:
+    if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
     else:
         show()
@@ -382,7 +383,7 @@ def run_overlay(data, args):
     ax.set_ylabel(analysis.__name__.replace("_", " "))
     ax.set_xlabel("Time")
 
-    if args.xkcd:
+    if 'XKCDify' in sys.modules:
         ax = XKCDify(ax)
 
     if args.dims is not None:
