@@ -36,7 +36,7 @@ def run_suite(exp):
             )
 
 
-def avg_of_dict(dict_list, key):
+def avg_of_dict(dict_list, keys):
     sum = 0
     count = 0
     for d in dict_list:
