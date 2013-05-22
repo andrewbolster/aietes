@@ -1,4 +1,4 @@
-import os
+import os, sys
 import tempfile
 import logging
 from copy import deepcopy
@@ -77,12 +77,15 @@ class Scenario(object):
         pp_defaults = {'outputFile': self.title + kwargs.get("title", ""), 'dataFile': True}
         if not self.committed: self.commit()
         self.datarun = [None for _ in range(runcount)]
+        sys.stdout.write("[%s]:"%self.title)
         for run in range(runcount):
+            sys.stdout.write("%d,"%run)
+            sys.stdout.flush()
             try:
                 sim = Simulation(config=self.config,
                                  title=self.title + "-%s" % run,
                                  logtofile=self.title + ".log",
-                                 logtoconsole=logging.INFO,
+                                 logtoconsole=logging.ERROR,
                                  progress_display=False
                 )
                 prep_stats = sim.prepare()
@@ -90,6 +93,7 @@ class Scenario(object):
                 self.datarun[run] = sim.generateDataPackage()
             except Exception as exp:
                 raise
+        print("done")
 
     def runThreaded(self, *args, **kwargs):
         """
@@ -122,7 +126,7 @@ class Scenario(object):
                 type(sim_run_dataset), sim_run_dataset))
 
     def commit(self):
-        print "Scenario Committed with %d nodes configured and %d defined" % (len(self.nodes.keys()), self.node_count)
+        print("Scenario Committed with %d nodes configured and %d defined" % (len(self.nodes.keys()), self.node_count))
         if self.node_count > len(self.nodes.keys()):
             self.addDefaultNode(count=self.node_count - len(self.nodes.keys()))
 

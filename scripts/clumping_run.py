@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 __author__ = 'andrewbolster'
 import numpy
 
@@ -12,8 +13,8 @@ def set_exp():
 
 
 def run_exp(exp):
-    exp.run(title="8-clumping-10",
-            runcount=5,
+    exp.run(title="8-clumping-20",
+            runcount=3,
             threaded=False)
 
     return exp
@@ -22,7 +23,7 @@ def run_exp(exp):
 def run_suite(exp):
     for s in exp.scenarios:
         stats = s.generateRunStats()
-        print s.title
+        print(s.title)
         print("\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
             avg_of_dict(stats, ['motion', 'fleet_distance']), avg_of_dict(stats, ['motion', 'fleet_efficiency']),
             avg_of_dict(stats, ['motion', 'std_of_INDA']), avg_of_dict(stats, ['motion', 'std_of_INDD']),
@@ -50,7 +51,7 @@ def avg_of_dict(dict_list, keys):
     return float(sum) / count
 
 
-if __name__ is "__main__":
+if __name__ == "__main__":
     exp = set_exp()
     exp = run_exp(exp)
     run_suite(exp)
