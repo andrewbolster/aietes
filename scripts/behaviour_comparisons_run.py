@@ -1,21 +1,18 @@
 __author__ = 'andrewbolster'
-import numpy
 
 from polybos import ExperimentManager as EXP
 
 
 def set_exp():
     exp = EXP(node_count=8,
-              title="Clumping Test")
-    exp.addVariableRangeScenario("clumping", numpy.linspace(0.0, 1.0, 20))
+              title="Malicious Behaviour Trust Comparison")
+    exp.addVariableAttackerBehaviourSuite(["Shadow", "SlowCoach"], n_attackers=1)
     return exp
 
 
 def run_exp(exp):
-    exp.run(title="8-clumping-10",
-            runcount=5,
-            threaded=False)
-
+    exp.run(title="8-bev-mal",
+            runcount=5)
     return exp
 
 

@@ -15,7 +15,7 @@
 			"file": "src/aietes/__init__.py",
 			"settings":
 			{
-				"buffer_size": 24662,
+				"buffer_size": 24740,
 				"line_ending": "Unix"
 			}
 		},
@@ -210,15 +210,15 @@
 					"file": "src/aietes/__init__.py",
 					"settings":
 					{
-						"buffer_size": 24662,
+						"buffer_size": 24740,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								228,
+								228
 							]
 						],
 						"settings":

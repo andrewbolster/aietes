@@ -208,6 +208,9 @@ class Flock(Behaviour):
             Head towards average fleet point
         """
         vector = np.array([0, 0, 0], dtype=np.float)
+        if len(self.nearest_neighbours) < 1:
+            raise RuntimeError("I don't have any neighbours!")
+
         for neighbour in self.nearest_neighbours:
             vector += np.array(neighbour.position)
 
@@ -222,6 +225,9 @@ class Flock(Behaviour):
         except ZeroDivisionError:
             self.logger.error("Zero Division Error: Returning zero vector")
             forceVector = position - position
+        except FloatingPointError:
+            self.logger.error("FPE: vector=%s" % str(vector))
+            raise
 
         if debug:
             self.logger.debug("Clump:%s" % forceVector)
@@ -303,6 +309,44 @@ class AlternativeFlock(Flock, AlternativeFlockMixin):
 
 
 class WaypointMixin():
+    """
+    Waypoint MixIn Class defines the general waypoint behaviour and includes the inner 'waypoint' object class.
+    """
+
+    class waypoint(object):
+        def __init__(self, positions, *args, **kwargs):
+            """
+            Defines waypoint paths:
+                positions = [ [ position, proximity ], *]
+            """
+            self.logger = kwargs.get("logger", logging.getLogger(__name__))
+            self.next = None
+            (self.position, self.prox) = positions[0]
+            if __debug__:
+                self.logger.debug("Waypoint: %s,%s" % (self.position, self.prox))
+            if len(positions) == 1:
+                if __debug__:
+                    self.logger.debug("End of Position List")
+            else:
+                self.append(positions[1:])
+
+        def append(self, position):
+            if self.next is None:
+                self.next = WaypointMixin.waypoint(position)
+            else:
+                self.next.append(position)
+
+        def insert(self, position):
+            temp_waypoint = self.next
+            self.next = WaypointMixin.waypoint(position)
+            self.next.next = temp_waypoint
+
+        def makeLoop(self, head):
+            if self.next is None:
+                self.next = head
+            else:
+                self.next.makeLoop(head)
+
     def __init__(self, *args, **kwargs):
         self.waypoint_factor = listfix(float, self.bev_config.waypoint_factor)
         if not hasattr(self, str(self.bev_config.waypoint_style)):
@@ -326,7 +370,7 @@ class WaypointMixin():
              [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
         )
         self.cubepatrolroute = [(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
-        self.nextwaypoint = waypoint(self.cubepatrolroute)
+        self.nextwaypoint = self.waypoint(self.cubepatrolroute)
         self.nextwaypoint.makeLoop(self.nextwaypoint)
 
     def waypointVector(self, position, velocity):
@@ -336,6 +380,7 @@ class WaypointMixin():
             real_d = distance(position, self.nextwaypoint.position)
             neighbourhood_d = distance(neighbourhood_avg, self.nextwaypoint.position)
             if neighbourhood_d < self.nextwaypoint.prox:
+                # GRANT ACHIEVEMENT
                 self.node.grantAchievement((self.nextwaypoint.position, real_d))
                 if __debug__:
                     self.logger.info("Moving to Next waypoint:%s" % self.nextwaypoint.position)
@@ -356,36 +401,32 @@ class AlternativeWaypoint(AlternativeFlock, Waypoint):
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
-class waypoint(object):
-    def __init__(self, positions, *args, **kwargs):
-        """
-        Defines waypoint paths:
-            positions = [ [ position, proximity ], *]
-        """
-        self.logger = kwargs.get("logger", logging.getLogger(__name__))
-        (self.position, self.prox) = positions[0]
-        if __debug__:
-            self.logger.debug("Waypoint: %s,%s" % (self.position, self.prox))
-        if len(positions) == 1:
-            if __debug__:
-                self.logger.debug("End of Position List")
-            self.next = None
-        else:
-            self.next = waypoint(positions[1:])
+class SlowCoach(Flock):
+    """
+    This behaviour gives the desire to be at the back of the fleet.
+    This is accomplished by taking the incident angle between the clumping centre and the heading vector and taking the
+        cross angle of it.
+    This provides a 'braking' force along the axis of the fleets movement
+    """
 
-    def append(self, position):
-        if self.next is None:
-            self.next = waypoint([position])
-        else:
-            self.next.append(position)
+    def __init__(self, *args, **kwargs):
+        Flock.__init__(self, *args, **kwargs)
+        self.behaviours.append(self.slowcoachVector)
 
-    def insert(self, position):
-        temp_waypoint = self.next
-        self.next = waypoint([position])
-        self.next.next = temp_waypoint
+    def slowcoachVector(self, position, velocity):
+        clumpingVector = self.clumpingVector(position, velocity)
+        localheadingVector = self.localHeading(position, velocity)
+        forceVector = np.array([0, 0, 0], dtype=np.float)
+        forceVector = -(clumpingVector + localheadingVector)
+        if debug:
+            self.logger.debug("SlowCoach:%s" % forceVector)
+        return self.normalize_behaviour(forceVector) * self.clumping_factor
 
-    def makeLoop(self, head):
-        if self.next is None:
-            self.next = head
-        else:
-            self.next.makeLoop(head)
+
+####
+# Malicious Class Aliases because I'm Lazy
+####
+
+#In the general case where everyone else is waypointing, the untargeted Flock behaviour is analogous
+#   to a un-initiated node 'shadowing' the fleet.
+Shadow = Flock

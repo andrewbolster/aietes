@@ -122,6 +122,7 @@ class Scenario(object):
                 type(sim_run_dataset), sim_run_dataset))
 
     def commit(self):
+        print "Scenario Committed with %d nodes configured and %d defined" % (len(self.nodes.keys()), self.node_count)
         if self.node_count > len(self.nodes.keys()):
             self.addDefaultNode(count=self.node_count - len(self.nodes.keys()))
 
@@ -197,7 +198,6 @@ class Scenario(object):
     def addDefaultNode(self, count=1):
         node_conf = deepcopy(self._default_node_config)
         self.addNode(node_conf, count=count)
-
 
     def addNode(self, node_conf, names=None, count=1):
         if names is None:
@@ -297,6 +297,16 @@ class ExperimentManager(object):
         for v in value_range:
             s = Scenario(title="%s(%f)" % (variable, v), default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({variable: v}, count=self.node_count)
+            self.scenarios.append(s)
+
+    def addVariableAttackerBehaviourSuite(self, behaviour_list, n_attackers=1):
+        """
+        Add a scenario with a range of configuration values to the experimental run
+        """
+        for v in behaviour_list:
+            s = Scenario(title="Behaviour(%s)" % (v), default_config=self._default_scenario.generateConfigObj())
+            s.addCustomNode({"behaviour": v}, count=n_attackers)
+            s.addDefaultNode(count=self.node_count - n_attackers)
             self.scenarios.append(s)
 
     def addVariableNScenario(self, v_dict):
