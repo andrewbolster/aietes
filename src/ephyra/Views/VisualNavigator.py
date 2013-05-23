@@ -3,19 +3,15 @@ __author__ = 'andrewbolster'
 WIDTH, HEIGHT = 8, 6
 SIDEBAR_WIDTH = 4
 
-from ephyra import wx
-
 import numpy as np
-
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
-
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize
-
 from matplotlib import cm
 
+from ephyra import wx
 from ephyra.Views import MetricView, Arrow3D
 
 
@@ -79,6 +75,7 @@ class VisualNavigator(wx.Panel):
         for ax in self.metric_axes:
             ax.autoscale_view(scalex=False, tight=True)
         self.metric_xlines = [None for i in range(HEIGHT)]
+        self.achievement_xlines = [None for i in range(HEIGHT)]
         self.metric_views = [None for i in range(HEIGHT)]
         self._zoom_metrics = True
 
@@ -346,6 +343,18 @@ class VisualNavigator(wx.Panel):
                     self.plot_axes.add_artist(
                         self.node_contrib_collections[-1],
                     )
+        self.plot_axes.autoscale()
+        (lx, rx) = self.plot_axes.get_xlim3d()
+        (ly, ry) = self.plot_axes.get_ylim3d()
+        (lz, rz) = self.plot_axes.get_zlim3d()
+        x_width = abs(lx - rx)
+        y_width = abs(ly - ry)
+        z_width = abs(lz - rz)
+
+        avg = np.average(positions, axis=1)
+        self.plot_axes.set_xlim3d((avg[0] - x_width / 2, avg[0] + x_width / 2))
+        self.plot_axes.set_ylim3d((avg[1] - y_width / 2, avg[1] + y_width / 2))
+        self.plot_axes.set_zlim3d((avg[2] - z_width / 2, avg[2] + z_width / 2))
 
     def get_contrib_colour(self, contrib_key):
         try:
@@ -389,6 +398,11 @@ class VisualNavigator(wx.Panel):
                 self.metric_xlines[i].set_xdata([self.t, self.t])
             else:
                 self.metric_xlines[i] = self.metric_axes[i].axvline(x=self.t, color='r', linestyle=':')
+            if self.achievement_xlines[i] is not None:
+                self.achievement_xlines[i].set_xdata([self.t, self.t])
+            else:
+                for achievement in self.ctl.get_achievements():
+                    self.achievement_xlines[i] = self.metric_axes[i].axvline(x=achievement, color='b', alpha=0.1)
             if self._zoom_metrics:
                 xlim = (max(0, self.t - 100), max(100, self.t + 100))
                 self.metric_axes[i].set_xlim(xlim)

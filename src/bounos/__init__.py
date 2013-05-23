@@ -5,6 +5,8 @@ BOUNOS - Heir to the Kingdom of AIETES
 import sys
 import re
 import argparse
+from argparse import RawTextHelpFormatter
+
 from math import ceil
 
 import numpy as np
@@ -58,11 +60,13 @@ def main():
     Initial Entry Point; Does very little other that option parsing
     """
     parser = argparse.ArgumentParser(
+        formatter_class=RawTextHelpFormatter,
         description="Simulation Visualisation and Analysis Suite for AIETES",
-        epilog="Example Usages:" \
-               "    Plot Metric Values with attempted detection ranges" \
-               "        bounos --shade-region --comparison --attempt-detection --source Stuff.npz"
-    )
+        epilog="Example Usages:\n" \
+               "    Plot Metric Values with attempted detection ranges\n" \
+               "        bounos --shade-region --comparison --attempt-detection --source Stuff.npz\n" \
+               "    Plot metric fusion (trust fusion with lag-lead)\n" \
+               "        bounos --fusion --source Stuff.npz\n")
     parser.add_argument('--source', '-s',
                         dest='source', action='store', nargs='+',
                         metavar='XXX.npz',
@@ -235,6 +239,10 @@ def run_detection_fusion(data, args):
                                  sharex=axes[0][0] if i > 0 or j > 0 else None,
                                  sharey=axes[i - 1][j] if i > 0 else None)
             ax.plot(deviation_fusion[j])
+
+            if hasattr(d, "achievements"):
+                for achievement in d.achievements.nonzero()[1]:
+                    ax.axvline(x=achievement, color='b', alpha=0.1)
 
             ax.grid(True, alpha='0.2')
             ax.autoscale_view(scalex=False, tight=True)
@@ -472,4 +480,4 @@ def run_overlay(data, args):
 
 def resize(figure, scale):
     figure.set_size_inches(figure.get_size_inches() * scale)
-    figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.1, hspace=0.0)
+    figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)

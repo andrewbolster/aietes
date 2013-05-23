@@ -161,6 +161,10 @@ class EphyraController():
     def get_contrib_keys(self):
         return self.model.contributions[np.argmax(len(self.model.contributions[:, 0])), 0].keys()
 
+    def get_achievements(self):
+        return self.model.achievements.nonzero()[1]
+
+
     def get_fleet_average_pos(self, time):
         return np.average(self.model.position_slice(time), axis=0)
 
