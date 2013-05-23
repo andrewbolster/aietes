@@ -335,7 +335,7 @@ class ExperimentManager(object):
             s.addDefaultNode(count=self.node_count - n_attackers)
             self.scenarios.append(s)
 
-    def addVariable2Scenario(self, v_dict):
+    def addVariable2RangeScenario(self, v_dict):
         """
         Add a 2dim range of scenarios based on a dictionary of {'variable':'value_range', 'variable':'value_range'}
         """
@@ -346,11 +346,13 @@ class ExperimentManager(object):
         # NOTE meshgrid indexing is reversed compared to keyname
         # i.e. meshgrid[:,key[-1],key[-2],...,key[0]]
         # However, doing anything more than two is insane...
-        scelist = [meshgrid[:, j, i] for j in range(grid.shape[1]) for i in range(meshgrid.shape[2])]
+        scelist = [meshgrid[:, j, i] for j in range(meshgrid.shape[1]) for i in range(meshgrid.shape[2])]
 
         for tup in scelist:
-            s = Scenario(title="%s(%f)" % (variable, v), default_config=self._default_scenario.generateConfigObj())
-            s.addCustomNode({variable: v}, count=self.node_count)
+            d = dict(zip(meshkeys, tup))
+            s = Scenario(title=str(["%s(%f)" % (variable, v) for variable, v in d.iteritems()]),
+                         default_config=self._default_scenario.generateConfigObj())
+            s.addCustomNode(d, count=self.node_count)
             self.scenarios.append(s)
 
 
