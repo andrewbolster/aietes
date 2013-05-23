@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import sys
+import traceback
+
 import numpy as np
 
 from aietes.Tools import Sim, distance, mag
@@ -36,7 +39,12 @@ class Fleet(Sim.Process):
                 return True
 
         if self.simulation.progress_display:
-            progress_bar = ProgressBar('green', width=20, block='▣', empty='□')
+            try:
+                progress_bar = ProgressBar('green', width=20, block='▣', empty='□')
+            except TypeError as exp:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+
+                self.logger.info("Tried to start progress bar but failed with %s" % traceback.format_exc())
         else:
             progress_bar = None
         self.logger.info("Initialised Node Lifecycle")

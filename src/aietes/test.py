@@ -12,12 +12,21 @@ datapackage_per_node_members = ['p', 'v', 'names', 'contributions', 'achievement
 class DefaultBehaviour(unittest.TestCase):
     def setUp(self):
         """Aietes should simulate fine with no input by pulling in from default values"""
-        self.simulation = aietes.Simulation(logtoconsole=logging.ERROR, progress_display=False)
-        self.prep_dict = self.simulation.prepare()
-        self.sim_time = self.simulation.simulate()
+        count = 4
+        self.run_time = 100
+        try:
+            self.simulation = aietes.Simulation(logtoconsole=logging.ERROR, progress_display=False)
+            self.prep_dict = self.simulation.prepare(sim_time=self.run_time)
+            self.sim_time = self.simulation.simulate()
+        except RuntimeError:
+            print "Got Runtime Error on SetUp, trying one more time"
+            self.simulation = aietes.Simulation(logtoconsole=logging.ERROR, progress_display=False)
+            self.prep_dict = self.simulation.prepare(sim_time=self.run_time)
+            self.sim_time = self.simulation.simulate()
 
     def testDictAndTimeReporting(self):
         """Simulation time at prep should be same as after simulation"""
+        self.assertEqual(self.prep_dict['sim_time'], self.run_time)
         self.assertEqual(self.prep_dict['sim_time'], self.sim_time)
 
     def testDataPackage(self):

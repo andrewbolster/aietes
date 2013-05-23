@@ -74,15 +74,16 @@ class Scenario(object):
 
         self.tweaks = {}
 
-    def run(self, *args, **kwargs):
+    def run(self, runcount=None, runtime=None, *args, **kwargs):
         """
         Offload this to AIETES
         Keyword Arguments:
             runcount:int(default)
             runtime:int(None)
         """
-        runcount = kwargs.get("runcount", self._default_run_count)
-        runtime = kwargs.get("runtime", None)
+        if runcount is None:
+            runcount = self._default_run_count
+
         pp_defaults = {'outputFile': self.title, 'dataFile': True}
         if not self.committed: self.commit()
         self.datarun = [None for _ in range(runcount)]
@@ -106,12 +107,12 @@ class Scenario(object):
 
             except Exception as exp:
                 raise
-        print("done")
+        print("done %d runs for %d each" % (runcount, runtime if runtime is not None else -sim_stats))
 
     def runThreaded(self, *args, **kwargs):
         """
         Offload this to AIETES threaded
-        Possibly still borked...
+        Still borked...
         """
         runcount = kwargs.get("runcount", self._default_run_count)
         if not self.committed: self.commit()
@@ -269,6 +270,7 @@ class ExperimentManager(object):
         Takes:
             title:int
             runcount:int
+            runtime:int(None)
         """
         title = kwargs.get("title", self.title)
         self.exp_path = os.path.abspath(os.path.join(os.path.curdir, title))
@@ -282,9 +284,9 @@ class ExperimentManager(object):
             os.chdir(self.exp_path)
             for scenario in self.scenarios:
                 if threaded:
-                    scenario.runThreaded(runcount=self.runcount)
+                    scenario.runThreaded(**kwargs)
                 else:
-                    scenario.run(runcount=self.runcount)
+                    scenario.run(**kwargs)
         finally:
             os.chdir(self.orig_path)
             print("Experimental results stored in %s" % self.exp_path)

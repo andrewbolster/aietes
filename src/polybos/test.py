@@ -18,11 +18,13 @@ class ScenarioGeneration(unittest.TestCase):
     def testSimulationStatsQuery(self):
         """ Test that generateSimulationStats does single and multiple query responses based on data"""
         count = 4
-        runcount = 3
+        runcount = 2
+        runtime = 100
         behaviour = "Flock"
         e = polybos.ExperimentManager(node_count=count)
         e.addRatioScenario(behaviour)
-        e.run(runcount=runcount)
+        e.run(runcount=runcount,
+              runtime=runtime)
         multistats = e.generateSimulationStats()
         self.assertEqual(len(multistats), len(e.scenarios))
         for stats in multistats:
