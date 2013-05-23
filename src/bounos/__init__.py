@@ -4,9 +4,11 @@ BOUNOS - Heir to the Kingdom of AIETES
 
 import sys
 import re
-
 import argparse
+from math import ceil
+
 import numpy as np
+
 
 np.seterr(under="ignore")
 
@@ -55,7 +57,12 @@ def main():
     """
     Initial Entry Point; Does very little other that option parsing
     """
-    parser = argparse.ArgumentParser(description="Simulation Visualisation and Analysis Suite for AIETES")
+    parser = argparse.ArgumentParser(
+        description="Simulation Visualisation and Analysis Suite for AIETES",
+        epilog="Example Usages:" \
+               "    Plot Metric Values with attempted detection ranges" \
+               "        bounos --shade-region --comparison --attempt-detection --source Stuff.npz"
+    )
     parser.add_argument('--source', '-s',
                         dest='source', action='store', nargs='+',
                         metavar='XXX.npz',
@@ -154,7 +161,9 @@ def plot_detections(ax, metric, orig_data, shade_region=False, real_culprits=Non
 
     import Analyses
 
-    results = Analyses.Detect_Misbehaviour(data=orig_data, metric=metric.__class__.__name__, stddev_frac=2)
+    results = Analyses.Detect_Misbehaviour(data=orig_data,
+                                           metric=metric.__class__.__name__,
+                                           stddev_frac=2)
     (detections, detection_vals, detection_dict) = results['detections'], results['detection_envelope'], results[
         'suspicions']
     if real_culprits is None:
@@ -208,12 +217,17 @@ def run_detection_fusion(data, args):
     fig = figure()
     base_ax = fig.add_axes([0, 0, 1, 1], )
     gs = GridSpec(len(_metrics) + 1, len(data))
-
     axes = [[None for _ in range(len(_metrics) + 1)] for _ in range(len(data))]
+
+    #Detect multiple runs by name introspection
+    namelist = []
+    [namelist.append(name) for (run, d) in data.iteritems() for name in d.names]
+    nameset = set(namelist)
+    per_run_names = len(namelist) / len(data) != len(nameset)
 
     for i, (run, d) in enumerate(data.iteritems()):
         print("One: %d" % i)
-        deviation_fusion, deviation_windowed = Analyses.Combined_Detection_Rank(d, _metrics)
+        deviation_fusion, deviation_windowed = Analyses.Combined_Detection_Rank(d, _metrics, stddev_frac=2)
         for j, _metric in enumerate(_metrics):
             print("One: %d:%d" % (i, j))
 
@@ -232,9 +246,21 @@ def run_detection_fusion(data, args):
                 ax.set_title(str(d.title).replace("_", " "))
                 # Last Metric Behaviour (Legend)
             if j == len(_metrics) - 1:
-                if i == 0:
+                if per_run_names:
+                    # Per Run Legend
+                    n_leg = len(data)
+                    leg_w = 1.0 / n_leg
+                    leg_x = 0 + (leg_w * (i))
+
+                    ax.legend(d.names, "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
+                              bbox_transform=fig.transFigure,
+                              ncol=int(ceil(float(len(d.names)) / (n_leg))))
+                #First Legend
+                elif i == 0:
                     ax.legend(d.names, "lower center", bbox_to_anchor=(0, 0, 1, 1), bbox_transform=fig.transFigure,
                               ncol=len(d.names))
+                else:
+                    pass
             else:
                 [l.set_visible(False) for l in ax.get_xticklabels()]
             if 'XKCDify' in sys.modules:
@@ -290,6 +316,12 @@ def run_metric_comparison(data, args):
     base_ax = fig.add_axes([0, 0, 1, 1], )
     gs = GridSpec(len(_metrics), len(data))
 
+    #Detect multiple runs by name introspection
+    namelist = []
+    [namelist.append(name) for (run, d) in data.iteritems() for name in d.names]
+    nameset = set(namelist)
+    per_run_names = len(namelist) / len(data) != len(nameset)
+
     axes = [[None for _ in range(len(_metrics))] for _ in range(len(data))]
     for i, (run, d) in enumerate(data.iteritems()):
         for j, _metric in enumerate(_metrics):
@@ -329,9 +361,17 @@ def run_metric_comparison(data, args):
                 ax.set_title(str(d.title).replace("_", " "))
                 # Last Metric Behaviour (Legend)
             if j == len(_metrics) - 1:
-                ax.get_xaxis().set_visible(True)
-                ax.set_xlabel("Time")
-                if i == 0:
+                if per_run_names:
+                    # Per Run Legend
+                    n_leg = len(data)
+                    leg_w = 1.0 / n_leg
+                    leg_x = 0 + (leg_w * (i))
+
+                    ax.legend(d.names, "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
+                              bbox_transform=fig.transFigure,
+                              ncol=int(ceil(float(len(d.names)) / (n_leg))))
+                #First Legend
+                elif i == 0:
                     ax.legend(d.names, "lower center", bbox_to_anchor=(0, 0, 1, 1), bbox_transform=fig.transFigure,
                               ncol=len(d.names))
             else:
@@ -432,3 +472,4 @@ def run_overlay(data, args):
 
 def resize(figure, scale):
     figure.set_size_inches(figure.get_size_inches() * scale)
+    figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.1, hspace=0.0)

@@ -167,7 +167,7 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
             results = Detect_Misbehaviour(data, metric=metric)
             misbehavors = results['suspicions']
 
-        stddev, deviance = results['stddev'], results['deviance']
+        stddev, deviance = results['detection_envelope'], results['deviance']
 
         for culprit, times in misbehavors.iteritems():
             deviance_accumulator[m, np.array(times), culprit] = (
