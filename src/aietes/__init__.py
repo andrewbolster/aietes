@@ -30,6 +30,15 @@ _ROOT = os.path.abspath(os.path.dirname(__file__))
 class Simulation():
     """
     Defines a single simulation
+    Keyword Arguments:
+        title:str(time)
+        progress_display:bool(True)
+        working_directory:str(/dev/shm)
+        logtofile:str(None)
+        logtoconsole:logging.level(INFO)
+        logger:logging.logger(None)
+        config_file:str(None)
+        config:dict(None)
     """
 
     def __init__(self, *args, **kwargs):
@@ -92,6 +101,10 @@ class Simulation():
         self.fleets = []
 
     def prepare(self, waits=False, *args, **kwargs):
+        """
+        Keyword Arguments:
+            sim_time:int(None)
+        """
         # Attempt Validation and construct the simulation from that config.
         try:
             self.logger.setLevel(LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))

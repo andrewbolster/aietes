@@ -139,13 +139,38 @@ def main():
         run_overlay(data, args)
 
 
-def plot_detections(ax, metric, orig_data, shade_region=False, real_culprit=None):
+def plot_detections(ax, metric, orig_data, shade_region=False, real_culprits=None, good_behaviour="Waypoint"):
+    """
+    Plot Detection Overlay including False-positive analysis.
+
+    Will attempt heuristic analysis of 'real' culprit from DataPackage behaviour records
+
+    Keyword Arguments:
+        shade_region:bool(False)
+        real_culprits:list([])
+        good_behaviour:str("Waypoint")
+    """
     from aietes.Tools import range_grouper
 
     import Analyses
 
-    results = Analyses.Detect_Misbehaviour(data=orig_data, metric=metric.__class__.__name__)
-    (detections, detection_vals, detection_dict) = results['detections'], results['stddev'], results['suspicions']
+    results = Analyses.Detect_Misbehaviour(data=orig_data, metric=metric.__class__.__name__, stddev_frac=2)
+    (detections, detection_vals, detection_dict) = results['detections'], results['detection_envelope'], results[
+        'suspicions']
+    if real_culprits is None:
+        real_culprits = []
+    elif isinstance(real_culprits, int):
+        real_culprits = [real_culprits]
+    else:
+        pass
+
+    if good_behaviour:
+        for bev, nodelist in orig_data.getBehaviourDict().iteritems():
+            if str(good_behaviour) != str(bev):  # Bloody String Comparison...
+                print "Adding %s to nodelist because \"%s\" is not \"%s\"" % (nodelist, bev, good_behaviour)
+                [real_culprits.append(orig_data.names.index(node)) for node in nodelist]
+
+    print real_culprits
 
     for culprit, detections in detection_dict.iteritems():
         for (min, max) in range_grouper(detections):
@@ -159,8 +184,9 @@ def plot_detections(ax, metric, orig_data, shade_region=False, real_culprit=None
                     _y1 = np.asarray([0] * len(_x))
                 _y2 = metric.data[min:max, culprit]
                 print("%s:%s:%s" % (orig_data.names[culprit], str((min, max)), str(max - min)))
-                if real_culprit is not None:
-                    ax.fill_between(_x, _y1, _y2, alpha=0.1, facecolor='red' if culprit != real_culprit else 'green')
+                if real_culprits is not []:
+                    ax.fill_between(_x, _y1, _y2, alpha=0.1,
+                                    facecolor='red' if culprit not in real_culprits else 'green')
                 else:
                     ax.fill_between(_x, _y1, _y2, alpha=0.1, facecolor='red')
 
@@ -203,7 +229,7 @@ def run_detection_fusion(data, args):
                 ax.set_ylabel(_metric.label)
                 # First Metric Behaviour (Title)
             if j == 0:
-                ax.set_title(d.title.replace("_", " "))
+                ax.set_title(str(d.title).replace("_", " "))
                 # Last Metric Behaviour (Legend)
             if j == len(_metrics) - 1:
                 if i == 0:
@@ -285,9 +311,13 @@ def run_metric_comparison(data, args):
             if metric.highlight_data is not None:
                 ax.plot(metric.highlight_data, color='k', linestyle='--')
 
+            if hasattr(d, "achievements"):
+                for achievement in d.achievements.nonzero()[1]:
+                    ax.axvline(x=achievement, color='b', alpha=0.1)
+
             #if args.attempt_detection and isinstance(metric, Metrics.PerNode_Internode_Distance_Avg):
             if args is not None and args.attempt_detection:
-                plot_detections(ax, metric, d, shade_region=args.shade_region, real_culprit=1 if i == 0 else None)
+                plot_detections(ax, metric, d, shade_region=args.shade_region)
 
             ax.grid(True, alpha='0.2')
             ax.autoscale_view(scalex=False, tight=True)
@@ -296,7 +326,7 @@ def run_metric_comparison(data, args):
                 ax.set_ylabel(_metric.label)
                 # First Metric Behaviour (Title)
             if j == 0:
-                ax.set_title(d.title.replace("_", " "))
+                ax.set_title(str(d.title).replace("_", " "))
                 # Last Metric Behaviour (Legend)
             if j == len(_metrics) - 1:
                 ax.get_xaxis().set_visible(True)
@@ -362,10 +392,15 @@ def run_overlay(data, args):
             results = analysis(data=data[source], **analysis_args)
         else:
             results = analysis(data=data[source])
-        metrics = results['stddev']
-        detections = results['detections']
+        metrics = results['detection_envelope']
+        if hasattr(results, 'detections'):
+            detections = results['detections']
+        elif args.attempt_detection:
+            raise NotImplementedError("Tried to do detection on a metric that doesn't support it:%s" % args.analysis)
+        else:
+            pass
 
-        ax.plot(metrics, label=data[source].title.replace("_", " "))
+        ax.plot(metrics, label=str(data[source].title).replace("_", " "))
         try:
             if args.attempt_detection:
                 ax.fill_between(range(len(metrics)), 0, metrics, where=[d is not None for d in detections], alpha=0.3)
@@ -379,7 +414,7 @@ def run_overlay(data, args):
             raise exp
 
     ax.legend(loc="upper right", prop={'size': 12})
-    ax.set_title(args.title.replace("_", " "))
+    ax.set_title(str(args.title).replace("_", " "))
     ax.set_ylabel(analysis.__name__.replace("_", " "))
     ax.set_xlabel("Time")
 

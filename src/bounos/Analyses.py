@@ -17,17 +17,20 @@ def Find_Convergence(data, *args, **kwargs):
     return detection_points, metrics
 
 
-def Detect_Misbehaviour(data, *args, **kwargs):
+def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg", stddev_frac=1, *args, **kwargs):
     """
     Detect and identify if a node / multiple nodes are misbehaving.
     Currently misbehaviour is regarded as where the internode distance is significantly greater
         for any particular node of a significant period of time.
+    Also can 'tighten' the detection bounds via fractions of \sigma
     Takes:
-        metric=Metric
+        metric:Metric("PerNode_Internode_Distance_Avg")
+        stddev_frac:int(1)
     """
     import bounos.Metrics
 
-    metric_arg = kwargs.get("metric", "PerNode_Internode_Distance_Avg")
+    metric_arg = metric
+
     if not isinstance(metric_arg, str) and issubclass(metric_arg, bounos.Metrics.Metric):
         metric_class = metric_arg
     else:
@@ -48,7 +51,7 @@ def Detect_Misbehaviour(data, *args, **kwargs):
     # IND has the highlight data to be the average of internode distances
     #TODO implement scrolling stddev calc to adjust smearing value (5)
     potential_misbehavers = {}
-    stddev = np.zeros((data.tmax), dtype=np.float64)
+    detection_envelope = np.zeros((data.tmax), dtype=np.float64)
     deviance = np.zeros((data.tmax, data.n), dtype=np.float64)
 
     rolling_detections = [[]] * data.tmax
@@ -61,20 +64,19 @@ def Detect_Misbehaviour(data, *args, **kwargs):
         except TypeError as e:
             raise TypeError("%s:%s" % (metric.__class__.__name__, e))
 
-        stddev[t] = np.std(deviance[t])
-
-        # Select culprits that are deviating by 1 sigma from the norm
+        # Select culprits that are deviating by 1 sigma/frac from the norm
+        detection_envelope[t] = this_detection_envelope = np.std(deviance[t]) / stddev_frac
         culprits = [False]
         # None is both not True and not False
         if metric.signed is not False:
             # Positive Swing
-            culprits = (metric.data[t] > (metric.highlight_data[t] + stddev[t]))
+            culprits = (metric.data[t] > (metric.highlight_data[t] + this_detection_envelope ))
         elif metric.signed is not True:
             # Negative Swing
-            culprits = (metric.data[t] < (metric.highlight_data[t] - stddev[t]))
+            culprits = (metric.data[t] < (metric.highlight_data[t] - this_detection_envelope))
         else:
-            culprits = (metric.data[t] > (metric.highlight_data[t] + stddev[t])) or (
-                metric.data[t] < (metric.highlight_data[t] - stddev[t]))
+            culprits = (metric.data[t] > (metric.highlight_data[t] + this_detection_envelope)) or (
+                metric.data[t] < (metric.highlight_data[t] - this_detection_envelope))
 
         for culprit in np.where(culprits)[0]:
             try:
@@ -90,7 +92,7 @@ def Detect_Misbehaviour(data, *args, **kwargs):
                 confirmed_detections[t].append(culprit)
 
     return {'detections': np.asarray(confirmed_detections),
-            'stddev': stddev,
+            'detection_envelope': detection_envelope,
             'suspicions': potential_misbehavers,
             'deviance': deviance,
             'metrics': metric.data

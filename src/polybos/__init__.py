@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 import tempfile
 import logging
 from copy import deepcopy
@@ -10,7 +11,6 @@ import numpy as np
 from datetime import datetime
 from aietes import _ROOT, Simulation # Must use the aietes path to get the config files
 from aietes.Threaded import go as goSim
-
 from aietes.Tools import nameGeneration, updateDict
 from bounos import DataPackage
 
@@ -77,14 +77,19 @@ class Scenario(object):
     def run(self, *args, **kwargs):
         """
         Offload this to AIETES
+        Keyword Arguments:
+            runcount:int(default)
+            runtime:int(None)
         """
         runcount = kwargs.get("runcount", self._default_run_count)
-        pp_defaults = {'outputFile': self.title + kwargs.get("title", ""), 'dataFile': True}
+        runtime = kwargs.get("runtime", None)
+        pp_defaults = {'outputFile': self.title, 'dataFile': True}
         if not self.committed: self.commit()
         self.datarun = [None for _ in range(runcount)]
-        sys.stdout.write("[%s]:"%self.title)
         for run in range(runcount):
-            sys.stdout.write("%d,"%run)
+            if runcount > 1:
+                pp_defaults.update({'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
+            sys.stdout.write("%s," % pp_defaults['outputFile'])
             sys.stdout.flush()
             try:
                 sim = Simulation(config=self.config,
@@ -93,11 +98,12 @@ class Scenario(object):
                                  logtoconsole=logging.ERROR,
                                  progress_display=False
                 )
-                prep_stats = sim.prepare()
+                prep_stats = sim.prepare(sim_time=runtime)
                 sim_stats = sim.simulate()
                 return_dict = sim.postProcess(**pp_defaults)
                 self.datarun[run] = sim.generateDataPackage()
-                
+                print return_dict['data_file']
+
             except Exception as exp:
                 raise
         print("done")
@@ -375,7 +381,8 @@ class ExperimentManager(object):
             print("\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
                 avg_of_dict(stats, ['motion', 'fleet_distance']), avg_of_dict(stats, ['motion', 'fleet_efficiency']),
                 avg_of_dict(stats, ['motion', 'std_of_INDA']), avg_of_dict(stats, ['motion', 'std_of_INDD']),
-                avg_of_dict(stats, ['achievements', 'max_ach']), avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0
+                avg_of_dict(stats, ['achievements', 'max_ach']),
+                avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0
             )
             )
 

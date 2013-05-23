@@ -1,11 +1,14 @@
 __author__ = 'bolster'
 import logging
-import os
 from scipy.spatial.distance import pdist, squareform
+# used to reconstitute config from NP object
+from ast import literal_eval
 
 import numpy as np
 
 from aietes.Tools import mag, add_ndarray_to_set
+
+from configobj import ConfigObj
 
 
 class DataPackage(object):
@@ -15,15 +18,16 @@ class DataPackage(object):
     [x,y,z,t] array for n simulated nodes positions over time. Additional
     information is queriable through the object.
     """
-    _attrib_map = {'p':'positions',
-                   'v':'vectors',
-                   'names':'names',
-                   'contributions':'contributions',
-                   'achievements':'achievements',
-                   'environment':'environment',
-                   'config':'config',
-                   'title':'title'
-                  }
+    _attrib_map = {'p': 'positions',
+                   'v': 'vectors',
+                   'names': 'names',
+                   'contributions': 'contributions',
+                   'achievements': 'achievements',
+                   'environment': 'environment',
+                   'config': 'config',
+                   'title': 'title'
+    }
+
     def _handle_mapping_exceptions_(self, source, sink, exp):
         """
         Attempts to extract DataPackage data from a source dict
@@ -33,10 +37,10 @@ class DataPackage(object):
             # If simulation title not explicitly given, use the filename -npz
             self.title = ""
         else:
-            self.logging.error("Can't find %s in source"%source)
+            self.logging.error("Can't find %s in source" % source)
             raise exp
 
-    def __init__(self, source=None,*args, **kwargs):
+    def __init__(self, source=None, *args, **kwargs):
         """
         Raises IOError on load failure
         """
@@ -45,28 +49,34 @@ class DataPackage(object):
                 source_dataset = np.load(source)
                 for sink_attrib, source_attrib in self._attrib_map.iteritems():
                     try:
-                        self.__dict__[sink_attrib]=source_dataset[source_attrib]
+                        self.__dict__[sink_attrib] = source_dataset[source_attrib]
                     except KeyError as exp:
                         self._handle_mapping_exceptions_(sink_attrib, source_attrib, exp)
             except KeyError:
                 raise
-        elif all(x is not None for x in [kwargs.get(attr) for attr in self._attrib_map.keys()] ):
+        elif all(x is not None for x in [kwargs.get(attr) for attr in self._attrib_map.keys()]):
             # kwargs needed
             for sink_attrib, source_attrib in self._attrib_map.iteritems():
                 try:
-                    self.__dict__[sink_attrib]=kwargs[sink_attrib]
+                    self.__dict__[sink_attrib] = kwargs[sink_attrib]
                 except AttributeError as exp:
                     self._handle_mapping_exceptions_(sink_attrib, source_attrib, exp)
         else:
-            raise ValueError("Can't work out what the hell you want!: %s missing" % 
-                             str([attr 
-                                  for attr,val in [(attr,kwargs.get(attr))
-                                                   for attr in self._attrib_map.keys()]
+            raise ValueError("Can't work out what the hell you want!: %s missing" %
+                             str([attr
+                                  for attr, val in [(attr, kwargs.get(attr))
+                                                    for attr in self._attrib_map.keys()]
                                   if val is None
-                                 ]))
+                             ]))
 
-        self.tmax = kwargs.get("tmax",len(self.p[0][0]))
+        self.tmax = kwargs.get("tmax", len(self.p[0][0]))
         self.n = len(self.p)
+
+        #Fixes for Datatypes
+        self.config = literal_eval(str(self.config))
+        if isinstance(self.names, np.ndarray):
+            self.names = self.names.tolist()
+
 
     def update(self, p=None, v=None, names=None, environment=None, **kwargs):
         logging.debug("Updating from tmax %d" % self.tmax)
@@ -98,6 +108,26 @@ class DataPackage(object):
 
     #Data has the format:
     # [n][x,y,z][t]
+
+    def getBehaviourDict(self):
+        behaviour_set = set()
+        config_dict = self.config
+        try:
+            node_config_dict = config_dict['Node']['Nodes']
+        except ValueError:
+            print(config_dict)
+            raise
+        behaviours = {}
+
+        if node_config_dict:
+            for name, node in node_config_dict.iteritems():
+                n_bev = node['Behaviour']['protocol']
+                behaviour_set.add(n_bev)
+                if n_bev in behaviours:
+                    behaviours[n_bev].append(name)
+                else:
+                    behaviours[n_bev] = [name]
+        return behaviours
 
     def package_statistics(self):
         """
