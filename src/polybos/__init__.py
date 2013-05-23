@@ -22,6 +22,7 @@ mutable_node_configs = {
     'repulsion': ['Behaviour', 'repulsive_factor'],
     'schooling': ['Behaviour', 'schooling_factor'],
     'clumping': ['Behaviour', 'clumping_factor'],
+    'waypointing': ['Behaviour', 'waypoint_factor'],
     'fudging': ['Behaviour', 'positional_accuracy'],
 }
 
@@ -334,11 +335,20 @@ class ExperimentManager(object):
             s.addDefaultNode(count=self.node_count - n_attackers)
             self.scenarios.append(s)
 
-    def addVariableNScenario(self, v_dict):
+    def addVariable2Scenario(self, v_dict):
         """
-        Add a ndim range of scenarios based on a dictionary of {'variable':'value_range'}
+        Add a 2dim range of scenarios based on a dictionary of {'variable':'value_range', 'variable':'value_range'}
         """
-        for variable, v in v_dict.iteritems():
+        meshkeys = v_dict.keys()
+        meshlist = []
+        [meshlist.append(v_dict[key]) for key in meshkeys]
+        meshgrid = np.asarray(np.meshgrid(*v_dict.values()))
+        # NOTE meshgrid indexing is reversed compared to keyname
+        # i.e. meshgrid[:,key[-1],key[-2],...,key[0]]
+        # However, doing anything more than two is insane...
+        scelist = [meshgrid[:, j, i] for j in range(grid.shape[1]) for i in range(meshgrid.shape[2])]
+
+        for tup in scelist:
             s = Scenario(title="%s(%f)" % (variable, v), default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({variable: v}, count=self.node_count)
             self.scenarios.append(s)
@@ -377,22 +387,28 @@ class ExperimentManager(object):
                 sum += d[keys[-1]]
             return float(sum) / count
 
+        print("Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\t")
         for s in exp.scenarios:
             stats = s.generateRunStats()
-            print s.title
-            print("\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
-                avg_of_dict(stats, ['motion', 'fleet_distance']), avg_of_dict(stats, ['motion', 'fleet_efficiency']),
-                avg_of_dict(stats, ['motion', 'std_of_INDA']), avg_of_dict(stats, ['motion', 'std_of_INDD']),
+            print("%s,%s" % (s.title, [(bev, nodelist)
+                                       for bev, nodelist in s.getBehaviourDict().iteritems()
+                                       if '__default__' not in nodelist
+            ]))
+            print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
+                avg_of_dict(stats, ['motion', 'fleet_distance']),
+                avg_of_dict(stats, ['motion', 'fleet_efficiency']),
+                avg_of_dict(stats, ['motion', 'std_of_INDA']),
+                avg_of_dict(stats, ['motion', 'std_of_INDD']),
                 avg_of_dict(stats, ['achievements', 'max_ach']),
                 avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0
             )
             )
 
-            for r in stats:
-                print("\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
+            for i, r in enumerate(stats):
+                print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
+                    i,
                     r['motion']['fleet_distance'], r['motion']['fleet_efficiency'],
                     r['motion']['std_of_INDA'], r['motion']['std_of_INDD'],
                     r['achievements']['max_ach'], r['achievements']['avg_completion'] * 100.0
                 )
                 )
-
