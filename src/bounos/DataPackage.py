@@ -28,6 +28,8 @@ class DataPackage(object):
                    'title': 'title'
     }
 
+    version = 1.0
+
     def _handle_mapping_exceptions_(self, source, sink, exp):
         """
         Attempts to extract DataPackage data from a source dict
