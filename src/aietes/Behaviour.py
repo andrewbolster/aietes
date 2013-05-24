@@ -401,7 +401,7 @@ class AlternativeWaypoint(AlternativeFlock, Waypoint):
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
-class SlowCoach(Flock):
+class Tail(Flock):
     """
     This behaviour gives the desire to be at the back of the fleet.
     This is accomplished by taking the incident angle between the clumping centre and the heading vector and taking the
@@ -411,17 +411,35 @@ class SlowCoach(Flock):
 
     def __init__(self, *args, **kwargs):
         Flock.__init__(self, *args, **kwargs)
-        self.behaviours.append(self.slowcoachVector)
+        self.behaviours.append(self.tailVector)
 
-    def slowcoachVector(self, position, velocity):
+    def tailVector(self, position, velocity):
         clumpingVector = self.clumpingVector(position, velocity)
         localheadingVector = self.localHeading(position, velocity)
         forceVector = np.array([0, 0, 0], dtype=np.float)
         forceVector = -(clumpingVector + localheadingVector)
         if debug:
-            self.logger.debug("SlowCoach:%s" % forceVector)
+            self.logger.debug("Tail:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.clumping_factor
 
+
+class SlowCoach(Flock):
+    """
+    This behaviour gives the desire to be clow.
+    This is accomplished by the opposite of the last velocity
+    This provides a 'braking' force along the axis of the nodes movement
+    """
+
+    def __init__(self, *args, **kwargs):
+        Flock.__init__(self, *args, **kwargs)
+        self.behaviours.append(self.slowcoachVector)
+
+    def slowcoachVector(self, position, velocity):
+        forceVector = np.array([0, 0, 0], dtype=np.float)
+        forceVector = -(velocity)
+        if debug:
+            self.logger.debug("SlowCoach:%s" % forceVector)
+        return self.normalize_behaviour(forceVector) * self.clumping_factor
 
 ####
 # Malicious Class Aliases because I'm Lazy

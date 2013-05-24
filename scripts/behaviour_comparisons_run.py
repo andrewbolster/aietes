@@ -12,8 +12,8 @@ def set():
 
 def run(exp):
     exp.run(title="8-bev-mal",
-            runcount=1,
-            runtime=5000)
+            runcount=3,
+            runtime=2000)
     return exp
 
 
