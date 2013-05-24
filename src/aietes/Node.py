@@ -1,7 +1,7 @@
 import uuid
+from scipy.special import erfc
 
 import numpy as np
-from scipy.special import erfc
 
 from Layercake import Layercake
 import Behaviour
@@ -22,6 +22,7 @@ class Node(Sim.Process):
         self.simulation = simulation
         self.config = node_config
         self.mass = 10  # kg modeling remus 100
+        self.mass = 5   # fudge cus I'm bricking it
 
         # Positions Initialised to None to highlight mistakes; as Any position could be a bad position
         self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
@@ -160,15 +161,36 @@ class Node(Sim.Process):
                 y=2.3*erfc(-(x-(1.4+0.09))/sqrt(1.4/2.3))/2 for x in [1..2]  The 0.09 is a fudge factor and I know it.
 
         """
-        #refactor = 1.0 / np.exp(- max(self.cruising_speed) + mag(velocity))
+        if mag(velocity) > max(self.max_speed):
+            return self.speedLimit(velocity, prev_velocity)
+        else:
+            refactor = max(self.cruising_speed) / np.exp(- 1 + mag(velocity))
+            new_V = (velocity) * refactor
+            if debug:
+                self.logger.error("Cruise: From %f against %f giving norm factor %f and vel of %f" % (
+                    mag(velocity), max(self.cruising_speed), refactor, mag(new_V)))
+            return new_V
+
+    def speedLimit(self, velocity, prev_velocity):
+        """
+        Attempt to maintain max velocity
+            The resultant velocity should:
+                y<=max for x>max
+            Candidates:
+                y=1/exp(-cruise+x) << fucking insane...
+                y=((2.1*(1/2+x)-1)/(1/2+x)) Too slow after x>cruise (also not easily variable)
+                y=2.3*erfc(-(x-(1.4+0.09))/sqrt(1.4/2.3))/2 for x in [1..2]  The 0.09 is a fudge factor and I know it.
+
+        """
         maxv = max(self.max_speed)
         cruise = max(self.cruising_speed)
-        refactor = maxv*erfc(-(mag(velocity)-(cruise+0.09))/((cruise/maxv)**0.5))/2.0
+        refactor = maxv * erfc(-(mag(velocity) - (cruise)) / ((cruise / maxv) ** 0.5)) / 2.0
         new_V = unit(velocity) * refactor
-        assert mag(new_V)<maxv, "Cruise Control isn't working! %s:%s:%s"%(mag(new_V),mag(velocity),refactor)
-        if debug:
-            self.logger.info("Cruise: From %f against %f giving norm factor %f and vel of %f" % (
-                mag(velocity), mag(self.cruising_speed), refactor, mag(new_V)))
+        assert mag(new_V) < maxv, "Cruise Control isn't working! %s:%s:%s" % (mag(new_V), mag(velocity), refactor)
+        debug = True
+        if True:
+            self.logger.error("Cruise: From %f against %f giving norm factor %f and vel of %f" % (
+                mag(velocity), max(self.cruising_speed), refactor, mag(new_V)))
         return new_V
 
     def move(self):
@@ -187,8 +209,8 @@ class Node(Sim.Process):
         # dv/dt = F(v,t)/m
         # dv/dt->(v(t+e)-v(t))/dt;
         # v(t+e) = v(t)+(F*dt)/m
-        new_velocity = self.velocity + (self.acceleration_force / self.mass) * dT
-        if mag(new_velocity) > any(self.cruising_speed):
+        new_velocity = self.velocity + ((self.acceleration_force * dT) / self.mass)
+        if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruiseControl(new_velocity, self.velocity)
             if debug:
                 self.logger.debug("Normalized Velocity: %s, clipped: %s" % (new_velocity, self.velocity))

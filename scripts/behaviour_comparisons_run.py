@@ -12,7 +12,7 @@ def set():
 
 def run(exp):
     exp.run(title="8-bev-mal",
-            runcount=3,
+            runcount=1,
             runtime=5000)
     return exp
 

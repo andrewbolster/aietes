@@ -246,7 +246,7 @@ def run_detection_fusion(data, args):
 
             ax.grid(True, alpha='0.2')
             ax.autoscale_view(scalex=False, tight=True)
-            # First Dataset Behaviour
+            # First Dataset B1haviour
             if i == 0:
                 ax.set_ylabel(_metric.label)
                 # First Metric Behaviour (Title)

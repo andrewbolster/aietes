@@ -104,11 +104,11 @@ class Scenario(object):
                 sim_stats = sim.simulate()
                 return_dict = sim.postProcess(**pp_defaults)
                 self.datarun[run] = sim.generateDataPackage()
-                print return_dict['data_file']
+                print sim_stats
 
             except Exception as exp:
                 raise
-        print("done %d runs for %d each" % (runcount, runtime if runtime is not None else -sim_stats))
+        print("done %d runs for %d each" % (runcount, sim_stats))
 
     def runThreaded(self, *args, **kwargs):
         """
