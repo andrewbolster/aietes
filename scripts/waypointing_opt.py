@@ -14,8 +14,8 @@ def set_exp():
 
 
 def run_exp(exp):
-    exp.run(title="8-clumping-20",
-            runcount=3,
+    exp.run(title="8-wapointing-20_20-3",
+            runcount=2,
             threaded=False)
 
     return exp

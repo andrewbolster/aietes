@@ -1,6 +1,7 @@
 import uuid
 
 import numpy as np
+from scipy.special import erfc
 
 from Layercake import Layercake
 import Behaviour
@@ -150,9 +151,21 @@ class Node(Sim.Process):
     def cruiseControl(self, velocity, prev_velocity):
         """
         Attempt to maintain cruising velocity
+            The resultant velocity should:
+                y<x for cruise < x < max
+                y<=max for x>max
+            Candidates:
+                y=1/exp(-cruise+x) << fucking insane...
+                y=((2.1*(1/2+x)-1)/(1/2+x)) Too slow after x>cruise (also not easily variable)
+                y=2.3*erfc(-(x-(1.4+0.09))/sqrt(1.4/2.3))/2 for x in [1..2]  The 0.09 is a fudge factor and I know it.
+
         """
-        refactor = 1.0 / np.exp(-(mag(velocity) - max(self.cruising_speed)))
+        #refactor = 1.0 / np.exp(- max(self.cruising_speed) + mag(velocity))
+        maxv = max(self.max_speed)
+        cruise = max(self.cruising_speed)
+        refactor = maxv*erfc(-(mag(velocity)-(cruise+0.09))/((cruise/maxv)**0.5))/2.0
         new_V = unit(velocity) * refactor
+        assert mag(new_V)<maxv, "Cruise Control isn't working! %s:%s:%s"%(mag(new_V),mag(velocity),refactor)
         if debug:
             self.logger.info("Cruise: From %f against %f giving norm factor %f and vel of %f" % (
                 mag(velocity), mag(self.cruising_speed), refactor, mag(new_V)))
