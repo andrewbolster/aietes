@@ -54,11 +54,12 @@ class BounosModel(DataPackage):
         test = re.compile(".npz$")
         return test.search(file)
 
-
+args = None
 def main():
     """
     Initial Entry Point; Does very little other that option parsing
     """
+    global args
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description="Simulation Visualisation and Analysis Suite for AIETES",
@@ -122,7 +123,11 @@ def main():
                         action='store_true', default=False,
                         help="Shade any detection regions"
     )
-
+    parser.add_argument('--label-size', '-L',
+                        dest='font_size', action='store', default=font['size'],
+                        metavar=font['size'], type=int,
+                        help="Change the Default Font size for axis labels"
+    )
     args = parser.parse_args()
     print args
 
@@ -262,7 +267,7 @@ def run_detection_fusion(data, args):
 
                     ax.legend(d.names, "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
-                              ncol=int(ceil(float(len(d.names)) / (n_leg))))
+                              ncol=int(ceil(float(len(d.names)+1) / (n_leg))))
                 #First Legend
                 elif i == 0:
                     ax.legend(d.names, "lower center", bbox_to_anchor=(0, 0, 1, 1), bbox_transform=fig.transFigure,
@@ -281,7 +286,7 @@ def run_detection_fusion(data, args):
         ax.plot(deviation_windowed)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time")
-        ax.set_ylabel("Fuzed Trust")
+        if i == 0: ax.set_ylabel("Fuzed Trust")
         axes[i][j] = ax
 
         # Now go left to right to adjust the scaling to match
@@ -305,7 +310,7 @@ def run_detection_fusion(data, args):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
-    resize(fig, 2)
+    global_adjust(fig, axes)
 
     if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
@@ -377,7 +382,7 @@ def run_metric_comparison(data, args):
 
                     ax.legend(d.names, "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
-                              ncol=int(ceil(float(len(d.names)) / (n_leg))))
+                              ncol=int(ceil(float(len(d.names)+1) / (n_leg))))
                 #First Legend
                 elif i == 0:
                     ax.legend(d.names, "lower center", bbox_to_anchor=(0, 0, 1, 1), bbox_transform=fig.transFigure,
@@ -408,7 +413,7 @@ def run_metric_comparison(data, args):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
-    resize(fig, 2)
+    global_adjust(fig,axes)
 
     if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
@@ -477,7 +482,9 @@ def run_overlay(data, args):
     else:
         pl.show()
 
-
-def resize(figure, scale):
+def global_adjust(figure, axes, scale = 2):
+    for axe in axes:
+        for ax in axe:
+            ax.set_ylabel(ax.get_ylabel(), size = args.font_size)
     figure.set_size_inches(figure.get_size_inches() * scale)
     figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
