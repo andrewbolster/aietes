@@ -79,13 +79,14 @@ class BounosModel(DataPackage):
         test = re.compile(".npz$")
         return test.search(file)
 
-
+args = None
 def main():
     """
     Initial Entry Point; Does very little other that option parsing
     Raises:
         ValueError if graph selection doesn't make any sense
     """
+    global args
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description="Simulation Visualisation and Analysis Suite for AIETES",
@@ -137,8 +138,11 @@ def main():
                         help='Attempt Detection and Graphic Annotation for a given analysis')
     parser.add_argument('--shade-region', '-S', dest='shade_region',
                         action='store_true', default=False,
-                        help="Shade any detection regions")
-
+                        help="Shade any detection regions"))
+    parser.add_argument('--label-size', '-L',
+                        dest='font_size', action='store', default=font['size'],
+                        metavar=font['size'], type=int,
+                        help="Change the Default Font size for axis labels")
     args = parser.parse_args()
 
     if isinstance(args.source, list):
@@ -295,7 +299,7 @@ def run_detection_fusion(data, args=None):
 
                     ax.legend(d.names, "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
-                              ncol=int(ceil(float(len(d.names)) / (n_leg))))
+                              ncol=int(ceil(float(len(d.names)+1) / (n_leg))))
                 #First Legend
                 elif i == 0:
                     ax.legend(d.names, "lower center",
@@ -316,7 +320,7 @@ def run_detection_fusion(data, args=None):
         ax.plot(deviation_windowed)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time")
-        ax.set_ylabel("Fuzed Trust")
+        if i == 0: ax.set_ylabel("Fuzed Trust")
         axes[i][j] = ax
 
         # Now go left to right to adjust the scaling to match
@@ -340,7 +344,7 @@ def run_detection_fusion(data, args=None):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
-    fig_adjust(fig)
+    global_adjust(fig, axes)
 
     if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
@@ -420,7 +424,7 @@ def run_metric_comparison(data, args=None):
                     ax.legend(d.names, "lower center",
                               bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
-                              ncol=int(ceil(float(len(d.names)) / (n_leg))))
+                              ncol=int(ceil(float(len(d.names)+1) / (n_leg))))
                 #First Legend
                 elif i == 0:
                     ax.legend(d.names, "lower center",
@@ -453,7 +457,7 @@ def run_metric_comparison(data, args=None):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
-    fig_adjust(fig)
+    global_adjust(fig,axes)
 
     if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
@@ -521,18 +525,14 @@ def run_overlay(data, args=None):
     ax.set_ylabel(analysis.__name__.replace("_", " "))
     ax.set_xlabel("Time")
 
-    if 'XKCDify' in sys.modules:
-        ax = XKCDify(ax)
-
-    fig_adjust(fig)
+    global_adjust(fig,ax)
 
     if args.output is not None:
         pl.savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
     else:
         pl.show()
 
-
-def fig_adjust(figure, scale=2):
+def global_adjust(figure, axes, scale = 2):
     """
     General Figure adjustments:
         Subplot-spacing adjustments
@@ -541,5 +541,10 @@ def fig_adjust(figure, scale=2):
         figure(Figure): figure to be adjusted
         scale(int/float): adjust figure to scale (optional:2)
     """
+    for axe in axes:
+        for ax in axe:
+            ax.set_ylabel(ax.get_ylabel(), size = args.font_size)
+            if 'XKCDify' in sys.modules:
+                ax = XKCDify(ax)
     figure.set_size_inches(figure.get_size_inches() * scale)
     figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
