@@ -1,3 +1,21 @@
+#!/usr/bin/env python
+"""
+ * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
+ *
+ * (C) Copyright 2013 Andrew Bolster (http://andrewbolster.info/) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrew Bolster, Queen's University Belfast
+"""
+__author__ = "Andrew Bolster"
+__license__ = "EPL"
+__email__ = "me@andrewbolster.info"
+
 __author__ = 'bolster'
 import logging
 from scipy.spatial.distance import pdist, squareform
@@ -134,6 +152,12 @@ class DataPackage(object):
     def package_statistics(self):
         """
         Generate General Package Statistics, i.e. full simulation statistics
+        Returns:
+            A dict containing:
+                'motion':{}
+                'achievements':{
+                    'pernode':{nodename:{time:tuple(achievement positio)}
+                    '}
         """
 
         stats = {}
@@ -186,12 +210,12 @@ class DataPackage(object):
         mot_stat = {}
         #Standard Variation of the Internode Distance Average would represent the variability of the fleet
         mot_stat["std_of_INDA"] = np.std([self.inter_distance_average(t) for t in xrange(self.tmax)])
+        mot_stat["std_of_INDD"] = np.std(
+            [self.position_matrix(t) / self.inter_distance_average(t) for t in xrange(self.tmax)])
         #Fleet speed (i.e. total distance covered) would represent comparative efficiency
         mot_f_distance = np.sum(map(mag, self.v))
         mot_stat["fleet_distance"] = mot_f_distance
         mot_stat["fleet_efficiency"] = (mot_f_distance / self.tmax) / self.n
-        mot_stat["std_of_INDD"] = np.std(
-            [self.position_matrix(t) / self.inter_distance_average(t) for t in xrange(self.tmax)])
 
         stats['motion'] = mot_stat
 

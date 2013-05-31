@@ -1,3 +1,22 @@
+#!/usr/bin/env python
+"""
+ * This file is part of the Aietes Framework
+ *  (https://github.com/andrewbolster/aietes)
+ *
+ * (C) Copyright 2013 Andrew Bolster (http://andrewbolster.info/) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrew Bolster, Queen's University Belfast
+"""
+__author__ = "Andrew Bolster"
+__license__ = "EPL"
+__email__ = "me@andrewbolster.info"
+
 import os
 import sys
 import tempfile
@@ -9,56 +28,68 @@ import validate
 import numpy as np
 
 from datetime import datetime
-from aietes import _ROOT, Simulation # Must use the aietes path to get the config files
+from aietes import _ROOT, Simulation  # Must use the aietes path to get the config files
 from aietes.Threaded import go as goSim
 from aietes.Tools import nameGeneration, updateDict
 from bounos import DataPackage
 
-
 _config_spec = '%s/configs/default.conf' % _ROOT
-
-mutable_node_configs = {
-    'behaviour': ['Behaviour', 'protocol'],
-    'repulsion': ['Behaviour', 'repulsive_factor'],
-    'schooling': ['Behaviour', 'schooling_factor'],
-    'clumping': ['Behaviour', 'clumping_factor'],
-    'waypointing': ['Behaviour', 'waypoint_factor'],
-    'fudging': ['Behaviour', 'positional_accuracy'],
-}
 
 
 def getConfig(source_config_file=None, config_spec=_config_spec):
-    config = ConfigObj(source_config_file, configspec=config_spec, stringify=True, interpolation=True)
+    """
+    Get a configuration, either using default values from aietes.configs or
+        by taking a configobj compatible file path
+    """
+    config = ConfigObj(source_config_file,
+                       configspec=config_spec,
+                       stringify=True, interpolation=True)
     config_status = config.validate(validate.Validator(), copy=True)
     if not config_status:
         if source_config_file is None:
             raise RuntimeError("Configspec is Broken: %s" % config_spec)
         else:
-            raise RuntimeError("Configspec doesn't match given input structure: %s" % source_config_file)
+            raise RuntimeError("Configspec doesn't match given input structure: %s"
+                               % source_config_file)
     return config
 
 
 class Scenario(object):
-    """
-    The Generic Manager Object deals with config management and passthrough, as well as some optional execution characteristics
-        The purpose of this manager is to abstract as much as humanly possible
-    Takes:
-        default_config_file:str
-        runcount:int
-        title:str
+    """ Scenario Object
+
+    The Scenario Object deals with config management and passthrough, as well as some optional
+    execution characteristics. The purpose of this manager is to abstract as much as humanly
+    possible.
 
     """
+    mutable_node_configs = {
+        'behaviour': ['Behaviour', 'protocol'],
+        'repulsion': ['Behaviour', 'repulsive_factor'],
+        'schooling': ['Behaviour', 'schooling_factor'],
+        'clumping': ['Behaviour', 'clumping_factor'],
+        'waypointing': ['Behaviour', 'waypoint_factor'],
+        'fudging': ['Behaviour', 'positional_accuracy'],
+    }
 
     def __init__(self, *args, **kwargs):
         """
         Builds an initial config and divides it up for convenience later
             Can take default_config = <ConfigObj> or default_config_file = <path>
+        Args:
+            default_config: ConfigObj
+            default_config_file(str): Path to config file
+            runcount(int): Number of repeated executions of this scenario; this value can be
+                overridden in the run method
+            title(str)
         """
 
-        self._default_config = kwargs.get("default_config", getConfig(kwargs.get("default_config_file", None)))
+        self._default_config = kwargs.get("default_config",
+                                          getConfig(kwargs.get("default_config_file", None)))
         if not isinstance(self._default_config, ConfigObj):
             raise RuntimeError(
-                "Given invalid Config of type %s: %s" % (type(self._default_config), self._default_config))
+                "Given invalid Config of type %s: %s"
+                % (type(self._default_config), self._default_config))
+
         self._default_config_dict = self._default_config.dict()
         self._default_node_config = self._default_config_dict['Node']['Nodes'].pop("__default__")
         self._default_custom_nodes = self._default_config_dict['Node']['Nodes']
@@ -78,15 +109,16 @@ class Scenario(object):
     def run(self, runcount=None, runtime=None, *args, **kwargs):
         """
         Offload this to AIETES
-        Keyword Arguments:
-            runcount:int(default)
-            runtime:int(None)
+        Args:
+            runcoun(int): Number of repeated executions of this scenario; this value overrides the
+                value set on init
+            runtime(int): Override simulation duration (normally inherited from config)
         """
         if runcount is None:
             runcount = self._default_run_count
 
         pp_defaults = {'outputFile': self.title, 'dataFile': True}
-        if not self.committed: self.commit()
+        self.commit()
         self.datarun = [None for _ in range(runcount)]
         for run in range(runcount):
             if runcount > 1:
@@ -94,21 +126,23 @@ class Scenario(object):
             sys.stdout.write("%s," % pp_defaults['outputFile'])
             sys.stdout.flush()
             try:
+                title = self.title + "-%s" % run
                 sim = Simulation(config=self.config,
-                                 title=self.title + "-%s" % run,
-                                 logtofile=self.title + ".log",
+                                 title=title,
+                                 logtofile=title + ".log",
                                  logtoconsole=logging.ERROR,
-                                 progress_display=False
-                )
+                                 progress_display=False)
                 prep_stats = sim.prepare(sim_time=runtime)
-                sim_stats = sim.simulate()
+                sim_time = sim.simulate()
                 return_dict = sim.postProcess(**pp_defaults)
                 self.datarun[run] = sim.generateDataPackage()
-                print sim_stats
+                print("%s(%s):%f%%"
+                      % (run, return_dict['data_file'],
+                         100.0*float(sim_time)/prep_stats['sim_time']))
 
-            except Exception as exp:
+            except Exception:
                 raise
-        print("done %d runs for %d each" % (runcount, sim_stats))
+        print("done %d runs for %d each" % (runcount, sim_time))
 
     def runThreaded(self, *args, **kwargs):
         """
@@ -116,7 +150,7 @@ class Scenario(object):
         Still borked...
         """
         runcount = kwargs.get("runcount", self._default_run_count)
-        if not self.committed: self.commit()
+        self.commit()
 
         pp_defaults = {'outputFile': self.title + kwargs.get("title", ""), 'dataFile': True}
         sim_args = {'config': self.config, 'title': self.title, 'logtofile': self.title + ".log",
@@ -127,6 +161,8 @@ class Scenario(object):
     def generateRunStats(self, sim_run_dataset=None):
         """
         Recieving a bounos.datapackage, generate relevant stats
+        Returns:
+            A list of dict's given from DataPackage.package_statistics()
         """
 
         if sim_run_dataset is None:
@@ -137,11 +173,19 @@ class Scenario(object):
         elif isinstance(sim_run_dataset, DataPackage):
             return sim_run_dataset.package_statistics()
         else:
-            raise RuntimeError("Cannot process simulation statistics of non-DataPackage: (%s)%s" % (
-                type(sim_run_dataset), sim_run_dataset))
+            raise RuntimeError("Cannot process simulation statistics of non-DataPackage: (%s)%s"
+                               % (type(sim_run_dataset), sim_run_dataset))
 
     def commit(self):
-        print("Scenario Committed with %d nodes configured and %d defined" % (len(self.nodes.keys()), self.node_count))
+        """
+        'Lock' the scenario, generating the final config, filling in any 'empty' config sections
+        Raises:
+            RuntimeError: on attempting to commit and already committed scenario
+        """
+        if self.committed:
+            raise(RuntimeError("Attempted to commit twice (or more)"))
+        print("Scenario Committed with %d nodes configured and %d defined"
+              % (len(self.nodes.keys()), self.node_count))
         if self.node_count > len(self.nodes.keys()):
             self.addDefaultNode(count=self.node_count - len(self.nodes.keys()))
 
@@ -149,6 +193,11 @@ class Scenario(object):
         self.committed = True
 
     def generateConfig(self):
+        """
+        Generate a config dict from the current state of the planned scenario
+        Returns:
+            DataPackage compatible dict
+        """
         config = {}
         config['Simulation'] = self.simulation
         config['Environment'] = self.environment
@@ -157,18 +206,30 @@ class Scenario(object):
         return config
 
     def generateConfigObj(self):
+        """
+        Generate a ConfigObj from the current state of the planned scenario
+        Returns:
+            DataPackage compatible ConfigObj
+        """
         rawconf = self.generateConfig()
         updateDict(rawconf, ['Node', 'Nodes', '__default__'], self._default_node_config)
         return ConfigObj(rawconf)
 
     def getBehaviourDict(self):
+        """
+        Generate and return a dict of currently configured behaviours wrt names of nodes
+        eg. {'Waypoing':['alpha','beta','gamma'],'Flock':['omega']}
+
+        Returns:
+            dict of behaviours associated with a list of node names
+        """
         default_bev = self._default_node_config['Behaviour']['protocol']
 
         behaviour_set = set(default_bev)
         behaviours = {}
         behaviours[default_bev] = ['__default__']
 
-        if self._default_node_config['bev'] != 'Null': #Stupid string comparison stops this from being 'is not'
+        if self._default_node_config['bev'] != 'Null':
             raise NotImplementedError(
                 "TODO Deal with parametric behaviour definition:%s" %
                 self._default_node_config['bev'])
@@ -191,23 +252,57 @@ class Scenario(object):
         return behaviours
 
     def setNodeCount(self, count):
+        """
+        Set the scenario node count, but does not update the configuration (this is satisfied in
+            the commit method)
+        Args:
+            count(int): New Node count
+        """
+        if self.committed:
+            raise(RuntimeError("Attempted to modify scenario after committing"))
         if hasattr(self, "node_count"):
             print("Updating nodecount from %d to %d" % (self.node_count, count))
         self.node_count = count
 
     def setDuration(self, tmax):
+        """
+        Set the scenario simulation duration,
+        Args:
+            tmax(int): New simulation time
+        """
+        if self.committed:
+            raise(RuntimeError("Attempted to modify scenario after committing"))
+        if hasattr(self.simulation, "sim_duration"):
+            print("Updating simulation time from %d to %d"
+                  % (self.simluation['sim_duration'], tmax))
         self.simulation['sim_duration'] = tmax
 
     def updateNode(self, node_conf, mutable, value):
+        """
+        Used to update selected field mappings between scenario definition and
+            the scenario configspec, as defined in mutable_node_configs
+        Args:
+            node_conf(dict): current node configuration to be updated
+            mutable(str): a string describing the aspect to be changed, present in the mutable map
+            value(any): the mutable value to be set
+        Raises:
+            NotImplementedError: on invalid mutable key
+        """
         if mutable is None:
             pass
-        if mutable in mutable_node_configs:
-            keys = mutable_node_configs[mutable]
+        if mutable in self.mutable_node_configs:
+            keys = self.mutable_node_configs[mutable]
             updateDict(node_conf, keys, value)
         else:
             raise NotImplementedError("Have no mutable map for %s" % mutable)
 
     def addCustomNode(self, variable_map, count=1):
+        """
+        Adds a node to the scenario based on a dict of mutable key,values
+        Args:
+            variable_map(dict): variables and values to be modified from the default
+            count(int): if set, creates count instances of the custom node
+        """
         node_conf = deepcopy(self._default_node_config)
         count = int(count)
         for variable, value in variable_map.iteritems():
@@ -215,18 +310,29 @@ class Scenario(object):
         self.addNode(node_conf=node_conf, count=count)
 
     def addDefaultNode(self, count=1):
+        """
+        Adds a default node
+        Args:
+            count(int): if set, creates count instances of the default node
+        """
         node_conf = deepcopy(self._default_node_config)
         self.addNode(node_conf, count=count)
 
     def addNode(self, node_conf, names=None, count=1):
+        """
+        Adds a node to the scenario based on a (hopefully valid) node configuration
+        Args:
+            node_conf(dict): Fully defined node config dict
+            names(list(str)): List of names for new nodes
+            count(int): if set, creates count instances of the node
+        Raises:
+            RuntimeError if name definition doesn't make sense
+        """
         if names is None:
             node_names = nameGeneration(count, existing_names=self.nodes.keys())
             if len(node_names) != count:
-                raise RuntimeError("Names don't make any sense: Asked for %d, got %d: %s" % (
-                    count,
-                    len(node_names),
-                    node_names)
-                )
+                raise RuntimeError("Names don't make any sense: Asked for %d, got %d: %s"
+                                   % (count, len(node_names), node_names))
         elif isinstance(names, list):
             node_names = names
         else:
@@ -236,22 +342,29 @@ class Scenario(object):
             self.nodes[node_name] = node_conf
 
     def updateDefaultNode(self, variable, value):
+        """
+        Update the default node for the scenario.
+        Args:
+            variable(str):The Variable to be modified (should me in the mutable map)
+            value: the value to set that variable to
+        Raises:
+            RuntimeError if attempting to modify after commit.
+        """
+        if self.committed:
+            raise RuntimeError("Attempting to update default node config after committing")
         self.updateNode(self._default_node_config, variable, value)
 
 
 class ExperimentManager(object):
-    """
-    The Experiment Manager Object deals with multiple scenarios build around a single or multiple experimental input. (Number of nodes, ratio of behaviours, etc)
-        The purpose of this manager is to abstract the per scenario setup
-    Takes:
-        node_count:int
-        title:str
-
-    """
-
     def __init__(self, node_count=4, title=None, *args, **kwargs):
         """
-        Acquire Generic Scenario
+        The Experiment Manager Object deals with multiple scenarios build around a single or
+            multiple experimental input. (Number of nodes, ratio of behaviours, etc)
+        The purpose of this manager is to abstract the per scenario setup
+        Args:
+            node_count(int): Define the standard fleet size (4)
+            title(str): define a title for this experiment, to be used for file and folder naming,
+                if not set, this defaults to a timecode and initialisation (not execution)
         """
         self.scenarios = []
         self._default_scenario = Scenario(title="__default__")
@@ -262,16 +375,22 @@ class ExperimentManager(object):
             self.title = title
         self._default_scenario.setNodeCount(self.node_count)
 
-    def updateBaseBehaviour(self, behaviour):
+    def updateDefaultBehaviour(self, behaviour):
+        """
+        Applys a behaviour (given as a string) to the experimental default for node generation
+        Args:
+            behaviour(str): new default behaviour
+        """
         self._default_scenario.updateDefaultNode('behaviour', behaviour)
 
     def run(self, threaded=False, **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
-        Takes:
-            title:int
-            runcount:int
-            runtime:int(None)
+        Args:
+            title(str): Update the experiment name
+            runtime(int): Override simulation duration (normally inherited from config)
+            runcount(int): Number of repeated executions of this scenario; this value overrides the
+                value set on init
         """
         title = kwargs.get("title", self.title)
         self.exp_path = os.path.abspath(os.path.join(os.path.curdir, title))
@@ -294,13 +413,21 @@ class ExperimentManager(object):
 
     def generateSimulationStats(self):
         """
-        Walks the scenario chain and returns a stats list of lists
+        Returns:
+            List of scenario stats (i.e. list of lists of run statistics dicts)
         """
         return [s.generateRunStats() for s in self.scenarios]
 
     def updateNodeCounts(self, new_count):
         """
-        Updates the node-count makeup; different behaviour ie new_count is list or scalar
+        Updates the node-count makeup.
+
+        If new_count is a list and that list length matches the number of currently
+            configured scenarios, those scenarios have their nodecounts updated on the
+            basis of the new_count list index
+
+        Args:
+            new_count(list or int):new values to be used across scenarios
         """
         if isinstance(new_count, list) and len(new_count) == len(self.scenarios):
             for i, s in enumerate(self.scenarios):
@@ -312,6 +439,8 @@ class ExperimentManager(object):
     def updateDuration(self, tmax):
         """
         Update the simulation time of currently configured scenarios
+        Args:
+            tmax(int): update experiment simulation duration for all scenarios
         """
         for s in self.scenarios:
             s.setDuration(tmax)
@@ -319,25 +448,39 @@ class ExperimentManager(object):
     def addVariableRangeScenario(self, variable, value_range):
         """
         Add a scenario with a range of configuration values to the experimental run
+
+        Args:
+            variable(str): mutable value description
+            value_range(range or generator): values to be tested against.
         """
         for v in value_range:
-            s = Scenario(title="%s(%f)" % (variable, v), default_config=self._default_scenario.generateConfigObj())
+            s = Scenario(title="%s(%f)" % (variable, v),
+                         default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({variable: v}, count=self.node_count)
             self.scenarios.append(s)
 
     def addVariableAttackerBehaviourSuite(self, behaviour_list, n_attackers=1):
         """
-        Add a scenario with a range of configuration values to the experimental run
+        Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
+
+        Args:
+            behaviour_list(list): minority behaviours
+            n_attackers(int): number of minority attackers (optional)
         """
         for v in behaviour_list:
-            s = Scenario(title="Behaviour(%s)" % (v), default_config=self._default_scenario.generateConfigObj())
+            s = Scenario(title="Behaviour(%s)" % (v),
+                         default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({"behaviour": v}, count=n_attackers)
             s.addDefaultNode(count=self.node_count - n_attackers)
             self.scenarios.append(s)
 
     def addVariable2RangeScenario(self, v_dict):
         """
-        Add a 2dim range of scenarios based on a dictionary of {'variable':'value_range', 'variable':'value_range'}
+        Add a 2dim range of scenarios based on a dictionary of value ranges.
+        This generates a meshgrid and samples scenarios across the 2dim space
+
+        Args:
+            v_dict(dict):{'variable':'value_range', 'variable':'value_range'}
         """
         meshkeys = v_dict.keys()
         meshlist = []
@@ -346,7 +489,9 @@ class ExperimentManager(object):
         # NOTE meshgrid indexing is reversed compared to keyname
         # i.e. meshgrid[:,key[-1],key[-2],...,key[0]]
         # However, doing anything more than two is insane...
-        scelist = [meshgrid[:, j, i] for j in range(meshgrid.shape[1]) for i in range(meshgrid.shape[2])]
+        scelist = [meshgrid[:, j, i]
+                   for j in range(meshgrid.shape[1])
+                   for i in range(meshgrid.shape[2])]
 
         for tup in scelist:
             d = dict(zip(meshkeys, tup))
@@ -355,12 +500,15 @@ class ExperimentManager(object):
             s.addCustomNode(d, count=self.node_count)
             self.scenarios.append(s)
 
-
     def addRatioScenario(self, badbehaviour, goodbehaviour=None):
         """
-        Add a scenario based on a ratio of behaviours of identical nodes
-        If goodbehaviour is not specified, then the default node configuration *should* be used for the remaining
-            nodes
+        Add scenarios based on a ratio of behaviours of identical nodes
+
+        If goodbehaviour is not specified, then the default node configuration *should* be used
+            for the remaining nodes
+        Args:
+            badbehaviour(str):Aietes behaviour definition string (i.e. modulename)
+            goodbehaviour(str):Aietes behaviour definition string (i.e. modulename) (optional)
         """
         for ratio in np.linspace(start=0.0, stop=1.00, num=self.node_count + 1):
             title = "%s(%.2f%%)" % (badbehaviour, float(ratio) * 100)
@@ -378,8 +526,26 @@ class ExperimentManager(object):
 
     @staticmethod
     def printStats(exp):
+        """
+        Perform and print a range of summary experiment statistics including
+            Fleet Distance (sum of velocities),
+            Fleet Efficiency (Distance per time per node),
+            Stdev(INDA) (Proxy for fleet positional variability)
+            Stdev(INDD) (Proxy for fleet positional efficiency)
+            Max Achievement Count,
+            Percentage completion rate (how much of the fleet got the top count)
+        """
 
         def avg_of_dict(dict_list, keys):
+            """
+            Find the average of a key value across a list of dicts
+
+            Args:
+                dict_list(list of dict):list of value maps to be sampled
+                keys(list of str): key-path of value in dict
+            Returns:
+                average value (float)
+            """
             sum = 0
             count = 0
             for d in dict_list:
@@ -394,17 +560,14 @@ class ExperimentManager(object):
             stats = s.generateRunStats()
             print("%s,%s" % (s.title, [(bev, nodelist)
                                        for bev, nodelist in s.getBehaviourDict().iteritems()
-                                       if '__default__' not in nodelist
-            ]))
-            print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
-                avg_of_dict(stats, ['motion', 'fleet_distance']),
-                avg_of_dict(stats, ['motion', 'fleet_efficiency']),
-                avg_of_dict(stats, ['motion', 'std_of_INDA']),
-                avg_of_dict(stats, ['motion', 'std_of_INDD']),
-                avg_of_dict(stats, ['achievements', 'max_ach']),
-                avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0
-            )
-            )
+                                       if '__default__' not in nodelist]))
+            print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
+                  % (avg_of_dict(stats, ['motion', 'fleet_distance']),
+                     avg_of_dict(stats, ['motion', 'fleet_efficiency']),
+                     avg_of_dict(stats, ['motion', 'std_of_INDA']),
+                     avg_of_dict(stats, ['motion', 'std_of_INDD']),
+                     avg_of_dict(stats, ['achievements', 'max_ach']),
+                     avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0))
 
             for i, r in enumerate(stats):
                 print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (

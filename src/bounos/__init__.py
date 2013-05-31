@@ -1,3 +1,21 @@
+#!/usr/bin/env python
+"""
+ * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
+ *
+ * (C) Copyright 2013 Andrew Bolster (http://andrewbolster.info/) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrew Bolster, Queen's University Belfast
+"""
+__author__ = "Andrew Bolster"
+__license__ = "EPL"
+__email__ = "me@andrewbolster.info"
+
 """
 BOUNOS - Heir to the Kingdom of AIETES
 """
@@ -14,7 +32,7 @@ import numpy as np
 
 np.seterr(under="ignore")
 
-from Metrics import *
+import Metrics
 import Analyses
 from DataPackage import DataPackage
 
@@ -23,12 +41,19 @@ from aietes.Tools import list_functions
 font = {'family': 'normal',
         'weight': 'normal',
         'size': 10}
-_metrics = [Deviation_Of_Heading,
-            PerNode_Speed,
-            PerNode_Internode_Distance_Avg]
+_metrics = [Metrics.Deviation_Of_Heading,
+            Metrics.PerNode_Speed,
+            Metrics.PerNode_Internode_Distance_Avg]
 
 
 class BounosModel(DataPackage):
+    """
+    BounosModel acts as an interactive superclass of DataPackage, designed for interactive
+        simulation/analysis
+
+    It is blankly initialised with no arguments and must be initialised by either interacting
+        with a simulation (update_data_from_sim) or from an existing datafile (import_datafile)
+    """
     def __init__(self, *args, **kwargs):
         self.metrics = []
         self.is_ready = False
@@ -39,11 +64,11 @@ class BounosModel(DataPackage):
         self.is_ready = True
         self.is_simulating = False
 
-
     def update_data_from_sim(self, p, v, names, environment, now):
         """
         Call back function used by SimulationStep if doing real time simulation
-        Will 'export' DataPackage data from the running simulation up to the requested time (self.t)
+
+        Imports DataPackage data from the running simulation up to the requested time (self.t)
         """
         self.log.debug("Updating data from simulator at %d" % now)
         self.update(p=p, v=v, names=names, environment=environment)
@@ -58,73 +83,63 @@ class BounosModel(DataPackage):
 def main():
     """
     Initial Entry Point; Does very little other that option parsing
+    Raises:
+        ValueError if graph selection doesn't make any sense
     """
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description="Simulation Visualisation and Analysis Suite for AIETES",
-        epilog="Example Usages:\n" \
-               "    Plot Metric Values with attempted detection ranges\n" \
-               "        bounos --shade-region --comparison --attempt-detection --source Stuff.npz\n" \
-               "    Plot metric fusion (trust fusion with lag-lead)\n" \
-               "        bounos --fusion --source Stuff.npz\n")
+        epilog="Example Usages:\n"
+        "    Plot Metric Values with attempted detection ranges\n"
+        "        bounos --shade-region --comparison --attempt-detection --source Stuff.npz\n"
+        "    Plot metric fusion (trust fusion with lag-lead)\n"
+        "        bounos --fusion --source Stuff.npz\n")
     parser.add_argument('--source', '-s',
                         dest='source', action='store', nargs='+',
                         metavar='XXX.npz',
                         required=True,
-                        help='AIETES Simulation Data Package to be analysed'
-    )
+                        help='AIETES Simulation Data Package to be analysed')
     parser.add_argument('--output', '-o',
                         dest='output', action='store',
                         default=None,
                         metavar='png|pdf',
-                        help='Output to png/pdf'
-    )
+                        help='Output to png/pdf')
     parser.add_argument('--title', '-T',
                         dest='title', action='store',
                         default="bounos_figure",
                         metavar='<Filename>',
-                        help='Set a title for this analysis run'
-    )
+                        help='Set a title for this analysis run')
     parser.add_argument('--outdim', '-d',
                         dest='dims', action='store', nargs=2, type=int,
                         default=None,
                         metavar='2.3',
-                        help='Figure Dimensions in Inches (default autofit)'
-    )
+                        help='Figure Dimensions in Inches (default autofit)')
     parser.add_argument('--comparison', '-c', dest='compare',
                         action='store_true', default=False,
-                        help="Compare Two Datasets for Meta-Analysis"
-    )
+                        help="Compare Two Datasets for Meta-Analysis")
     parser.add_argument('--fusion', '-f', dest='fusion',
                         action='store_true', default=False,
-                        help="Attempt Fusion of Meta-Analysis"
-    )
+                        help="Attempt Fusion of Meta-Analysis")
     parser.add_argument('--xkcdify', '-x', dest='xkcd',
                         action='store_true', default=False,
-                        help="Plot like Randall"
-    )
+                        help="Plot like Randall")
     parser.add_argument('--analysis', '-a',
                         dest='analysis', action='store', nargs='+', default=None,
                         metavar=str([f[0] for f in list_functions(Analyses)]),
-                        help="Select analysis to perform"
-    )
+                        help="Select analysis to perform")
     parser.add_argument('--analysis-args', '-A',
                         dest='analysis_args', action='store', default="None",
                         metavar="{'x':1}", type=str,
-                        help="Pass on kwargs to analysis in the form of a dict to be processed by literaleval"
-    )
-
+                        help="Pass on kwargs to analysis in the form of a"
+                             "dict to be processed by literaleval")
     parser.add_argument('--attempt-detection', '-D',
                         dest='attempt_detection', action='store_true', default=False,
-                        help='Attempt Detection and Graphic Annotation for a given analysis'
-    )
+                        help='Attempt Detection and Graphic Annotation for a given analysis')
     parser.add_argument('--shade-region', '-S', dest='shade_region',
                         action='store_true', default=False,
-                        help="Shade any detection regions"
-    )
+                        help="Shade any detection regions")
 
     args = parser.parse_args()
-    print args
 
     if isinstance(args.source, list):
         sources = args.source
@@ -137,6 +152,8 @@ def main():
 
     if args.xkcd:
         from XKCDify import XKCDify
+    else:
+        XKCDify = None
 
     if args.compare:
         if args.analysis is None:
@@ -150,16 +167,20 @@ def main():
         run_overlay(data, args)
 
 
-def plot_detections(ax, metric, orig_data, shade_region=False, real_culprits=None, good_behaviour="Waypoint"):
+def plot_detections(ax, metric, orig_data,
+                    shade_region=False, real_culprits=None, good_behaviour="Waypoint"):
     """
     Plot Detection Overlay including False-positive analysis.
 
     Will attempt heuristic analysis of 'real' culprit from DataPackage behaviour records
 
-    Keyword Arguments:
-        shade_region:bool(False)
-        real_culprits:list([])
-        good_behaviour:str("Waypoint")
+    Args:
+        ax(axes): plot to operate on
+        metric(Metric): metric to use for detection
+        orig_data(DataPackage): data used
+        shade_region(bool): shade the detection region (optional:False)
+        real_culprits(list): provide a list of culprits for false-positive testing (optional)
+        good_behaviour(str): override the default good behaviour (optional: "Waypoint")
     """
     from aietes.Tools import range_grouper
 
@@ -168,8 +189,10 @@ def plot_detections(ax, metric, orig_data, shade_region=False, real_culprits=Non
     results = Analyses.Detect_Misbehaviour(data=orig_data,
                                            metric=metric.__class__.__name__,
                                            stddev_frac=2)
-    (detections, detection_vals, detection_dict) = results['detections'], results['detection_envelope'], results[
-        'suspicions']
+    detections = results['detections']
+    detection_vals = results['detection_envelope']
+    detection_dict = results['suspicions']
+
     if real_culprits is None:
         real_culprits = []
     elif isinstance(real_culprits, int):
@@ -180,7 +203,8 @@ def plot_detections(ax, metric, orig_data, shade_region=False, real_culprits=Non
     if good_behaviour:
         for bev, nodelist in orig_data.getBehaviourDict().iteritems():
             if str(good_behaviour) != str(bev):  # Bloody String Comparison...
-                print "Adding %s to nodelist because \"%s\" is not \"%s\"" % (nodelist, bev, good_behaviour)
+                print("Adding %s to nodelist because \"%s\" is not \"%s\""
+                      % (nodelist, bev, good_behaviour))
                 [real_culprits.append(orig_data.names.index(node)) for node in nodelist]
 
     print real_culprits
@@ -205,18 +229,25 @@ def plot_detections(ax, metric, orig_data, shade_region=False, real_culprits=Non
 
     if shade_region:
         _x = np.asarray(range(len(metric.data)))
-        ax.fill_between(_x, metric.highlight_data - detection_vals, metric.highlight_data + detection_vals, alpha=0.2,
-                        facecolor='red')
+        ax.fill_between(_x,
+                        metric.highlight_data - detection_vals,
+                        metric.highlight_data + detection_vals,
+                        alpha=0.2, facecolor='red')
 
 
-def run_detection_fusion(data, args):
+def run_detection_fusion(data, args=None):
+    """
+    Generate a trust fusion across available metrics, and plot both the metric deviations,
+        per-metric detections, and the trust fusion per node, per dataset
+    Args:
+        data(list of DataPackage): datasets to plot horizontally
+        args(argparse.NameSpace): formatting and option arguments (optional)
+    """
     import matplotlib.pyplot as plt
 
     plt.rc('font', **font)
     from matplotlib.pyplot import figure, show, savefig
     from matplotlib.gridspec import GridSpec
-    import Metrics
-
 
     fig = figure()
     base_ax = fig.add_axes([0, 0, 1, 1], )
@@ -231,7 +262,9 @@ def run_detection_fusion(data, args):
 
     for i, (run, d) in enumerate(data.iteritems()):
         print("One: %d" % i)
-        deviation_fusion, deviation_windowed = Analyses.Combined_Detection_Rank(d, _metrics, stddev_frac=2)
+        deviation_fusion, deviation_windowed = Analyses.Combined_Detection_Rank(d,
+                                                                                _metrics,
+                                                                                stddev_frac=2)
         for j, _metric in enumerate(_metrics):
             print("One: %d:%d" % (i, j))
 
@@ -265,7 +298,9 @@ def run_detection_fusion(data, args):
                               ncol=int(ceil(float(len(d.names)) / (n_leg))))
                 #First Legend
                 elif i == 0:
-                    ax.legend(d.names, "lower center", bbox_to_anchor=(0, 0, 1, 1), bbox_transform=fig.transFigure,
+                    ax.legend(d.names, "lower center",
+                              bbox_to_anchor=(0, 0, 1, 1),
+                              box_transform=fig.transFigure,
                               ncol=len(d.names))
                 else:
                     pass
@@ -305,7 +340,7 @@ def run_detection_fusion(data, args):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
-    resize(fig, 2)
+    fig_adjust(fig)
 
     if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
@@ -313,7 +348,14 @@ def run_detection_fusion(data, args):
         show()
 
 
-def run_metric_comparison(data, args):
+def run_metric_comparison(data, args=None):
+    """
+    Generate available metrics, and plot both the metric values,
+        per-metric detections, per dataset
+    Args:
+        data(list of DataPackage): datasets to plot horizontally
+        args(argparse.NameSpace): formatting and option arguments (optional)
+    """
     import matplotlib.pyplot as plt
 
     plt.rc('font', **font)
@@ -335,7 +377,8 @@ def run_metric_comparison(data, args):
         for j, _metric in enumerate(_metrics):
             metric = _metric(data=d)
             metric.update()
-            #Sharing axis is awkward; each metric should be matched to it's partners, and x axis should always be shared
+            #Sharing axis is awkward; each metric should be matched to it's partners,
+            # and x axis should always be shared
             if i > 0 or j > 0:
                 #This is the axis that will be shared for time
                 sharedx = axes[0][0]
@@ -355,7 +398,6 @@ def run_metric_comparison(data, args):
                 for achievement in d.achievements.nonzero()[1]:
                     ax.axvline(x=achievement, color='b', alpha=0.1)
 
-            #if args.attempt_detection and isinstance(metric, Metrics.PerNode_Internode_Distance_Avg):
             if args is not None and args.attempt_detection:
                 plot_detections(ax, metric, d, shade_region=args.shade_region)
 
@@ -375,12 +417,15 @@ def run_metric_comparison(data, args):
                     leg_w = 1.0 / n_leg
                     leg_x = 0 + (leg_w * (i))
 
-                    ax.legend(d.names, "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
+                    ax.legend(d.names, "lower center",
+                              bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
                               ncol=int(ceil(float(len(d.names)) / (n_leg))))
                 #First Legend
                 elif i == 0:
-                    ax.legend(d.names, "lower center", bbox_to_anchor=(0, 0, 1, 1), bbox_transform=fig.transFigure,
+                    ax.legend(d.names, "lower center",
+                              bbox_to_anchor=(0, 0, 1, 1),
+                              bbox_transform=fig.transFigure,
                               ncol=len(d.names))
             else:
                 [l.set_visible(False) for l in ax.get_xticklabels()]
@@ -408,7 +453,7 @@ def run_metric_comparison(data, args):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
-    resize(fig, 2)
+    fig_adjust(fig)
 
     if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
@@ -416,7 +461,13 @@ def run_metric_comparison(data, args):
         show()
 
 
-def run_overlay(data, args):
+def run_overlay(data, args=None):
+    #TODO Documentation
+    """
+    Args:
+        data(list of DataPackage): datasets to plot horizontally
+        args(argparse.NameSpace): formatting and option arguments (optional)
+    """
     import pylab as pl
     from ast import literal_eval
 
@@ -444,16 +495,20 @@ def run_overlay(data, args):
         if hasattr(results, 'detections'):
             detections = results['detections']
         elif args.attempt_detection:
-            raise NotImplementedError("Tried to do detection on a metric that doesn't support it:%s" % args.analysis)
+            raise NotImplementedError(
+                "Tried to do detection on a metric that doesn't support it:%s" % args.analysis)
         else:
             pass
 
         ax.plot(metrics, label=str(data[source].title).replace("_", " "))
         try:
             if args.attempt_detection:
-                ax.fill_between(range(len(metrics)), 0, metrics, where=[d is not None for d in detections], alpha=0.3)
+                ax.fill_between(range(len(metrics)),
+                                0, metrics,
+                                where=[d is not None for d in detections], alpha=0.3)
             else:
-                ax.fill_between(range(len(metrics)), metrics - data[source].data, metrics + data[source].data,
+                ax.fill_between(range(len(metrics)),
+                                metrics - data[source].data, metrics + data[source].data,
                                 alpha=0.2, facecolor='red')
         except ValueError as exp:
             print("Metrics:%s" % str(metrics.shape))
@@ -469,8 +524,7 @@ def run_overlay(data, args):
     if 'XKCDify' in sys.modules:
         ax = XKCDify(ax)
 
-    if args.dims is not None:
-        fig.set_size_inches((int(d) for d in args.dims))
+    fig_adjust(fig)
 
     if args.output is not None:
         pl.savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
@@ -478,6 +532,14 @@ def run_overlay(data, args):
         pl.show()
 
 
-def resize(figure, scale):
+def fig_adjust(figure, scale=2):
+    """
+    General Figure adjustments:
+        Subplot-spacing adjustments
+        Figure sizing/scaling
+    Args:
+        figure(Figure): figure to be adjusted
+        scale(int/float): adjust figure to scale (optional:2)
+    """
     figure.set_size_inches(figure.get_size_inches() * scale)
     figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)

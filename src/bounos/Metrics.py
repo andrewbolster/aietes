@@ -1,3 +1,21 @@
+#!/usr/bin/env python
+"""
+ * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
+ *
+ * (C) Copyright 2013 Andrew Bolster (http://andrewbolster.info/) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrew Bolster, Queen's University Belfast
+"""
+__author__ = "Andrew Bolster"
+__license__ = "EPL"
+__email__ = "me@andrewbolster.info"
+
 __author__ = 'andrewbolster'
 
 import logging
@@ -7,9 +25,11 @@ from aietes.Tools import mag
 
 
 class Metric(object):
-    """ This Axes provides data plotting tools
+    """
+    This superclass provides abstracted methods for generating, updating and presenting
+        simulation data
 
-    data format is array(t,n) where n can be 1 (i.e. linear array)
+    Output data format is array(t,n) where n can be 1 (i.e. linear array)
 
     The 'wanted' functionality acts as a boolean filter, i.e.
     w = [010]
@@ -23,6 +43,14 @@ class Metric(object):
 
     # Assumes that data is constant and only needs to be selected per node
     def __init__(self, *args, **kw):
+        """
+        Args:
+            label(str):metric name (optional)
+            data(ndarray[t,n]): multi-node metric data (optional)
+            highlight_data(ndarray[t]): data to be higlighted as the 'average' behaviour (optional)
+            signed(bool): decide if the metric values are signed or not, i.e. if deviation is
+                directional (lower is ok but higher is bad)
+        """
         if not hasattr(self, 'label'):
             self.label = kw.get('label', self.__class__.__name__.replace("_", " "))
         self.highlight_data = kw.get('highlight_data', None)
@@ -33,7 +61,7 @@ class Metric(object):
         if __debug__: logging.debug("%s" % self)
 
     def generator(self, data):
-        return data
+        raise NotImplementedError("Uninitialised Metric generator")
 
     def __repr__(self):
         return "Metric: %s with %s entries" % (
@@ -42,6 +70,11 @@ class Metric(object):
         )
 
     def update(self, data=None):
+        """
+        Re Run the generator function across either the existing data or data passed in.
+        Args:
+            data (DataPackage): (optional)
+        """
         if data is None:
             self.data = np.asarray(self.generator(self.data))
         else:
@@ -54,16 +87,27 @@ class Metric(object):
 
 
 class StdDev_of_Distance(Metric):
+    """
+    Measures the level of variation (stddev) of the distance between each node and the centre of
+        the fleet
+    """
     def generator(self, data):
         return data.distance_from_average_stddev_range()
 
 
 class StdDev_of_Heading(Metric):
+    """
+    Measures the level of variation (stddev) of the mag of the heading distance from fleet
+        average heading
+    """
     def generator(self, data):
         return data.heading_stddev_range()
 
 
 class Avg_Mag_of_Heading(Metric):
+    """
+    Measures the average node speed in the fleet across time
+    """
     def generator(self, data):
         return data.heading_mag_range()
 

@@ -1,3 +1,21 @@
+#!/usr/bin/env python
+"""
+ * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
+ *
+ * (C) Copyright 2013 Andrew Bolster (http://andrewbolster.info/) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrew Bolster, Queen's University Belfast
+"""
+__author__ = "Andrew Bolster"
+__license__ = "EPL"
+__email__ = "me@andrewbolster.info"
+
 import sys
 import os
 import traceback
@@ -102,8 +120,14 @@ class Simulation():
 
     def prepare(self, waits=False, *args, **kwargs):
         """
-        Keyword Arguments:
-            sim_time:int(None)
+        Args:
+            waits(bool): set if running interactively (i.e. sim will wait for external actions)
+            sim_time(int): override the simulation duration
+        Raises:
+            SystemExit on configuration error in setting log)
+        Returns:
+            Dict: {'sim_time':prepared sim duration (int),}
+            This is an extensible interface that can be added to but must maintain compatibility.
         """
         # Attempt Validation and construct the simulation from that config.
         try:
@@ -136,6 +160,10 @@ class Simulation():
     def simulate(self, callback=None):
         """
         Initiate the processed Simulation
+        Args:
+            callback(func): Callback function to be called at each execution step
+        Returns:
+            Simulation Duration in ticks (generally seconds)
         """
         self.logger.info("Initialising Simulation %s, to run for %s steps" % (self.title, self.duration_intervals))
         for fleet in self.fleets:

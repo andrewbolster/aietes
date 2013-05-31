@@ -1,3 +1,21 @@
+#!/usr/bin/env python
+"""
+ * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
+ *
+ * (C) Copyright 2013 Andrew Bolster (http://andrewbolster.info/) and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrew Bolster, Queen's University Belfast
+"""
+__author__ = "Andrew Bolster"
+__license__ = "EPL"
+__email__ = "me@andrewbolster.info"
+
 __author__ = 'andrewbolster'
 
 import numpy as np
@@ -10,22 +28,49 @@ def Find_Convergence(data, *args, **kwargs):
     Return the Time of estimated convergence of the fleet along with some certainty value
     using the Average of Inter Node Distances metric
     i.e. the stability of convergence
+    Args:
+        data(DataPackage)
+    Raises:
+        AssertionError if data is not DataPackage
+    Returns:
+        tuple of:
+            detection_points, metrics (both just data)
+
     """
+    #TODO This isn't done at all
     assert isinstance(data, DataPackage)
     detection_points = data
     metrics = data
     return detection_points, metrics
 
 
-def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg", stddev_frac=1, *args, **kwargs):
+def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
+                        stddev_frac=1, *args, **kwargs):
     """
     Detect and identify if a node / multiple nodes are misbehaving.
     Currently misbehaviour is regarded as where the internode distance is significantly greater
         for any particular node of a significant period of time.
     Also can 'tighten' the detection bounds via fractions of \sigma
-    Takes:
-        metric:Metric("PerNode_Internode_Distance_Avg")
-        stddev_frac:int(1)
+    Args:
+        data(DataPackage)
+        metric(Metric): What metric to use for detection
+            (optional:"PerNode_Internode_Distance_Avg")
+        stddev_frac(int): Adjust the detection threshold (optional:1)
+    Raises:
+        ValueError if metric cannot be found as a module (from bounos.Metrics)
+        TypeError if metric deviation calculation bugs out
+    Returns:
+        Dict of:
+            'detections': ndarray(t,list of names)
+                misbehaviours 'confirmed' over the envelope period,
+            'detection_envelope': ndarray(t,dtype=float)
+                the detection range (stddev(deviance)/frac)
+            'suspicions': [names][list of ints]
+                list of times each node was under suspicion
+            'deviance': ndarray(t,n, dtype=float)
+                raw deviance from the mean for each node for each t
+            'metrics': as metric.data
+                Raw metric data
     """
     import bounos.Metrics
 
@@ -70,7 +115,7 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg", stddev_fr
         # None is both not True and not False
         if metric.signed is not False:
             # Positive Swing
-            culprits = (metric.data[t] > (metric.highlight_data[t] + this_detection_envelope ))
+            culprits = (metric.data[t] > (metric.highlight_data[t] + this_detection_envelope))
         elif metric.signed is not True:
             # Negative Swing
             culprits = (metric.data[t] < (metric.highlight_data[t] - this_detection_envelope))
@@ -95,16 +140,28 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg", stddev_fr
             'detection_envelope': detection_envelope,
             'suspicions': potential_misbehavers,
             'deviance': deviance,
-            'metrics': metric.data
-    }
+            'metrics': metric.data}
 
 
 def Deviation(data, *args, **kwargs):
     """
-    Detect and identify if a node / multiple nodes are misbehaving.
-    Currently misbehaviour is regarded as where the internode distance is significantly greater
-        for any particular node of a significant period of time.
+    Calculate simple, absolute, deviance across the metric set.
 
+    Args:
+        data(DataPackage)
+        metric(str/Metric):Metric (optional:"PerNode_Internode_Distance_Avg")
+        stddev_frac(int): Adjust the detection threshold (optional:1)
+    Raises:
+        ValueError if metric cannot be found as a module (from bounos.Metrics)
+        TypeError if metric deviation calculation bugs out
+    Returns:
+        dict of:
+            'stddev':ndarray(t, dtype=float)
+                stddev of deviance per time slot
+            'deviance': ndarray(t,n, dtype=float)
+                Absolute deviance from metric highlight data
+            'metrics': as metric.data
+                Raw metric data
     """
     import bounos.Metrics
 
@@ -124,7 +181,8 @@ def Deviation(data, *args, **kwargs):
     if metric is None:
         raise ValueError("No Metric! Cannot Contine")
     else:
-        print("Performing Deviation analysis with %s" % (metric.__class__.__name__))
+        print("Performing Deviation analysis with %s"
+              % (metric.__class__.__name__))
     metric.update(data)
     # IND has the highlight data to be the average of internode distances
     #TODO implement scrolling stddev calc to adjust smearing value (5)
@@ -141,8 +199,7 @@ def Deviation(data, *args, **kwargs):
 
     return {'stddev': stddev,
             'deviance': deviance,
-            'metrics': metric.data
-    }
+            'metrics': metric.data}
 
 
 def Combined_Detection_Rank(data, metrics, *args, **kwargs):
@@ -178,7 +235,9 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
 
     for t in range(tmax):
         head = max(0, t - window)
-        deviance_lag_lead_accumulator[t] = np.sum(np.prod(deviance_accumulator[:, head:t, :], axis=0), axis=0)
+        deviance_lag_lead_accumulator[t] = np.sum(
+            np.prod(deviance_accumulator[:, head:t, :], axis=0),
+            axis=0)
         deviance_windowed_accumulator[t] = deviance_lag_lead_accumulator[t] - (t - head)
 
     detection_sums = np.sum(deviance_accumulator, axis=1) - tmax
@@ -187,9 +246,3 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
     print(detection_subtot)
     print(detection_tot)
     return deviance_accumulator, deviance_windowed_accumulator
-
-
-
-
-
-
