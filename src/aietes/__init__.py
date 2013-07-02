@@ -37,7 +37,7 @@ from Node import Node
 import Behaviour
 from Animation import AIETESAnimation
 from Tools import *
-from bounos import DataPackage
+from bounos.DataPackage import DataPackage
 
 
 np.set_printoptions(precision=3)
@@ -224,6 +224,7 @@ class Simulation():
             names.append(node.name)
             contributions.append(node.contributions_log)
             achievements.append(node.achievements_log)
+
         shape = self.environment.shape
         return {'p': np.asarray(positions),
                 'v': np.asarray(vectors),

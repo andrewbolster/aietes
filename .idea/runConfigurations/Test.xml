@@ -4,7 +4,7 @@
     <option name="PARENT_ENVS" value="true" />
     <envs />
     <option name="SDK_HOME" value="" />
-    <option name="WORKING_DIRECTORY" value="C:/Windows/Temp" />
+    <option name="WORKING_DIRECTORY" value="" />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
@@ -20,7 +20,9 @@
     <option name="PUREUNITTEST" value="true" />
     <option name="PARAMS" value="" />
     <option name="USE_PARAM" value="false" />
+    <RunnerSettings RunnerId="PyDebugRunner" />
     <RunnerSettings RunnerId="PythonRunner" />
+    <ConfigurationWrapper RunnerId="PyDebugRunner" />
     <ConfigurationWrapper RunnerId="PythonRunner" />
     <method />
   </configuration>
