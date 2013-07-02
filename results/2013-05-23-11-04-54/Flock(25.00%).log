@@ -1,0 +1,18 @@
+[2013-05-23 11:05:01,090] aietes-INFO-using given config
+[2013-05-23 11:05:01,103] aietes.aietes.Fleet-INFO-creating instance
+[2013-05-23 11:05:01,103] aietes-INFO-Initialising Simulation Flock(25.00%)-0, to run for 1000.0 steps
+[2013-05-23 11:05:01,103] aietes.aietes.Fleet-INFO-Initialised Node Lifecycle
+[2013-05-23 11:05:02,597] aietes.aietes.Node.Bev:Waypoint-INFO-Moving to Next waypoint:[ 333.333  333.333  333.333]
+[2013-05-23 11:05:02,634] aietes.aietes.Node.Bev:Waypoint-INFO-Moving to Next waypoint:[ 333.333  333.333  333.333]
+[2013-05-23 11:05:02,659] aietes.aietes.Node.Bev:Waypoint-INFO-Moving to Next waypoint:[ 333.333  333.333  333.333]
+[2013-05-23 11:05:04,229] aietes-INFO-Finished Simulation at 1000.0
+[2013-05-23 11:05:04,244] aietes-INFO-Writing datafile to Flock(25.00%)(0:2).aietes
+[2013-05-23 11:05:04,336] aietes-INFO-using given config
+[2013-05-23 11:05:04,349] aietes.aietes.Fleet-INFO-creating instance
+[2013-05-23 11:05:04,349] aietes-INFO-Initialising Simulation Flock(25.00%)-1, to run for 1000.0 steps
+[2013-05-23 11:05:04,350] aietes.aietes.Fleet-INFO-Initialised Node Lifecycle
+[2013-05-23 11:05:05,676] aietes.aietes.Node.Bev:Waypoint-INFO-Moving to Next waypoint:[ 333.333  333.333  333.333]
+[2013-05-23 11:05:05,716] aietes.aietes.Node.Bev:Waypoint-INFO-Moving to Next waypoint:[ 333.333  333.333  333.333]
+[2013-05-23 11:05:05,736] aietes.aietes.Node.Bev:Waypoint-INFO-Moving to Next waypoint:[ 333.333  333.333  333.333]
+[2013-05-23 11:05:07,556] aietes-INFO-Finished Simulation at 1000.0
+[2013-05-23 11:05:07,572] aietes-INFO-Writing datafile to Flock(25.00%)(1:2).aietes

@@ -54,6 +54,7 @@ class BounosModel(DataPackage):
     It is blankly initialised with no arguments and must be initialised by either interacting
         with a simulation (update_data_from_sim) or from an existing datafile (import_datafile)
     """
+
     def __init__(self, *args, **kwargs):
         self.metrics = []
         self.is_ready = False
@@ -79,7 +80,10 @@ class BounosModel(DataPackage):
         test = re.compile(".npz$")
         return test.search(file)
 
+
 args = None
+
+
 def main():
     """
     Initial Entry Point; Does very little other that option parsing
@@ -91,10 +95,10 @@ def main():
         formatter_class=RawTextHelpFormatter,
         description="Simulation Visualisation and Analysis Suite for AIETES",
         epilog="Example Usages:\n"
-        "    Plot Metric Values with attempted detection ranges\n"
-        "        bounos --shade-region --comparison --attempt-detection --source Stuff.npz\n"
-        "    Plot metric fusion (trust fusion with lag-lead)\n"
-        "        bounos --fusion --source Stuff.npz\n")
+               "    Plot Metric Values with attempted detection ranges\n"
+               "        bounos --shade-region --comparison --attempt-detection --source Stuff.npz\n"
+               "    Plot metric fusion (trust fusion with lag-lead)\n"
+               "        bounos --fusion --source Stuff.npz\n")
     parser.add_argument('--source', '-s',
                         dest='source', action='store', nargs='+',
                         metavar='XXX.npz',
@@ -138,7 +142,7 @@ def main():
                         help='Attempt Detection and Graphic Annotation for a given analysis')
     parser.add_argument('--shade-region', '-S', dest='shade_region',
                         action='store_true', default=False,
-                        help="Shade any detection regions"))
+                        help="Shade any detection regions")
     parser.add_argument('--label-size', '-L',
                         dest='font_size', action='store', default=font['size'],
                         metavar=font['size'], type=int,
@@ -299,7 +303,7 @@ def run_detection_fusion(data, args=None):
 
                     ax.legend(d.names, "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
-                              ncol=int(ceil(float(len(d.names)+1) / (n_leg))))
+                              ncol=int(ceil(float(len(d.names) + 1) / (n_leg))))
                 #First Legend
                 elif i == 0:
                     ax.legend(d.names, "lower center",
@@ -424,7 +428,7 @@ def run_metric_comparison(data, args=None):
                     ax.legend(d.names, "lower center",
                               bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
-                              ncol=int(ceil(float(len(d.names)+1) / (n_leg))))
+                              ncol=int(ceil(float(len(d.names) + 1) / (n_leg))))
                 #First Legend
                 elif i == 0:
                     ax.legend(d.names, "lower center",
@@ -457,7 +461,7 @@ def run_metric_comparison(data, args=None):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
-    global_adjust(fig,axes)
+    global_adjust(fig, axes)
 
     if args is not None and args.output is not None:
         savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
@@ -525,14 +529,15 @@ def run_overlay(data, args=None):
     ax.set_ylabel(analysis.__name__.replace("_", " "))
     ax.set_xlabel("Time")
 
-    global_adjust(fig,ax)
+    global_adjust(fig, ax)
 
     if args.output is not None:
         pl.savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
     else:
         pl.show()
 
-def global_adjust(figure, axes, scale = 2):
+
+def global_adjust(figure, axes, scale=2):
     """
     General Figure adjustments:
         Subplot-spacing adjustments
@@ -543,7 +548,7 @@ def global_adjust(figure, axes, scale = 2):
     """
     for axe in axes:
         for ax in axe:
-            ax.set_ylabel(ax.get_ylabel(), size = args.font_size)
+            ax.set_ylabel(ax.get_ylabel(), size=args.font_size)
             if 'XKCDify' in sys.modules:
                 ax = XKCDify(ax)
     figure.set_size_inches(figure.get_size_inches() * scale)
