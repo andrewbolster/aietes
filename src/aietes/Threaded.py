@@ -18,66 +18,66 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
 
-import threading
-from Queue import Queue
+from multiprocessing import Process, JoinableQueue, cpu_count
+from multiprocessing.process import current_process
 
 from aietes import Simulation
 
 
-class SimulationThread(threading.Thread):
-    def __init__(self, runcount=1, sim_args=None, pp_args=None, **kwargs):
-        self.runcount = runcount
-        self.sim_args = sim_args
-        self.pp_args = pp_args
-        threading.Thread.__init__(self)
-        self.sim = Simulation(**self.sim_args)
-        self.prep_stats = self.sim.prepare()
+def sim_mask(kwargs, pp_defaults):
+    sim_time = kwargs.pop("runtime", None)
+    sim = Simulation(**kwargs)
+    prep_stats = sim.prepare(sim_time=sim_time)
+    sim_time = sim.simulate()
+    return_dict = sim.postProcess(**pp_defaults)
+    print("%s(%s):%f%%"
+          % (current_process().name, return_dict['data_file'],
+             100.0 * float(sim_time) / prep_stats['sim_time']))
+    return sim.generateDataPackage()
 
-    def run(self):
+
+def consumer(w_queue, r_queue):
+    while True:
         try:
-            self.sim_stats = self.sim.simulate()
-            self.sim.postProcess(**self.pp_args)
-        except Exception as exp:
+            uuid, simargs, postargs = w_queue.get()
+            sim_results = sim_mask(simargs, postargs)
+            r_queue.put((uuid, sim_results))
+            w_queue.task_done()
+            print "Done %s" % uuid
+        except RuntimeError as e:
+            r_queue.put(uuid, e)
+            w_queue.task_done()
+            print "Fuck %s" % uuid
+
+        except Exception as e:
             raise
 
-    def get_result(self):
-        return self.runcount, self.sim.generateDataPackage()
+
+work_queue = JoinableQueue()
+result_queue = JoinableQueue()
+cores = cpu_count()
+running = False
+workers = []
 
 
-def producer(q, runcount, sim_args=None, pp_args=None):
-    base_title = sim_args['title']
-    for run in range(runcount):
-        try:
-            sim_args.update({'title': base_title + "-%s" % run})
-            sim = SimulationThread(sim_args=sim_args, pp_args=pp_args, runcount=run)
-            sim.start()
-        except Exception as exp:
-            raise
+def boot():
+    global running, workers
+    workers = [Process(target=consumer, args=(work_queue, result_queue)) for i in range(cores)]
+    for worker in workers:
+        worker.start()
+    print "started"
+    running = True
 
 
-finished = []
-
-
-def consumer(q, count):
-    while len(finished) < count:
-        thread = q.get(True)
-    thread.join()
-    finished.append(thread.get_result())
-
-
-def go(runcount, sim_args=None, pp_args=None):
-    sim_queue = Queue(4)
-    p_thread = threading.Thread(target=producer, args=(sim_queue, runcount, sim_args, pp_args))
-    c_thread = threading.Thread(target=consumer, args=(sim_queue, runcount))
-    p_thread.start()
-    c_thread.start()
-    p_thread.join()
-    c_thread.join()
-    dataset = [None for _ in range(runcount)]
-    for res_tup in finished:
-        run, result = res_tup
-        dataset[run] = result
-    return dataset
-
-
+def kill():
+    global running, workers
+    print "joining"
+    work_queue.join()
+    print "joined"
+    for worker in workers:
+        worker.terminate()
+        del worker
+    workers = []
+    print "killed"
+    running = False
 

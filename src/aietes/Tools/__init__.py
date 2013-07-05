@@ -22,11 +22,10 @@ import logging
 from inspect import getmembers, isfunction
 from itertools import groupby
 from operator import itemgetter
+import numpy as np
+from datetime import datetime as dt
 
 from SimPy import SimulationStep as Sim
-import numpy as np
-
-from datetime import datetime as dt
 
 
 np.seterr(all='raise')
@@ -499,3 +498,7 @@ def updateDict(d, keys, value, safe=False):
 
 def list_functions(module):
     return [o for o in getmembers(module) if isfunction(o[1])]
+
+
+def kwarger(**kwargs):
+    return kwargs

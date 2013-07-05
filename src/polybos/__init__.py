@@ -20,20 +20,36 @@ __email__ = "me@andrewbolster.info"
 import os
 import sys
 import tempfile
+from uuid import uuid4 as get_uuid
 import logging
 from copy import deepcopy
-
 from configobj import ConfigObj
 import validate
 import numpy as np
-
 from datetime import datetime
+import functools
+
 from aietes import _ROOT, Simulation  # Must use the aietes path to get the config files
-from aietes.Threaded import go as goSim
-from aietes.Tools import nameGeneration, updateDict
+import aietes.Threaded as ParSim
+from aietes.Tools import nameGeneration, updateDict, kwarger
 from bounos import DataPackage
 
+
 _config_spec = '%s/configs/default.conf' % _ROOT
+
+
+def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
+    @functools.wraps(fn) #keeps name and docstring of old function
+    def new_fn(*args, **kwargs):
+        for i in xrange(x):
+            try:
+                return fn(*args, **kwargs)
+            except exceptions_to_catch as e:
+                print "Failed %d/%d: %s" % (i, x, e)
+                pass
+        raise exception_to_raise
+
+    return new_fn
 
 
 def getConfig(source_config_file=None, config_spec=_config_spec):
@@ -138,25 +154,70 @@ class Scenario(object):
                 self.datarun[run] = sim.generateDataPackage()
                 print("%s(%s):%f%%"
                       % (run, return_dict['data_file'],
-                         100.0*float(sim_time)/prep_stats['sim_time']))
+                         100.0 * float(sim_time) / prep_stats['sim_time']))
 
             except Exception:
                 raise
         print("done %d runs for %d each" % (runcount, sim_time))
 
-    def runThreaded(self, *args, **kwargs):
+    def run_parralel(self, runcount=None, runtime=None, *args, **kwargs):
         """
-        Offload this to AIETES threaded
-        Still borked...
+        Offload this to AIETES multiprocessing queue
+
+        Args:
+            runcoun(int): Number of repeated executions of this scenario; this value overrides the
+                value set on init
+            runtime(int): Override simulation duration (normally inherited from config)
         """
-        runcount = kwargs.get("runcount", self._default_run_count)
+        if runcount is None:
+            runcount = self._default_run_count
+
+        if not ParSim.running:
+            raise RuntimeError("Attempted parrallel without booting, breaking")
+
+        pp_defaults = {'outputFile': self.title, 'dataFile': True}
         self.commit()
+        self.datarun = [None for _ in range(runcount)]
+        uuids = [get_uuid() for _ in range(runcount)]
+        for run in range(runcount):
+            if runcount > 1:
+                pp_defaults.update({'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
+            sys.stdout.write("%s," % pp_defaults['outputFile'])
+            sys.stdout.flush()
+            try:
+                title = self.title + "-%s" % run
+                ParSim.work_queue.put(
+                    (
+                        uuids[run],
+                        kwarger(config=self.config,
+                                title=title,
+                                logtofile=title + ".log",
+                                logtoconsole=logging.ERROR,
+                                progress_display=False,
+                                sim_time=runtime),
+                        pp_defaults
+                    ), 10
+                )
+            except Exception:
+                raise
+        print "Joining"
+        ParSim.work_queue.join()
+        print "Joined"
+        while not ParSim.result_queue.empty() or any(r is None for r in self.datarun):
+            uuid, response = ParSim.result_queue.get(1)
+            if isinstance(response, Exception):
+                raise response
+            else:
+                try:
+                    self.datarun[uuids.index(uuid)] = response
+                except ValueError:
+                    print("Tripped over old hash?:%s" % uuid)
+                    pass
+        assert all(r is not None for r in self.datarun), "All dataruns should be completed by now"
+        print "Got responses"
 
-        pp_defaults = {'outputFile': self.title + kwargs.get("title", ""), 'dataFile': True}
-        sim_args = {'config': self.config, 'title': self.title, 'logtofile': self.title + ".log",
-                    'logtoconsole': logging.INFO, 'progress_display': False}
+        print("done %d runs in parralel" % (runcount))
 
-        self.datarun = goSim(runcount, sim_args=sim_args, pp_args=pp_defaults)
 
     def generateRunStats(self, sim_run_dataset=None):
         """
@@ -183,7 +244,7 @@ class Scenario(object):
             RuntimeError: on attempting to commit and already committed scenario
         """
         if self.committed:
-            raise(RuntimeError("Attempted to commit twice (or more)"))
+            raise (RuntimeError("Attempted to commit twice (or more)"))
         print("Scenario Committed with %d nodes configured and %d defined"
               % (len(self.nodes.keys()), self.node_count))
         if self.node_count > len(self.nodes.keys()):
@@ -259,7 +320,7 @@ class Scenario(object):
             count(int): New Node count
         """
         if self.committed:
-            raise(RuntimeError("Attempted to modify scenario after committing"))
+            raise (RuntimeError("Attempted to modify scenario after committing"))
         if hasattr(self, "node_count"):
             print("Updating nodecount from %d to %d" % (self.node_count, count))
         self.node_count = count
@@ -271,7 +332,7 @@ class Scenario(object):
             tmax(int): New simulation time
         """
         if self.committed:
-            raise(RuntimeError("Attempted to modify scenario after committing"))
+            raise (RuntimeError("Attempted to modify scenario after committing"))
         if hasattr(self.simulation, "sim_duration"):
             print("Updating simulation time from %d to %d"
                   % (self.simluation['sim_duration'], tmax))
@@ -356,7 +417,7 @@ class Scenario(object):
 
 
 class ExperimentManager(object):
-    def __init__(self, node_count=4, title=None, *args, **kwargs):
+    def __init__(self, node_count=4, title=None, parralel=False, *args, **kwargs):
         """
         The Experiment Manager Object deals with multiple scenarios build around a single or
             multiple experimental input. (Number of nodes, ratio of behaviours, etc)
@@ -374,6 +435,16 @@ class ExperimentManager(object):
         else:
             self.title = title
         self._default_scenario.setNodeCount(self.node_count)
+        self.parralel = parralel
+        if self.parralel:
+            ParSim.boot()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.parralel:
+            ParSim.kill()
 
     def updateDefaultBehaviour(self, behaviour):
         """
@@ -383,7 +454,7 @@ class ExperimentManager(object):
         """
         self._default_scenario.updateDefaultNode('behaviour', behaviour)
 
-    def run(self, threaded=False, **kwargs):
+    def run(self, **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
         Args:
@@ -403,10 +474,12 @@ class ExperimentManager(object):
         try:
             os.chdir(self.exp_path)
             for scenario in self.scenarios:
-                if threaded:
-                    scenario.runThreaded(**kwargs)
+                if self.parralel:
+                    scenario.run_parralel(**kwargs)
                 else:
-                    scenario.run(**kwargs)
+                    protected_runs = try_x_times(2, RuntimeError, RuntimeError("Attempted two runs, both failed"),
+                                                 scenario.run)
+                    protected_runs(**kwargs)
         finally:
             os.chdir(self.orig_path)
             print("Experimental results stored in %s" % self.exp_path)
