@@ -26,8 +26,7 @@ import cProfile
 from pprint import pformat
 
 import numpy as np
-from configobj import ConfigObj
-import validate
+
 
 from datetime import datetime as dt
 from Layercake import Layercake
@@ -41,8 +40,6 @@ from bounos.DataPackage import DataPackage
 
 
 np.set_printoptions(precision=3)
-
-_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 class Simulation():
@@ -61,8 +58,9 @@ class Simulation():
 
     def __init__(self, *args, **kwargs):
         self._done = False
-        self.config_spec = '%s/configs/default.conf' % _ROOT
-        self.title = kwargs.get("title", dt.now().strftime('%Y-%m-%d-%H-%M-%S'))
+        self.title = kwargs.get("title", None )
+        if self.title is None:
+            self.title =  dt.now().strftime('%Y-%m-%d-%H-%M-%S')
         self.progress_display = kwargs.get("progress_display", True)
         self.working_directory = kwargs.get("working_directory", "/dev/shm/")
         logtofile = kwargs.get("logtofile", None)
@@ -97,7 +95,7 @@ class Simulation():
         self.config = kwargs.get("config", None)
         if self.config_file is None and self.config is None:
             self.logger.info("creating instance from default")
-            self.config = self.validateConfig(None)
+            self.config = validateConfig(None)
             self.config = self.generateConfig(self.config)
         elif self.config_file is None and self.config is not None:
             self.logger.info("using given config")
@@ -106,7 +104,7 @@ class Simulation():
             self.config = dotdict(config.dict())
         else:
             self.logger.info("creating instance from %s" % self.config_file)
-            self.config = self.validateConfig(self.config_file)
+            self.config = validateConfig(self.config_file)
             self.config = self.generateConfig(self.config)
         if "__default__" in self.config.Node.Nodes.keys():
             raise RuntimeError("Dun fucked up: __default__ node detected")
@@ -236,32 +234,6 @@ class Simulation():
                 'title': self.title
 
         }
-
-    def validateConfig(self, config=None, final_check=False):
-        """
-        Generate valid configuration information by interpolating a given config
-        file with the defaults
-
-        NOTE: This does not verify if any of the functionality requested in the config is THERE
-        Only that the config 'makes sense' as requested.
-
-        I.e. does not check if particular modular behaviour exists or not.
-        """
-
-        #
-        # GENERIC CONFIG ACQUISITION
-        #
-        if not isinstance(config, ConfigObj):
-            config = ConfigObj(config, configspec=self.config_spec, stringify=True, interpolation=not final_check)
-        else:
-            self.logger.info("Skipping configobj for final validation")
-        config_status = config.validate(validate.Validator(), copy=not final_check)
-
-        if not config_status:
-            # If config_spec doesn't match the input, bail
-            raise ConfigError("Configspec doesn't match given input structure: %s" % config_status)
-
-        return config
 
     def generateConfig(self, config):
         #
@@ -573,8 +545,8 @@ def go(options, args):
                 print("Will try to postprocess anyway")
 
     if options.output:
-        print("Storing output in %s" % options.title)
-        sim.postProcess(inputFile=options.input, outputFile=options.title, dataFile=options.data,
+        print("Storing output in %s" % sim.title)
+        sim.postProcess(inputFile=options.input, outputFile=sim.title, dataFile=options.data,
                         movieFile=options.movie, fps=options.fps)
 
     if options.plot:
@@ -625,8 +597,8 @@ def main():
         exit_code = 0
         if options.verbose:
             print time.asctime()
-        if options.title is None:  # and no custom title
-            if options.config is not None:                                # If have a config
+        if options.title is None:                               # if no custom title
+            if options.config is not None:                      # and have a config
                 options.title = os.path.splitext(os.path.splitext(os.path.basename(options.config))[0])[
                     0]  # use config title
         if options.runs > 1:

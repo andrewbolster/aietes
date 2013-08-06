@@ -153,6 +153,7 @@ class EphyraNotebook(wx.Frame):
         self.nb = wx.Notebook(self.p)
         self.CreateMenuBar()
 
+        self.Bind(wx.EVT_MAXIMIZE, self.on_resize)
         self.Bind(wx.EVT_SIZE, self.on_resize)
         self.Bind(wx.EVT_IDLE, self.on_idle)
 
@@ -235,9 +236,9 @@ class EphyraNotebook(wx.Frame):
         self.log.debug("plotsize:%s" % str(plot_size))
 
         self.p.SetSize(plot_size)
-
+        current_page = self.nb.GetCurrentPage()
         try:
-            self.nb.GetCurrentPage().on_resize(event)
+            wx.CallAfter(current_page.on_resize,event)
         except Exception as e:
             traceback.print_exc(file=sys.stdout)
             wx.CallAfter(self.exit)

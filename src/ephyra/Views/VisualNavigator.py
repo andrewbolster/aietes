@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 __author__ = 'andrewbolster'
 
 WIDTH, HEIGHT = 8, 6
-SIDEBAR_WIDTH = 4
+SIDEBAR_WIDTH = 3
 
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -61,11 +61,12 @@ class VisualNavigator(wx.Panel):
         self.fleet_vector_enabled = True
         self.node_vector_collections = []
         self.fleet_vector_collection = None
+        self._fleet_zoom = False
         self.vector_opacity = 0.9
 
         #Configure contrib Plotting on Plot_pnl
-        self.node_contrib_enabled = True
-        self.fleet_contrib_enabled = True
+        self.node_contrib_enabled = False
+        self.fleet_contrib_enabled = False
         self.node_contrib_collections = []
         self.fleet_contrib_collection = None
         self.contrib_opacity = 0.9
@@ -82,7 +83,7 @@ class VisualNavigator(wx.Panel):
         # Main Plot
         ####
         plot_area = self.gs[:-1, SIDEBAR_WIDTH:]
-        self.plot_axes = self.fig.add_subplot(plot_area, projection='3d')
+        self.plot_axes = self.fig.add_subplot(plot_area, projection='3d', aspect=1)
         self.lines = []
 
         ####
@@ -136,13 +137,18 @@ class VisualNavigator(wx.Panel):
         self.Bind(wx.EVT_CHECKBOX, self.on_metric_zoom_chk, self.metric_zoom_chk)
         control_btn_sizer.Add(self.metric_zoom_chk)
 
+        self.zoom_fleet_chk = wx.CheckBox(self.control_pnl, label="Fleet Zoom")
+        self.zoom_fleet_chk.SetValue(self._fleet_zoom)
+        self.Bind(wx.EVT_CHECKBOX, self.on_zoom_fleet_chk, self.zoom_fleet_chk)
+        control_btn_sizer.Add(self.zoom_fleet_chk)
+
         self.vector_chk = wx.CheckBox(self.control_pnl, label="Vector")
         self.vector_chk.SetValue(self.node_vector_enabled)
         self.Bind(wx.EVT_CHECKBOX, self.on_vector_chk, self.vector_chk)
         control_btn_sizer.Add(self.vector_chk)
 
         self.contrib_chk = wx.CheckBox(self.control_pnl, label="Contribs.")
-        self.contrib_chk.SetValue(self.node_vector_enabled)
+        self.contrib_chk.SetValue(self.node_contrib_enabled)
         self.Bind(wx.EVT_CHECKBOX, self.on_contrib_chk, self.contrib_chk)
         control_btn_sizer.Add(self.contrib_chk)
 
@@ -249,6 +255,24 @@ class VisualNavigator(wx.Panel):
             self.redraw_fleet_sphere()
 
         self.update_metric_charts()
+
+        ###
+        # UPDATE WINDOW PARAMETERS
+        ###
+        if self._fleet_zoom:
+            positions = self.ctl.get_fleet_positions(self.t)
+            (lx, rx) = self.plot_axes.get_xlim3d()
+            (ly, ry) = self.plot_axes.get_ylim3d()
+            (lz, rz) = self.plot_axes.get_zlim3d()
+            x_width = abs(lx - rx)
+            y_width = abs(ly - ry)
+            z_width = abs(lz - rz)
+
+            avg = np.average(positions, axis=0)
+            self.log.debug("Average Pos: %s"%str(avg))
+            self.plot_axes.set_xlim3d((avg[0] - (x_width / 2), avg[0] + (x_width / 2)))
+            self.plot_axes.set_ylim3d((avg[1] - (y_width / 2), avg[1] + (y_width / 2)))
+            self.plot_axes.set_zlim3d((avg[2] - (z_width / 2), avg[2] + (z_width / 2)))
 
         self.canvas.draw()
 
@@ -362,17 +386,7 @@ class VisualNavigator(wx.Panel):
                         self.node_contrib_collections[-1],
                     )
         self.plot_axes.autoscale()
-        (lx, rx) = self.plot_axes.get_xlim3d()
-        (ly, ry) = self.plot_axes.get_ylim3d()
-        (lz, rz) = self.plot_axes.get_zlim3d()
-        x_width = abs(lx - rx)
-        y_width = abs(ly - ry)
-        z_width = abs(lz - rz)
 
-        avg = np.average(positions, axis=1)
-        self.plot_axes.set_xlim3d((avg[0] - x_width / 2, avg[0] + x_width / 2))
-        self.plot_axes.set_ylim3d((avg[1] - y_width / 2, avg[1] + y_width / 2))
-        self.plot_axes.set_zlim3d((avg[2] - z_width / 2, avg[2] + z_width / 2))
 
     def get_contrib_colour(self, contrib_key):
         try:
@@ -416,7 +430,9 @@ class VisualNavigator(wx.Panel):
                 self.metric_xlines[i].set_xdata([self.t, self.t])
             else:
                 self.metric_xlines[i] = self.metric_axes[i].axvline(x=self.t, color='r', linestyle=':')
-            if self.achievement_xlines[i] is not None:
+            if self.ctl.get_achievements() is None:
+                pass
+            elif self.achievement_xlines[i] is not None:
                 self.achievement_xlines[i].set_xdata([self.t, self.t])
             else:
                 for achievement in self.ctl.get_achievements():
@@ -511,6 +527,10 @@ class VisualNavigator(wx.Panel):
             self._zoom_metrics = False
         wx.CallAfter(self.redraw_page)
 
+    def on_zoom_fleet_chk(self, event):
+        self._fleet_zoom= self.zoom_fleet_chk.IsChecked()
+        wx.CallAfter(self.redraw_page)
+
     ####
     # Menu Event Handlers
     ####
@@ -551,11 +571,15 @@ class VisualNavigator(wx.Panel):
                 pass
 
     def on_resize(self, event):
+        """
+        Retrieve the Panel-size in pixels and update the plot panel, plot canvas, and figure.
+        """
         plot_size = self.panel_sizer.GetChildren()[0].GetSize()
-        self.log.debug("plotsize:%s" % str(plot_size))
+        self.log.info("plotsize:%s" % str(plot_size))
 
         self.plot_pnl.SetSize(plot_size)
         self.canvas.SetSize(plot_size)
-        self.fig.set_size_inches(float(plot_size[0]) / self.fig.get_dpi(),
-                                 float(plot_size[0]) / self.fig.get_dpi()
-        )
+        canvas_inches = (float(plot_size[0]) / self.fig.get_dpi(),float(plot_size[1]) / self.fig.get_dpi())
+        self.log.debug("canvas_inch:%s"%str(canvas_inches))
+        self.fig.set_size_inches(canvas_inches)
+        wx.CallAfter(self.redraw_page)
