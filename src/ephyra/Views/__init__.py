@@ -236,9 +236,10 @@ class EphyraNotebook(wx.Frame):
         self.log.debug("plotsize:%s" % str(plot_size))
 
         self.p.SetSize(plot_size)
+        self.p.Layout()
         current_page = self.nb.GetCurrentPage()
         try:
-            wx.CallAfter(current_page.on_resize,event)
+            current_page.on_resize(event)
         except Exception as e:
             traceback.print_exc(file=sys.stdout)
             wx.CallAfter(self.exit)

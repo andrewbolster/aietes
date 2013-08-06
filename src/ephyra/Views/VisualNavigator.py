@@ -269,7 +269,6 @@ class VisualNavigator(wx.Panel):
             z_width = abs(lz - rz)
 
             avg = np.average(positions, axis=0)
-            self.log.debug("Average Pos: %s"%str(avg))
             self.plot_axes.set_xlim3d((avg[0] - (x_width / 2), avg[0] + (x_width / 2)))
             self.plot_axes.set_ylim3d((avg[1] - (y_width / 2), avg[1] + (y_width / 2)))
             self.plot_axes.set_zlim3d((avg[2] - (z_width / 2), avg[2] + (z_width / 2)))
