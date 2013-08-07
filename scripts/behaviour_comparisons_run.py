@@ -5,7 +5,8 @@ from polybos import ExperimentManager as EXP
 
 def set():
     exp = EXP(node_count=8,
-              title="Malicious Behaviour Trust Comparison")
+              title="Malicious Behaviour Trust Comparison",
+             parralel=True)
     exp.addVariableAttackerBehaviourSuite(["Waypoint", "Shadow", "SlowCoach"], n_attackers=1)
     return exp
 
