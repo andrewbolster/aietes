@@ -56,6 +56,12 @@ class DefaultBehaviour(unittest.TestCase):
             self.assertIsNotNone(m_val, msg=member)
             self.assertEqual(len(m_val), datapackage.n)
 
+    @unittest.skip("Reminder for later")
+    def testZeroFleetCreation(self):
+        """Ensure failure on launching fleet with 0 nodes"""
+        #TODO
+        pass
+
 
 if __name__ == "__main__":
     unittest.main() 

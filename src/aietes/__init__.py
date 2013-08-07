@@ -66,8 +66,7 @@ class Simulation():
         logtofile = kwargs.get("logtofile", None)
         logtoconsole = kwargs.get("logtoconsole", logging.INFO)
 
-        self.logger = kwargs.get("logger", None)
-        if self.logger is None and __name__ in logging.Logger.manager.loggerDict:
+        if kwargs.get("logger", None) is None and __name__ in logging.Logger.manager.loggerDict:
             #Assume we need to make our own logger with NO preexisting handlers
             try:
                 _tmplogdict = logging.Logger.manager.loggerDict[__name__]
@@ -77,11 +76,6 @@ class Simulation():
                 """Assumes that this is the first one"""
                 pass
         self.logger = logging.getLogger(__name__)
-        if logtofile is not None:
-            hdlr = logging.FileHandler(logtofile)
-            hdlr.setFormatter(logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
-            hdlr.setLevel(logging.INFO)
-            self.logger.addHandler(hdlr)
         if logtoconsole is not None and not self.logger.root.handlers:
             #i.e. if logging to console and no handlers enabled
             ch = logging.StreamHandler()
@@ -90,24 +84,29 @@ class Simulation():
                 logging.Formatter('%(name)s - %(levelname)s - %(message)s')
             )
             self.logger.addHandler(ch)
+            self.logger.debug("Launched Console Logger (%s)"%log_level_lookup(ch.level))
+        if logtofile is not None:
+            hdlr = logging.FileHandler(logtofile)
+            hdlr.setFormatter(logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
+            hdlr.setLevel(logging.DEBUG)
+            self.logger.addHandler(hdlr)
+            self.logger.debug("Launched File Logger (%s)"%logtofile)
 
         self.config_file = kwargs.get("config_file", None)
         self.config = kwargs.get("config", None)
         if self.config_file is None and self.config is None:
-            self.logger.info("creating instance from default")
+            self.logger.debug("creating instance from default")
             self.config = validateConfig(None)
             self.config = self.generateConfig(self.config)
         elif self.config_file is None and self.config is not None:
-            self.logger.info("using given config")
-            config = self.validateConfig(self.config, final_check=True)
+            self.logger.debug("using given config")
+            config = validateConfig(self.config, final_check=True)
             config['Node']['Nodes'].pop('__default__')
             self.config = dotdict(config.dict())
         else:
             self.logger.info("creating instance from %s" % self.config_file)
             self.config = validateConfig(self.config_file)
             self.config = self.generateConfig(self.config)
-        if "__default__" in self.config.Node.Nodes.keys():
-            raise RuntimeError("Dun fucked up: __default__ node detected")
         if "__default__" in self.config.Node.Nodes.keys():
             raise RuntimeError("Dun fucked up: __default__ node detected")
 
@@ -174,6 +173,7 @@ class Simulation():
             self.logger.info("Finished Simulation at %s" % Sim.now())
         except RuntimeError as err:
             self.logger.exception("Simulation crashed at %s" % Sim.now())
+            raise
         return Sim.now()
 
     def inner_join(self):
@@ -385,10 +385,10 @@ class Simulation():
             )
             node_list.append(new_node)
 
-        # TODO Fleet implementation
-
-
-        return node_list
+        if len(node_list)>0:
+            return node_list
+        else:
+            raise ConfigError("Node Generation failed: Zero nodes with config %s"%str(self.config))
 
     def vectorGen(self, node_name, node_config):
         """

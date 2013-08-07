@@ -22,6 +22,7 @@ from multiprocessing import Process, JoinableQueue, cpu_count
 from multiprocessing.process import current_process
 
 from aietes import Simulation
+from aietes.Tools import try_x_times
 
 
 def sim_mask(kwargs, pp_defaults):
@@ -40,7 +41,10 @@ def consumer(w_queue, r_queue):
     while True:
         try:
             uuid, simargs, postargs = w_queue.get()
-            sim_results = sim_mask(simargs, postargs)
+            protected_run = try_x_times(2, RuntimeError,
+                                        RuntimeError("Attempted two runs, both failed"),
+                                        sim_mask)
+            sim_results = protected_run(simargs, postargs)
             r_queue.put((uuid, sim_results))
             w_queue.task_done()
             print "Done %s" % uuid

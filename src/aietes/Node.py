@@ -40,7 +40,7 @@ class Node(Sim.Process):
         self.simulation = simulation
         self.config = node_config
         self.mass = 10  # kg modeling remus 100
-        self.mass = 5   # fudge cus I'm bricking it
+        self.mass = 5   # fudge cus I'm bricking it #FIXME
 
         # Positions Initialised to None to highlight mistakes; as Any position could be a bad position
         self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
@@ -85,7 +85,7 @@ class Node(Sim.Process):
         self.app = app_mod(self, node_config['Application'], layercake=self.layercake)
 
         #
-        # Propultion Capabilities
+        # Propulsion Capabilities
         #
         if len(self.config['cruising_speed']) == 1:
             # cruising speed is independent of direction
@@ -136,6 +136,7 @@ class Node(Sim.Process):
         """
         Fired on Sim Start
         """
+        self.logger.debug("Initialised Node Lifecycle")
         Sim.activate(self, self.lifecycle())
         self.app.activate()
         if self.app.layercake:
@@ -270,7 +271,6 @@ class Node(Sim.Process):
         Called to update internal awareness and motion:
             THESE CALLS ARE NOT GUARANTEED TO BE ALIGNED ACROSS NODES
         """
-        self.logger.debug("Initialised Node Lifecycle")
         while True:
             #
             # Update Node State

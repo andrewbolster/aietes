@@ -25,6 +25,8 @@ import numpy as np
 from aietes.Tools import Sim, distance, mag
 from aietes.Tools.ProgressBar import ProgressBar
 
+#Local Debug
+debug = False
 
 class Fleet(Sim.Process):
     """
@@ -33,7 +35,7 @@ class Fleet(Sim.Process):
 
     def __init__(self, nodes, simulation, *args, **kwargs):
         self.logger = kwargs.get("logger", simulation.logger.getChild(__name__))
-        self.logger.info("creating instance")
+        self.logger.info("creating Fleet instance with %d nodes"%len(nodes))
         Sim.Process.__init__(self, name="Fleet")
         self.nodes = nodes
         self.environment = simulation.environment
@@ -41,9 +43,9 @@ class Fleet(Sim.Process):
         self.waiting = False
 
     def activate(self):
-        Sim.activate(self, self.lifecycle())
         for node in self.nodes:
             node.activate()
+        Sim.activate(self, self.lifecycle())
 
     def lifecycle(self):
         def allPassive():
@@ -60,13 +62,14 @@ class Fleet(Sim.Process):
                 progress_bar = ProgressBar('green', width=20, block='▣', empty='□')
             except TypeError as exp:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-
                 self.logger.info("Tried to start progress bar but failed with %s" % traceback.format_exc())
+                progress_bar = None
         else:
             progress_bar = None
-        self.logger.info("Initialised Node Lifecycle")
+        self.logger.info("Initialised Fleet Lifecycle")
         while True:
             self.simulation.waiting = True
+            if debug: self.logger.debug("Yield for allPassive")
             yield Sim.waituntil, self, allPassive
             if self.simulation.progress_display:
                 percent_now = ((100 * Sim.now()) / self.simulation.duration_intervals)
@@ -75,6 +78,7 @@ class Fleet(Sim.Process):
                 if not __debug__ and percent_now % 1 == 0 and progress_bar is not None:
                     progress_bar.render(int(percent_now),
                                         'step %s\nProcessing %s...' % (percent_now, self.simulation.title))
+            if debug: self.logger.debug("Yield for not_waiting")
             yield Sim.waituntil, self, not_waiting
             for node in self.nodes:
                 Sim.reactivate(node)

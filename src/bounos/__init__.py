@@ -38,6 +38,8 @@ from DataPackage import DataPackage
 
 from aietes.Tools import list_functions
 
+from pprint import pformat
+
 font = {'family': 'normal',
         'weight': 'normal',
         'size': 10}
@@ -268,14 +270,17 @@ def run_detection_fusion(data, args=None):
     nameset = set(namelist)
     per_run_names = len(namelist) / len(data) != len(nameset)
 
-    for i, (run, d) in enumerate(data.iteritems()):
-        print("One: %d" % i)
+    for i, (run, d) in enumerate(sorted(data.items())):
+        print("Run %d: %s" % (i, d.title))
         deviation_fusion, deviation_windowed = Analyses.Combined_Detection_Rank(d,
                                                                                 _metrics,
                                                                                 stddev_frac=2)
+        print(pformat(
+            Analyses.behaviour_identification(deviation_fusion, deviation_windowed, _metrics,
+                                          names=d.names,
+                                          verbose=False)
+        ))
         for j, _metric in enumerate(_metrics):
-            print("One: %d:%d" % (i, j))
-
             ax = fig.add_subplot(gs[j, i],
                                  sharex=axes[0][0] if i > 0 or j > 0 else None,
                                  sharey=axes[i - 1][j] if i > 0 else None)
@@ -308,7 +313,7 @@ def run_detection_fusion(data, args=None):
                 elif i == 0:
                     ax.legend(d.names, "lower center",
                               bbox_to_anchor=(0, 0, 1, 1),
-                              box_transform=fig.transFigure,
+                              bbox_transform=fig.transFigure,
                               ncol=len(d.names))
                 else:
                     pass

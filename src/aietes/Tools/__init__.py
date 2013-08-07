@@ -17,6 +17,7 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import math
+import functools
 import os
 import random
 import logging
@@ -511,7 +512,16 @@ def unext(filename):
 def kwarger(**kwargs):
     return kwargs
 
-def validateConfig(self, config=None, final_check=False):
+def log_level_lookup(log_level):
+    if isinstance(log_level, str):
+        return LOGLEVELS[log_level]
+    else:
+        #assume numeric/loglevel type, reverse lookup
+        for k,v in LOGLEVELS.iteritems():
+            if v == log_level:
+                return k
+
+def validateConfig(config=None, final_check=False):
     """
     Generate valid configuration information by interpolating a given config
     file with the defaults
@@ -528,7 +538,7 @@ def validateConfig(self, config=None, final_check=False):
     if not isinstance(config, ConfigObj):
         config = ConfigObj(config, configspec=_config_spec, stringify=True, interpolation=not final_check)
     else:
-        self.logger.info("Skipping configobj for final validation")
+        raise ConfigError("Skipping configobj for final validation")
     config_status = config.validate(validate.Validator(), copy=not final_check)
 
     if not config_status:
@@ -536,3 +546,16 @@ def validateConfig(self, config=None, final_check=False):
         raise ConfigError("Configspec doesn't match given input structure: %s" % config_status)
 
     return config
+
+def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
+    @functools.wraps(fn) #keeps name and docstring of old function
+    def new_fn(*args, **kwargs):
+        for i in xrange(x):
+            try:
+                return fn(*args, **kwargs)
+            except exceptions_to_catch as e:
+                print "Failed %d/%d: %s" % (i, x, e)
+                pass
+        raise exception_to_raise
+
+    return new_fn

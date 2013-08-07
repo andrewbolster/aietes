@@ -22,6 +22,8 @@ import numpy as np
 
 from DataPackage import DataPackage
 
+from pprint import pformat
+
 
 def Find_Convergence(data, *args, **kwargs):
     """
@@ -90,8 +92,6 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
     metric = metric_class()
     if metric is None:
         raise ValueError("No Metric! Cannot Contine")
-    else:
-        print("Performing Misbehaviour Detection with %s" % (metric.__class__.__name__))
     metric.update(data)
     # IND has the highlight data to be the average of internode distances
     #TODO implement scrolling stddev calc to adjust smearing value (5)
@@ -240,9 +240,39 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
             axis=0)
         deviance_windowed_accumulator[t] = deviance_lag_lead_accumulator[t] - (t - head)
 
-    detection_sums = np.sum(deviance_accumulator, axis=1) - tmax
-    detection_subtot = np.argmax(detection_sums, axis=1)
-    detection_tot = np.argmax(np.sum(detection_sums, axis=0))
-    print(detection_subtot)
-    print(detection_tot)
     return deviance_accumulator, deviance_windowed_accumulator
+
+
+def behaviour_identification(deviance, trust, metrics, names=None, verbose=False):
+    """
+    Attempts to detect and guess malicious/'broken' behaviour
+    Deviance is unitless, in a shape [metrics,t,nodes]
+    """
+    detection_sums = np.sum(deviance, axis=1) - deviance.shape[1] #Removes the 1.0 initial bias
+    detection_totals = np.sum(detection_sums, axis=1)
+    detection_subtot = np.argmax(detection_sums, axis=1)
+    detection_max = np.argmax(np.sum(detection_sums, axis=0))
+    trust_average = np.average(trust, axis=0)
+    trust_stdev = np.std(trust_average)
+    prime_distrusted_node = np.argmax(trust_average)
+    if trust_stdev > 100:
+        if verbose:
+            print("Untrustworthy behaviour detected")
+            if names is None:
+                print("\n".join(["%s:%d(%f)"%(metrics[i].label, m_subtot, detection_totals[i] ) for i,m_subtot in enumerate(detection_subtot)]))
+                print("Prime Suspect:%s:%s"%(prime_distrusted_node, str(trust_average[prime_distrusted_node])))
+            else:
+                print("\n".join(["%s:%s(%f)"%(metrics[i].label, names[m_subtot], detection_totals[i]) for i,m_subtot in enumerate(detection_subtot)]))
+                print("Prime Suspect:%s:%s"%(names[prime_distrusted_node], str(trust_average[prime_distrusted_node])))
+    result = {"suspect": prime_distrusted_node,
+              "suspect_name": names[prime_distrusted_node] if names is not None else None,
+              "suspect_distruct": trust_average[prime_distrusted_node],
+              "suspect_confidence": (trust_average[prime_distrusted_node]-np.average(trust_average))/np.std(trust_average),
+              "trust_stdev": trust_stdev,
+              "trust_average": trust_average,
+              "detection_totals": detection_totals}
+    return result
+
+
+
+
