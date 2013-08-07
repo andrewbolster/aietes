@@ -180,7 +180,10 @@ class EphyraController():
         return self.model.contributions[np.argmax(len(self.model.contributions[:, 0])), 0].keys()
 
     def get_achievements(self):
-        return self.model.achievements.nonzero()[1]
+        if self.model.achievements is not None:
+            return self.model.achievements.nonzero()[1]
+        else:
+            return None
 
 
     def get_fleet_average_pos(self, time):

@@ -27,29 +27,16 @@ from configobj import ConfigObj
 import validate
 import numpy as np
 from datetime import datetime
-import functools
+from pprint import pformat
+from collections import namedtuple
 
-from aietes import _ROOT, Simulation  # Must use the aietes path to get the config files
+from aietes import Simulation  # Must use the aietes path to get the config files
 import aietes.Threaded as ParSim
-from aietes.Tools import nameGeneration, updateDict, kwarger
-from bounos import DataPackage
+from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times
+from bounos import DataPackage, Analyses, _metrics
 
 
 _config_spec = '%s/configs/default.conf' % _ROOT
-
-
-def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
-    @functools.wraps(fn) #keeps name and docstring of old function
-    def new_fn(*args, **kwargs):
-        for i in xrange(x):
-            try:
-                return fn(*args, **kwargs)
-            except exceptions_to_catch as e:
-                print "Failed %d/%d: %s" % (i, x, e)
-                pass
-        raise exception_to_raise
-
-    return new_fn
 
 
 def getConfig(source_config_file=None, config_spec=_config_spec):
@@ -134,11 +121,10 @@ class Scenario(object):
             runcount = self._default_run_count
 
         pp_defaults = {'outputFile': self.title, 'dataFile': True}
-        self.commit()
         self.datarun = [None for _ in range(runcount)]
         for run in range(runcount):
             if runcount > 1:
-                pp_defaults.update({'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
+                pp_defaults.update({'outputFile': "%s-%d" % (self.title, run)})
             sys.stdout.write("%s," % pp_defaults['outputFile'])
             sys.stdout.flush()
             try:
@@ -160,7 +146,7 @@ class Scenario(object):
                 raise
         print("done %d runs for %d each" % (runcount, sim_time))
 
-    def run_parralel(self, runcount=None, runtime=None, *args, **kwargs):
+    def run_parallel(self, runcount=None, runtime=None, *args, **kwargs):
         """
         Offload this to AIETES multiprocessing queue
 
@@ -176,7 +162,6 @@ class Scenario(object):
             raise RuntimeError("Attempted parrallel without booting, breaking")
 
         pp_defaults = {'outputFile': self.title, 'dataFile': True}
-        self.commit()
         self.datarun = [None for _ in range(runcount)]
         uuids = [get_uuid() for _ in range(runcount)]
         for run in range(runcount):
@@ -216,7 +201,7 @@ class Scenario(object):
         assert all(r is not None for r in self.datarun), "All dataruns should be completed by now"
         print "Got responses"
 
-        print("done %d runs in parralel" % (runcount))
+        print("done %d runs in parallel" % (runcount))
 
 
     def generateRunStats(self, sim_run_dataset=None):
@@ -417,7 +402,7 @@ class Scenario(object):
 
 
 class ExperimentManager(object):
-    def __init__(self, node_count=4, title=None, parralel=False, *args, **kwargs):
+    def __init__(self, node_count=4, title=None, parallel=False, *args, **kwargs):
         """
         The Experiment Manager Object deals with multiple scenarios build around a single or
             multiple experimental input. (Number of nodes, ratio of behaviours, etc)
@@ -435,15 +420,15 @@ class ExperimentManager(object):
         else:
             self.title = title
         self._default_scenario.setNodeCount(self.node_count)
-        self.parralel = parralel
-        if self.parralel:
+        self.parallel = parallel
+        if self.parallel:
             ParSim.boot()
 
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
-        if self.parralel:
+        if self.parallel:
             ParSim.kill()
 
     def updateDefaultBehaviour(self, behaviour):
@@ -474,12 +459,16 @@ class ExperimentManager(object):
         try:
             os.chdir(self.exp_path)
             for scenario in self.scenarios:
-                if self.parralel:
-                    scenario.run_parralel(**kwargs)
+                scenario.commit()
+                if self.parallel:
+                    scenario.run_parallel(**kwargs)
                 else:
                     protected_runs = try_x_times(2, RuntimeError, RuntimeError("Attempted two runs, both failed"),
                                                  scenario.run)
                     protected_runs(**kwargs)
+        except ConfigError as e:
+            print("Caught Configuration error %s on scenario config \n%s"%(str(e),pformat(scenario.config)))
+            raise
         finally:
             os.chdir(self.orig_path)
             print("Experimental results stored in %s" % self.exp_path)
@@ -597,6 +586,7 @@ class ExperimentManager(object):
                 s.addDefaultNode(count=invcount)
             self.scenarios.append(s)
 
+
     @staticmethod
     def printStats(exp):
         """
@@ -608,6 +598,10 @@ class ExperimentManager(object):
             Max Achievement Count,
             Percentage completion rate (how much of the fleet got the top count)
         """
+        def printAnalysis(d):
+            deviation, trust = Analyses.Combined_Detection_Rank(d, _metrics, stddev_frac=2)
+            result_dict = Analyses.behaviour_identification(deviation, trust, _metrics, names=d.names)
+            return result_dict
 
         def avg_of_dict(dict_list, keys):
             """
@@ -628,12 +622,20 @@ class ExperimentManager(object):
                 sum += d[keys[-1]]
             return float(sum) / count
 
+        _boolfields = ("TrueNeg","TruePos","FalseNeg","FalsePos")
+        BoolStat = namedtuple("BoolStat", _boolfields)
+        ident_stats = []
         print("Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\t")
         for s in exp.scenarios:
             stats = s.generateRunStats()
-            print("%s,%s" % (s.title, [(bev, nodelist)
+            suspect_behaviour_list = [(bev, nodelist)
                                        for bev, nodelist in s.getBehaviourDict().iteritems()
-                                       if '__default__' not in nodelist]))
+                                       if '__default__' not in nodelist]
+            suspects = []
+            for _, nodelist in suspect_behaviour_list:
+                for node in nodelist:
+                        suspects.append(node)
+            print("%s,%s" % (s.title, suspects))
             print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
                   % (avg_of_dict(stats, ['motion', 'fleet_distance']),
                      avg_of_dict(stats, ['motion', 'fleet_efficiency']),
@@ -643,10 +645,31 @@ class ExperimentManager(object):
                      avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0))
 
             for i, r in enumerate(stats):
-                print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)" % (
+                analysis = printAnalysis(s.datarun[i])
+                correct_detection = analysis['suspect_name'] in suspects
+                confident = analysis['trust_stdev'] > 100
+                valid_negative = not suspects and not confident
+                valid_positive = correct_detection and confident
+                false_positive = not correct_detection and confident
+                false_negative = bool(suspects) and not confident
+                boolstat = BoolStat(valid_negative,valid_positive,false_negative,false_positive)
+                bool_state = [f for f in boolstat._fields if getattr(boolstat, f)]
+                ident_stats.append(boolstat)
+                print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%) %s, %s, %.2f, %.2f, %s" % (
                     i,
                     r['motion']['fleet_distance'], r['motion']['fleet_efficiency'],
                     r['motion']['std_of_INDA'], r['motion']['std_of_INDD'],
-                    r['achievements']['max_ach'], r['achievements']['avg_completion'] * 100.0
+                    r['achievements']['max_ach'], r['achievements']['avg_completion'] * 100.0,
+                    "%s(%.2f)"%(bool_state, analysis['trust_stdev']),
+                    analysis['suspect_name']+" %d"%analysis["suspect"],
+                    analysis['suspect_distruct'],
+                    analysis['suspect_confidence'],
+                    str(analysis["trust_average"])
                 )
                 )
+        boolsum={}
+        for field in BoolStat._fields:
+            boolsum[field]=sum([getattr(record, field) for record in ident_stats])
+        print(pformat(boolsum))
+
+

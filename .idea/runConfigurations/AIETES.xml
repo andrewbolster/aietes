@@ -1,18 +1,18 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="AIETES Release" type="PythonConfigurationType" factoryName="Python" singleton="true">
+  <configuration default="false" name="AIETES" type="PythonConfigurationType" factoryName="Python" singleton="true">
     <option name="INTERPRETER_OPTIONS" value="-O" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="" />
-    <option name="WORKING_DIRECTORY" value="/dev/shm/" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/results" />
     <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <module name="aietes" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
-    <option name="SCRIPT_NAME" value="$USER_HOME$/.local/bin/aietes" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/aietes/__init__.py" />
     <option name="PARAMETERS" value="-odq" />
     <RunnerSettings RunnerId="PyDebugRunner" />
     <RunnerSettings RunnerId="PythonRunner" />

@@ -17,6 +17,8 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import math
+import functools
+import os
 import random
 import logging
 from inspect import getmembers, isfunction
@@ -27,7 +29,8 @@ from datetime import datetime as dt
 
 from SimPy import SimulationStep as Sim
 
-
+from configobj import ConfigObj
+import validate
 np.seterr(all='raise')
 # from os import urandom as randomstr #Provides unicode random String
 
@@ -35,6 +38,9 @@ np.seterr(all='raise')
 debug = False
 FUDGED = True
 
+_ROOT = os.path.abspath(os.path.dirname(__file__)+'/../')
+
+_config_spec = '%s/configs/default.conf' % _ROOT
 
 class ConfigError(Exception):
     """
@@ -499,6 +505,57 @@ def updateDict(d, keys, value, safe=False):
 def list_functions(module):
     return [o for o in getmembers(module) if isfunction(o[1])]
 
+def unext(filename):
+     return os.path.splitext(os.path.basename(filename))[0]
+
 
 def kwarger(**kwargs):
     return kwargs
+
+def log_level_lookup(log_level):
+    if isinstance(log_level, str):
+        return LOGLEVELS[log_level]
+    else:
+        #assume numeric/loglevel type, reverse lookup
+        for k,v in LOGLEVELS.iteritems():
+            if v == log_level:
+                return k
+
+def validateConfig(config=None, final_check=False):
+    """
+    Generate valid configuration information by interpolating a given config
+    file with the defaults
+
+    NOTE: This does not verify if any of the functionality requested in the config is THERE
+    Only that the config 'makes sense' as requested.
+
+    I.e. does not check if particular modular behaviour exists or not.
+    """
+
+    #
+    # GENERIC CONFIG ACQUISITION
+    #
+    if not isinstance(config, ConfigObj):
+        config = ConfigObj(config, configspec=_config_spec, stringify=True, interpolation=not final_check)
+    else:
+        raise ConfigError("Skipping configobj for final validation")
+    config_status = config.validate(validate.Validator(), copy=not final_check)
+
+    if not config_status:
+        # If config_spec doesn't match the input, bail
+        raise ConfigError("Configspec doesn't match given input structure: %s" % config_status)
+
+    return config
+
+def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
+    @functools.wraps(fn) #keeps name and docstring of old function
+    def new_fn(*args, **kwargs):
+        for i in xrange(x):
+            try:
+                return fn(*args, **kwargs)
+            except exceptions_to_catch as e:
+                print "Failed %d/%d: %s" % (i, x, e)
+                pass
+        raise exception_to_raise
+
+    return new_fn

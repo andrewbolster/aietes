@@ -24,8 +24,8 @@ from ast import literal_eval
 
 import numpy as np
 
-from aietes.Tools import mag, add_ndarray_to_set
 
+from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig
 from configobj import ConfigObj
 
 
@@ -48,7 +48,7 @@ class DataPackage(object):
 
     version = 1.0
 
-    def _handle_mapping_exceptions_(self, source, sink, exp):
+    def _handle_mapping_exceptions_(self, source, sink, source_filename, exp):
         """
         Attempts to extract DataPackage data from a source dict
         """
@@ -56,8 +56,17 @@ class DataPackage(object):
         if sink is "title":
             # If simulation title not explicitly given, use the filename -npz
             self.title = ""
+        elif sink is "achievements":
+            # If using pre-achievements datapackage, turn achievement stats off by setting achievements to none
+            self.achievements = None
+        elif sink is "config":
+            # If config file is not listed, look for one in the same dir with the same name
+            potential_config_file = unext(source_filename)+".conf"
+            logging.error("Potential Config %s"%potential_config_file)
+            self.config = validateConfig(potential_config_file)
+
         else:
-            self.logging.error("Can't find %s in source" % source)
+            logging.error("Can't find %s in source" % source)
             raise exp
 
     def __init__(self, source=None, *args, **kwargs):
@@ -71,7 +80,8 @@ class DataPackage(object):
                     try:
                         self.__dict__[sink_attrib] = source_dataset[source_attrib]
                     except KeyError as exp:
-                        self._handle_mapping_exceptions_(sink_attrib, source_attrib, exp)
+                        logging.info("Caught exception on file %s"%source)
+                        self._handle_mapping_exceptions_(sink_attrib, source_attrib, source, exp)
             except KeyError:
                 raise
         elif all(x is not None for x in [kwargs.get(attr) for attr in self._attrib_map.keys()]):
@@ -149,19 +159,13 @@ class DataPackage(object):
                     behaviours[n_bev] = [name]
         return behaviours
 
-    def package_statistics(self):
+    def achievement_statistics(self):
         """
-        Generate General Package Statistics, i.e. full simulation statistics
-        Returns:
-            A dict containing:
-                'motion':{}
+        Generate Achievements Statistics
                 'achievements':{
                     'pernode':{nodename:{time:tuple(achievement positio)}
                     '}
         """
-
-        stats = {}
-        """Achievement Statistics"""
         ach_stat = {}
         ach_stat = {'pernode': {}}
 
@@ -201,7 +205,21 @@ class DataPackage(object):
         ach_stat['avg_completion'] = float(tot_achs) / len(ach_stat['pernode'])
         ach_stat['percent_completion'] = float(len(top_guns)) / len(ach_stat['pernode'])
 
-        stats['achievements'] = ach_stat
+        return ach_stat
+
+    def package_statistics(self):
+        """
+        Generate General Package Statistics, i.e. full simulation statistics
+        Returns:
+            A dict containing:
+                'motion':{}
+
+        """
+
+        stats = {}
+        """Achievement Statistics"""
+        if self.achievements is not None:
+            stats['achievements'] = self.achievement_statistics()
 
         """Volume Statistics"""
         #TODO The maths for this is insane....

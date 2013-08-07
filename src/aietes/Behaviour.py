@@ -26,7 +26,7 @@ from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, li
 
 class Behaviour(object):
     """
-    Generic Represnetation of a Nodes behavioural characteristics
+    Generic Representation of a Nodes behavioural characteristics
     #TODO should be a state machine?
     """
 
@@ -194,6 +194,7 @@ class Behaviour(object):
         return response
 
 
+
 class Flock(Behaviour):
     """
     Flocking Behaviour as modelled by three rules:
@@ -207,7 +208,7 @@ class Flock(Behaviour):
         self.n_nearest_neighbours = listfix(int, self.bev_config.nearest_neighbours)
         self.neighbourhood_max_rad = listfix(int, self.bev_config.neighbourhood_max_rad)
         self.neighbour_min_rad = listfix(int, self.bev_config.neighbourhood_min_rad)
-        self.clumping_factor = listfix(float, self.bev_config.clumping_factor)
+        self.clumping_factor = self.bev_config.clumping_factor
         self.repulsive_factor = listfix(float, self.bev_config.repulsive_factor)
         self.schooling_factor = listfix(float, self.bev_config.schooling_factor)
         self.collision_avoidance_d = listfix(float, self.bev_config.collision_avoidance_d)
