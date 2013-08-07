@@ -463,7 +463,7 @@ class ExperimentManager(object):
                 if self.parallel:
                     scenario.run_parallel(**kwargs)
                 else:
-                    protected_runs = try_x_times(2, RuntimeError, RuntimeError("Attempted two runs, both failed"),
+                    protected_runs = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
                                                  scenario.run)
 
                     protected_runs = try_forever(RuntimeError, scenario.run)
