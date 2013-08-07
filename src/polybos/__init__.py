@@ -136,6 +136,9 @@ class Scenario(object):
                                  progress_display=False)
                 prep_stats = sim.prepare(sim_time=runtime)
                 sim_time = sim.simulate()
+                protected_run = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
+                                             sim.simulate)
+                sim_time = protected_run()
                 return_dict = sim.postProcess(**pp_defaults)
                 self.datarun[run] = sim.generateDataPackage()
                 print("%s(%s):%f%%"
@@ -463,8 +466,6 @@ class ExperimentManager(object):
                 if self.parallel:
                     scenario.run_parallel(**kwargs)
                 else:
-                    #protected_runs = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
-                    #                             scenario.run)
 
                     protected_runs = try_forever(RuntimeError, scenario.run)
                     protected_runs(**kwargs)
