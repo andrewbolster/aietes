@@ -7,14 +7,15 @@ from bounos import Analyses, _metrics
 def set():
     exp = EXP(node_count=8,
               title="Malicious Behaviour Trust Comparison",
+             )
     exp.addVariableAttackerBehaviourSuite(["Waypoint", "Shadow", "SlowCoach"], n_attackers=1)
     return exp
 
 
 def run(exp):
     exp.run(title="8-bev-mal",
-            runcount=2,
-            runtime=1000)
+            runcount=50,
+            runtime=2000)
     return exp
 
 
