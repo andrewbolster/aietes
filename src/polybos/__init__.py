@@ -32,7 +32,7 @@ from collections import namedtuple
 
 from aietes import Simulation  # Must use the aietes path to get the config files
 import aietes.Threaded as ParSim
-from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times
+from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, try_forever
 from bounos import DataPackage, Analyses, _metrics
 
 
@@ -465,6 +465,8 @@ class ExperimentManager(object):
                 else:
                     protected_runs = try_x_times(2, RuntimeError, RuntimeError("Attempted two runs, both failed"),
                                                  scenario.run)
+
+                    protected_runs = try_forever(RuntimeError, scenario.run)
                     protected_runs(**kwargs)
         except ConfigError as e:
             print("Caught Configuration error %s on scenario config \n%s"%(str(e),pformat(scenario.config)))

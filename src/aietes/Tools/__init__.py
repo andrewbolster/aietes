@@ -559,3 +559,16 @@ def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
         raise exception_to_raise
 
     return new_fn
+def try_forever(exceptions_to_catch, fn):
+    count=0
+    @functools.wraps(fn) #keeps name and docstring of old function
+    def new_fn(*args, **kwargs):
+        while True:
+            try:
+                return fn(*args, **kwargs)
+            except exceptions_to_catch as e:
+                count+=1
+                print "Failed %d: %s" % (count, e)
+                pass
+
+    return new_fn
