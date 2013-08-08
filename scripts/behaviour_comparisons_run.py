@@ -3,10 +3,19 @@ __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 from bounos import Analyses, _metrics
 
+from contextlib import contextmanager
+import sys
+@contextmanager
+def redirected(stdout):
+    saved_stdout = sys.stdout
+    sys.stdout = open(stdout, 'a')
+    yield
+    sys.stdout = saved_stdout
 
 def set():
     exp = EXP(node_count=8,
               title="Malicious Behaviour Trust Comparison",
+              parallel=False
              )
     exp.addVariableAttackerBehaviourSuite(["Waypoint", "Shadow", "SlowCoach"], n_attackers=1)
     return exp
@@ -14,7 +23,7 @@ def set():
 
 def run(exp):
     exp.run(title="8-bev-mal",
-            runcount=50,
+            runcount=64,
             runtime=2000)
     return exp
 
@@ -25,4 +34,5 @@ def set_run():
 if __name__ == "__main__":
     exp = set()
     exp = run(exp)
-    EXP.printStats(exp)
+    with redirected(stdout="%s.log"%exp.title):
+        EXP.printStats(exp)

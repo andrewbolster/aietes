@@ -135,7 +135,6 @@ class Scenario(object):
                                  logtoconsole=logging.ERROR,
                                  progress_display=False)
                 prep_stats = sim.prepare(sim_time=runtime)
-                sim_time = sim.simulate()
                 protected_run = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
                                              sim.simulate)
                 sim_time = protected_run()
@@ -466,14 +465,14 @@ class ExperimentManager(object):
                 if self.parallel:
                     scenario.run_parallel(**kwargs)
                 else:
+                    scenario.run(**kwargs)
 
-                    protected_runs = try_forever(RuntimeError, scenario.run)
-                    protected_runs(**kwargs)
         except ConfigError as e:
             print("Caught Configuration error %s on scenario config \n%s"%(str(e),pformat(scenario.config)))
             raise
         finally:
             os.chdir(self.orig_path)
+            if self.parallel: ParSim.kill()
             print("Experimental results stored in %s" % self.exp_path)
 
     def generateSimulationStats(self):
@@ -601,6 +600,7 @@ class ExperimentManager(object):
             Max Achievement Count,
             Percentage completion rate (how much of the fleet got the top count)
         """
+
         def printAnalysis(d):
             deviation, trust = Analyses.Combined_Detection_Rank(d, _metrics, stddev_frac=2)
             result_dict = Analyses.behaviour_identification(deviation, trust, _metrics, names=d.names)
@@ -625,11 +625,10 @@ class ExperimentManager(object):
                 sum += d[keys[-1]]
             return float(sum) / count
 
-        _boolfields = ("TrueNeg","TruePos","FalseNeg","FalsePos")
-        BoolStat = namedtuple("BoolStat", _boolfields)
-        ident_stats = []
-        print("Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\t")
+        correctness_stats = {}
+        print("Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\tCorrect/Confident\tSuspect ")
         for s in exp.scenarios:
+            correctness_stats[s.title]=[]
             stats = s.generateRunStats()
             suspect_behaviour_list = [(bev, nodelist)
                                        for bev, nodelist in s.getBehaviourDict().iteritems()
@@ -649,30 +648,38 @@ class ExperimentManager(object):
 
             for i, r in enumerate(stats):
                 analysis = printAnalysis(s.datarun[i])
-                correct_detection = analysis['suspect_name'] in suspects
                 confident = analysis['trust_stdev'] > 100
-                valid_negative = not suspects and not confident
-                valid_positive = correct_detection and confident
-                false_positive = not correct_detection and confident
-                false_negative = bool(suspects) and not confident
-                boolstat = BoolStat(valid_negative,valid_positive,false_negative,false_positive)
-                bool_state = [f for f in boolstat._fields if getattr(boolstat, f)]
-                ident_stats.append(boolstat)
+                correct_detection = (not bool(suspects) and not confident) or analysis['suspect_name'] in suspects
+                correctness_stats[s.title].append((correct_detection, confident))
                 print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%) %s, %s, %.2f, %.2f, %s" % (
                     i,
                     r['motion']['fleet_distance'], r['motion']['fleet_efficiency'],
                     r['motion']['std_of_INDA'], r['motion']['std_of_INDD'],
                     r['achievements']['max_ach'], r['achievements']['avg_completion'] * 100.0,
-                    "%s(%.2f)"%(bool_state, analysis['trust_stdev']),
+                    "%s(%.2f)"%(str((correct_detection,confident)), analysis['trust_stdev']),
                     analysis['suspect_name']+" %d"%analysis["suspect"],
                     analysis['suspect_distruct'],
                     analysis['suspect_confidence'],
                     str(analysis["trust_average"])
                 )
                 )
-        boolsum={}
-        for field in BoolStat._fields:
-            boolsum[field]=sum([getattr(record, field) for record in ident_stats])
-        print(pformat(boolsum))
+
+        # Print out Correctness stats per scenario
+        print("Scenario\t\t++\t+-\t--\t-+\t\t (Correct,Confident)")
+        cct=cnt=nct=nnt=0
+        for run, stats in sorted(correctness_stats.items()):
+            cc=sum([correct and confident for (correct,confident) in stats])
+            cn=sum([correct and not confident for (correct,confident) in stats])
+            nc=sum([not correct and confident for (correct,confident) in stats])
+            nn=sum([not correct and not confident for (correct,confident) in stats])
+            print("%s\t%d\t%d\t%d\t%d"%(run,cc,cn,nc,nn))
+            cct+=cc
+            cnt+=cn
+            nct+=nc
+            nnt+=nn
+
+
+        print("Subtot\t\t\t%d\t%d\t%d\t%d"%(cct,cnt,nct,nnt))
+        print("Total\t\t\t%d\t\t\t%d"%(cct+cnt,nct+nnt))
 
 

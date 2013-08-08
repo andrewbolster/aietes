@@ -555,7 +555,6 @@ def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
                 return fn(*args, **kwargs)
             except exceptions_to_catch as e:
                 print "Failed %d/%d: %s" % (i, x, e)
-                pass
         raise exception_to_raise
 
     return new_fn
@@ -569,6 +568,5 @@ def try_forever(exceptions_to_catch, fn):
             except exceptions_to_catch as e:
                 count+=1
                 print "Failed %d: %s" % (count, e)
-                pass
 
     return new_fn

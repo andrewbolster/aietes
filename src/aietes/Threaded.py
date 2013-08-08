@@ -41,7 +41,7 @@ def consumer(w_queue, r_queue):
     while True:
         try:
             uuid, simargs, postargs = w_queue.get()
-            protected_run = try_x_times(2, RuntimeError,
+            protected_run = try_x_times(5, RuntimeError,
                                         RuntimeError("Attempted two runs, both failed"),
                                         sim_mask)
             sim_results = protected_run(simargs, postargs)
@@ -49,9 +49,9 @@ def consumer(w_queue, r_queue):
             w_queue.task_done()
             print "Done %s" % uuid
         except RuntimeError as e:
+            print "Fuck %s" % uuid
             r_queue.put(uuid, e)
             w_queue.task_done()
-            print "Fuck %s" % uuid
 
         except Exception as e:
             raise
