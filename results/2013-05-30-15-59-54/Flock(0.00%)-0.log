@@ -1,6 +1,0 @@
-[2013-05-30 15:59:54,075] aietes-INFO-using given config
-[2013-05-30 15:59:54,089] aietes.aietes.Fleet-INFO-creating instance
-[2013-05-30 15:59:54,089] aietes-INFO-Initialising Simulation Flock(0.00%)-0, to run for 100.0 steps
-[2013-05-30 15:59:54,089] aietes.aietes.Fleet-INFO-Initialised Node Lifecycle
-[2013-05-30 15:59:54,414] aietes-INFO-Finished Simulation at 100.0
-[2013-05-30 15:59:54,417] aietes-INFO-Writing datafile to Flock(0.00%)(0:2).aietes

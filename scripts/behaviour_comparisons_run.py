@@ -23,7 +23,7 @@ def set():
 
 
 def run(exp):
-    exp.run(title="8-bev-mal",
+    exp.run(title="8-bev-mal-64r-2000t",
             runcount=64,
             runtime=2000,
             dataFile=True)
