@@ -770,7 +770,7 @@ class ExperimentManager(object):
             start = time.clock()
             s_paths[i] = os.path.abspath(os.path.join(self.exp_path, s.title+".anl"))
             print("Writing analysis %s to %s"%(s.title, s_paths[i]))
-            stats = [dict(printAnalysis(d).items() + d.package_statistics()) for d in s.datarun]
+            stats = [dict(printAnalysis(d).items() + d.package_statistics().items()) for d in s.datarun]
 
             pickle.dump(stats,open(s_paths[i], "wb"))
             print("Done in %f seconds"%(time.clock()-start))
