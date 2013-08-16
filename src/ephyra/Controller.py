@@ -228,6 +228,15 @@ class EphyraController():
         mags = self.model.heading_mag_range()
         return max(mags), min(mags)
 
+    def get_position_min_max(self, time):
+        """
+        Return a 3-tuple of (min,max),(min,max),(min,max) for x,y,z respectively for a given time
+        """
+        pos = self.get_fleet_positions(time)
+        mins = pos.min(axis=0)
+        maxes = pos.max(axis=0)
+        return tuple(zip(mins,maxes))
+
     def get_position_stddev_max_min(self):
         stddevs = self.model.distance_from_average_stddev_range()
         return max(stddevs), min(stddevs)

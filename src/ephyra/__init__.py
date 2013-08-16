@@ -28,6 +28,7 @@ import logging
 import argparse
 import cProfile
 import traceback
+from bounos import BounosModel as model
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -79,7 +80,6 @@ def main():
     )
     args = parser.parse_args()
 
-    from bounos import BounosModel as model
 
     if args.data_file is 'latest_aietes.npz_from_pwd':
         candidate_data_files = os.listdir(os.getcwd())

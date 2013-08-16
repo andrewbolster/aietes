@@ -200,12 +200,18 @@ class VisualNavigator(wx.Panel):
 
         # Initialise 3D Plot Lines
         (xs, ys, zs) = self.ctl.get_3D_trail()
+        names = self.ctl.get_vector_names()
         self.log.info("Got %s" % str(xs.shape))
 
         self.lines = [
-            self.plot_axes.plot(x, y, z, label=self.ctl.get_vector_names(i=i), alpha=self.trail_opacity)[0] for
+            self.plot_axes.plot(x, y, z, label=names[i], alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))]
         self.plot_axes.legend(loc="lower right")
+
+        self.labels = [
+            self.plot_axes.text(x[0],y[0],z[0], names[i][0])
+            for i,(x,y,z) in enumerate(zip(xs,ys,zs))
+        ]
 
         # Initialise Metric Views
         metrics = self.ctl.get_metrics()
@@ -233,12 +239,22 @@ class VisualNavigator(wx.Panel):
         ###
         # MAIN PLOT AREA
         ###
-        for n, line in enumerate(self.lines):
+        names = self.ctl.get_vector_names()
+        for n, (line, label) in enumerate(zip(self.lines, self.labels)):
             (xs, ys, zs) = self.ctl.get_3D_trail(node=n, time_start=self.t, length=self.trail_length)
-
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
-            line.set_label(self.ctl.get_vector_names(i=n))
+            line.set_label(names[n])
+            try:
+                label.set_position((xs[0],ys[0]))
+                label.set_3d_properties(zs[0])
+            except TypeError as err:
+                self.log.error("x:%s,y:%s,z:%s"%(xs[0],ys[0],zs[0]))
+                raise
+            except IndexError:
+                # In the case of the 'first time'. This should probably be removed in the case
+                # of any architectural changes.
+                pass
 
         ###
         # VECTOR OVERLAYS TO MAIN PLOT AREA
@@ -261,17 +277,19 @@ class VisualNavigator(wx.Panel):
         ###
         if self._fleet_zoom:
             positions = self.ctl.get_fleet_positions(self.t)
-            (lx, rx) = self.plot_axes.get_xlim3d()
-            (ly, ry) = self.plot_axes.get_ylim3d()
-            (lz, rz) = self.plot_axes.get_zlim3d()
+            #(lx, rx) = self.plot_axes.get_xlim3d()
+            #(ly, ry) = self.plot_axes.get_ylim3d()
+            #(lz, rz) = self.plot_axes.get_zlim3d()
+            (lx,rx),(ly,ry),(lz,rz) = self.ctl.get_position_min_max(self.t)
             x_width = abs(lx - rx)
             y_width = abs(ly - ry)
             z_width = abs(lz - rz)
+            width = max(x_width, y_width, z_width) * 1.1
 
             avg = np.average(positions, axis=0)
-            self.plot_axes.set_xlim3d((avg[0] - (x_width / 2), avg[0] + (x_width / 2)))
-            self.plot_axes.set_ylim3d((avg[1] - (y_width / 2), avg[1] + (y_width / 2)))
-            self.plot_axes.set_zlim3d((avg[2] - (z_width / 2), avg[2] + (z_width / 2)))
+            self.plot_axes.set_xlim3d((avg[0] - (width / 2), avg[0] + (width / 2)))
+            self.plot_axes.set_ylim3d((avg[1] - (width / 2), avg[1] + (width / 2)))
+            self.plot_axes.set_zlim3d((avg[2] - (width / 2), avg[2] + (width / 2)))
 
         self.canvas.draw()
 
@@ -390,7 +408,7 @@ class VisualNavigator(wx.Panel):
     def get_contrib_colour(self, contrib_key):
         try:
             return self._contrib_colour_dict[contrib_key]
-        except AttributeError, KeyError:
+        except (AttributeError, KeyError):
             self.contrib_colourmap = [cm.spectral(i) for i in np.linspace(0, 0.9, self.ctl.get_max_node_contribs())]
             self._contrib_colour_dict = {}
             for i, contrib_key in enumerate(self.ctl.get_contrib_keys()):

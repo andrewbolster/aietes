@@ -21,18 +21,21 @@ __author__ = 'andrewbolster'
 from multiprocessing import Process, JoinableQueue, cpu_count
 from multiprocessing.process import current_process
 
+import futures
+
 from aietes import Simulation
 from aietes.Tools import try_x_times
 
 
-def sim_mask(kwargs, pp_defaults):
+def sim_mask(args):
+    kwargs, pp_defaults = args
     sim_time = kwargs.pop("runtime", None)
     sim = Simulation(**kwargs)
     prep_stats = sim.prepare(sim_time=sim_time)
     sim_time = sim.simulate()
     return_dict = sim.postProcess(**pp_defaults)
     print("%s(%s):%f%%"
-          % (current_process().name, return_dict['data_file'],
+          % (current_process().name, return_dict.get('data_file',"N/A"),
              100.0 * float(sim_time) / prep_stats['sim_time']))
     return sim.generateDataPackage()
 
@@ -44,7 +47,7 @@ def consumer(w_queue, r_queue):
             protected_run = try_x_times(5, RuntimeError,
                                         RuntimeError("Attempted two runs, both failed"),
                                         sim_mask)
-            sim_results = protected_run(simargs, postargs)
+            sim_results = protected_run((simargs, postargs))
             r_queue.put((uuid, sim_results))
             w_queue.task_done()
             print "Done %s" % uuid
@@ -56,6 +59,13 @@ def consumer(w_queue, r_queue):
         except Exception as e:
             raise
 
+def futures_version(arglist):
+    results=[None]*len(arglist)
+    with futures.ProcessPoolExecutor() as exe:
+        for i,(kwargs, pp_args) in enumerate(arglist):
+            e=exe.submit(sim_mask,(kwargs,pp_args))
+            results[i]=e.result()
+    return results
 
 work_queue = JoinableQueue()
 result_queue = JoinableQueue()

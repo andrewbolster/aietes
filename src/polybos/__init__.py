@@ -28,15 +28,17 @@ import validate
 import numpy as np
 from datetime import datetime
 from pprint import pformat
-from collections import namedtuple
+import pickle
+import time
 
 from aietes import Simulation  # Must use the aietes path to get the config files
 import aietes.Threaded as ParSim
 from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, try_forever
-from bounos import DataPackage, Analyses, _metrics
+from bounos import DataPackage, printAnalysis
 
 
 _config_spec = '%s/configs/default.conf' % _ROOT
+_results_dir = '%s/../../results/' % _ROOT
 
 
 def getConfig(source_config_file=None, config_spec=_config_spec):
@@ -120,7 +122,7 @@ class Scenario(object):
         if runcount is None:
             runcount = self._default_run_count
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': True}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
         self.datarun = [None for _ in range(runcount)]
         for run in range(runcount):
             if runcount > 1:
@@ -163,7 +165,7 @@ class Scenario(object):
         if not ParSim.running:
             raise RuntimeError("Attempted parrallel without booting, breaking")
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': True}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
         self.datarun = [None for _ in range(runcount)]
         uuids = [get_uuid() for _ in range(runcount)]
         for run in range(runcount):
@@ -206,9 +208,49 @@ class Scenario(object):
         print("done %d runs in parallel" % (runcount))
 
 
+    def run_future(self, runcount=None, runtime=None, *args, **kwargs):
+        """
+        Offload this to AIETES multiprocessing queue
+
+        Args:
+            runcoun(int): Number of repeated executions of this scenario; this value overrides the
+                value set on init
+            runtime(int): Override simulation duration (normally inherited from config)
+        """
+        if runcount is None:
+            runcount = self._default_run_count
+
+        pp_defaults = {'outputFile': self.title, 'dataFile': True}
+        self.datarun = [None for _ in range(runcount)]
+        self.runlist = []
+        for run in range(runcount):
+            if runcount > 1:
+                pp_defaults.update({'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
+            try:
+                title = self.title + "-%s" % run
+                self.runlist.append(
+                    (
+                        kwarger(config=self.config,
+                                title=title,
+                                logtofile=title + ".log",
+                                logtoconsole=logging.ERROR,
+                                progress_display=False,
+                                sim_time=runtime),
+                        pp_defaults
+                    )
+                )
+            except Exception:
+                raise
+        self.datarun = ParSim.futures_version(self.runlist)
+        assert all(r is not None for r in self.datarun), "All dataruns should be completed by now"
+        print "Got responses"
+
+        print("done %d runs in parallel" % (runcount))
+
     def generateRunStats(self, sim_run_dataset=None):
         """
         Recieving a bounos.datapackage, generate relevant stats
+        This is nasty and I can't remember why I did it this way
         Returns:
             A list of dict's given from DataPackage.package_statistics()
         """
@@ -423,14 +465,15 @@ class ExperimentManager(object):
             self.title = title
         self._default_scenario.setNodeCount(self.node_count)
         self.parallel = parallel
-        if self.parallel:
+        self.future = False
+        if self.parallel and not self.future:
             ParSim.boot()
 
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
-        if self.parallel:
+        if self.parallel and not self.future:
             ParSim.kill()
 
     def updateDefaultBehaviour(self, behaviour):
@@ -451,8 +494,8 @@ class ExperimentManager(object):
                 value set on init
         """
         title = kwargs.get("title", self.title)
-        self.exp_path = os.path.abspath(os.path.join(os.path.curdir, title))
-        self.orig_path = os.path.abspath(os.path.curdir)
+        self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
+        self.orig_path = os.path.abspath(_results_dir)
         self.runcount = kwargs.get("runcount", 1)
         try:
             os.mkdir(self.exp_path)
@@ -463,7 +506,10 @@ class ExperimentManager(object):
             for scenario in self.scenarios:
                 scenario.commit()
                 if self.parallel:
-                    scenario.run_parallel(**kwargs)
+                    if self.future:
+                        scenario.run_future(**kwargs)
+                    else:
+                        scenario.run_parallel(**kwargs)
                 else:
                     scenario.run(**kwargs)
 
@@ -601,10 +647,7 @@ class ExperimentManager(object):
             Percentage completion rate (how much of the fleet got the top count)
         """
 
-        def printAnalysis(d):
-            deviation, trust = Analyses.Combined_Detection_Rank(d, _metrics, stddev_frac=2)
-            result_dict = Analyses.behaviour_identification(deviation, trust, _metrics, names=d.names)
-            return result_dict
+
 
         def avg_of_dict(dict_list, keys):
             """
@@ -681,5 +724,18 @@ class ExperimentManager(object):
 
         print("Subtot\t\t\t%d\t%d\t%d\t%d"%(cct,cnt,nct,nnt))
         print("Total\t\t\t%d\t\t\t%d"%(cct+cnt,nct+nnt))
+
+    def dump(self, filename=None):
+        """
+        Dump the experiment object to a filename
+        """
+        if filename is None:
+            filename = self.title
+        print("Writing experiment %s to %s"%(self.title, filename))
+        filename+=".pkl"
+        start = time.clock()
+        pickle.dump(self, open(filename,'wb'))
+        print("Complete after % seconds"%(time.clock() - start))
+
 
 

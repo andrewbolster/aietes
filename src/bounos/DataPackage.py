@@ -436,3 +436,4 @@ class DataPackage(object):
         Returns the average distance between nodes
         """
         return np.average(self.position_matrix(time))
+

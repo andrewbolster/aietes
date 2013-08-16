@@ -558,3 +558,10 @@ def global_adjust(figure, axes, scale=2):
                 ax = XKCDify(ax)
     figure.set_size_inches(figure.get_size_inches() * scale)
     figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
+
+
+
+def printAnalysis(d):
+    deviation, trust = Analyses.Combined_Detection_Rank(d, _metrics, stddev_frac=2)
+    result_dict = Analyses.behaviour_identification(deviation, trust, _metrics, names=d.names)
+    return result_dict
