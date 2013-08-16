@@ -26,7 +26,7 @@ def run(exp):
     exp.run(title="8-bev-mal",
             runcount=64,
             runtime=2000,
-            dataFile=False)
+            dataFile=True)
     return exp
 
 
@@ -36,6 +36,5 @@ def set_run():
 if __name__ == "__main__":
     exp = set()
     exp = run(exp)
-    exp.dump()
     with redirected(stdout="%s.log"%exp.title):
         EXP.printStats(exp)

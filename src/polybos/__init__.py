@@ -31,6 +31,8 @@ from pprint import pformat
 import pickle
 import time
 
+import collections
+
 from aietes import Simulation  # Must use the aietes path to get the config files
 import aietes.Threaded as ParSim
 from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, try_forever
@@ -494,6 +496,7 @@ class ExperimentManager(object):
                 value set on init
         """
         title = kwargs.get("title", self.title)
+        title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
         self.orig_path = os.path.abspath(_results_dir)
         self.runcount = kwargs.get("runcount", 1)
@@ -501,6 +504,7 @@ class ExperimentManager(object):
             os.mkdir(self.exp_path)
         except:
             self.exp_path = tempfile.mkdtemp()
+            print("Filepath collision, using %s"%self.exp_path)
         try:
             os.chdir(self.exp_path)
             for scenario in self.scenarios:
@@ -636,7 +640,7 @@ class ExperimentManager(object):
 
 
     @staticmethod
-    def printStats(exp):
+    def printStats(experiment):
         """
         Perform and print a range of summary experiment statistics including
             Fleet Distance (sum of velocities),
@@ -647,6 +651,22 @@ class ExperimentManager(object):
             Percentage completion rate (how much of the fleet got the top count)
         """
 
+        if isinstance(experiment, ExperimentManager):
+            # Running as proper experiment Manager instance, no modification required
+            scenario_iterable = experiment.scenarios
+        elif isinstance(experiment, list) \
+                and all([isinstance(entry, Scenario) for entry in experiment]):
+            # Have been given list of Scenarios entities in a single 'scenario', treat as normalo
+            scenario_iterable = experiment
+        elif isinstance(experiment, list) \
+            and all([isinstance(entry, DataPackage) for entry in experiment]):
+            # Have been given list of DataPackage entities in a single 'scenario', treat as single virtual scenario
+            PseudoScenario = collections.NamedTuple("PseudoScenario",
+                                                    ["title","datarun"]
+            )
+            scenario_iterable = [PseudoScenario("PseudoScenario",experiment)]
+        else:
+            raise RuntimeWarning("Cannot validate experiment structure")
 
 
         def avg_of_dict(dict_list, keys):
@@ -670,16 +690,18 @@ class ExperimentManager(object):
 
         correctness_stats = {}
         print("Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\tCorrect/Confident\tSuspect ")
-        for s in exp.scenarios:
+        for s in scenario_iterable:
             correctness_stats[s.title]=[]
-            stats = s.generateRunStats()
-            suspect_behaviour_list = [(bev, nodelist)
-                                       for bev, nodelist in s.getBehaviourDict().iteritems()
-                                       if '__default__' not in nodelist]
+            stats = [d.package_statistics() for d in s.datarun]
             suspects = []
-            for _, nodelist in suspect_behaviour_list:
-                for node in nodelist:
-                        suspects.append(node)
+            if isinstance(s, Scenario):
+                # Running on a real scenario so use information we shouldn't have
+                suspect_behaviour_list = [(bev, nodelist)
+                                           for bev, nodelist in s.getBehaviourDict().iteritems()
+                                           if '__default__' not in nodelist]
+                for _, nodelist in suspect_behaviour_list:
+                    for node in nodelist:
+                            suspects.append(node)
             print("%s,%s" % (s.title, suspects))
             print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
                   % (avg_of_dict(stats, ['motion', 'fleet_distance']),
@@ -725,17 +747,15 @@ class ExperimentManager(object):
         print("Subtot\t\t\t%d\t%d\t%d\t%d"%(cct,cnt,nct,nnt))
         print("Total\t\t\t%d\t\t\t%d"%(cct+cnt,nct+nnt))
 
-    def dump(self, filename=None):
+    def dump(self):
         """
-        Dump the experiment object to a filename
+        Dump scenarios into the exp_path directory
         """
-        if filename is None:
-            filename = self.title
-        print("Writing experiment %s to %s"%(self.title, filename))
-        filename+=".pkl"
-        start = time.clock()
-        pickle.dump(self, open(filename,'wb'))
-        print("Complete after % seconds"%(time.clock() - start))
+        s_paths = [None for _ in xrange(len(self.scenarios))]
 
-
-
+        for i,s in enumerate(self.scenarios):
+            start = time.clock()
+            s_paths[i] = os.path.abspath(os.path.join(self.exp_path, s.title+".pkl"))
+            print("Writing %s to %s"%(s.title, s_paths[i]))
+            pickle.dump(s,open(s_paths[i], "wb"))
+            print("Done in %f seconds"%(time.clock()-start))
