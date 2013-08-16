@@ -759,3 +759,19 @@ class ExperimentManager(object):
             print("Writing %s to %s"%(s.title, s_paths[i]))
             pickle.dump(s,open(s_paths[i], "wb"))
             print("Done in %f seconds"%(time.clock()-start))
+
+    def dump_analysis(self):
+        """
+        Ignore actual simulation information, record trust analysis stats to a pickle
+        """
+        s_paths = [None for _ in xrange(len(self.scenarios))]
+
+        for i, s in enumerate(self.scenarios):
+            start = time.clock()
+            s_paths[i] = os.path.abspath(os.path.join(self.exp_path, s.title+".anl"))
+            print("Writing analysis %s to %s"%(s.title, s_paths[i]))
+            stats = [dict(printAnalysis(d).items() + d.package_statistics()) for d in s.datarun]
+
+            pickle.dump(stats,open(s_paths[i], "wb"))
+            print("Done in %f seconds"%(time.clock()-start))
+

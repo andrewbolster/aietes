@@ -36,5 +36,6 @@ def set_run():
 if __name__ == "__main__":
     exp = set()
     exp = run(exp)
+    exp.dump_analysis()
     with redirected(stdout="%s.log"%exp.title):
         EXP.printStats(exp)
