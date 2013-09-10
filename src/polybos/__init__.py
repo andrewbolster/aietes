@@ -521,7 +521,13 @@ class ExperimentManager(object):
             print("Caught Configuration error %s on scenario config \n%s"%(str(e),pformat(scenario.config)))
             raise
         finally:
-            os.chdir(self.orig_path)
+            try:
+                os.listdir(self.orig_path)
+            except OSError as e:
+                os.mkdir(self.orig_path)
+            finally:
+                os.chdir(self.orig_path)
+
             if self.parallel: ParSim.kill()
             print("Experimental results stored in %s" % self.exp_path)
 
