@@ -11,3 +11,4 @@ Non-Pipable Dependencies
   python-scipy
   libfreetype6-dev
   libpng-dev
+  libzmq-dev

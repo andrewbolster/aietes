@@ -84,22 +84,22 @@ class Simulation():
                 logging.Formatter('%(name)s - %(levelname)s - %(message)s')
             )
             self.logger.addHandler(ch)
-            self.logger.debug("Launched Console Logger (%s)"%log_level_lookup(ch.level))
+            self.logger.info("Launched Console Logger (%s)"%log_level_lookup(ch.level))
         if logtofile is not None:
             hdlr = logging.FileHandler(logtofile)
             hdlr.setFormatter(logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
             hdlr.setLevel(logging.DEBUG)
             self.logger.addHandler(hdlr)
-            self.logger.debug("Launched File Logger (%s)"%logtofile)
+            self.logger.info("Launched File Logger (%s)"%logtofile)
 
         self.config_file = kwargs.get("config_file", None)
         self.config = kwargs.get("config", None)
         if self.config_file is None and self.config is None:
-            self.logger.debug("creating instance from default")
+            self.logger.info("creating instance from default")
             self.config = validateConfig(None)
             self.config = self.generateConfig(self.config)
         elif self.config_file is None and self.config is not None:
-            self.logger.debug("using given config")
+            self.logger.info("using given config")
             config = validateConfig(self.config, final_check=True)
             config['Node']['Nodes'].pop('__default__')
             self.config = dotdict(config.dict())
@@ -212,6 +212,7 @@ class Simulation():
         contributions = []
         achievements = []
         for node in self.nodes:
+            # Universal Stats
             pos = node.pos_log[:, :Sim.now()]
             vec = node.vec_log[:, :Sim.now()]
             pos = pos[np.isfinite(pos)].reshape(3, -1)
@@ -223,8 +224,7 @@ class Simulation():
             contributions.append(node.contributions_log)
             achievements.append(node.achievements_log)
 
-        shape = self.environment.shape
-        return {'p': np.asarray(positions),
+        state = {'p': np.asarray(positions),
                 'v': np.asarray(vectors),
                 'names': names,
                 'environment': self.environment.shape,
@@ -232,8 +232,21 @@ class Simulation():
                 'achievements': np.asarray(achievements),
                 'config': self.config,
                 'title': self.title
-
         }
+
+        # 'Quirky' Optional State Info
+
+        #If any node is using waypoint bev, grab it.
+
+        if any([isinstance(node.behaviour,Behaviour.WaypointMixin) for node in self.nodes]):
+            waypointss = [getattr(node.behaviour, "waypoints", None) for node in self.nodes]
+            #If All the valid waypoints are the same, only report one.
+            if are_equal_waypoints(waypointss):
+                state.update({'waypoints': waypointss[0]})
+            else:
+                state.update({'waypoints': waypointss})
+
+        return state
 
     def generateConfig(self, config):
         #

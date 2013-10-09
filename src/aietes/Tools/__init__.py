@@ -570,3 +570,17 @@ def try_forever(exceptions_to_catch, fn):
                 print "Failed %d: %s" % (count, e)
 
     return new_fn
+
+def are_equal_waypoints(wps):
+    "Compare Waypoint Objects as used by WaypointMixin ([pos],prox)"
+    poss = [[w[0] for w in wp] for wp in wps]
+    proxs= [[w[1] for w in wp] for wp in wps]
+    for pos in poss:
+        if not np.array_equal(pos,poss[0]):
+            print pos,poss[0]
+            return False
+    for prox in proxs:
+        if not np.array_equal(prox, proxs[0]):
+            print prox,proxs[0]
+            return False
+    return True

@@ -43,7 +43,8 @@ class DataPackage(object):
                    'achievements': 'achievements',
                    'environment': 'environment',
                    'config': 'config',
-                   'title': 'title'
+                   'title': 'title',
+                   'waypoints':'waypoints'
     }
 
     version = 1.0
@@ -59,6 +60,9 @@ class DataPackage(object):
         elif sink is "achievements":
             # If using pre-achievements datapackage, turn achievement stats off by setting achievements to none
             self.achievements = None
+        elif sink is "waypoints":
+            # If using pre-achievements datapackage, turn achievement stats off by setting achievements to none
+            self.waypoints = None
         elif sink is "config":
             # If config file is not listed, look for one in the same dir with the same name
             potential_config_file = unext(source_filename)+".conf"

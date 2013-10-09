@@ -368,6 +368,7 @@ class WaypointMixin():
 
     def __init__(self, *args, **kwargs):
         self.waypoint_factor = listfix(float, self.bev_config.waypoint_factor)
+        self.waypoints = []
         if not hasattr(self, str(self.bev_config.waypoint_style)):
             raise ValueError("Cannot generate using waypoint definition:%s" % self.bev_config.waypoint_style)
         else:
@@ -388,9 +389,11 @@ class WaypointMixin():
             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
              [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
         )
-        self.cubepatrolroute = [(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
-        self.nextwaypoint = self.waypoint(self.cubepatrolroute)
+        cubepatrolroute = [(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
+        self.nextwaypoint = self.waypoint(cubepatrolroute)
         self.nextwaypoint.makeLoop(self.nextwaypoint)
+
+        self.waypoints = cubepatrolroute
 
     def waypointVector(self, position, velocity):
         forceVector = np.array([0, 0, 0], dtype=np.float)

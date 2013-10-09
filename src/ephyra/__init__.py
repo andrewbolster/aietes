@@ -85,6 +85,8 @@ def main():
         candidate_data_files = os.listdir(os.getcwd())
         candidate_data_files = [f for f in candidate_data_files if model.is_valid_aietes_datafile(f)]
         candidate_data_files.sort(reverse=True)
+        if len(candidate_data_files) == 0:
+            raise ValueError("There are no valid datafiles in the working directory:%s" % os.getcwd())
         args.data_file = candidate_data_files[0]
         logging.info("Using Latest AIETES file: %s" % args.data_file)
     elif args.data_file is not None:
