@@ -158,6 +158,7 @@ class EphyraNotebook(wx.Frame):
         self.Bind(wx.EVT_IDLE, self.on_idle)
 
         pages = [VisualNavigator, Configurator, Simulator]
+        pages = [VisualNavigator]
 
         for page in pages:
             self.log.debug("Adding Page: %s" % page.__name__)

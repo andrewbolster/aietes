@@ -29,6 +29,7 @@ import argparse
 import cProfile
 import traceback
 from bounos import BounosModel as model
+from aietes.Tools import get_latest_aietes_datafile, is_valid_aietes_datafile
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -82,15 +83,10 @@ def main():
 
 
     if args.data_file is 'latest_aietes.npz_from_pwd':
-        candidate_data_files = os.listdir(os.getcwd())
-        candidate_data_files = [f for f in candidate_data_files if model.is_valid_aietes_datafile(f)]
-        candidate_data_files.sort(reverse=True)
-        if len(candidate_data_files) == 0:
-            raise ValueError("There are no valid datafiles in the working directory:%s" % os.getcwd())
-        args.data_file = candidate_data_files[0]
+        args.data_file = get_latest_aietes_datafile()
         logging.info("Using Latest AIETES file: %s" % args.data_file)
     elif args.data_file is not None:
-        if not model.is_valid_aietes_datafile(args.data_file):
+        if not is_valid_aietes_datafile(args.data_file):
             raise ValueError("Provided data file does not appear to be an aietes dataset:%s" % args.data_file)
 
     if True:

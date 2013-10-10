@@ -59,9 +59,11 @@ class DataPackage(object):
             self.title = ""
         elif sink is "achievements":
             # If using pre-achievements datapackage, turn achievement stats off by setting achievements to none
+            logging.debug("Pre-Achievements Datapackage")
             self.achievements = None
         elif sink is "waypoints":
-            # If using pre-achievements datapackage, turn achievement stats off by setting achievements to none
+            # If using pre-waypoints datapackage, turn waypoints
+            logging.debug("Pre-Waypoints Datapackage")
             self.waypoints = None
         elif sink is "config":
             # If config file is not listed, look for one in the same dir with the same name

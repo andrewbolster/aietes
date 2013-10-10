@@ -219,6 +219,21 @@ class VisualNavigator(wx.Panel):
         for i, (axes, metric) in enumerate(zip(self.metric_axes, self.ctl.get_metrics())):
             self.metric_views[i] = MetricView(axes, metric)
 
+        # Initialise Waypoints if present
+        waypoints = self.ctl.get_waypoints()
+        if waypoints is not None:
+            self.log.debug("Found [%s] waypoints"%str(getattr(waypoints,"shape","No Shape")))
+            # Case where there is a single common waypoint set
+            if waypoints.ndim == 2:
+                for (x,y,z), r in waypoints:
+                    xs, ys, zs = self.sphere(x, y, z, r)
+                    self.plot_axes.plot_wireframe(xs,ys,zs, alpha=0.1)
+            else:
+                raise NotImplementedError("Haven't implemented advanced Waypoint display yet")
+        else:
+            self.log.debug("No Waypoints Defined")
+
+
 
         #Initialise Data-Based timings.
         self.tmax = max(self.ctl.get_final_tmax() - 1, 1)
@@ -545,6 +560,13 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page)
 
     def on_zoom_fleet_chk(self, event):
+        # When unchecking, return to default viewpoint
+        if not self.zoom_fleet_chk.IsChecked() and self._fleet_zoom:
+            self.plot_axes.autoscale_view(scalex=True,scaley=True, scalez=True, tight=False)
+            environment = self.ctl.get_extent()
+            self.plot_axes.set_xlim3d(0,environment[0])
+            self.plot_axes.set_ylim3d(0,environment[1])
+            self.plot_axes.set_zlim3d(0,environment[2])
         self._fleet_zoom= self.zoom_fleet_chk.IsChecked()
         wx.CallAfter(self.redraw_page)
 

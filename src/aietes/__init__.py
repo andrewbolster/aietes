@@ -240,6 +240,7 @@ class Simulation():
 
         if any([isinstance(node.behaviour,Behaviour.WaypointMixin) for node in self.nodes]):
             waypointss = [getattr(node.behaviour, "waypoints", None) for node in self.nodes]
+            waypointss = np.asarray(waypointss)
             #If All the valid waypoints are the same, only report one.
             if are_equal_waypoints(waypointss):
                 state.update({'waypoints': waypointss[0]})
@@ -505,7 +506,8 @@ class Simulation():
                          contributions=contributions,
                          achievements=achievements,
                          title=filename,
-                         config=co
+                         config=co,
+                         waypoints=dp.waypoints
                 )
                 return_dict['data_file'] = "%s.npz" % filename
                 return_dict['config_file'] = co.filename

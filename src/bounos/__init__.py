@@ -21,7 +21,6 @@ BOUNOS - Heir to the Kingdom of AIETES
 """
 
 import sys
-import re
 import argparse
 from argparse import RawTextHelpFormatter
 
@@ -75,12 +74,6 @@ class BounosModel(DataPackage):
         """
         self.log.debug("Updating data from simulator at %d" % now)
         self.update(p=p, v=v, names=names, environment=environment)
-
-    @classmethod
-    def is_valid_aietes_datafile(cls, file):
-        #TODO This isn't a very good test...
-        test = re.compile(".npz$")
-        return test.search(file)
 
 
 args = None

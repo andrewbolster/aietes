@@ -240,3 +240,7 @@ class EphyraController():
     def get_position_stddev_max_min(self):
         stddevs = self.model.distance_from_average_stddev_range()
         return max(stddevs), min(stddevs)
+
+    @check_model()
+    def get_waypoints(self):
+        return getattr(self.model, 'waypoints', None)
