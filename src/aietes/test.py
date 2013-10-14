@@ -62,6 +62,10 @@ class DefaultBehaviour(unittest.TestCase):
         #TODO
         pass
 
+    def testGifGeneration(self):
+        """Ensure nothing goes too wrong with gif generation"""
+        pass
+
 
 if __name__ == "__main__":
     unittest.main() 

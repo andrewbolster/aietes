@@ -17,9 +17,11 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 from matplotlib import animation as MPLanimation
+import logging
 
 
 class AIETESAnimation(MPLanimation.FuncAnimation):
+
     def save(self, filename, fps=5, codec='libx264', clear_temp=True,
              frame_prefix='_tmp', *args, **kwargs):
         """
@@ -60,7 +62,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
             fnames.append(fname)
             self._fig.savefig(fname)
 
-        self.make_movie(filename, fps, codec, frame_prefix, cmd_gen=self.mencoder_cmd)
+        self._make_movie(filename, fps, codec, frame_prefix, cmd_gen=self.mencoder_cmd)
 
         # Delete temporary files
         if clear_temp:
@@ -101,9 +103,13 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
 
         if cmd_gen is None:
             cmd_gen = self.ffmpeg_cmd
-        command = cmd_gen(self, fname, fps, codec, frame_prefix)
+        command = cmd_gen(fname, fps, codec, frame_prefix)
         print command
-        proc = Popen(command, shell=False,
-                     stdout=PIPE, stderr=PIPE)
-        proc.wait()
+        try:
+            proc = Popen(command, shell=False,
+                         stdout=PIPE, stderr=PIPE)
+            proc.wait()
+        except OSError:
+            logging.critical("Mencoder probably not found in path, try installing it")
+            raise
 

@@ -21,9 +21,11 @@ import functools
 import os
 import random
 import logging
+import re
 from inspect import getmembers, isfunction
 from itertools import groupby
 from operator import itemgetter
+from pprint import pformat
 import numpy as np
 from datetime import datetime as dt
 
@@ -572,15 +574,34 @@ def try_forever(exceptions_to_catch, fn):
     return new_fn
 
 def are_equal_waypoints(wps):
-    "Compare Waypoint Objects as used by WaypointMixin ([pos],prox)"
-    poss = [[w[0] for w in wp] for wp in wps]
-    proxs= [[w[1] for w in wp] for wp in wps]
+    """Compare Waypoint Objects as used by WaypointMixin ([pos],prox)
+        Will exclude 'None' records in wps and only compare valid waypoint lists
+    """
+    retval = True
+    poss = [[w[0] for w in wp] for wp in wps if wp is not None]
+    proxs= [[w[1] for w in wp] for wp in wps if wp is not None]
     for pos in poss:
         if not np.array_equal(pos,poss[0]):
-            print pos,poss[0]
-            return False
+            retval = False
     for prox in proxs:
         if not np.array_equal(prox, proxs[0]):
-            print prox,proxs[0]
-            return False
-    return True
+            retval = False
+
+    if retval is False:
+        logging.error(pformat(zip(poss,proxs)))
+    return retval
+
+
+def get_latest_aietes_datafile(dir=None):
+    fqp=os.getcwd() if dir is None else dir
+    candidate_data_files = os.listdir(fqp)
+    candidate_data_files = [f for f in candidate_data_files if is_valid_aietes_datafile(f)]
+    candidate_data_files.sort(reverse=True)
+    if len(candidate_data_files) == 0:
+        raise ValueError("There are no valid datafiles in the working directory:%s" % os.getcwd())
+    return os.path.join(fqp,candidate_data_files[0])
+
+def is_valid_aietes_datafile(file):
+    #TODO This isn't a very good test...
+    test = re.compile(".npz$")
+    return test.search(file)

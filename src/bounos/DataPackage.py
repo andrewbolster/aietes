@@ -44,7 +44,7 @@ class DataPackage(object):
                    'environment': 'environment',
                    'config': 'config',
                    'title': 'title',
-                   'waypoints':'waypoints'
+                   'waypoints': 'waypoints'
     }
 
     version = 1.0
@@ -53,6 +53,8 @@ class DataPackage(object):
         """
         Attempts to extract DataPackage data from a source dict
         """
+        logging.debug("Caught exception on sink:%s source:%s (%s) attempting to recover"
+                      %(sink,source,exp))
         #Per Attrib Fixes in the case of failure
         if sink is "title":
             # If simulation title not explicitly given, use the filename -npz
@@ -62,7 +64,7 @@ class DataPackage(object):
             logging.debug("Pre-Achievements Datapackage")
             self.achievements = None
         elif sink is "waypoints":
-            # If using pre-waypoints datapackage, turn waypoints
+            # If using pre-waypoints datapackage, turn waypoints off
             logging.debug("Pre-Waypoints Datapackage")
             self.waypoints = None
         elif sink is "config":
@@ -79,25 +81,27 @@ class DataPackage(object):
         """
         Raises IOError on load failure
         """
-        if source is not None:
-            try:
-                source_dataset = np.load(source)
+        try:
+            if source is not None:
+                """ Attempt to fix sink source mapping between file stores and runtime stores"""
+                try:
+                    source_dataset = np.load(source)
+                    for sink_attrib, source_attrib in self._attrib_map.iteritems():
+                        try:
+                            self.__dict__[sink_attrib] = source_dataset[source_attrib]
+                        except (AttributeError, KeyError) as exp:
+                            logging.info("Caught exception on file %s"%source)
+                            self._handle_mapping_exceptions_(sink_attrib, source_attrib, source, exp)
+                except KeyError:
+                    raise
+            else:
+                # kwargs needed
                 for sink_attrib, source_attrib in self._attrib_map.iteritems():
                     try:
-                        self.__dict__[sink_attrib] = source_dataset[source_attrib]
-                    except KeyError as exp:
-                        logging.info("Caught exception on file %s"%source)
-                        self._handle_mapping_exceptions_(sink_attrib, source_attrib, source, exp)
-            except KeyError:
-                raise
-        elif all(x is not None for x in [kwargs.get(attr) for attr in self._attrib_map.keys()]):
-            # kwargs needed
-            for sink_attrib, source_attrib in self._attrib_map.iteritems():
-                try:
-                    self.__dict__[sink_attrib] = kwargs[sink_attrib]
-                except AttributeError as exp:
-                    self._handle_mapping_exceptions_(sink_attrib, source_attrib, exp)
-        else:
+                        self.__dict__[sink_attrib] = kwargs[sink_attrib]
+                    except (AttributeError, KeyError) as exp:
+                        self._handle_mapping_exceptions_(sink_attrib, source_attrib, "kwargs", exp)
+        except (AttributeError, KeyError) as exp:
             raise ValueError("Can't work out what the hell you want!: %s missing" %
                              str([attr
                                   for attr, val in [(attr, kwargs.get(attr))
@@ -128,19 +132,25 @@ class DataPackage(object):
         self.n = len(self.p)
 
     def write(self, filename=None):
-        #TODO TEST
+        if filename is None:
+            filename = "%s"%self.title
+        logging.info("Writing datafile to %s" % filename)
 
-        np.savez(filename if filename is not None else self.filename,
-                 positions=positions,
-                 vectors=vectors,
-                 names=names,
-                 environment=self.environment.shape,
-                 contributions=contributions,
-                 achievements=achievements
+        np.savez(filename,
+                 positions=self.p,
+                 vectors=self.v,
+                 names=self.names,
+                 environment=self.environment,
+                 contributions=self.contributions,
+                 achievements=self.achievements,
+                 title=self.title,
+                 config=self.config,
+                 waypoints=self.waypoints
         )
         co = ConfigObj(self.config, list_values=False)
         co.filename = "%s.conf" % filename
         co.write()
+        return ("%s.npz"%filename, co.filename)
 
     #Data has the format:
     # [n][x,y,z][t]
@@ -164,6 +174,12 @@ class DataPackage(object):
                 else:
                     behaviours[n_bev] = [name]
         return behaviours
+
+    def getExtent(self):
+        """
+        Return the 3D Limits of the experiment
+        """
+        return zip(np.min(np.min(self.p,axis=0),axis=1),np.max(np.max(self.p,axis=0),axis=1))
 
     def achievement_statistics(self):
         """

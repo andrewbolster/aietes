@@ -246,7 +246,6 @@ class Simulation():
                 state.update({'waypoints': waypointss[0]})
             else:
                 state.update({'waypoints': waypointss})
-
         return state
 
     def generateConfig(self, config):
@@ -437,8 +436,8 @@ class Simulation():
         return dp
 
 
-    def postProcess(self, log=None, outputFile=None, displayFrames=None, dataFile=False, movieFile=False,
-                    inputFile=None, xRes=1024, yRes=768, fps=24):
+    def postProcess(self, log=None, outputFile=None, displayFrames=None, dataFile=False, movieFile=False, gif=False,
+                    inputFile=None, plot = False, xRes=1024, yRes=768, fps=24, extent=True):
         """
         Performs output and positions generation for a given simulation
         """
@@ -456,21 +455,22 @@ class Simulation():
             for line, dat in zip(lines, positions):
                 line.set_data(dat[0:2, j:i])  # x,y axis
                 line.set_3d_properties(dat[2, j:i])  # z axis
+
             return lines
 
         dp = DataPackage(**(self.currentState()))
 
+
+
         positions = dp.p
-        vectors = dp.v
         names = dp.names
-        contributions = dp.contributions
-        achievements = dp.achievements
         shape = dp.environment
 
         n_frames = len(positions[0][0])
+        filename = "%s.aietes" % outputFile
         return_dict = {}
 
-        if movieFile or outputFile is None:
+        if movieFile or plot or gif:
             import matplotlib.pyplot as plt
             import mpl_toolkits.mplot3d.axes3d as axes3
 
@@ -481,46 +481,50 @@ class Simulation():
             lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=names[i])[0] for i, dat in
                      enumerate(positions)]
 
-            line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(positions, lines, displayFrames),
-                                       interval=1000 / fps, repeat_delay=300, blit=True, )
             ax.legend()
-            ax.set_xlim3d((0, shape[0]))
-            ax.set_ylim3d((0, shape[1]))
-            ax.set_zlim3d((0, shape[2]))
+            if extent is True:
+                extent = tuple(zip(np.min(np.min(dp.p,axis=0),axis=1),np.max(np.max(dp.p,axis=0),axis=1)))
+                (lx,rx),(ly,ry),(lz,rz) = extent
+                x_width = abs(lx - rx)
+                y_width = abs(ly - ry)
+                z_width = abs(lz - rz)
+                width = max(x_width, y_width, z_width) * 1.2
+
+                avg = np.average(np.average(positions, axis=0), axis=1)
+                ax.set_xlim3d((avg[0] - (width / 2), avg[0] + (width / 2)))
+                ax.set_ylim3d((avg[1] - (width / 2), avg[1] + (width / 2)))
+                ax.set_zlim3d((avg[2] - (width / 2), avg[2] + (width / 2)))
+            else:
+                ax.set_xlim3d((0, shape[0]))
+                ax.set_ylim3d((0, shape[1]))
+                ax.set_zlim3d((0, shape[2]))
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
-
-        if outputFile is not None:
-            filename = "%s.aietes" % outputFile
-            if dataFile:
-                self.logger.info("Writing datafile to %s" % filename)
-                co = ConfigObj(self.config, list_values=False)
-                co.filename = "%s.conf" % filename
-                co.write()
-                np.savez(filename,
-                         positions=positions,
-                         vectors=vectors,
-                         names=names,
-                         environment=self.environment.shape,
-                         contributions=contributions,
-                         achievements=achievements,
-                         title=filename,
-                         config=co,
-                         waypoints=dp.waypoints
-                )
-                return_dict['data_file'] = "%s.npz" % filename
-                return_dict['config_file'] = co.filename
+            line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(positions, lines, displayFrames),
+                                       interval=1000 / fps, repeat_delay=300, blit=True, )
             if movieFile:
-                self.logger.info("Writing animation to %s" % filename)
-                self.save(line_ani,
+                self.logger.info("Writing animation to %s.mp4" % filename)
+                line_ani.save(
                           filename=filename,
                           fps=fps,
                           codec='mpeg4',
                           clear_temp=True
                 )
                 return_dict['ani_file'] = "%s.mp4" % filename
-        else:
+            if gif:
+                self.logger.info("Writing animation to %s.gif" % filename)
+                from matplotlib import animation as MPLanimation
+                return_dict['ani_file'] = "%s.gif" % filename
+                MPLanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8", writer='imagemagick', bitrate=-1, fps=fps)
+
+        if outputFile is not None:
+            if dataFile:
+                ret_val = dp.write(filename)
+                return_dict['data_file'] = ret_val[0]
+                return_dict['config_file'] = ret_val[1]
+
+        if plot:
             plt.show()
         return return_dict
 
@@ -559,13 +563,13 @@ def go(options, args):
                 print(exp)
                 print("Will try to postprocess anyway")
 
-    if options.output:
+    if options.movie or options.data or options.gif:
         print("Storing output in %s" % sim.title)
         sim.postProcess(inputFile=options.input, outputFile=sim.title, dataFile=options.data,
-                        movieFile=options.movie, fps=options.fps)
+                        movieFile=options.movie, gif=options.gif, fps=options.fps)
 
     if options.plot:
-        sim.postProcess(inputFile=options.input, displayFrames=720)
+        sim.postProcess(inputFile=options.input, displayFrames=720, plot=True, fps=options.fps)
 
 
 def main():
@@ -585,11 +589,11 @@ def main():
         parser.add_option('-P', '--profile', action='store_true',
                           default=False, help='profiled execution')
         parser.add_option('-p', '--plot', action='store_true',
-                          default=False, help='perform ploting')
-        parser.add_option('-o', '--output', action='store_true',
-                          default=False, help='store output')
+                          default=False, help='perform plotting (overrides outputs)')
         parser.add_option('-m', '--movie', action='store_true',
                           default=None, help='generate and store movie (this takes a long time)')
+        parser.add_option('-g', '--gif', action='store_true',
+                          default=None, help='generate and store movie as an animated gif')
         parser.add_option('-f', '--fps', action='store', type="int",
                           default=24, help='set the fps for animation')
         parser.add_option('-x', '--noexecution', action='store_true',
