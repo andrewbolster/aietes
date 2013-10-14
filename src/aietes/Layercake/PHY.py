@@ -20,7 +20,7 @@ import math
 from aietes.Tools import *
 from Packet import PHYPacket
 
-debug = True
+debug = False
 
 #####################################################################
 # Physical Layer
@@ -288,7 +288,7 @@ class ArrivalScheduler(Sim.Process):
 
             receive_power = DB2Linear(receive_power_db)
 
-            transducer.logger.debug("Packet %s will take %s to cover %s" % (packet.data, travel_time, distance_to))
+            transducer.logger.debug("Packet from %s to %s will take %s to cover %s" % (packet.source, packet.destination, travel_time, distance_to))
 
             yield Sim.hold, self, travel_time
 

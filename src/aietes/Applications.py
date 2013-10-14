@@ -20,7 +20,6 @@ from numpy import *
 from numpy.random import poisson
 from aietes.Tools import Sim, debug, randomstr, broadcast_address
 
-import Layercake
 from Layercake.Packet import AppPacket
 
 debug = True
@@ -32,7 +31,7 @@ class Application(Sim.Process):
     """
     HAS_LAYERCAKE = True
 
-    def __init__(self, node, config, layercake=None):
+    def __init__(self, node, config, layercake):
         self._start_log(node)
         Sim.Process.__init__(self)
         self.stats = {'packets_sent': 0,
@@ -43,11 +42,8 @@ class Application(Sim.Process):
         }
         self.packet_log = {}
         self.config = config
-        if self.HAS_LAYERCAKE and layercake is not None:
-            self.layercake = layercake
-            assert isinstance(self.layercake, Layercake.Layercake)
-        else:
-            self.layercake = None
+        self.logger.info(layercake)
+        self.layercake = layercake
 
         packet_rate = getattr(config, 'packet_rate')
         packet_count = getattr(config, 'packet_count')
@@ -60,7 +56,7 @@ class Application(Sim.Process):
             self.logger.debug("Taking Packet_Count from config: %s" % self.packet_rate)
         else:
             self.packet_rate = 1
-            self.logger.info("This sure is a weird configuration of Packets!")
+            self.logger.info("This sure is a weird configuration of Packets! Sending at 1pps anyway")
             # raise Exception("Packet Rate/Count doesn't make sense!")
 
         self.period = 1 / float(self.packet_rate)
@@ -161,3 +157,4 @@ class Null(Application):
 
     def packetRecv(self, packet):
         assert isinstance(packet, AppPacket)
+        del packet

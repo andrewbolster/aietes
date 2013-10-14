@@ -35,7 +35,7 @@ class Node(Sim.Process):
     def __init__(self, name, simulation, node_config, vector=None, **kwargs):
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
-        self.logger = kwargs.get("logger", simulation.logger.getChild(__name__))
+        self.logger = kwargs.get("logger", simulation.logger.getChild("%s[%s]"%(__name__,self.name)))
 
         self.simulation = simulation
         self.config = node_config
@@ -81,6 +81,7 @@ class Node(Sim.Process):
         if app_mod.HAS_LAYERCAKE:
             self.layercake = Layercake(self, node_config)
         else:
+            self.logger.info("No Layercake in this application")
             self.layercake = None
         self.app = app_mod(self, node_config['Application'], layercake=self.layercake)
 
@@ -123,12 +124,16 @@ class Node(Sim.Process):
 
         self.behaviour = behave_mod(node=self,
                                     bev_config=self.config['Behaviour'],
-                                    map=self.simulation.environment.map)
+                                    map=self.simulation.environment.map) ##TODO FIX SLAM MAP
 
         #
         # Simulation Configuration
         self.internalEvent = Sim.SimEvent(self.name)
+
+
         #
+        # Fleet Partitioning
+        self.fleet = None
 
         self.logger.debug('instance created')
 
