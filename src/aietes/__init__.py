@@ -460,13 +460,7 @@ class Simulation():
 
         dp = DataPackage(**(self.currentState()))
 
-
-
-        positions = dp.p
-        names = dp.names
-        shape = dp.environment
-
-        n_frames = len(positions[0][0])
+        n_frames = dp.tmax
         filename = "%s.aietes" % outputFile
         return_dict = {}
 
@@ -478,8 +472,8 @@ class Simulation():
             ipp = 80
             fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
             ax = axes3.Axes3D(fig)
-            lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=names[i])[0] for i, dat in
-                     enumerate(positions)]
+            lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=dp.names[i])[0] for i, dat in
+                     enumerate(dp.p)]
 
             ax.legend()
             if extent is True:
@@ -490,18 +484,18 @@ class Simulation():
                 z_width = abs(lz - rz)
                 width = max(x_width, y_width, z_width) * 1.2
 
-                avg = np.average(np.average(positions, axis=0), axis=1)
+                avg = np.average(np.average(dp.p, axis=0), axis=1)
                 ax.set_xlim3d((avg[0] - (width / 2), avg[0] + (width / 2)))
                 ax.set_ylim3d((avg[1] - (width / 2), avg[1] + (width / 2)))
                 ax.set_zlim3d((avg[2] - (width / 2), avg[2] + (width / 2)))
             else:
-                ax.set_xlim3d((0, shape[0]))
-                ax.set_ylim3d((0, shape[1]))
-                ax.set_zlim3d((0, shape[2]))
+                ax.set_xlim3d((0, dp.environment[0]))
+                ax.set_ylim3d((0, dp.environment[1]))
+                ax.set_zlim3d((0, dp.environment[2]))
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
-            line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(positions, lines, displayFrames),
+            line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(dp.p, lines, displayFrames),
                                        interval=1000 / fps, repeat_delay=300, blit=True, )
             if movieFile:
                 self.logger.info("Writing animation to %s.mp4" % filename)
@@ -545,7 +539,7 @@ class Simulation():
 # atexit.register(readline.write_history_file, histfile)
 
 
-def go(options, args):
+def go(options, args=None):
     logging.basicConfig(level=logging.INFO)
     sim = Simulation(config_file=options.config,
                      title=options.title,
@@ -571,48 +565,48 @@ def go(options, args):
     if options.plot:
         sim.postProcess(inputFile=options.input, displayFrames=720, plot=True, fps=options.fps)
 
-
+def option_parser():
+    parser = optparse.OptionParser(
+            formatter=optparse.TitledHelpFormatter(),
+            usage=globals()['__doc__'],
+            version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
+    parser.add_option('-q', '--quiet', action='store_true',
+                      default=False, help='quiet output')
+    parser.add_option('-v', '--verbose', action='store_true',
+                      default=False, help='verbose output')
+    parser.add_option('-P', '--profile', action='store_true',
+                      default=False, help='profiled execution')
+    parser.add_option('-p', '--plot', action='store_true',
+                      default=False, help='perform plotting (overrides outputs)')
+    parser.add_option('-m', '--movie', action='store_true',
+                      default=None, help='generate and store movie (this takes a long time)')
+    parser.add_option('-g', '--gif', action='store_true',
+                      default=None, help='generate and store movie as an animated gif')
+    parser.add_option('-f', '--fps', action='store', type="int",
+                      default=24, help='set the fps for animation')
+    parser.add_option('-x', '--noexecution', action='store_true',
+                      default=False, help='prepare only, don\' execute simulation')
+    parser.add_option('-d', '--data', action='store_true',
+                      default=None, help='store output to datafile')
+    parser.add_option('-i', '--input', action='store', dest='input',
+                      default=None, help='store input file, this kills the simulation')
+    parser.add_option('-t', '--tmax', action='store', dest='sim_time',
+                      default=None, help='Override the simulation duration')
+    parser.add_option('-c', '--config', action='store', dest='config',
+                      default=None, help='generate simulation from config file')
+    parser.add_option('-T', '--title', action='store', dest='title',
+                      default=None,
+                      help='Override the simulation name')
+    parser.add_option('-r', '--runs', action='store', type="int",
+                      default=1, help='set repeated runs (incompatible with Profiling)')
+    return parser
 def main():
     """
     Everyone knows what the main does; it does everything!
     """
     try:
         start_time = time.time()
-        parser = optparse.OptionParser(
-            formatter=optparse.TitledHelpFormatter(),
-            usage=globals()['__doc__'],
-            version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
-        parser.add_option('-q', '--quiet', action='store_true',
-                          default=False, help='quiet output')
-        parser.add_option('-v', '--verbose', action='store_true',
-                          default=False, help='verbose output')
-        parser.add_option('-P', '--profile', action='store_true',
-                          default=False, help='profiled execution')
-        parser.add_option('-p', '--plot', action='store_true',
-                          default=False, help='perform plotting (overrides outputs)')
-        parser.add_option('-m', '--movie', action='store_true',
-                          default=None, help='generate and store movie (this takes a long time)')
-        parser.add_option('-g', '--gif', action='store_true',
-                          default=None, help='generate and store movie as an animated gif')
-        parser.add_option('-f', '--fps', action='store', type="int",
-                          default=24, help='set the fps for animation')
-        parser.add_option('-x', '--noexecution', action='store_true',
-                          default=False, help='prepare only, don\' execute simulation')
-        parser.add_option('-d', '--data', action='store_true',
-                          default=None, help='store output to datafile')
-        parser.add_option('-i', '--input', action='store', dest='input',
-                          default=None, help='store input file, this kills the simulation')
-        parser.add_option('-t', '--tmax', action='store', dest='sim_time',
-                          default=None, help='Override the simulation duration')
-        parser.add_option('-c', '--config', action='store', dest='config',
-                          default=None, help='generate simulation from config file')
-        parser.add_option('-T', '--title', action='store', dest='title',
-                          default=None,
-                          help='Override the simulation name')
-        parser.add_option('-r', '--runs', action='store', type="int",
-                          default=1, help='set repeated runs (incompatible with Profiling)')
-        (options, args) = parser.parse_args()
-        print options
+        (options, args) = option_parser().parse_args()
         exit_code = 0
         if options.verbose:
             print time.asctime()

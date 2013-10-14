@@ -23,7 +23,7 @@ import logging
 class AIETESAnimation(MPLanimation.FuncAnimation):
 
     def save(self, filename, fps=5, codec='libx264', clear_temp=True,
-             frame_prefix='_tmp', *args, **kwargs):
+             frame_prefix='_tmp', blit=False, *args, **kwargs):
         """
         Saves a movie file by drawing every frame.
 
@@ -57,7 +57,7 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
         # to allow for this non-existant use case or find a way to make it work.
         for idx, data in enumerate(self.new_saved_frame_seq()):
             # TODO: Need to see if turning off blit is really necessary
-            self._draw_next_frame(data, blit=False)
+            self._draw_next_frame(data, blit=blit)
             fname = '%s%04d.png' % (frame_prefix, idx)
             fnames.append(fname)
             self._fig.savefig(fname)

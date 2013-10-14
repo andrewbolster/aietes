@@ -17,10 +17,11 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 """ Unit test for aietes """
-
-import unittest
-
 import logging
+import unittest
+from aietes.Tools import dotdictify
+from pprint import pformat
+
 import aietes
 import bounos
 
@@ -56,16 +57,35 @@ class DefaultBehaviour(unittest.TestCase):
             self.assertIsNotNone(m_val, msg=member)
             self.assertEqual(len(m_val), datapackage.n)
 
+
+class ConfigBehaviour(unittest.TestCase):
     @unittest.skip("Reminder for later")
     def testZeroFleetCreation(self):
         """Ensure failure on launching fleet with 0 nodes"""
         #TODO
         pass
 
+
+class OutputBehaviour(unittest.TestCase):
     def testGifGeneration(self):
         """Ensure nothing goes too wrong with gif generation"""
-        pass
+        options = aietes.option_parser().defaults
+        options.update({'gif':True, 'quiet':False, 'sim_time':100})
+        options = dotdictify(options)
+        try:
+            print(pformat(options))
+            aietes.go(options)
+        except Exception as e:
+            self.fail("Failed: %s "%e)
+            raise
 
+    def testMovieGeneration(self):
+        """Ensure nothing goes too wrong with movie generation"""
+        options = aietes.option_parser().defaults
+        options.update({'movie':True, 'quiet':False, 'sim_time':100})
+        options = dotdictify(options)
+        print(pformat(options))
+        aietes.go(options)
 
 if __name__ == "__main__":
     unittest.main() 
