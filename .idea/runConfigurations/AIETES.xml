@@ -15,8 +15,10 @@
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/aietes/__init__.py" />
     <option name="PARAMETERS" value="-dq" />
     <RunnerSettings RunnerId="PyDebugRunner" />
+    <RunnerSettings RunnerId="PythonCover" />
     <RunnerSettings RunnerId="PythonRunner" />
     <ConfigurationWrapper RunnerId="PyDebugRunner" />
+    <ConfigurationWrapper RunnerId="PythonCover" />
     <ConfigurationWrapper RunnerId="PythonRunner" />
     <method />
   </configuration>

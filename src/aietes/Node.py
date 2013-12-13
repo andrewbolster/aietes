@@ -17,9 +17,7 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import uuid
-from scipy.special import erfc
-
-import numpy as np
+import sys
 
 from Layercake import Layercake
 import Behaviour
@@ -41,6 +39,8 @@ class Node(Sim.Process):
         self.config = node_config
         self.mass = 10  # kg modeling remus 100
         self.mass = 5   # fudge cus I'm bricking it #FIXME
+
+
 
         # Positions Initialised to None to highlight mistakes; as Any position could be a bad position
         self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
@@ -135,6 +135,18 @@ class Node(Sim.Process):
         # Fleet Partitioning
         self.fleet = None
 
+        #
+        # Drift Characteristics from Contribs?
+        self.drifting = False
+        if self.config['drift'] != "Null":
+            import contrib.Ghia.uuv_position_drift_model as Driftmodels
+
+            self.drift = getattr(Driftmodels, self.config['drift'])(self)
+            self.drifting = True
+        elif kwargs.has_key('drift'):
+            self.drift = kwargs.get('drift')(self)
+            self.drifting = True
+
         self.logger.debug('instance created')
 
     def activate(self):
@@ -148,7 +160,7 @@ class Node(Sim.Process):
             self.layercake.activate()
 
         # Tell the environment that we are here!
-        self.simulation.environment.update(self.id, self.getPos(), self.getVec())
+        self.update_environment()
 
     def assignFleet(self, fleet):
         """
@@ -189,10 +201,10 @@ class Node(Sim.Process):
         maxv = max(self.max_speed)
         if cruisev < mag(velocity) < maxv:
             new_V = unit(velocity) * (cruisev + (mag(velocity) - cruisev) ** 2)
-        elif mag(velocity) < maxv:
+        elif maxv < mag(velocity):
             new_V = unit(velocity) * max(self.max_speed)
         else:
-            self.logger.error("shouldn't really be here")
+            self.logger.error("shouldn't really be here: {},{}".format(velocity, mag(velocity)))
         if debug:
             self.logger.error("Cruise: From %f against %f and vel of %f" % (
                 mag(velocity), cruisev, mag(new_V)))
@@ -206,6 +218,7 @@ class Node(Sim.Process):
         # Positional information
         #
         old_pos = self.position.copy()
+        old_vec = self.velocity.copy()
         dT = self.simulation.deltaT(Sim.now(), self._lastupdate)
         # Since you're an idiot and keep forgetting if this is right or not; it is;
         # src (http://physics.stackexchange.com/questions/17049/how-does-force-relate-to-velocity)
@@ -223,9 +236,24 @@ class Node(Sim.Process):
             if debug:
                 self.logger.debug("Velocity: %s" % new_velocity)
             self.velocity = new_velocity
+
         assert mag(self.velocity) < max(self.max_speed), "Breaking the speed limit: %s, %s" % (
-            mag(self.velocity), self.cruising_speed)
-        self.position += self.velocity
+            mag(self.velocity), self.cruising_speed
+        )
+
+        if self.drifting:
+            try:
+                self.position, self.velocity, error_dict = self.drift.update(self.position,
+                                                                             self.velocity,
+                                                                             old_vec,
+                                                                             self._lastupdate,
+                                                                             dT)
+            except FloatingPointError:
+                type, value, traceback = sys.exc_info()
+                raise ValueError, ("Dt,t:{},{}".format(dT, Sim.now()), type, value), traceback
+        else:
+            self.position += self.velocity
+
         if debug:
             self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
@@ -236,13 +264,24 @@ class Node(Sim.Process):
             self.logger.critical("PosLog:(%d,%d)\n%s" % (
                 self._lastupdate, 0, [mag(self.pos_log[:, x]) for x in range(self._lastupdate)]))
             raise Exception("%s Crashed out of the environment at %s m/s" % (self.name, mag(self.velocity)))
-        self.pos_log[:, self._lastupdate] = self.position.copy()
-        assert not np.isnan(sum(self.pos_log[:, self._lastupdate]))
 
+        self.pos_log[:, self._lastupdate] = self.position.copy()
         self.vec_log[:, self._lastupdate] = self.velocity
+
+        assert not np.isnan(sum(self.pos_log[:, self._lastupdate]))
 
         self.highest_attained_speed = max(self.highest_attained_speed, mag(self.velocity))
         self._lastupdate = Sim.now()
+
+    def update_environment(self):
+        if not self.drifting:
+            self.simulation.environment.update(self.id,
+                                               self.getPos(),
+                                               self.getVec())
+        else:
+            self.simulation.environment.update(self.id,
+                                               self.drift.getPos(),
+                                               self.drift.getVec())
 
     def setPos(self, placeVector):
         assert isinstance(placeVector, np.array)
@@ -308,7 +347,7 @@ class Node(Sim.Process):
                 self.logger.info('updating map')
             yield Sim.hold, self, self.behaviour.update_rate
             try:
-                self.simulation.environment.update(self.id, self.getPos(), self.getVec())
+                self.update_environment()
             except Exception:
                 self.logger.error("Exception in Environment Update")
                 raise

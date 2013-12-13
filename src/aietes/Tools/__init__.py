@@ -28,11 +28,11 @@ from operator import itemgetter
 from pprint import pformat
 import numpy as np
 from datetime import datetime as dt
+from configobj import ConfigObj
+import validate
 
 from SimPy import SimulationStep as Sim
 
-from configobj import ConfigObj
-import validate
 np.seterr(all='raise')
 # from os import urandom as randomstr #Provides unicode random String
 
@@ -605,3 +605,24 @@ def is_valid_aietes_datafile(file):
     #TODO This isn't a very good test...
     test = re.compile(".npz$")
     return test.search(file)
+
+
+def angle_between(v1, v2, ndim=3):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit(v1[0:ndim - 1])
+    v2_u = unit(v2[0:ndim - 1])
+    angle = np.arccos(np.dot(v1_u, v2_u))
+    if np.isnan(angle):
+        if (v1_u == v2_u).all():
+            return 0.0
+        else:
+            return np.pi
+    return angle
