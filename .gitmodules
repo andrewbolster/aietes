@@ -1,0 +1,3 @@
+[submodule "src/contrib/Ghia"]
+	path = src/contrib/Ghia
+	url = git@github.com:andrewbolster/ghia.git
