@@ -40,9 +40,10 @@ np.seterr(all='raise')
 debug = False
 FUDGED = True
 
-_ROOT = os.path.abspath(os.path.dirname(__file__)+'/../')
+_ROOT = os.path.abspath(os.path.dirname(__file__) + '/../')
 
 _config_spec = '%s/configs/default.conf' % _ROOT
+
 
 class ConfigError(Exception):
     """
@@ -507,21 +508,24 @@ def updateDict(d, keys, value, safe=False):
 def list_functions(module):
     return [o for o in getmembers(module) if isfunction(o[1])]
 
+
 def unext(filename):
-     return os.path.splitext(os.path.basename(filename))[0]
+    return os.path.splitext(os.path.basename(filename))[0]
 
 
 def kwarger(**kwargs):
     return kwargs
+
 
 def log_level_lookup(log_level):
     if isinstance(log_level, str):
         return LOGLEVELS[log_level]
     else:
         #assume numeric/loglevel type, reverse lookup
-        for k,v in LOGLEVELS.iteritems():
+        for k, v in LOGLEVELS.iteritems():
             if v == log_level:
                 return k
+
 
 def validateConfig(config=None, final_check=False):
     """
@@ -549,6 +553,7 @@ def validateConfig(config=None, final_check=False):
 
     return config
 
+
 def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
     @functools.wraps(fn) #keeps name and docstring of old function
     def new_fn(*args, **kwargs):
@@ -560,18 +565,21 @@ def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
         raise exception_to_raise
 
     return new_fn
+
+
 def try_forever(exceptions_to_catch, fn):
     @functools.wraps(fn) #keeps name and docstring of old function
     def new_fn(*args, **kwargs):
-        count=0
+        count = 0
         while True:
             try:
                 return fn(*args, **kwargs)
             except exceptions_to_catch as e:
-                count+=1
+                count += 1
                 print "Failed %d: %s" % (count, e)
 
     return new_fn
+
 
 def are_equal_waypoints(wps):
     """Compare Waypoint Objects as used by WaypointMixin ([pos],prox)
@@ -579,27 +587,28 @@ def are_equal_waypoints(wps):
     """
     retval = True
     poss = [[w[0] for w in wp] for wp in wps if wp is not None]
-    proxs= [[w[1] for w in wp] for wp in wps if wp is not None]
+    proxs = [[w[1] for w in wp] for wp in wps if wp is not None]
     for pos in poss:
-        if not np.array_equal(pos,poss[0]):
+        if not np.array_equal(pos, poss[0]):
             retval = False
     for prox in proxs:
         if not np.array_equal(prox, proxs[0]):
             retval = False
 
     if retval is False:
-        logging.error(pformat(zip(poss,proxs)))
+        logging.error(pformat(zip(poss, proxs)))
     return retval
 
 
 def get_latest_aietes_datafile(dir=None):
-    fqp=os.getcwd() if dir is None else dir
+    fqp = os.getcwd() if dir is None else dir
     candidate_data_files = os.listdir(fqp)
     candidate_data_files = [f for f in candidate_data_files if is_valid_aietes_datafile(f)]
     candidate_data_files.sort(reverse=True)
     if len(candidate_data_files) == 0:
         raise ValueError("There are no valid datafiles in the working directory:%s" % os.getcwd())
-    return os.path.join(fqp,candidate_data_files[0])
+    return os.path.join(fqp, candidate_data_files[0])
+
 
 def is_valid_aietes_datafile(file):
     #TODO This isn't a very good test...

@@ -33,7 +33,7 @@ class Node(Sim.Process):
     def __init__(self, name, simulation, node_config, vector=None, **kwargs):
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
-        self.logger = kwargs.get("logger", simulation.logger.getChild("%s[%s]"%(__name__,self.name)))
+        self.logger = kwargs.get("logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
 
         self.simulation = simulation
         self.config = node_config
@@ -149,15 +149,18 @@ class Node(Sim.Process):
 
         self.logger.debug('instance created')
 
-    def activate(self):
+    def activate(self, launch_args=None):
         """
         Fired on Sim Start
         """
         self.logger.debug("Initialised Node Lifecycle")
         Sim.activate(self, self.lifecycle())
+        if launch_args is None:
+            launch_args = {}
         self.app.activate()
         if self.app.layercake:
             self.layercake.activate()
+        self.behaviour.activate(**launch_args)
 
         # Tell the environment that we are here!
         self.update_environment()

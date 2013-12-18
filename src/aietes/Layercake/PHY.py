@@ -16,7 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-import math
 from aietes.Tools import *
 from Packet import PHYPacket
 
@@ -288,7 +287,8 @@ class ArrivalScheduler(Sim.Process):
 
             receive_power = DB2Linear(receive_power_db)
 
-            transducer.logger.debug("Packet from %s to %s will take %s to cover %s" % (packet.source, packet.destination, travel_time, distance_to))
+            transducer.logger.debug("Packet from %s to %s will take %s to cover %s" % (
+            packet.source, packet.destination, travel_time, distance_to))
 
             yield Sim.hold, self, travel_time
 

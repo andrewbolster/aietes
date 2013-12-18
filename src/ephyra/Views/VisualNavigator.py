@@ -229,7 +229,7 @@ class VisualNavigator(wx.Panel):
                     xs, ys, zs = self.sphere(x, y, z, r)
                     self.plot_axes.plot_wireframe(xs,ys,zs, alpha=0.1)
             else:
-                raise NotImplementedError("Haven't implemented advanced Waypoint display yet")
+                raise NotImplementedError("Haven't implemented advanced Waypoint display yet:{}".format(waypoints))
         else:
             self.log.debug("No Waypoints Defined")
 

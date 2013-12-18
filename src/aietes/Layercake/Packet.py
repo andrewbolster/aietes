@@ -223,7 +223,8 @@ class PHYPacket(Sim.Process, Packet):
             # Even if a packet is not received properly, we have consumed power
             transducer.phy.rx_energy += DB2Linear(self.power) * duration #TODO shouldn't this be listen power?
         else:
-            self.logger.debug("Recieved Packet :%s with power %s from %s BELOW LISTENING THRESHOLD" % (self.data, self.power, self.source))
+            self.logger.debug("Recieved Packet :%s with power %s from %s BELOW LISTENING THRESHOLD" % (
+            self.data, self.power, self.source))
 
     def updateInterference(self, interference):
         """A simple ratchet of interference based on the transducer _request func

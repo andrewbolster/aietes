@@ -17,21 +17,14 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import sys
-import os
 import traceback
 import optparse
 import time
-import logging
 import cProfile
-from pprint import pformat
 
-import numpy as np
-
-
-from datetime import datetime as dt
 from Layercake import Layercake
 from Environment import Environment
-from Fleet import Fleet
+import Fleet
 from Node import Node
 import Behaviour
 from Animation import AIETESAnimation
@@ -58,9 +51,9 @@ class Simulation():
 
     def __init__(self, *args, **kwargs):
         self._done = False
-        self.title = kwargs.get("title", None )
+        self.title = kwargs.get("title", None)
         if self.title is None:
-            self.title =  dt.now().strftime('%Y-%m-%d-%H-%M-%S')
+            self.title = dt.now().strftime('%Y-%m-%d-%H-%M-%S')
         self.progress_display = kwargs.get("progress_display", True)
         self.working_directory = kwargs.get("working_directory", "/dev/shm/")
         logtofile = kwargs.get("logtofile", None)
@@ -84,13 +77,13 @@ class Simulation():
                 logging.Formatter('%(name)s - %(levelname)s - %(message)s')
             )
             self.logger.addHandler(ch)
-            self.logger.info("Launched Console Logger (%s)"%log_level_lookup(ch.level))
+            self.logger.info("Launched Console Logger (%s)" % log_level_lookup(ch.level))
         if logtofile is not None:
             hdlr = logging.FileHandler(logtofile)
             hdlr.setFormatter(logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
             hdlr.setLevel(logging.DEBUG)
             self.logger.addHandler(hdlr)
-            self.logger.info("Launched File Logger (%s)"%logtofile)
+            self.logger.info("Launched File Logger (%s)" % logtofile)
 
         self.config_file = kwargs.get("config_file", None)
         self.config = kwargs.get("config", None)
@@ -146,8 +139,16 @@ class Simulation():
         self.environment = self.configureEnvironment(self.config.Environment)
         self.nodes = self.configureNodes()
 
-        # Single Fleet to control all
-        self.fleets.append(Fleet(self.nodes, self))
+        #
+        # Configure Fleet Behaviour
+        #
+        fleet = None
+        try:
+            fleet = self.config['Fleets']['fleet']
+            fleet_class = getattr(Fleet, str(fleet))
+        except AttributeError:
+            raise ConfigError("Can't find Fleet: %s" % fleet)
+        self.fleets.append(fleet_class(self.nodes, self))
 
         # Set up 'join-like' operation for nodes
         self.move_flag = Sim.Resource(capacity=len(self.nodes))
@@ -225,20 +226,20 @@ class Simulation():
             achievements.append(node.achievements_log)
 
         state = {'p': np.asarray(positions),
-                'v': np.asarray(vectors),
-                'names': names,
-                'environment': self.environment.shape,
-                'contributions': np.asarray(contributions),
-                'achievements': np.asarray(achievements),
-                'config': self.config,
-                'title': self.title
+                 'v': np.asarray(vectors),
+                 'names': names,
+                 'environment': self.environment.shape,
+                 'contributions': np.asarray(contributions),
+                 'achievements': np.asarray(achievements),
+                 'config': self.config,
+                 'title': self.title
         }
 
         # 'Quirky' Optional State Info
 
         #If any node is using waypoint bev, grab it.
 
-        if any([isinstance(node.behaviour,Behaviour.WaypointMixin) for node in self.nodes]):
+        if any([isinstance(node.behaviour, Behaviour.WaypointMixin) for node in self.nodes]):
             waypointss = [getattr(node.behaviour, "waypoints", None) for node in self.nodes]
             waypointss = np.asarray(waypointss)
             #If All the valid waypoints are the same, only report one.
@@ -398,10 +399,10 @@ class Simulation():
             )
             node_list.append(new_node)
 
-        if len(node_list)>0:
+        if len(node_list) > 0:
             return node_list
         else:
-            raise ConfigError("Node Generation failed: Zero nodes with config %s"%str(self.config))
+            raise ConfigError("Node Generation failed: Zero nodes with config %s" % str(self.config))
 
     def vectorGen(self, node_name, node_config):
         """
@@ -437,7 +438,7 @@ class Simulation():
 
 
     def postProcess(self, log=None, outputFile=None, displayFrames=None, dataFile=False, movieFile=False, gif=False,
-                    inputFile=None, plot = False, xRes=1024, yRes=768, fps=24, extent=True):
+                    inputFile=None, plot=False, xRes=1024, yRes=768, fps=24, extent=True):
         """
         Performs output and positions generation for a given simulation
         """
@@ -477,8 +478,8 @@ class Simulation():
 
             ax.legend()
             if extent is True:
-                extent = tuple(zip(np.min(np.min(dp.p,axis=0),axis=1),np.max(np.max(dp.p,axis=0),axis=1)))
-                (lx,rx),(ly,ry),(lz,rz) = extent
+                extent = tuple(zip(np.min(np.min(dp.p, axis=0), axis=1), np.max(np.max(dp.p, axis=0), axis=1)))
+                (lx, rx), (ly, ry), (lz, rz) = extent
                 x_width = abs(lx - rx)
                 y_width = abs(ly - ry)
                 z_width = abs(lz - rz)
@@ -500,17 +501,19 @@ class Simulation():
             if movieFile:
                 self.logger.info("Writing animation to %s.mp4" % filename)
                 line_ani.save(
-                          filename=filename,
-                          fps=fps,
-                          codec='mpeg4',
-                          clear_temp=True
+                    filename=filename,
+                    fps=fps,
+                    codec='mpeg4',
+                    clear_temp=True
                 )
                 return_dict['ani_file'] = "%s.mp4" % filename
             if gif:
                 self.logger.info("Writing animation to %s.gif" % filename)
                 from matplotlib import animation as MPLanimation
+
                 return_dict['ani_file'] = "%s.gif" % filename
-                MPLanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8", writer='imagemagick', bitrate=-1, fps=fps)
+                MPLanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8",
+                                                writer='imagemagick', bitrate=-1, fps=fps)
 
         if outputFile is not None:
             if dataFile:
@@ -565,11 +568,12 @@ def go(options, args=None):
     if options.plot:
         sim.postProcess(inputFile=options.input, displayFrames=720, plot=True, fps=options.fps)
 
+
 def option_parser():
     parser = optparse.OptionParser(
-            formatter=optparse.TitledHelpFormatter(),
-            usage=globals()['__doc__'],
-            version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
+        formatter=optparse.TitledHelpFormatter(),
+        usage=globals()['__doc__'],
+        version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
     parser.add_option('-q', '--quiet', action='store_true',
                       default=False, help='quiet output')
     parser.add_option('-v', '--verbose', action='store_true',
@@ -600,6 +604,8 @@ def option_parser():
     parser.add_option('-r', '--runs', action='store', type="int",
                       default=1, help='set repeated runs (incompatible with Profiling)')
     return parser
+
+
 def main():
     """
     Everyone knows what the main does; it does everything!

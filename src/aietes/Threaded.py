@@ -35,7 +35,7 @@ def sim_mask(args):
     sim_time = sim.simulate()
     return_dict = sim.postProcess(**pp_defaults)
     print("%s(%s):%f%%"
-          % (current_process().name, return_dict.get('data_file',"N/A"),
+          % (current_process().name, return_dict.get('data_file', "N/A"),
              100.0 * float(sim_time) / prep_stats['sim_time']))
     return sim.generateDataPackage()
 
@@ -59,13 +59,15 @@ def consumer(w_queue, r_queue):
         except Exception as e:
             raise
 
+
 def futures_version(arglist):
-    results=[None]*len(arglist)
+    results = [None] * len(arglist)
     with futures.ProcessPoolExecutor() as exe:
-        for i,(kwargs, pp_args) in enumerate(arglist):
-            e=exe.submit(sim_mask,(kwargs,pp_args))
-            results[i]=e.result()
+        for i, (kwargs, pp_args) in enumerate(arglist):
+            e = exe.submit(sim_mask, (kwargs, pp_args))
+            results[i] = e.result()
     return results
+
 
 work_queue = JoinableQueue()
 result_queue = JoinableQueue()

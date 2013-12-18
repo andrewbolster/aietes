@@ -16,12 +16,12 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-from matplotlib import animation as MPLanimation
 import logging
+
+from matplotlib import animation as MPLanimation
 
 
 class AIETESAnimation(MPLanimation.FuncAnimation):
-
     def save(self, filename, fps=5, codec='libx264', clear_temp=True,
              frame_prefix='_tmp', blit=False, *args, **kwargs):
         """

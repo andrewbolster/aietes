@@ -19,11 +19,12 @@ __email__ = "me@andrewbolster.info"
 """ Unit test for aietes """
 import logging
 import unittest
-from aietes.Tools import dotdictify
 from pprint import pformat
 
+from aietes.Tools import dotdictify
 import aietes
 import bounos
+
 
 datapackage_per_node_members = ['p', 'v', 'names', 'contributions', 'achievements']
 
@@ -70,22 +71,23 @@ class OutputBehaviour(unittest.TestCase):
     def testGifGeneration(self):
         """Ensure nothing goes too wrong with gif generation"""
         options = aietes.option_parser().defaults
-        options.update({'gif':True, 'quiet':False, 'sim_time':100})
+        options.update({'gif': True, 'quiet': False, 'sim_time': 100})
         options = dotdictify(options)
         try:
             print(pformat(options))
             aietes.go(options)
         except Exception as e:
-            self.fail("Failed: %s "%e)
+            self.fail("Failed: %s " % e)
             raise
 
     def testMovieGeneration(self):
         """Ensure nothing goes too wrong with movie generation"""
         options = aietes.option_parser().defaults
-        options.update({'movie':True, 'quiet':False, 'sim_time':100})
+        options.update({'movie': True, 'quiet': False, 'sim_time': 100})
         options = dotdictify(options)
         print(pformat(options))
         aietes.go(options)
+
 
 if __name__ == "__main__":
     unittest.main() 

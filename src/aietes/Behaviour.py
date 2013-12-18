@@ -21,7 +21,7 @@ import logging
 
 import numpy as np
 
-from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance
+from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError
 
 
 class Behaviour(object):
@@ -51,6 +51,9 @@ class Behaviour(object):
     def _start_log(self, parent):
         self.logger = parent.logger.getChild("Bev:%s" % self.__class__.__name__)
         self.logger.debug('creating instance')
+
+    def activate(self, *args, **kwargs):
+        pass
 
     def normalize_behaviour(self, forceVector):
         return forceVector
@@ -192,7 +195,6 @@ class Behaviour(object):
             self.logger.error("Wall Avoidance:%s" % response)
 
         return response
-
 
 
 class Flock(Behaviour):
@@ -369,6 +371,10 @@ class WaypointMixin():
     def __init__(self, *args, **kwargs):
         self.waypoint_factor = listfix(float, self.bev_config.waypoint_factor)
         self.waypoints = []
+        self.nextwaypoint = None
+        self.behaviours.append(self.waypointVector)
+
+    def activate(self, *args, **kwargs):
         if not hasattr(self, str(self.bev_config.waypoint_style)):
             raise ValueError("Cannot generate using waypoint definition:%s" % self.bev_config.waypoint_style)
         else:
@@ -377,7 +383,6 @@ class WaypointMixin():
             if __debug__:
                 self.logger.debug("Generating waypoints: %s" % g.__name__)
             g()
-        self.behaviours.append(self.waypointVector)
 
     def patrolCube(self):
         """
@@ -421,6 +426,45 @@ class AlternativeWaypoint(AlternativeFlock, Waypoint):
     def __init__(self, *args, **kwargs):
         AlternativeFlock.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
+
+
+class FleetWaypointer(Flock, WaypointMixin):
+    """
+    Repeating Lawnmower Behaviour across a 2D slice of the environment extent
+        Subdivides environment into N-Overlapping patterns based on fleet size
+
+    Assuming a swatch width of 250m for the time being.
+    Turning is not controlled in detail, however in practice, it is assumed that
+    the pinning waypoints would be in overlapping regions rather than being
+    destructively lost.
+
+    Uses the repulsive behaviour from Flock and uses the same repulsive
+    factor config entry, but disregards other behaviours
+    """
+
+    def __init__(self, *args, **kwargs):
+        Behaviour.__init__(self, *args, **kwargs)
+        self.n_nearest_neighbours = listfix(int, self.bev_config.nearest_neighbours)
+        self.neighbourhood_max_rad = listfix(int, self.bev_config.neighbourhood_max_rad)
+        self.neighbour_min_rad = listfix(int, self.bev_config.neighbourhood_min_rad)
+        self.repulsive_factor = listfix(float, self.bev_config.repulsive_factor)
+        self.collision_avoidance_d = listfix(float, self.bev_config.collision_avoidance_d)
+
+        self.behaviours.append(self.repulsiveVector)
+
+        assert self.n_nearest_neighbours > 0
+        assert self.neighbourhood_max_rad > 0
+        assert self.neighbour_min_rad > 0
+
+    def activate(self, *args, **kwargs):
+        course = kwargs.get('waypoints', None)
+        if course is None:
+            raise ConfigError("No waypoints given to Waypoint Follower")
+
+        self.nextwaypoint = self.waypoint(course)
+        self.nextwaypoint.makeLoop(self.nextwaypoint)
+
+        self.waypoints = course
 
 
 class Tail(Flock):

@@ -19,14 +19,16 @@ __email__ = "me@andrewbolster.info"
 
 import sys
 import traceback
-
 import numpy as np
+from itertools import product
 
 from aietes.Tools import Sim, distance, mag
 from aietes.Tools.ProgressBar import ProgressBar
 
+
 #Local Debug
 debug = False
+
 
 class Fleet(Sim.Process):
     """
@@ -35,7 +37,7 @@ class Fleet(Sim.Process):
 
     def __init__(self, nodes, simulation, *args, **kwargs):
         self.logger = kwargs.get("logger", simulation.logger.getChild(__name__))
-        self.logger.info("creating Fleet instance with %d nodes"%len(nodes))
+        self.logger.info("creating Fleet instance with %d nodes" % len(nodes))
         Sim.Process.__init__(self, name="Fleet")
         self.nodes = nodes
         self.environment = simulation.environment
@@ -109,3 +111,101 @@ class Fleet(Sim.Process):
                 maxDeviation = avgHeading
 
         return "V:%s,C:%s,D:%s,A:%s" % (avgHeading, fleetCenter, maxDistance, maxDeviation)
+
+
+class LawnmowerFleet(Fleet):
+    def activate(self):
+        extent = np.asarray([[0,0],[1,1]])
+        prox = 10
+        patrolcorners = [(self.environment.shape[0:2] * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in extent]
+        self.logger.error("Shape:{}".format(patrolcorners))
+
+        courses = self.sharing_lawnmower(patrolcorners, len(self.nodes), overlap=10, twister=False)
+
+        for node, course in zip(self.nodes, courses):
+            node.activate(launch_args={'waypoints': course})
+        Sim.activate(self, self.lifecycle())
+
+    def sharing_lawnmower(self, shape, n, overlap=0, base_axis=0, twister=False):
+        """
+        N is either a single number (i.e. n rows of a shape) or a tuple (x, 1/y rows)
+        """
+        top = max(shape[base_axis])
+        bottom = min(shape[base_axis])
+        left = min(shape[not base_axis])
+        right = max(shape[not base_axis])
+
+        height = top - bottom
+        width = right - left
+
+        if isinstance(n, tuple):
+            row_count = n[base_axis]
+            col_count = n[not base_axis]
+        else:
+            row_count = n
+            col_count = 1
+
+        row_height = height / col_count
+        row_width = width / row_count
+
+        print("HW:{},{}".format(row_height, row_width))
+
+        courses = []
+
+        for r, c in product(range(row_count), range(col_count)):
+            sub_shape = [[(left + r * row_width) - overlap, (left + (r + 1) * row_width) + overlap],
+                         [(bottom + c * row_height) - overlap, (bottom + (c + 1) * row_height) + overlap]]
+            print("rc:{},{},S:{}".format(r, c, sub_shape))
+            if twister:
+                axis = base_axis + c % 2
+            else:
+                axis = base_axis
+            courses.append(self.lawnmower_waypoints(sub_shape, 5, base_axis=axis))
+        return courses
+
+    def lawnmower_waypoints(self, shape, swath, base_axis=0):
+        """
+        Generates an overlapping lawnmower grid across the environment
+        """
+        top = max(shape[base_axis])
+        bottom = min(shape[base_axis])
+        left = min(shape[not base_axis])
+        right = max(shape[not base_axis])
+
+        height = top - bottom
+        inc = np.sign(height)
+        swath = inc * swath
+
+        step = 0 #on a plateau going left or right
+        stepping = 0 # on a rise going up or down
+        current_y = bottom
+        current_x = left - swath
+
+        start = [current_x, current_y]
+
+        points = [start]
+
+        while current_y < top + (1 + stepping % 2) * swath:
+            # four phases to a lawnmower iteration from bottom-left last point
+            # 1) right to edge + swath
+            # 2) up to step (if not above top + swath) else origin
+            # 3) left to edge + swath
+            # 4) up to step (if not above top + swath) else origin
+            if stepping % 2:
+                if step % 2: # If on rightward leg
+                    current_x = right + swath
+                else:
+                    current_x = left - swath
+                points.append([current_x, current_y])
+                stepping += 1
+            else:
+                current_y += swath
+                points.append([current_x, current_y])
+                step += 1
+                stepping += 1
+        if base_axis:
+            points = np.asarray([[y, x] for (x, y) in points])
+        else:
+            points = np.asarray(points)
+        return points
+
