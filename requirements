@@ -5,6 +5,6 @@ wx
 pydot
 matplotlib
 numpy
-SimPy
+SimPy>=2.3,<3
 pubsub
 futures
