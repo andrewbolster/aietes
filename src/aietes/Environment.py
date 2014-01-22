@@ -22,7 +22,7 @@ import numpy as np
 
 from SimPy import Simulation as Sim
 
-from aietes.Tools import map_entry, distance, debug
+from aietes.Tools import map_entry, distance, debug, ConfigError
 
 
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
@@ -44,11 +44,18 @@ class Environment():
         """
         self._start_log(simulation)
         self.map = {}
-        self.shape = shape if shape is not None else [100, 100, 100]
         self.pos_log = []
         self.depth = base_depth
         self.sos = 1400
         self.simulation = simulation
+        if shape is None or not isinstance(shape, np.ndarray):
+            try:
+                shape = np.asarray(shape)
+                if shape is None or not isinstance(shape, np.ndarray) or len(shape) != 3:
+                    raise ConfigError("Shape doesn't make sense: {}{}".format(shape, type(shape)))
+            except:
+                raise
+        self.shape = shape
 
     # TODO Random Surface Generation
     # self.generateSurface()
