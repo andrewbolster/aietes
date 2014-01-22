@@ -52,9 +52,6 @@ class Behaviour(object):
         self.logger = parent.logger.getChild("Bev:%s" % self.__class__.__name__)
         self.logger.debug('creating instance')
 
-    def activate(self, *args, **kwargs):
-        pass
-
     def normalize_behaviour(self, forceVector):
         return forceVector
 
@@ -376,12 +373,11 @@ class WaypointMixin():
 
     def activate(self, *args, **kwargs):
         if not hasattr(self, str(self.bev_config.waypoint_style)):
-            raise ValueError("Cannot generate using waypoint definition:%s" % self.bev_config.waypoint_style)
+            raise ConfigError("Cannot generate using waypoint definition:%s" % self.bev_config.waypoint_style)
         else:
             generator = attrgetter(str(self.bev_config.waypoint_style))
             g = generator(self)
-            if __debug__:
-                self.logger.debug("Generating waypoints: %s" % g.__name__)
+            self.logger.debug("Generating waypoints: %s" % g.__name__)
             g()
 
     def patrolCube(self):
@@ -441,6 +437,8 @@ class FleetWaypointer(Flock, WaypointMixin):
     Uses the repulsive behaviour from Flock and uses the same repulsive
     factor config entry, but disregards other behaviours
     """
+
+    #TODO The guts of this are in notebook
 
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)

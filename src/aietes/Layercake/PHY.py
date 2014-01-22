@@ -277,6 +277,7 @@ class ArrivalScheduler(Sim.Process):
                                               packet.source,
                                               pos)
         )
+        # TODO This needs to be updated to deal with drift
         distance_to = distance(pos, params['pos'])
 
         if distance_to > 0.01:  # I should not receive my own transmissions

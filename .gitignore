@@ -40,3 +40,7 @@ env/
 
 # distribute pkg
 distribute*.tar.gz
+
+# idea
+.idea/workspace.xml
+

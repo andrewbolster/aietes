@@ -604,7 +604,7 @@ def get_latest_aietes_datafile(dir=None):
     fqp = os.getcwd() if dir is None else dir
     candidate_data_files = os.listdir(fqp)
     candidate_data_files = [f for f in candidate_data_files if is_valid_aietes_datafile(f)]
-    candidate_data_files.sort(reverse=True)
+    candidate_data_files.sort(key=os.path.getmtime, reverse=True)
     if len(candidate_data_files) == 0:
         raise ValueError("There are no valid datafiles in the working directory:%s" % os.getcwd())
     return os.path.join(fqp, candidate_data_files[0])

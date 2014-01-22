@@ -221,7 +221,7 @@ class VisualNavigator(wx.Panel):
 
         # Initialise Waypoints if present
         waypoints = self.ctl.get_waypoints()
-        if waypoints is not None:
+        if waypoints is not None and waypoints.size > 0:
             self.log.debug("Found [%s] waypoints"%str(getattr(waypoints,"shape","No Shape")))
             # Case where there is a single common waypoint set
             if waypoints.ndim == 2:

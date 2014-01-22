@@ -40,8 +40,6 @@ class Node(Sim.Process):
         self.mass = 10  # kg modeling remus 100
         self.mass = 5   # fudge cus I'm bricking it #FIXME
 
-
-
         # Positions Initialised to None to highlight mistakes; as Any position could be a bad position
         self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
         self.pos_log.fill(None)
@@ -119,6 +117,7 @@ class Node(Sim.Process):
         try:
             behaviour = self.config['Behaviour']['protocol']
             behave_mod = getattr(Behaviour, str(behaviour))
+            assert issubclass(behave_mod, Behaviour.Behaviour), behave_mod
         except AttributeError:
             raise ConfigError("Can't find Behaviour: %s" % behaviour)
 
@@ -142,9 +141,11 @@ class Node(Sim.Process):
             import contrib.Ghia.uuv_position_drift_model as Driftmodels
 
             self.drift = getattr(Driftmodels, self.config['drift'])(self)
+            self.logger.info("Drift activated from config: {}".format(self.config['drift']))
             self.drifting = True
         elif kwargs.has_key('drift'):
             self.drift = kwargs.get('drift')(self)
+            self.logger.info("Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
 
         self.logger.debug('instance created')
@@ -160,7 +161,10 @@ class Node(Sim.Process):
         self.app.activate()
         if self.app.layercake:
             self.layercake.activate()
-        self.behaviour.activate(**launch_args)
+
+        # Messy nasty way to deal with some behaviours that need activating
+        if hasattr(self.behaviour,'activate'):
+            self.behaviour.activate(**launch_args)
 
         # Tell the environment that we are here!
         self.update_environment()
@@ -244,6 +248,7 @@ class Node(Sim.Process):
             mag(self.velocity), self.cruising_speed
         )
 
+        # If we're drifting, the Node's concept of reality is NOT true
         if self.drifting:
             try:
                 self.position, self.velocity, error_dict = self.drift.update(self.position,
@@ -277,14 +282,9 @@ class Node(Sim.Process):
         self._lastupdate = Sim.now()
 
     def update_environment(self):
-        if not self.drifting:
-            self.simulation.environment.update(self.id,
-                                               self.getPos(),
-                                               self.getVec())
-        else:
-            self.simulation.environment.update(self.id,
-                                               self.drift.getPos(),
-                                               self.drift.getVec())
+        self.simulation.environment.update(self.id,
+                                           self.getPos(true=True),
+                                           self.getVec(true=True))
 
     def setPos(self, placeVector):
         assert isinstance(placeVector, np.array)
@@ -292,11 +292,31 @@ class Node(Sim.Process):
         self.logger.info("Vector focibly moved")
         self.position = placeVector
 
-    def getPos(self):
-        return self.position.copy()
+    def getPos(self, true=False):
+        """
+        Returns the current position of the node ACCORDING TO THE NODE
 
-    def getVec(self):
-        return self.velocity.copy()
+        If the node is drifting, the nodes position is incorrect, and
+            it's 'true' position is requested using the keyword arg
+        """
+        if self.drifting and true:
+                position = self.drift.getPos()
+        else:
+                position = self.position.copy()
+        return position
+
+    def getVec(self, true=False):
+        """
+        Returns the current velocity of the node ACCORDING TO THE NODE
+
+        If the node is drifting, the nodes velocity is incorrect, and
+            it's 'true' velocity is requested using the keyword arg
+        """
+        if self.drifting and true:
+                velocity = self.drift.getVec()
+        else:
+                velocity = self.velocity.copy()
+        return velocity
 
     def distance_to(self, their_position):
         d = distance(self.getPos(), their_position)

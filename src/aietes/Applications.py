@@ -44,6 +44,7 @@ class Application(Sim.Process):
         self.config = config
         self.logger.info(layercake)
         self.layercake = layercake
+        self.sim_duration = node.simulation.config.Simulation.sim_duration
 
         packet_rate = getattr(config, 'packet_rate')
         packet_count = getattr(config, 'packet_count')
@@ -52,7 +53,7 @@ class Application(Sim.Process):
             self.logger.debug("Taking Packet_Rate from config: %s" % self.packet_rate)
         elif packet_count > 0 and packet_rate == 0:
             # If packet count defined, only send our N packets
-            self.packet_rate = packet_count / self.layercake.sim_duration
+            self.packet_rate = packet_count / float(self.sim_duration)
             self.logger.debug("Taking Packet_Count from config: %s" % self.packet_rate)
         else:
             self.packet_rate = 1
