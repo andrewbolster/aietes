@@ -46,6 +46,7 @@ class Fleet(Sim.Process):
 
     def activate(self):
         for node in self.nodes:
+            node.assignFleet(self)
             node.activate()
         Sim.activate(self, self.lifecycle())
 
@@ -115,7 +116,7 @@ class Fleet(Sim.Process):
 
 class LawnmowerFleet(Fleet):
     def activate(self):
-        extent = np.asarray([[0,0],[1,1]])
+        extent = np.asarray([[0, 0], [1, 1]])
         prox = 10
         patrolcorners = [(self.environment.shape[0:2] * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in extent]
         self.logger.error("Shape:{}".format(patrolcorners))

@@ -209,8 +209,8 @@ class VisualNavigator(wx.Panel):
         self.plot_axes.legend(loc="lower right")
 
         self.labels = [
-            self.plot_axes.text(x[0],y[0],z[0], names[i][0])
-            for i,(x,y,z) in enumerate(zip(xs,ys,zs))
+            self.plot_axes.text(x[0], y[0], z[0], names[i][0])
+            for i, (x, y, z) in enumerate(zip(xs, ys, zs))
         ]
 
         # Initialise Metric Views
@@ -222,12 +222,12 @@ class VisualNavigator(wx.Panel):
         # Initialise Waypoints if present
         waypoints = self.ctl.get_waypoints()
         if waypoints is not None and waypoints.size > 0:
-            self.log.debug("Found [%s] waypoints"%str(getattr(waypoints,"shape","No Shape")))
+            self.log.debug("Found [%s] waypoints" % str(getattr(waypoints, "shape", "No Shape")))
             # Case where there is a single common waypoint set
             if waypoints.ndim == 2:
-                for (x,y,z), r in waypoints:
+                for (x, y, z), r in waypoints:
                     xs, ys, zs = self.sphere(x, y, z, r)
-                    self.plot_axes.plot_wireframe(xs,ys,zs, alpha=0.1)
+                    self.plot_axes.plot_wireframe(xs, ys, zs, alpha=0.1)
             else:
                 raise NotImplementedError("Haven't implemented advanced Waypoint display yet:{}".format(waypoints))
         else:
@@ -261,10 +261,10 @@ class VisualNavigator(wx.Panel):
             line.set_3d_properties(zs)
             line.set_label(names[n])
             try:
-                label.set_position((xs[0],ys[0]))
+                label.set_position((xs[0], ys[0]))
                 label.set_3d_properties(zs[0])
             except TypeError as err:
-                self.log.error("x:%s,y:%s,z:%s"%(xs[0],ys[0],zs[0]))
+                self.log.error("x:%s,y:%s,z:%s" % (xs[0], ys[0], zs[0]))
                 raise
             except IndexError:
                 # In the case of the 'first time'. This should probably be removed in the case
@@ -295,7 +295,7 @@ class VisualNavigator(wx.Panel):
             #(lx, rx) = self.plot_axes.get_xlim3d()
             #(ly, ry) = self.plot_axes.get_ylim3d()
             #(lz, rz) = self.plot_axes.get_zlim3d()
-            (lx,rx),(ly,ry),(lz,rz) = self.ctl.get_position_min_max(self.t)
+            (lx, rx), (ly, ry), (lz, rz) = self.ctl.get_position_min_max(self.t)
             x_width = abs(lx - rx)
             y_width = abs(ly - ry)
             z_width = abs(lz - rz)
@@ -400,7 +400,14 @@ class VisualNavigator(wx.Panel):
         self._remove_vectors(self.node_contrib_collections)
         positions = self.ctl.get_fleet_positions(self.t)
         for node in range(self.ctl.get_n_vectors()):
-            for contributor, contribution in self.ctl.get_node_contribs(node, self.t).iteritems():
+            try:
+                contributions = self.ctl.get_node_contribs(node, self.t)
+            except Exception as e:
+                self.log.error("something went bad, quitting Contrib display: {}".format(e))
+                self.node_contrib_enabled = False
+                break
+
+            for contributor, contribution in contributions.iteritems():
 
                 mag = np.linalg.norm(np.asarray(contribution))
                 # Getting FPE's due to suspected zero vectors in mpl.draw
@@ -562,12 +569,12 @@ class VisualNavigator(wx.Panel):
     def on_zoom_fleet_chk(self, event):
         # When unchecking, return to default viewpoint
         if not self.zoom_fleet_chk.IsChecked() and self._fleet_zoom:
-            self.plot_axes.autoscale_view(scalex=True,scaley=True, scalez=True, tight=False)
+            self.plot_axes.autoscale_view(scalex=True, scaley=True, scalez=True, tight=False)
             environment = self.ctl.get_extent()
-            self.plot_axes.set_xlim3d(0,environment[0])
-            self.plot_axes.set_ylim3d(0,environment[1])
-            self.plot_axes.set_zlim3d(0,environment[2])
-        self._fleet_zoom= self.zoom_fleet_chk.IsChecked()
+            self.plot_axes.set_xlim3d(0, environment[0])
+            self.plot_axes.set_ylim3d(0, environment[1])
+            self.plot_axes.set_zlim3d(0, environment[2])
+        self._fleet_zoom = self.zoom_fleet_chk.IsChecked()
         wx.CallAfter(self.redraw_page)
 
     ####
@@ -618,7 +625,7 @@ class VisualNavigator(wx.Panel):
 
         self.plot_pnl.SetSize(plot_size)
         self.canvas.SetSize(plot_size)
-        canvas_inches = (float(plot_size[0]) / self.fig.get_dpi(),float(plot_size[1]) / self.fig.get_dpi())
-        self.log.debug("canvas_inch:%s"%str(canvas_inches))
+        canvas_inches = (float(plot_size[0]) / self.fig.get_dpi(), float(plot_size[1]) / self.fig.get_dpi())
+        self.log.debug("canvas_inch:%s" % str(canvas_inches))
         self.fig.set_size_inches(canvas_inches)
         wx.CallAfter(self.redraw_page)

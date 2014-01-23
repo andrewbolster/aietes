@@ -449,9 +449,13 @@ class DataPackage(object):
         try:
             return self.contributions[node, time]
         except IndexError as e:
-            logging.debug(
-                "Contribution Query for n:%d @ all for position shape %s" % (node, self.contributions[node].shape))
-            raise e
+            try:
+                logging.debug(
+                    "Contribution Query for n:%d @ all for position shape %s" % (node, self.contributions[node].shape))
+                raise e
+            except AttributeError as e:
+                logging.error("Ok, the debug message failed, this looks like a corrupted file")
+                raise e
 
     def inter_distance_average(self, time):
         """

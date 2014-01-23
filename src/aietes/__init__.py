@@ -29,6 +29,7 @@ from Node import Node
 import Behaviour
 from Animation import AIETESAnimation
 from Tools import *
+from Tools.humanize_time import secondsToStr
 from bounos.DataPackage import DataPackage
 
 
@@ -164,6 +165,7 @@ class Simulation():
             Simulation Duration in ticks (generally seconds)
         """
         self.logger.info("Initialising Simulation %s, to run for %s steps" % (self.title, self.duration_intervals))
+        starttime = time.time()
         for fleet in self.fleets:
             fleet.activate()
         if callback is not None:
@@ -171,7 +173,8 @@ class Simulation():
             Sim.startStepping()
         try:
             Sim.simulate(until=self.duration_intervals, callback=callback)
-            self.logger.info("Finished Simulation at %s" % Sim.now())
+            self.logger.info("Finished Simulation at %s(%s) after %s" % (
+            Sim.now(), secondsToStr(Sim.now()), secondsToStr(time.time() - starttime)))
         except RuntimeError as err:
             self.logger.exception("Simulation crashed at %s" % Sim.now())
             raise
@@ -575,7 +578,7 @@ def option_parser():
         usage=globals()['__doc__'],
         version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
     parser.add_option('-q', '--quiet', action='store_true',
-                      default=False, help='quiet output')
+                      default=True, help='quiet output')
     parser.add_option('-v', '--verbose', action='store_true',
                       default=False, help='verbose output')
     parser.add_option('-P', '--profile', action='store_true',

@@ -224,8 +224,8 @@ class Node(Sim.Process):
         #
         # Positional information
         #
-        old_pos = self.position.copy()
-        old_vec = self.velocity.copy()
+        old_pos = self.getPos()
+        old_vec = self.getVec()
         dT = self.simulation.deltaT(Sim.now(), self._lastupdate)
         # Since you're an idiot and keep forgetting if this is right or not; it is;
         # src (http://physics.stackexchange.com/questions/17049/how-does-force-relate-to-velocity)
@@ -251,7 +251,7 @@ class Node(Sim.Process):
         # If we're drifting, the Node's concept of reality is NOT true
         if self.drifting:
             try:
-                self.position, self.velocity, error_dict = self.drift.update(self.position,
+                self.position, self.velocity, error_dict = self.drift.update(old_pos,
                                                                              self.velocity,
                                                                              old_vec,
                                                                              self._lastupdate,
