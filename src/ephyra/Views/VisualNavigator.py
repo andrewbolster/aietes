@@ -18,8 +18,8 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
 
-WIDTH, HEIGHT = 8, 6
-SIDEBAR_WIDTH = 3
+WIDTH, HEIGHT = 16, 9
+SIDEBAR_WIDTH = 8
 
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -30,7 +30,7 @@ from matplotlib.colors import Normalize
 from matplotlib import cm
 
 from ephyra import wx
-from ephyra.Views import MetricView, Arrow3D
+from ephyra.Views import MetricView, Arrow3D, callsuper
 
 
 # noinspection PyStringFormat
@@ -200,23 +200,24 @@ class VisualNavigator(wx.Panel):
 
         # Initialise 3D Plot Lines
         (xs, ys, zs) = self.ctl.get_3D_trail()
-        names = self.ctl.get_vector_names()
+        self.names = self.ctl.get_vector_names()
         self.log.info("Got %s" % str(xs.shape))
 
         self.lines = [
-            self.plot_axes.plot(x, y, z, label=names[i], alpha=self.trail_opacity)[0] for
+            self.plot_axes.plot(x, y, z, label=self.names[i], alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))]
         self.plot_axes.legend(loc="lower right")
 
         self.labels = [
-            self.plot_axes.text(x[0], y[0], z[0], names[i][0])
+            self.plot_axes.text(x[0], y[0], z[0], self.names[i][0])
             for i, (x, y, z) in enumerate(zip(xs, ys, zs))
         ]
 
         # Initialise Metric Views
         metrics = self.ctl.get_metrics()
-        assert len(metrics) == HEIGHT, str(metrics)
-        for i, (axes, metric) in enumerate(zip(self.metric_axes, self.ctl.get_metrics())):
+        if len(metrics) != len(self.metric_axes):
+            self.log.info("Not enough height for selected metrics (%s) "%len(metrics))
+        for i, (axes, metric) in enumerate(zip(self.metric_axes, metrics)):
             self.metric_views[i] = MetricView(axes, metric)
 
         # Initialise Waypoints if present
@@ -254,12 +255,11 @@ class VisualNavigator(wx.Panel):
         ###
         # MAIN PLOT AREA
         ###
-        names = self.ctl.get_vector_names()
         for n, (line, label) in enumerate(zip(self.lines, self.labels)):
             (xs, ys, zs) = self.ctl.get_3D_trail(node=n, time_start=self.t, length=self.trail_length)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
-            line.set_label(names[n])
+            line.set_label(self.names[n])
             try:
                 label.set_position((xs[0], ys[0]))
                 label.set_3d_properties(zs[0])
@@ -463,6 +463,12 @@ class VisualNavigator(wx.Panel):
         collection = [None for _ in range(length)]
 
     def update_metric_charts(self):
+        # Cleanup Metrics
+        while None in self.metric_views:
+            ind = self.metric_views.index(None)
+            del self.metric_axes[ind]
+            del self.metric_views[ind]
+
         for i, plot in enumerate(self.metric_views):
             self.metric_axes[i] = plot.update(wanted=np.asarray(self.displayed_nodes))
             if self.metric_xlines[i] is not None:
@@ -629,3 +635,31 @@ class VisualNavigator(wx.Panel):
         self.log.debug("canvas_inch:%s" % str(canvas_inches))
         self.fig.set_size_inches(canvas_inches)
         wx.CallAfter(self.redraw_page)
+
+class DriftingNavigator(VisualNavigator):
+    def initialise_3d_plot(self):
+        VisualNavigator.initialise_3d_plot(self)
+        # Get Drift Plot info
+        (xs,ys,zs) = self.ctl.get_3D_drift()
+        self.drift_lines = [
+            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], alpha=self.trail_opacity)[0] for
+            i, (x, y, z) in enumerate(zip(xs, ys, zs))
+        ]
+
+    def redraw_page(self, t=None):
+        VisualNavigator.redraw_page(self,t=t)
+        for n, (line, label) in enumerate(zip(self.drift_lines, self.labels)):
+            (xs, ys, zs) = self.ctl.get_3D_drift(node=n, time_start=self.t, length=self.trail_length)
+            line.set_data(xs, ys)
+            line.set_3d_properties(zs)
+            line.set_label("({})".format(self.names[n]))
+            try:
+                label.set_position((xs[0], ys[0]))
+                label.set_3d_properties(zs[0])
+            except TypeError as err:
+                self.log.error("x:%s,y:%s,z:%s" % (xs[0], ys[0], zs[0]))
+                raise
+            except IndexError:
+                # In the case of the 'first time'. This should probably be removed in the case
+                # of any architectural changes.
+                pass

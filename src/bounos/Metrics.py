@@ -40,6 +40,7 @@ class Metric(object):
     i.e. result[0] is the metric state of the system at time zero
     """
     signed = None
+    drift_enabled = False
 
     # Assumes that data is constant and only needs to be selected per node
     def __init__(self, *args, **kw):
@@ -143,3 +144,10 @@ class PerNode_Internode_Distance_Avg(Metric):
         self.highlight_data = [data.inter_distance_average(time) for time in range(int(data.tmax))]
         return [data.distances_from_average_at(time) for time in range(int(data.tmax))]
 
+class Drift_Characteristics(Metric):
+    label = "Drift"
+    signed = False
+    drift_enabled = True
+
+    def generator(self, data):
+       return data.drift_error().swapaxes(0,1)

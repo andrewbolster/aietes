@@ -98,9 +98,12 @@ class Simulation():
             config['Node']['Nodes'].pop('__default__')
             self.config = dotdict(config.dict())
         else:
-            self.logger.info("creating instance from %s" % self.config_file)
-            self.config = validateConfig(self.config_file)
-            self.config = self.generateConfig(self.config)
+            if os.path.isfile(self.config_file):
+                self.logger.info("creating instance from %s" % self.config_file)
+                self.config = validateConfig(self.config_file)
+                self.config = self.generateConfig(self.config)
+            else:
+                raise ConfigError("Cannot open given config file:%s"% self.config_file)
         if "__default__" in self.config.Node.Nodes.keys():
             raise RuntimeError("Dun fucked up: __default__ node detected")
 
@@ -250,6 +253,16 @@ class Simulation():
                 state.update({'waypoints': waypointss[0]})
             else:
                 state.update({'waypoints': waypointss})
+
+        # If drifting, take the drift positions
+        if any([node.drifting for node in self.nodes]):
+            drift_positions = []
+            for node in self.nodes:
+                drift = node.drift.pos_log[:, :Sim.now()]
+                drift = drift[np.isfinite(drift)].reshape(3, -1)
+                drift_positions.append(drift)
+            state.update({'drift_positions': drift_positions})
+
         return state
 
     def generateConfig(self, config):
@@ -465,6 +478,9 @@ class Simulation():
         dp = DataPackage(**(self.currentState()))
 
         n_frames = dp.tmax
+        if os.path.isdir(os.path.dirname(outputFile)):
+            # Have not been given a FQN Path: Assume to use the results directory
+            outputFile=os.path.join(_results_dir,outputFile)
         filename = "%s.aietes" % outputFile
         return_dict = {}
 

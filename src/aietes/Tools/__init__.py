@@ -43,6 +43,7 @@ FUDGED = True
 _ROOT = os.path.abspath(os.path.dirname(__file__) + '/../')
 
 _config_spec = '%s/configs/default.conf' % _ROOT
+_results_dir = '%s/../../results/' % _ROOT
 
 
 class ConfigError(Exception):

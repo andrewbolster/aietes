@@ -44,12 +44,13 @@ class DataPackage(object):
                    'environment': 'environment',
                    'config': 'config',
                    'title': 'title',
-                   'waypoints': 'waypoints'
+                   'waypoints': 'waypoints',
+                   'drift_positions': 'drift_positions'
     }
 
     version = 1.0
 
-    def _handle_mapping_exceptions_(self, source, sink, source_filename, exp):
+    def _handle_mapping_exceptions_(self, sink, source, source_filename, exp):
         """
         Attempts to extract DataPackage data from a source dict
         """
@@ -72,9 +73,12 @@ class DataPackage(object):
             potential_config_file = unext(source_filename)+".conf"
             logging.error("Potential Config %s"%potential_config_file)
             self.config = validateConfig(potential_config_file)
+        elif sink is "drift_positions":
+            logging.debug("Non-drifting Datapackage")
+            self.drifting = False
 
         else:
-            logging.error("Can't find %s in source" % source)
+            logging.error("Can't find %s(%s) in source" % (source,sink))
             raise exp
 
     def __init__(self, source=None, *args, **kwargs):
@@ -83,31 +87,19 @@ class DataPackage(object):
         """
         try:
             if source is not None:
-                """ Attempt to fix sink source mapping between file stores and runtime stores"""
+                kwargs.update(**np.load(source))
+
+            """ Attempt to fix sink source mapping between file stores and runtime stores"""
+            for sink_attrib, source_attrib in self._attrib_map.iteritems():
                 try:
-                    source_dataset = np.load(source)
-                    for sink_attrib, source_attrib in self._attrib_map.iteritems():
-                        try:
-                            self.__dict__[sink_attrib] = source_dataset[source_attrib]
-                        except (AttributeError, KeyError) as exp:
-                            logging.info("Caught exception on file %s"%source)
-                            self._handle_mapping_exceptions_(sink_attrib, source_attrib, source, exp)
-                except KeyError:
-                    raise
-            else:
-                # kwargs needed
-                for sink_attrib, source_attrib in self._attrib_map.iteritems():
-                    try:
-                        self.__dict__[sink_attrib] = kwargs[sink_attrib]
-                    except (AttributeError, KeyError) as exp:
-                        self._handle_mapping_exceptions_(sink_attrib, source_attrib, "kwargs", exp)
+                    self.__dict__[sink_attrib] = kwargs[sink_attrib]
+                except (AttributeError, KeyError) as exp:
+                    logging.error("Caught exception on source:(so:%s,si:%s)"%(source_attrib, sink_attrib))
+                    self._handle_mapping_exceptions_(sink_attrib, source_attrib, "kwargs", exp)
         except (AttributeError, KeyError) as exp:
             raise ValueError("Can't work out what the hell you want!: %s missing" %
-                             str([attr
-                                  for attr, val in [(attr, kwargs.get(attr))
-                                                    for attr in self._attrib_map.keys()]
-                                  if val is None
-                             ]))
+                             str([attr for attr in self._attrib_map.keys() if not kwargs.has_key(attr)])
+            )
 
         self.tmax = kwargs.get("tmax", len(self.p[0][0]))
         self.n = len(self.p)
@@ -116,6 +108,10 @@ class DataPackage(object):
         self.config = literal_eval(str(self.config))
         if isinstance(self.names, np.ndarray):
             self.names = self.names.tolist()
+
+        # Convoluted logic to by DEFAULT assume drifting, unless it's set by the failing case in _handle
+        if not hasattr(self,'drifting'):
+            self.drifting = True
 
 
     def update(self, p=None, v=None, names=None, environment=None, **kwargs):
@@ -136,16 +132,10 @@ class DataPackage(object):
             filename = "%s"%self.title
         logging.info("Writing datafile to %s" % filename)
 
+        data = {i:self.__dict__[i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
+
         np.savez(filename,
-                 positions=self.p,
-                 vectors=self.v,
-                 names=self.names,
-                 environment=self.environment,
-                 contributions=self.contributions,
-                 achievements=self.achievements,
-                 title=self.title,
-                 config=self.config,
-                 waypoints=self.waypoints
+                 **(data)
         )
         co = ConfigObj(self.config, list_values=False)
         co.filename = "%s.conf" % filename
@@ -461,4 +451,13 @@ class DataPackage(object):
         Returns the average distance between nodes
         """
         return np.average(self.position_matrix(time))
+
+    def drift_error(self):
+        """
+        Returns the drift errors for each node
+        """
+        if self.drifting:
+            return np.linalg.norm(self.drift_positions-self.p, axis=00)
+        else:
+            raise ValueError("Not Drifting")
 
