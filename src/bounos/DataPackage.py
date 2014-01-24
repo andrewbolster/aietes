@@ -454,8 +454,7 @@ class DataPackage(object):
                     "Contribution Query for n:%d @ all for position shape %s" % (node, self.contributions[node].shape))
                 raise e
             except AttributeError as e:
-                logging.error("Ok, the debug message failed, this looks like a corrupted file")
-                raise e
+                logging.error("Ok, the debug message failed, this looks like a corrupted file so I'll just shut off the contrib ")
 
     def inter_distance_average(self, time):
         """
