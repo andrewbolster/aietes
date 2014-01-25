@@ -27,7 +27,6 @@ from Environment import Environment
 import Fleet
 from Node import Node
 import Behaviour
-from Animation import AIETESAnimation
 from Tools import *
 from Tools.humanize_time import secondsToStr
 from bounos.DataPackage import DataPackage
@@ -436,6 +435,9 @@ class Simulation():
             elif gen_style == "center":
                 vector = self.environment.position_around()
                 self.logger.debug("Gave node %s a center vector: %s" % (node_name, vector))
+            elif gen_style == "surface":
+                vector = self.environment.position_around(position="surface")
+                self.logger.debug("Gave node %s a surface vector: %s" % (node_name, vector))
             else:
                 vector = [0, 0, 0]
                 self.logger.debug("Gave node %s a zero vector from %s" % (node_name, gen_style))
@@ -483,6 +485,9 @@ class Simulation():
         return_dict = {}
 
         if movieFile or plot or gif:
+            import matplotlib
+            matplotlib.use('Agg')
+            from Animation import AIETESAnimation
             import matplotlib.pyplot as plt
             import mpl_toolkits.mplot3d.axes3d as axes3
 

@@ -29,8 +29,13 @@ class Node(Sim.Process):
     """
     Generic Representation of a network node
     """
+    nodes = 0
 
     def __init__(self, name, simulation, node_config, vector=None, **kwargs):
+        self.nodenum = Node.nodes
+        Node.nodes += 1
+        self.debug = debug and self.nodenum == 0
+
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
         self.logger = kwargs.get("logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))

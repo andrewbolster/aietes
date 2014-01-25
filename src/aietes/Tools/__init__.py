@@ -93,6 +93,35 @@ DEFAULT_CONVENTION = ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo',
 # Measuring functions
 #
 
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.1415926535897931
+    """
+    v1_u = unit(v1)
+    v2_u = unit(v2)
+    if np.allclose(v1_u,v2_u):
+        return 0.0
+    else:
+        try:
+            angle = np.arccos(np.dot(v1_u, v2_u))
+        except FloatingPointError:
+            logging.warning("FPE: 1:{},2:{}".format(v1_u,v2_u))
+            raise
+    if np.isnan(angle):
+        return np.pi
+    else:
+        return angle
+
+def bearing(v):
+    """radian angle between a given vector and 'north'"""
+    return angle_between(v,np.array([0,1]))
+
 def distance(pos_a, pos_b, scale=1):
     """
     Return the distance between two positions
@@ -605,8 +634,6 @@ def are_equal_waypoints(wps):
         if not np.array_equal(prox, proxs[0]):
             retval = False
 
-    if retval is False:
-        logging.error(pformat(zip(poss, proxs)))
     return retval
 
 
@@ -625,23 +652,3 @@ def is_valid_aietes_datafile(file):
     test = re.compile(".npz$")
     return test.search(file)
 
-
-def angle_between(v1, v2, ndim=3):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'::
-
-            >>> angle_between((1, 0, 0), (0, 1, 0))
-            1.5707963267948966
-            >>> angle_between((1, 0, 0), (1, 0, 0))
-            0.0
-            >>> angle_between((1, 0, 0), (-1, 0, 0))
-            3.141592653589793
-    """
-    v1_u = unit(v1[0:ndim - 1])
-    v2_u = unit(v2[0:ndim - 1])
-    angle = np.arccos(np.dot(v1_u, v2_u))
-    if np.isnan(angle):
-        if (v1_u == v2_u).all():
-            return 0.0
-        else:
-            return np.pi
-    return angle

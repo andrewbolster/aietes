@@ -92,20 +92,29 @@ class Environment():
         """
         if position is None:
             position = np.asarray(self.shape) / 2
+        if isinstance(position,basestring):
+            if position == "surface":
+                position = np.asarray(self.shape)/2
+                position[2]=self.shape[2] - (3 * stddev)
+            else:
+                raise ValueError("Incorrect position string")
 
         candidate_pos = None
 
         if self.is_outside(position):
-            raise ValueError("Position is not within volume")
+            raise ValueError("Position is not within volume: {}".format(position))
         else:
             valid = False
             while not valid:
                 candidate_pos = np.random.normal(np.asarray(position), stddev)
-                candidate_pos = tuple(np.asarray(candidate_pos, dtype=int))
-                valid = self.is_empty(candidate_pos)
+                candidate_pos = np.asarray(candidate_pos, dtype=int)
+                try:
+                    valid = self.is_empty(candidate_pos) and not self.is_outside(candidate_pos)
+                except:
+                    raise TypeError("{}".format(candidate_pos))
                 if debug:
                     self.logger.debug("Candidate position: %s:%s" % (candidate_pos, valid))
-        return candidate_pos
+        return tuple(candidate_pos)
 
     def is_outside(self, position):
         too_high = not all(position < self.shape)

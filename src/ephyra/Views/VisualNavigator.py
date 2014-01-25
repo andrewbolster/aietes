@@ -224,13 +224,20 @@ class VisualNavigator(wx.Panel):
         waypoints = self.ctl.get_waypoints()
         if waypoints is not None and waypoints.size > 0:
             self.log.debug("Found [%s] waypoints" % str(getattr(waypoints, "shape", "No Shape")))
-            # Case where there is a single common waypoint set
+            # Case where there is a single common waypoint set, set up spheres
             if waypoints.ndim == 2:
                 for (x, y, z), r in waypoints:
                     xs, ys, zs = self.sphere(x, y, z, r)
                     self.plot_axes.plot_wireframe(xs, ys, zs, alpha=0.1)
             else:
-                raise NotImplementedError("Haven't implemented advanced Waypoint display yet:{}".format(waypoints))
+                # If there are multiple, sphere, colour, AND lines matching each index
+                for i, inner_waypoints in enumerate(waypoints):
+                    xs,ys,zs = [],[],[]
+                    for (x, y, z), r in inner_waypoints:
+                        xs.append(x)
+                        ys.append(y)
+                        zs.append(z)
+                    self.plot_axes.plot(xs,ys,zs, alpha=0.1, color=self.lines[i].get_color())
         else:
             self.log.debug("No Waypoints Defined")
 
