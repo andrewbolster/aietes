@@ -46,6 +46,8 @@ class Behaviour(object):
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
+        self.neighbourhood_max_rad = listfix(int, self.bev_config.neighbourhood_max_rad)
+        self.neighbour_min_rad = listfix(int, self.bev_config.neighbourhood_min_rad)
         self.positional_accuracy = listfix(float, self.bev_config.positional_accuracy)
         self.horizon = 200
 
@@ -139,7 +141,7 @@ class Behaviour(object):
     def repulseFromPosition(self, position, repulsive_position, d_limit=1):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         distanceVal = distance(position, repulsive_position)
-        forceVector = unit(position - repulsive_position) * d_limit / float(distanceVal)
+        forceVector = unit(position - repulsive_position) * d_limit / float(min(distanceVal,self.neighbourhood_max_rad))
 
         if distanceVal < 2:
             raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
@@ -157,7 +159,7 @@ class Behaviour(object):
     def attractToPosition(self, position, attractive_position, d_limit=1):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         distanceVal = distance(position, attractive_position)
-        forceVector = unit(attractive_position - position) * (distanceVal / d_limit)
+        forceVector = unit(attractive_position - position) * (min(distanceVal,self.neighbourhood_max_rad)/ float(d_limit))
         if self.debug:
             self.logger.debug(
                 "Attraction to %s: %s, at range of %s" % (forceVector, attractive_position, distanceVal))
@@ -213,8 +215,6 @@ class Flock(Behaviour):
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
         self.n_nearest_neighbours = listfix(int, self.bev_config.nearest_neighbours)
-        self.neighbourhood_max_rad = listfix(int, self.bev_config.neighbourhood_max_rad)
-        self.neighbour_min_rad = listfix(int, self.bev_config.neighbourhood_min_rad)
         self.clumping_factor = self.bev_config.clumping_factor
         self.repulsive_factor = listfix(float, self.bev_config.repulsive_factor)
         self.schooling_factor = listfix(float, self.bev_config.schooling_factor)
@@ -413,14 +413,8 @@ class WaypointMixin():
             if neighbourhood_d < self.nextwaypoint.prox or real_d < self.nextwaypoint.prox:
                 self.goto_next_waypoint(real_d)
             forceVector = self.attractToPosition(position, self.nextwaypoint.position, self.nextwaypoint.prox/2)
-        achievementtime = self.node.timeSinceLastAchievement()
-        if achievementtime > self.node.meanAchievementTime():
-            adjustment=1.5
-            self.logger.warn("In Adjustment: {}>{}".format(achievementtime,self.node.meanAchievementTime()))
-        else:
-            adjustment=1.0
 
-        return self.normalize_behaviour(forceVector) * self.waypoint_factor * adjustment
+        return self.normalize_behaviour(forceVector) * self.waypoint_factor
 
     def goto_next_waypoint(self, real_d):
         # GRANT ACHIEVEMENT

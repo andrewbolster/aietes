@@ -283,8 +283,8 @@ class Node(Sim.Process):
 
     def update_environment(self):
         self.simulation.environment.update(self.id,
-                                           self.getPos(true=True),
-                                           self.getVec(true=True))
+                                           self.getPos(),
+                                           self.getVec())
 
     def setPos(self, placeVector):
         assert isinstance(placeVector, np.array)

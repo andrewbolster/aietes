@@ -206,7 +206,7 @@ class VisualNavigator(wx.Panel):
         self.lines = [
             self.plot_axes.plot(x, y, z, label=self.names[i], alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))]
-        self.plot_axes.legend(loc="lower right")
+        self._legend = self.plot_axes.legend(loc="lower right")
 
         self.labels = [
             self.plot_axes.text(x[0], y[0], z[0], self.names[i][0])
@@ -290,23 +290,30 @@ class VisualNavigator(wx.Panel):
         ###
         # UPDATE WINDOW PARAMETERS
         ###
-        if self._fleet_zoom:
-            positions = self.ctl.get_fleet_positions(self.t)
-            #(lx, rx) = self.plot_axes.get_xlim3d()
-            #(ly, ry) = self.plot_axes.get_ylim3d()
-            #(lz, rz) = self.plot_axes.get_zlim3d()
-            (lx, rx), (ly, ry), (lz, rz) = self.ctl.get_position_min_max(self.t)
+        if self.zoom_fleet_chk.IsChecked():
+            # On first time, zoom to fleet sphere, otherwise use whatever the width of the window is.
+            if not self._fleet_zoom:
+                self._fleet_zoom = True
+                (lx, rx) = self.plot_axes.get_xlim3d()
+                (ly, ry) = self.plot_axes.get_ylim3d()
+                (lz, rz) = self.plot_axes.get_zlim3d()
+            else:
+                (lx, rx), (ly, ry), (lz, rz) = self.ctl.get_position_min_max(self.t)
             x_width = abs(lx - rx)
             y_width = abs(ly - ry)
             z_width = abs(lz - rz)
             width = max(x_width, y_width, z_width) * 1.1
 
+            positions = self.ctl.get_fleet_positions(self.t)
             avg = np.average(positions, axis=0)
             self.plot_axes.set_xlim3d((avg[0] - (width / 2), avg[0] + (width / 2)))
             self.plot_axes.set_ylim3d((avg[1] - (width / 2), avg[1] + (width / 2)))
             self.plot_axes.set_zlim3d((avg[2] - (width / 2), avg[2] + (width / 2)))
 
-        self.canvas.draw()
+        if self._legend not in self.plot_axes.get_children():
+            self.plot_axes.add_artist(self._legend)
+
+        wx.CallAfter(self.canvas.draw)
 
     def move_T(self, delta_t=None):
         """ Seek the visual plot by delta_t while doing bounds checking and redraw
@@ -399,6 +406,7 @@ class VisualNavigator(wx.Panel):
     def redraw_fleet_heading_contribs(self):
         self._remove_vectors(self.node_contrib_collections)
         positions = self.ctl.get_fleet_positions(self.t)
+        self._contrib_labels = []
         for node in range(self.ctl.get_n_vectors()):
             try:
                 contributions = self.ctl.get_node_contribs(node, self.t)
@@ -420,10 +428,13 @@ class VisualNavigator(wx.Panel):
                     )
 
                     self.node_contrib_collections.append(vector)
+                    if contributor not in self._contrib_labels:
+                        self._contrib_labels.append(contributor)
                     #TODO Update to UPDATE DATA instead of re plotting
                     self.plot_axes.add_artist(
                         self.node_contrib_collections[-1],
                     )
+        self.plot_axes.legend(self.node_contrib_collections, self._contrib_labels,loc="lower left")
         self.plot_axes.autoscale()
 
 
@@ -500,11 +511,11 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page, t=0)
 
     def on_faster_btn(self, event):
-        self.d_t = int(min(max(1, self.d_t * 1.1), self.tmax / 2))
+        self.d_t = int(min(max(2,self.d_t * 1.1), self.tmax / 20))
         self.log.debug("Setting time step to: %s" % self.d_t)
 
     def on_slower_btn(self, event):
-        self.d_t = int(min(max(1, self.d_t * 0.9), self.tmax / 2))
+        self.d_t = int(min(max(2, self.d_t * 0.9), self.tmax / 20))
         self.log.debug("Setting time step to: %s" % self.d_t)
 
     def on_time_slider(self, event):
@@ -580,7 +591,7 @@ class VisualNavigator(wx.Panel):
             self.plot_axes.set_xlim3d(0, environment[0])
             self.plot_axes.set_ylim3d(0, environment[1])
             self.plot_axes.set_zlim3d(0, environment[2])
-        self._fleet_zoom = self.zoom_fleet_chk.IsChecked()
+            self._fleet_zoom = False
         wx.CallAfter(self.redraw_page)
 
     ####
@@ -642,7 +653,7 @@ class DriftingNavigator(VisualNavigator):
         # Get Drift Plot info
         (xs,ys,zs) = self.ctl.get_3D_drift()
         self.drift_lines = [
-            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], alpha=self.trail_opacity)[0] for
+            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
         ]
 
