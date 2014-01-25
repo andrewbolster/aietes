@@ -410,15 +410,24 @@ class WaypointMixin():
             neighbourhood_avg = sum(n.position for n in self.nearest_neighbours) / len(self.nearest_neighbours)
             real_d = distance(position, self.nextwaypoint.position)
             neighbourhood_d = distance(neighbourhood_avg, self.nextwaypoint.position)
-            if neighbourhood_d < self.nextwaypoint.prox:
-                # GRANT ACHIEVEMENT
-                self.node.grantAchievement((self.nextwaypoint.position, real_d))
-                if __debug__:
-                    self.logger.info("Moving to Next waypoint:%s" % self.nextwaypoint.position)
-                self.nextwaypoint = self.nextwaypoint.next
-            forceVector = self.attractToPosition(position, self.nextwaypoint.position, self.nextwaypoint.prox)
-        return self.normalize_behaviour(forceVector) * self.waypoint_factor
+            if neighbourhood_d < self.nextwaypoint.prox or real_d < self.nextwaypoint.prox:
+                self.goto_next_waypoint(real_d)
+            forceVector = self.attractToPosition(position, self.nextwaypoint.position, self.nextwaypoint.prox/2)
+        achievementtime = self.node.timeSinceLastAchievement()
+        if achievementtime > self.node.meanAchievementTime():
+            adjustment=1.5
+            self.logger.warn("In Adjustment: {}>{}".format(achievementtime,self.node.meanAchievementTime()))
+        else:
+            adjustment=1.0
 
+        return self.normalize_behaviour(forceVector) * self.waypoint_factor * adjustment
+
+    def goto_next_waypoint(self, real_d):
+        # GRANT ACHIEVEMENT
+        self.node.grantAchievement((self.nextwaypoint.position, real_d))
+        if __debug__:
+            self.logger.info("Moving to Next waypoint:%s" % self.nextwaypoint.position)
+        self.nextwaypoint = self.nextwaypoint.next
 
 class Waypoint(Flock, WaypointMixin):
     def __init__(self, *args, **kwargs):

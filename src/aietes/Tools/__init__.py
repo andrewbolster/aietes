@@ -38,7 +38,7 @@ np.seterr(all='raise')
 
 
 debug = False
-FUDGED = True
+FUDGED = False
 
 _ROOT = os.path.abspath(os.path.dirname(__file__) + '/../')
 
@@ -526,6 +526,15 @@ def log_level_lookup(log_level):
         for k, v in LOGLEVELS.iteritems():
             if v == log_level:
                 return k
+
+def results_file(proposed_name):
+
+    if os.path.dirname(proposed_name) is not None:
+        # Have not been given a FQN Path: Assume to use the results directory
+        proposed_name=os.path.join(_results_dir,proposed_name)
+    return proposed_name
+
+
 
 
 def validateConfig(config=None, final_check=False):

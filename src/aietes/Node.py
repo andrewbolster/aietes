@@ -333,6 +333,20 @@ class Node(Sim.Process):
         else:
             raise RuntimeError("Non standard Achievement passed:%s" % achievement)
 
+    def timeSinceLastAchievement(self) :
+        try:
+            return [ i for i,l in enumerate(self.achievements_log) if len(l[i])][-1]
+        except IndexError:
+            return self._lastupdate
+
+    def meanAchievementTime(self):
+        try:
+            wins = [ i for i,l in enumerate(self.achievements_log) if len(l[0])]
+            return sum(wins)/len(wins)
+        except IndexError:
+            return self._lastupdate
+
+
     def lifecycle(self):
         """
         Called to update internal awareness and motion:

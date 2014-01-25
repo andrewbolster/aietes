@@ -478,10 +478,8 @@ class Simulation():
         dp = DataPackage(**(self.currentState()))
 
         n_frames = dp.tmax
-        if os.path.isdir(os.path.dirname(outputFile)):
-            # Have not been given a FQN Path: Assume to use the results directory
-            outputFile=os.path.join(_results_dir,outputFile)
-        filename = "%s.aietes" % outputFile
+
+        filename = "%s.aietes" % results_file(outputFile if outputFile is not None else dp.title)
         return_dict = {}
 
         if movieFile or plot or gif:

@@ -25,7 +25,7 @@ from ast import literal_eval
 import numpy as np
 
 
-from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig
+from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig, results_file
 from configobj import ConfigObj
 
 
@@ -128,9 +128,7 @@ class DataPackage(object):
         self.n = len(self.p)
 
     def write(self, filename=None):
-        if filename is None:
-            filename = "%s"%self.title
-        logging.info("Writing datafile to %s" % filename)
+        logging.info("Writing datafile to %s" % results_file(filename))
 
         data = {i:self.__dict__[i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
 
