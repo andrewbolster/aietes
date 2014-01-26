@@ -8,3 +8,4 @@ numpy
 SimPy>=2.3,<3
 pubsub
 futures
+joblib >=0.8.0a3

@@ -20,8 +20,11 @@ __author__ = 'andrewbolster'
 
 from multiprocessing import Process, JoinableQueue, cpu_count
 from multiprocessing.process import current_process
+import struct, os
 
 import futures
+
+import numpy as np
 
 from aietes import Simulation
 from aietes.Tools import try_x_times
@@ -41,6 +44,10 @@ def sim_mask(args):
 
 
 def consumer(w_queue, r_queue):
+    # Properly Parallel
+    #http://stackoverflow.com/questions/444591/convert-a-string-of-bytes-into-an-int-python
+    myid=current_process()._identity[0]
+    np.random.seed(myid^struct.unpack("<L",os.urandom(4))[0])
     while True:
         try:
             uuid, simargs, postargs = w_queue.get()
@@ -48,16 +55,12 @@ def consumer(w_queue, r_queue):
                                         RuntimeError("Attempted two runs, both failed"),
                                         sim_mask)
             sim_results = protected_run((simargs, postargs))
+        except Exception as e:
+            sim_results = e
+        finally:
             r_queue.put((uuid, sim_results))
             w_queue.task_done()
             print "Done %s" % uuid
-        except RuntimeError as e:
-            print "Fuck %s" % uuid
-            r_queue.put(uuid, e)
-            w_queue.task_done()
-
-        except Exception as e:
-            raise
 
 
 def futures_version(arglist):

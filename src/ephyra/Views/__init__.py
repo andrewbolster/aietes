@@ -190,7 +190,7 @@ class EphyraNotebook(wx.Frame):
         pages = [VisualNavigator, Configurator, Simulator]
         pages = [VisualNavigator]
 
-        if self.ctl.drifting():
+        if self.ctl.model_is_ready() and self.ctl.drifting():
             pages.append(DriftingNavigator)
             pages.remove(VisualNavigator)
 
@@ -263,7 +263,15 @@ class EphyraNotebook(wx.Frame):
         self.Destroy()
 
     def on_idle(self, event):
-        self.nb.GetCurrentPage().on_idle(event)
+
+        if self.args.autoexit:
+            self.exit()
+        else:
+            try:
+                self.nb.GetCurrentPage().on_idle(event)
+            except wx._core.PyDeadObjectError:
+                self.log.debug("Et tu, Brute?")
+                self.exit()
 
 
     def on_resize(self, event):

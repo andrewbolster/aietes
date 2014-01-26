@@ -29,9 +29,11 @@ from pprint import pformat
 import numpy as np
 from datetime import datetime as dt
 from configobj import ConfigObj
+from time import time
 import validate
 
 from SimPy import SimulationStep as Sim
+from humanize_time import secondsToStr
 
 np.seterr(all='raise')
 # from os import urandom as randomstr #Provides unicode random String
@@ -620,6 +622,19 @@ def try_forever(exceptions_to_catch, fn):
     return new_fn
 
 
+def timeit():
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            start = time()
+            res = func(*args, **kwargs)
+            logging.info("%s (%s)" % (func.__name__, time()-start))
+            return res
+
+
+        return wrapper
+
+    return decorator
 def are_equal_waypoints(wps):
     """Compare Waypoint Objects as used by WaypointMixin ([pos],prox)
         Will exclude 'None' records in wps and only compare valid waypoint lists

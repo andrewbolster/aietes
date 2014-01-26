@@ -17,11 +17,17 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
-import functools
+import functools, os
+from joblib import Parallel, delayed
+from joblib.pool import has_shareable_memory
+parallel = False # Doesn't make a damned difference.
+if parallel:
+    os.system("taskset -p 0xff %d" % os.getpid())
 
 from bounos import BounosModel
 from bounos.Metrics import *
-from aietes.Tools import itersubclasses
+from aietes.Tools import itersubclasses, timeit
+
 
 
 def log_and_call():
@@ -55,6 +61,7 @@ class EphyraController():
         self.view = None
         self._metrics_availiable = list(itersubclasses(Metric))
         self._metrics_enabled = [ metric for metric in self._metrics_availiable if not getattr(metric, 'drift_enabled',False)]
+        self.metrics = []
         self.args = kw.get("exec_args", None)
 
         if self.args is not None and self.args.data_file is not None:
@@ -84,6 +91,7 @@ class EphyraController():
         self.update_metrics()
 
     @check_model()
+    @timeit()
     def update_metrics(self):
         # Update secondary metrics
         if self.drifting():
@@ -93,14 +101,19 @@ class EphyraController():
                 self._metrics_enabled.append(drift_metric)
         if not len(getattr(self, "metrics", [])) == len(self._metrics_enabled):
             self.rebuild_metrics()
-        for metric in self.metrics:
-            metric.update(self.model)
+
+        if parallel:
+            n_jobs=-1
+        else:
+            n_jobs=1
+        self.metrics = Parallel(n_jobs=n_jobs, verbose=30, max_nbytes='1M')(delayed(metric)(self.model) for metric in self.metrics)
 
     @check_model()
+    @timeit()
     def rebuild_metrics(self):
         # in the case of metrics_enabled being changed, this requires a complete rebuild
         logging.info("Rebuilding Metrics:{}".format(self._metrics_enabled))
-        self.metrics = [metric() for metric in self._metrics_enabled]
+        self.metrics=map(lambda m:m(), self._metrics_enabled)
         return self.metrics
 
     @check_model()

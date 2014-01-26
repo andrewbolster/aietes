@@ -32,9 +32,12 @@ from matplotlib import cm
 from ephyra import wx
 from ephyra.Views import MetricView, Arrow3D, callsuper
 
+from aietes.Tools import timeit
+
 
 # noinspection PyStringFormat
 class VisualNavigator(wx.Panel):
+    @timeit()
     def __init__(self, parent, frame, *args, **kw):
         wx.Panel.__init__(self, parent, *args, **kw)
         self.log = frame.log.getChild(self.__class__.__name__)
@@ -251,7 +254,8 @@ class VisualNavigator(wx.Panel):
 
     def redraw_page(self, t=None):
         if not self._plot_initialised:
-            raise RuntimeError("Plot isn't ready yet!")
+            self.log.warn("Plot isn't ready yet!")
+            return
             ###
         # Update Time!
         ###
@@ -345,7 +349,7 @@ class VisualNavigator(wx.Panel):
                 self.log.debug("End Of The Line")
                 self.paused = True
                 t = tmax
-                if self.frame.args.autoexit:
+                if self.frame.args.autoexit and self.frame.args.autostart:
                     wx.CallAfter(self.frame.exit)
                     self.Destroy()
 
@@ -358,6 +362,7 @@ class VisualNavigator(wx.Panel):
         self.time_slider.SetValue(t)
         if self.ctl.model_is_ready():
             self.redraw_page(t=t)
+
 
 
     def sphere(self, x, y, z, r=1.0):

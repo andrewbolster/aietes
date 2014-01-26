@@ -453,9 +453,18 @@ class DataPackage(object):
     def drift_error(self):
         """
         Returns the drift errors for each node
+        in real meters
         """
         if self.drifting:
-            return np.linalg.norm(self.drift_positions-self.p, axis=00)
+            return np.linalg.norm(self.drift_positions-self.p, axis=1)
         else:
             raise ValueError("Not Drifting")
+
+    def drift_RMS(self):
+        """
+        Returns the RMS of drift across all nodes over time
+        """
+        return np.sqrt(np.sum(self.drift_error(), axis=0)/self.n)
+
+
 

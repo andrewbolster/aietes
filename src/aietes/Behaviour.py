@@ -396,7 +396,6 @@ class WaypointMixin():
                 self.nextwaypoint = 0
             else:
                 self.nextwaypoint = None
-        self.logger.info("Moving to Next waypoint(%d):%s" % (self.nextwaypoint, position))
 
 
 class Waypoint(Flock, WaypointMixin):
@@ -450,7 +449,7 @@ class FleetLawnmower(Flock, WaypointMixin):
         if self.nextwaypoint is not None:
             target = self.waypoints[self.nextwaypoint]
             angle = angle_between(target.position-position,velocity)
-            self.logger.info("Boresight angle {}".format(angle))
+            if self.debug: self.logger.info("Boresight:{}@{}".format(np.rad2deg(angle),distance(target.position,position)))
             forceVector=-velocity * 2*angle * self.waypoint_factor
         return forceVector
 

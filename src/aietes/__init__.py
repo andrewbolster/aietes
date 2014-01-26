@@ -19,7 +19,6 @@ __email__ = "me@andrewbolster.info"
 import sys
 import traceback
 import optparse
-import time
 import cProfile
 
 from Layercake import Layercake
@@ -167,7 +166,7 @@ class Simulation():
             Simulation Duration in ticks (generally seconds)
         """
         self.logger.info("Initialising Simulation %s, to run for %s steps" % (self.title, self.duration_intervals))
-        starttime = time.time()
+        starttime = time()
         for fleet in self.fleets:
             fleet.activate()
         if callback is not None:
@@ -176,7 +175,7 @@ class Simulation():
         try:
             Sim.simulate(until=self.duration_intervals, callback=callback)
             self.logger.info("Finished Simulation at %s(%s) after %s" % (
-            Sim.now(), secondsToStr(Sim.now()), secondsToStr(time.time() - starttime)))
+            Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
         except RuntimeError as err:
             self.logger.exception("Simulation crashed at %s" % Sim.now())
             raise
@@ -633,7 +632,7 @@ def main():
     Everyone knows what the main does; it does everything!
     """
     try:
-        start_time = time.time()
+        start_time = time()
         (options, args) = option_parser().parse_args()
         exit_code = 0
         if options.verbose:
@@ -659,7 +658,7 @@ def main():
         if options.verbose:
             print 'TOTAL TIME IN MINUTES:',
         if options.verbose:
-            print (time.time() - start_time) / 60.0
+            print (time() - start_time) / 60.0
         sys.exit(exit_code)
     except KeyboardInterrupt, e:  # Ctrl-C
         raise e
