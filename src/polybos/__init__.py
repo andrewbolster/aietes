@@ -233,7 +233,7 @@ class Scenario(object):
         if runcount is None:
             runcount = self._default_run_count
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': True}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
         self.datarun = [None for _ in range(runcount)]
         self.runlist = []
         for run in range(runcount):
@@ -249,7 +249,7 @@ class Scenario(object):
                                 logtoconsole=logging.ERROR,
                                 progress_display=False,
                                 sim_time=runtime),
-                        pp_defaults
+                        deepcopy(pp_defaults)
                     )
                 )
             except Exception:
@@ -391,6 +391,17 @@ class Scenario(object):
                   % (self.simluation['sim_duration'], tmax))
         self.simulation['sim_duration'] = tmax
 
+    def setEnvironment(self, environment):
+        """
+        Set the scenario simulation environment extent,
+        Args:
+            environment([int,int,int]): New simulation environment extent
+        """
+        if self.committed:
+            raise (RuntimeError("Attempted to modify scenario after committing"))
+
+        self.environment = environment
+
     def updateNode(self, node_conf, mutable, value):
         """
         Used to update selected field mappings between scenario definition and
@@ -489,7 +500,7 @@ class ExperimentManager(object):
             self.title = title
         self._default_scenario.setNodeCount(self.node_count)
         self.parallel = parallel
-        self.future = False
+        self.future = kwargs.get("future",False)
         if self.parallel and not self.future:
             ParSim.boot()
 
@@ -543,7 +554,9 @@ class ExperimentManager(object):
             for scenario in self.scenarios:
                 scenario.commit()
                 if self.parallel:
+                    print("Parallel")
                     if self.future:
+                        print("Futuristic")
                         scenario.run_future(**kwargs)
                     else:
                         scenario.run_parallel(**kwargs)
@@ -599,6 +612,15 @@ class ExperimentManager(object):
         """
         for s in self.scenarios:
             s.setDuration(tmax)
+
+    def updateEnvironment(self, environment):
+        """
+        Update the environment extent of currently configured scenarios
+        Args:
+            environment([int,int,int]): update experiment simulation environment for all scenarios
+        """
+        for s in self.scenarios:
+            s.setEnvironment(environment)
 
     def addVariableRangeScenario(self, variable, value_range):
         """

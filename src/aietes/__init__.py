@@ -67,16 +67,11 @@ class Simulation():
             except KeyError:
                 """Assumes that this is the first one"""
                 pass
-        self.logger = logging.getLogger(__name__)
-        if logtoconsole is not None and not self.logger.root.handlers:
-            #i.e. if logging to console and no handlers enabled
-            ch = logging.StreamHandler()
-            ch.setLevel(logtoconsole)
-            ch.setFormatter(
-                logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-            )
-            self.logger.addHandler(ch)
-            self.logger.info("Launched Console Logger (%s)" % log_level_lookup(ch.level))
+        self.logger = kwargs.get("logger",None)
+        if self.logger is None:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logtoconsole)
+
         if logtofile is not None:
             hdlr = logging.FileHandler(logtofile)
             hdlr.setFormatter(logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
@@ -404,7 +399,6 @@ class Simulation():
         # Configure specified nodes
         #
         for node_name, config in self.config.Node.Nodes.items():
-            self.logger.debug("Generating node %s with config %s" % (node_name, config))
             new_node = Node(
                 node_name,
                 self,

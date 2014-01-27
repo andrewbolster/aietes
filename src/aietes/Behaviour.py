@@ -25,7 +25,7 @@ from collections import namedtuple
 
 from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between
 
-#debug=True
+debug=False
 class Behaviour(object):
     """
     Generic Representation of a Nodes behavioural characteristics
@@ -55,7 +55,6 @@ class Behaviour(object):
 
     def _start_log(self, parent):
         self.logger = parent.logger.getChild("Bev:%s" % self.__class__.__name__)
-        self.logger.debug('creating instance')
 
     def normalize_behaviour(self, forceVector):
         return forceVector
@@ -84,7 +83,7 @@ class Behaviour(object):
         """
         Process current map and memory information and update velocities
         """
-        self.debug = debug and self.node == self.node.fleet.nodes[0]
+        self.debug = self.debug and self.node == self.node.fleet.nodes[0]
         self.neighbours = self.neighbour_map()
         self.nearest_neighbours = self.getNearestNeighbours(self.node.position,
                                                             n_neighbours=self.n_nearest_neighbours)
@@ -347,6 +346,7 @@ class WaypointMixin():
         self.waypoints = []
         self.nextwaypoint = None
         self.waypointloop = True
+        self._nwpc = 0
         self.behaviours.append(self.waypointVector)
 
     def activate(self, *args, **kwargs):
@@ -355,7 +355,7 @@ class WaypointMixin():
         else:
             generator = attrgetter(str(self.bev_config.waypoint_style))
             g = generator(self)
-            self.logger.debug("Generating waypoints: %s" % g.__name__)
+            if self.debug: self.logger.debug("Generating waypoints: %s" % g.__name__)
             g()
 
     def patrolCube(self):
@@ -380,10 +380,11 @@ class WaypointMixin():
             neighbourhood_d = distance(neighbourhood_avg, target.position)
             if neighbourhood_d < target.prox or real_d < target.prox:
                 self.goto_next_waypoint(target.position, real_d)
-                target = self.waypoints[self.nextwaypoint]
-            forceVector = self.attractToPosition(position, target.position, target.prox/2)
+            else:
+                forceVector = self.attractToPosition(position, target.position, target.prox/2)
         else:
-            self.logger.info("No Waypoint")
+            if self.node.on_mission:
+                self.logger.info("No Waypoint")
 
         return self.normalize_behaviour(forceVector) * self.waypoint_factor
 
@@ -391,10 +392,12 @@ class WaypointMixin():
         # GRANT ACHIEVEMENT
         self.node.grantAchievement((position, real_d))
         self.nextwaypoint=(self.nextwaypoint+1)
+
         if self.nextwaypoint > len(self.waypoints)-1:
             if self.waypointloop:
                 self.nextwaypoint = 0
             else:
+                self.node.missionAccomplished()
                 self.nextwaypoint = None
 
 
@@ -429,19 +432,21 @@ class FleetLawnmower(Flock, WaypointMixin):
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
+        self.waypointloop = False
         self.n_nearest_neighbours = listfix(int, self.bev_config.nearest_neighbours)
         self.repulsive_factor = listfix(float, self.bev_config.repulsive_factor)
         self.collision_avoidance_d = listfix(float, self.bev_config.collision_avoidance_d)
 
         self.behaviours.append(self.repulsiveVector)
         self.behaviours.append(self.boresight)
+        self.behaviours.append(self.tracked_avoidance)
 
         assert self.n_nearest_neighbours > 0
         assert self.neighbourhood_max_rad > 0
         assert self.neighbour_min_rad > 0
 
     def activate(self, *args, **kwargs):
-        self.logger.debug("Generating waypoints: Lawnmower")
+        if self.debug: self.logger.debug("Generating waypoints: Lawnmower")
         self.lawnmower(self.node.nodes)
 
     def boresight(self, position, velocity):
@@ -452,6 +457,23 @@ class FleetLawnmower(Flock, WaypointMixin):
             if self.debug: self.logger.info("Boresight:{}@{}".format(np.rad2deg(angle),distance(target.position,position)))
             forceVector=-velocity * 2*angle * self.waypoint_factor
         return forceVector
+
+    def tracked_avoidance(self, position, velocity):
+        forceVector = np.array([0, 0, 0], dtype=np.float)
+        for neighbour in self.nearest_neighbours:
+            if distance(position, neighbour.position) < self.collision_avoidance_d:
+                partVector = self.repulseFromPosition(position, neighbour.position, self.collision_avoidance_d)
+                partVector = unit(partVector)*np.cos(angle_between(-velocity,partVector))
+                if self.debug:
+                    self.logger.debug(
+                        "Avoiding %s:%f:%s" % (
+                            neighbour.name, distance(position, neighbour.position), sixvec(partVector)))
+                forceVector += partVector
+
+                # Return an inverse vector to the obstacles
+        if self.debug:
+            self.logger.debug("Repulse:%s" % forceVector)
+        return self.normalize_behaviour(forceVector) * self.repulsive_factor
 
 
     def per_node_lawnmower(self,shape, swath, base_axis=0, altitude=None):
@@ -501,7 +523,6 @@ class FleetLawnmower(Flock, WaypointMixin):
                 step += 1
             points.append([current_x, current_y, altitude])
             stepping += 1
-        points.append(start)
         if bool(base_axis):
             points = np.asarray([[y,x,z] for (x,y,z) in points])
         else:
@@ -515,7 +536,7 @@ class FleetLawnmower(Flock, WaypointMixin):
         N is either a single number (i.e. n rows of a shape) or a tuple (x, 1/y rows)
         """
         extent = np.asarray(zip(np.zeros(3),np.asarray(self.env_shape)))
-        shape = np.asarray([ self.env_shape[0:2] * (((vertex - 0.5) / 3) + 0.5) for vertex in np.asarray([[0,0],[0,1],[1,0],[1,1]])])
+        shape = np.asarray([ self.env_shape[0:2] * ((2*(vertex - 0.5) / 3) + 0.5) for vertex in np.asarray([[0,0],[0,1],[1,0],[1,1]])])
 
         front = np.max(shape,axis=0)[bool(base_axis)]
         back = np.min(shape,axis=0)[bool(base_axis)]
@@ -524,6 +545,8 @@ class FleetLawnmower(Flock, WaypointMixin):
         top = max(extent[2])
         bottom = min(extent[2])
         mid_z = (top+bottom)/2.0
+
+        self.logger.info("Survey area:{}km^2 ({})".format((front-back)*(right-left)/1e6,[front,back,right,left]))
 
         inc = np.sign(front-back)
         swath = inc*swath
@@ -540,14 +563,11 @@ class FleetLawnmower(Flock, WaypointMixin):
         row_height = (front-back)/col_count
         row_width = (right-left)/row_count
 
-        print("HW:{},{}, {}".format(row_height,row_width, shape))
-
         courses = []
 
         for r,c in product(range(row_count),range(col_count)):
             sub_shape = [[(left+r*row_width)-overlap, (left+(r+1)*row_width)+overlap],
                          [(back+c*row_height)-overlap, (back+(c+1)*row_height)+overlap]]
-            print("rc:{},{},S:{}".format(r,c,sub_shape))
             if twister:
                 axis = base_axis+c%2
             else:
@@ -555,6 +575,7 @@ class FleetLawnmower(Flock, WaypointMixin):
             courses.append(self.per_node_lawnmower(sub_shape,swath=swath, altitude=mid_z, base_axis=axis))
 
         self.waypoints = [self.waypoint(point,prox) for point in courses[self.node.nodenum]]
+        self.waypoints.append(self.waypoint(self.node.position,prox*2))
         self.nextwaypoint = 0
 
 

@@ -221,11 +221,11 @@ class EphyraController():
            """
         positions = self.get_fleet_positions(time)
         avg_pos = self.get_fleet_average_pos(time)
-        _distances_from_avg_pos = map(lambda v: np.linalg.norm(v - avg_pos), positions)
+        _distances_from_avg_pos = map(lambda v: mag(v - avg_pos), positions)
         stddev_pos = np.std(_distances_from_avg_pos)
         headings = self.get_fleet_headings(time)
         avg_head = np.average(headings, axis=0)
-        _distances_from_avg_head = map(lambda v: np.linalg.norm(v - avg_head), headings)
+        _distances_from_avg_head = map(lambda v: mag(v - avg_head), headings)
         stddev_head = np.std(_distances_from_avg_head)
 
         return dict({'positions':

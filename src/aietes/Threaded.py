@@ -64,11 +64,8 @@ def consumer(w_queue, r_queue):
 
 
 def futures_version(arglist):
-    results = [None] * len(arglist)
-    with futures.ProcessPoolExecutor() as exe:
-        for i, (kwargs, pp_args) in enumerate(arglist):
-            e = exe.submit(sim_mask, (kwargs, pp_args))
-            results[i] = e.result()
+    from joblib import Parallel, delayed
+    results=Parallel(n_jobs=-1, verbose=50)(delayed(sim_mask)(args) for args in arglist)
     return results
 
 

@@ -8,13 +8,14 @@ from polybos import ExperimentManager as EXP
 def set_exp():
     exp = EXP(node_count=4,
               title="Drift Analysis",
-              parallel=True,dataFile=False)
+              parallel=True, future=True,dataFile=False)
     exp.updateDefaultNode({
         'behaviour':'FleetLawnmower',
         'waypoint_style':'lawnmower',
         'positioning':'surface',
         'drifting':'DriftFactorPy'
     })
+    exp.updateEnvironment([])
     exp.useDefaultScenario()
     exp.updateDuration(28800)
     return exp

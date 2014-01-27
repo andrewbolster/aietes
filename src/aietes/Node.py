@@ -35,6 +35,7 @@ class Node(Sim.Process):
         self.nodenum = Node.nodes
         Node.nodes += 1
         self.debug = debug and self.nodenum == 0
+        self.on_mission = True
 
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
@@ -146,20 +147,17 @@ class Node(Sim.Process):
             import contrib.Ghia.uuv_position_drift_model as Driftmodels
 
             self.drift = getattr(Driftmodels, self.config['drift'])(self)
-            self.logger.info("Drift activated from config: {}".format(self.config['drift']))
+            self.logger.debug("Drift activated from config: {}".format(self.config['drift']))
             self.drifting = True
         elif kwargs.has_key('drift'):
             self.drift = kwargs.get('drift')(self)
-            self.logger.info("Drift activated from kwarg: {}".format(self.drift.__name__))
+            self.logger.debug("Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
-
-        self.logger.debug('instance created')
 
     def activate(self, launch_args=None):
         """
         Fired on Sim Start
         """
-        self.logger.debug("Initialised Node Lifecycle")
         Sim.activate(self, self.lifecycle())
         if launch_args is None:
             launch_args = {}
@@ -179,6 +177,12 @@ class Node(Sim.Process):
         Assign or Re-assign a node to a given Fleet object
         """
         self.fleet = fleet
+
+    def missionAccomplished(self):
+        """
+        GWB
+        """
+        self.on_mission = False
 
     def wallCheck(self):
         """
@@ -239,7 +243,11 @@ class Node(Sim.Process):
         # dv/dt = F(v,t)/m
         # dv/dt->(v(t+e)-v(t))/dt;
         # v(t+e) = v(t)+(F*dt)/m
-        new_velocity = self.velocity + ((self.acceleration_force * dT) / self.mass)
+        if np.all(self.acceleration_force == 0.0):
+            # Braking as there's no acceleration vector
+            new_velocity = np.zeros(3)
+        else:
+            new_velocity = self.velocity + ((self.acceleration_force * dT) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruiseControl(new_velocity, self.velocity)
             if debug:

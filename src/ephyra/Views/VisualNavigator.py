@@ -32,7 +32,7 @@ from matplotlib import cm
 from ephyra import wx
 from ephyra.Views import MetricView, Arrow3D, callsuper
 
-from aietes.Tools import timeit
+from aietes.Tools import timeit, mag
 
 
 # noinspection PyStringFormat
@@ -399,10 +399,10 @@ class VisualNavigator(wx.Panel):
         headings = self.ctl.get_fleet_headings(self.t)
 
         for node in range(self.ctl.get_n_vectors()):
-            mag = np.linalg.norm(np.asarray(headings[node]))
-            colorval = self.plot_head_mag_norm(mag)
+            magnitude = mag(np.asarray(headings[node]))
+            colorval = self.plot_head_mag_norm(magnitude)
             if self.frame.args.verbose: self.log.debug(
-                "Average heading: %s, Color: [%s], Speed: %s" % (str(headings[node]), str(colorval), str(mag)))
+                "Average heading: %s, Color: [%s], Speed: %s" % (str(headings[node]), str(colorval), str(magnitude)))
 
             xs, ys, zs = zip(positions[node], np.add(positions[node], (np.asarray(headings[node]) * 50)))
             self.node_vector_collections.append(Arrow3D(
@@ -429,9 +429,9 @@ class VisualNavigator(wx.Panel):
 
             for contributor, contribution in contributions.iteritems():
 
-                mag = np.linalg.norm(np.asarray(contribution))
+                magnitude = mag(np.asarray(contribution))
                 # Getting FPE's due to suspected zero vectors in mpl.draw
-                if mag > 0.001:
+                if magnitude > 0.001:
                     xs, ys, zs = zip(positions[node], np.add(positions[node], (np.asarray(contribution) * 50)))
                     vector = Arrow3D(
                         xs, ys, zs,

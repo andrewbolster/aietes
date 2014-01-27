@@ -122,7 +122,10 @@ def angle_between(v1, v2):
 
 def bearing(v):
     """radian angle between a given vector and 'north'"""
-    return angle_between(v,np.array([0,1]))
+    if np.all(v==0):
+        return 0.0
+    else:
+        return angle_between(v,np.array([1,0]))
 
 def distance(pos_a, pos_b, scale=1):
     """

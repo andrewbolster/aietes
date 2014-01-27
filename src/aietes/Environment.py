@@ -94,8 +94,10 @@ class Environment():
             position = np.asarray(self.shape) / 2
         if isinstance(position,basestring):
             if position == "surface":
-                position = np.asarray(self.shape)/2
-                position[2]=self.shape[2] - (3 * stddev)
+                position = np.zeros(3)
+                position[0] = (2 * stddev)
+                position[1] = self.shape[1] / 2
+                position[2] =self.shape[2] - (2 * stddev)
             else:
                 raise ValueError("Incorrect position string")
 
