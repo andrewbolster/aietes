@@ -29,18 +29,26 @@ import numpy as np
 from aietes import Simulation
 from aietes.Tools import try_x_times
 
-
 def sim_mask(args):
-    kwargs, pp_defaults = args
-    sim_time = kwargs.pop("runtime", None)
-    sim = Simulation(**kwargs)
-    prep_stats = sim.prepare(sim_time=sim_time)
-    sim_time = sim.simulate()
-    return_dict = sim.postProcess(**pp_defaults)
-    print("%s(%s):%f%%"
-          % (current_process().name, return_dict.get('data_file', "N/A"),
-             100.0 * float(sim_time) / prep_stats['sim_time']))
-    return sim.generateDataPackage()
+    lives=5
+    while True:
+        try:
+            kwargs, pp_defaults = args
+            sim_time = kwargs.pop("runtime", None)
+            sim = Simulation(**kwargs)
+            prep_stats = sim.prepare(sim_time=sim_time)
+            sim_time = sim.simulate()
+            return_dict = sim.postProcess(**pp_defaults)
+            print("%s(%s):%f%%"
+                  % (current_process().name, return_dict.get('data_file', "N/A"),
+                     100.0 * float(sim_time) / prep_stats['sim_time']))
+            return sim.generateDataPackage()
+        except RuntimeError:
+            lives-=1
+            if lives <= 0:
+                raise
+            else:
+                continue
 
 
 def consumer(w_queue, r_queue):

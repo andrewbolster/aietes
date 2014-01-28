@@ -15,7 +15,6 @@ def set_exp():
         'positioning':'surface',
         'drifting':'DriftFactorPy'
     })
-    exp.updateEnvironment([])
     exp.useDefaultScenario()
     exp.updateDuration(28800)
     return exp

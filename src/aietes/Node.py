@@ -275,6 +275,9 @@ class Node(Sim.Process):
         else:
             self.position += self.velocity
 
+        self.pos_log[:, self._lastupdate] = self.position.copy()
+        self.vec_log[:, self._lastupdate] = self.velocity
+
         if debug:
             self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
@@ -282,12 +285,8 @@ class Node(Sim.Process):
             self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
             self.logger.critical("WE'RE OUT OF THE ENVIRONMENT! %s, v=%s" % (self.position, self.velocity))
-            self.logger.critical("PosLog:(%d,%d)\n%s" % (
-                self._lastupdate, 0, [mag(self.pos_log[:, x]) for x in range(self._lastupdate)]))
-            raise Exception("%s Crashed out of the environment at %s m/s" % (self.name, mag(self.velocity)))
+            raise RuntimeError("%s Crashed out of the environment at %s m/s" % (self.name, mag(self.velocity)))
 
-        self.pos_log[:, self._lastupdate] = self.position.copy()
-        self.vec_log[:, self._lastupdate] = self.velocity
 
         assert not np.isnan(sum(self.pos_log[:, self._lastupdate]))
 

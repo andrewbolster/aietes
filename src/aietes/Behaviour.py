@@ -171,7 +171,7 @@ class Behaviour(object):
         Called by responseVector to avoid walls to a distance of half min distance
         """
         response = np.zeros(shape=forceVector.shape)
-        min_dist = self.neighbour_min_rad * 2
+        min_dist = self.neighbour_min_rad
         avoid = False
         avoiding_position = None
         if np.any((np.zeros(3) + min_dist) > position):
@@ -179,14 +179,14 @@ class Behaviour(object):
                 self.logger.debug("Too Close to the Origin-surfaces: %s" % position)
             offending_dim = position.argmin()
             avoiding_position = position.copy()
-            avoiding_position[offending_dim] = float(0.0)
+            avoiding_position[offending_dim] = min_dist
             avoid = True
         elif np.any(position > (self.env_shape - min_dist)):
             if self.debug:
                 self.logger.debug("Too Close to the Upper-surfaces: %s" % position)
             offending_dim = position.argmax()
             avoiding_position = position.copy()
-            avoiding_position[offending_dim] = float(self.env_shape[offending_dim])
+            avoiding_position[offending_dim] = float(self.env_shape[offending_dim]+min_dist)
             avoid = True
         else:
             response = forceVector
@@ -531,7 +531,7 @@ class FleetLawnmower(Flock, WaypointMixin):
 
         return points
 
-    def lawnmower(self, n, overlap = 0, base_axis = 0, twister = False, swath = 60, prox=25):
+    def lawnmower(self, n, overlap = 0, base_axis = 0, twister = False, swath = 200, prox=25):
         """
         N is either a single number (i.e. n rows of a shape) or a tuple (x, 1/y rows)
         """
@@ -544,7 +544,7 @@ class FleetLawnmower(Flock, WaypointMixin):
         left = np.min(shape,axis=0)[not bool(base_axis)]
         top = max(extent[2])
         bottom = min(extent[2])
-        mid_z = (top+bottom)/2.0
+        mid_z = 2*(top+bottom)/3.0
 
         self.logger.info("Survey area:{}km^2 ({})".format((front-back)*(right-left)/1e6,[front,back,right,left]))
 
