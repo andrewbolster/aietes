@@ -12,3 +12,5 @@ Non-Pipable Dependencies
   libfreetype6-dev
   libpng-dev
   libzmq-dev
+  mencoder
+  imagemagick
