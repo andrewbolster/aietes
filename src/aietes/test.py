@@ -77,7 +77,6 @@ class OutputBehaviour(unittest.TestCase):
             print(pformat(options))
             aietes.go(options)
         except Exception as e:
-            self.fail("Failed: %s " % e)
             raise
 
     def testMovieGeneration(self):

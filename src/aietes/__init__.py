@@ -510,6 +510,9 @@ class Simulation():
             if gif:
                 self.logger.info("Writing animation to %s.gif" % filename)
                 from matplotlib import animation as MPLanimation
+                from matplotlib import verbose
+
+                verbose.level="debug"
 
                 return_dict['ani_file'] = "%s.gif" % filename
                 MPLanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8",
