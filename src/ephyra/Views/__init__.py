@@ -37,6 +37,36 @@ matplotlib.rcParams.update({'font.size': 8})
 
 import numpy as np
 
+class CallSuper(Exception): pass
+
+
+def callsuper(method):
+    """
+    Decorator for calling the super method automagically.
+
+    In the submethod, if a ``CallSuper`` exception is raised at any point, then
+    the wrapper will look up the class's MRO (method resolution order) for a
+    method of the same name. If none is found, the exception is allowed to
+    permeate. If one is found, it too is wrapped with the ``callsuper``
+    decorator and called with the arguments passed to ``CallSuper.__init__()``.
+    """
+    def callsuper_wrapper(self, *args, **kwargs):
+        try:
+            print("{}:{}".format(args,kwargs))
+            return method(self, *args, **kwargs)
+        except CallSuper, exc:
+            supermethod, name = None, method.__name__
+            for base in self.__class__.mro()[1:]:
+                if (hasattr(base, name) and
+                    hasattr(getattr(base, name), '__call__')):
+                    supermethod = callsuper(getattr(base, name))
+                    break
+            if not supermethod:
+                raise
+            return supermethod(self, *exc.args, **exc.kwargs)
+    callsuper_wrapper.__name__ = method.__name__
+    callsuper_wrapper.__doc__ = method.__doc__
+    return callsuper_wrapper
 
 class MetricView():
     """
@@ -136,7 +166,7 @@ class GenericFrame(wx.Frame):
         self.Layout()
 
 
-from ephyra.Views.VisualNavigator import VisualNavigator
+from ephyra.Views.VisualNavigator import VisualNavigator, DriftingNavigator
 from ephyra.Views.Configurator import Configurator
 from ephyra.Views.Simulator import Simulator
 
@@ -159,6 +189,10 @@ class EphyraNotebook(wx.Frame):
 
         pages = [VisualNavigator, Configurator, Simulator]
         pages = [VisualNavigator]
+
+        if self.ctl.model_is_ready() and self.ctl.drifting():
+            pages.append(DriftingNavigator)
+            pages.remove(VisualNavigator)
 
         for page in pages:
             self.log.debug("Adding Page: %s" % page.__name__)
@@ -229,7 +263,15 @@ class EphyraNotebook(wx.Frame):
         self.Destroy()
 
     def on_idle(self, event):
-        self.nb.GetCurrentPage().on_idle(event)
+
+        if self.args.autoexit:
+            self.exit()
+        else:
+            try:
+                self.nb.GetCurrentPage().on_idle(event)
+            except wx._core.PyDeadObjectError:
+                self.log.debug("Et tu, Brute?")
+                self.exit()
 
 
     def on_resize(self, event):

@@ -35,7 +35,7 @@ import collections
 
 from aietes import Simulation  # Must use the aietes path to get the config files
 import aietes.Threaded as ParSim
-from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, try_forever
+from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, try_forever, secondsToStr
 from bounos import DataPackage, printAnalysis
 
 
@@ -75,6 +75,9 @@ class Scenario(object):
         'schooling': ['Behaviour', 'schooling_factor'],
         'clumping': ['Behaviour', 'clumping_factor'],
         'waypointing': ['Behaviour', 'waypoint_factor'],
+        'waypoint_style': ['Behaviour', 'waypoint_style'],
+        'drifting': ['drift'],
+        'positioning': ['position_generation'],
         'fudging': ['Behaviour', 'positional_accuracy'],
     }
 
@@ -113,6 +116,7 @@ class Scenario(object):
 
         self.tweaks = {}
 
+
     def run(self, runcount=None, runtime=None, *args, **kwargs):
         """
         Offload this to AIETES
@@ -123,6 +127,9 @@ class Scenario(object):
         """
         if runcount is None:
             runcount = self._default_run_count
+
+        self.mypath = os.path.join(kwargs.get("basepath",tempfile.mkdtemp()),self.title)
+        os.mkdir(self.mypath)
 
         pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
         self.datarun = [None for _ in range(runcount)]
@@ -135,7 +142,7 @@ class Scenario(object):
                 title = self.title + "-%s" % run
                 sim = Simulation(config=self.config,
                                  title=title,
-                                 logtofile=title + ".log",
+                                 logtofile=os.path.join(self.mypath,"%s.log"%title),
                                  logtoconsole=logging.ERROR,
                                  progress_display=False)
                 prep_stats = sim.prepare(sim_time=runtime)
@@ -157,13 +164,15 @@ class Scenario(object):
         Offload this to AIETES multiprocessing queue
 
         Args:
-            runcoun(int): Number of repeated executions of this scenario; this value overrides the
+            runcount(int): Number of repeated executions of this scenario; this value overrides the
                 value set on init
             runtime(int): Override simulation duration (normally inherited from config)
         """
         if runcount is None:
             runcount = self._default_run_count
 
+        self.mypath = os.path.join(kwargs.get("basepath",tempfile.mkdtemp()),self.title)
+        os.mkdir(self.mypath)
         if not ParSim.running:
             raise RuntimeError("Attempted parrallel without booting, breaking")
 
@@ -182,7 +191,7 @@ class Scenario(object):
                         uuids[run],
                         kwarger(config=self.config,
                                 title=title,
-                                logtofile=title + ".log",
+                                logtofile=os.path.join(self.mypath,"%s.log"%title),
                                 logtoconsole=logging.ERROR,
                                 progress_display=False,
                                 sim_time=runtime),
@@ -215,14 +224,16 @@ class Scenario(object):
         Offload this to AIETES multiprocessing queue
 
         Args:
-            runcoun(int): Number of repeated executions of this scenario; this value overrides the
+            runcount(int): Number of repeated executions of this scenario; this value overrides the
                 value set on init
             runtime(int): Override simulation duration (normally inherited from config)
         """
+        self.mypath = os.path.join(kwargs.get("basepath",tempfile.mkdtemp()),self.title)
+        os.mkdir(self.mypath)
         if runcount is None:
             runcount = self._default_run_count
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': True}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
         self.datarun = [None for _ in range(runcount)]
         self.runlist = []
         for run in range(runcount):
@@ -234,11 +245,11 @@ class Scenario(object):
                     (
                         kwarger(config=self.config,
                                 title=title,
-                                logtofile=title + ".log",
+                                logtofile=os.path.join(self.mypath,"%s.log"%title),
                                 logtoconsole=logging.ERROR,
                                 progress_display=False,
                                 sim_time=runtime),
-                        pp_defaults
+                        deepcopy(pp_defaults)
                     )
                 )
             except Exception:
@@ -267,6 +278,13 @@ class Scenario(object):
         else:
             raise RuntimeError("Cannot process simulation statistics of non-DataPackage: (%s)%s"
                                % (type(sim_run_dataset), sim_run_dataset))
+
+    def write(self):
+        """
+        Dump the datafiles into a path but creating a folder with our name
+        """
+        for i,d in enumerate(self.datarun):
+            d.write(filename=os.path.join(self.mypath,str(i)))
 
     def commit(self):
         """
@@ -317,9 +335,13 @@ class Scenario(object):
         """
         default_bev = self._default_node_config['Behaviour']['protocol']
 
-        behaviour_set = set(default_bev)
+        if isinstance(default_bev,list) and len(default_bev>1):
+            behaviour_set = set(default_bev)
+        else:
+            behaviour_set = set()
+            behaviour_set.add(default_bev)
         behaviours = {}
-        behaviours[default_bev] = ['__default__']
+        behaviours[default_bev] = ['__default__',]
 
         if self._default_node_config['bev'] != 'Null':
             raise NotImplementedError(
@@ -368,6 +390,17 @@ class Scenario(object):
             print("Updating simulation time from %d to %d"
                   % (self.simluation['sim_duration'], tmax))
         self.simulation['sim_duration'] = tmax
+
+    def setEnvironment(self, environment):
+        """
+        Set the scenario simulation environment extent,
+        Args:
+            environment([int,int,int]): New simulation environment extent
+        """
+        if self.committed:
+            raise (RuntimeError("Attempted to modify scenario after committing"))
+
+        self.environment = environment
 
     def updateNode(self, node_conf, mutable, value):
         """
@@ -467,7 +500,7 @@ class ExperimentManager(object):
             self.title = title
         self._default_scenario.setNodeCount(self.node_count)
         self.parallel = parallel
-        self.future = False
+        self.future = kwargs.get("future",False)
         if self.parallel and not self.future:
             ParSim.boot()
 
@@ -477,6 +510,15 @@ class ExperimentManager(object):
     def __exit__(self, type, value, traceback):
         if self.parallel and not self.future:
             ParSim.kill()
+
+    def updateDefaultNode(self, config_dict):
+        """
+        Applys a behaviour (given as a string) to the experimental default for node generation
+        Args:
+            behaviour(str): new default behaviour
+        """
+        for k,v in config_dict.iteritems():
+            self._default_scenario.updateDefaultNode(k,v)
 
     def updateDefaultBehaviour(self, behaviour):
         """
@@ -500,6 +542,8 @@ class ExperimentManager(object):
         self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
         self.orig_path = os.path.abspath(_results_dir)
         self.runcount = kwargs.get("runcount", 1)
+        kwargs.update({"basepath":self.exp_path})
+        start = time.time()
         try:
             os.mkdir(self.exp_path)
         except:
@@ -510,7 +554,9 @@ class ExperimentManager(object):
             for scenario in self.scenarios:
                 scenario.commit()
                 if self.parallel:
+                    print("Parallel")
                     if self.future:
+                        print("Futuristic")
                         scenario.run_future(**kwargs)
                     else:
                         scenario.run_parallel(**kwargs)
@@ -530,6 +576,8 @@ class ExperimentManager(object):
 
             if self.parallel: ParSim.kill()
             print("Experimental results stored in %s" % self.exp_path)
+        self.runtime = time.time()-start
+        print("Runtime:{}".format(secondsToStr(self.runtime)))
 
     def generateSimulationStats(self):
         """
@@ -564,6 +612,15 @@ class ExperimentManager(object):
         """
         for s in self.scenarios:
             s.setDuration(tmax)
+
+    def updateEnvironment(self, environment):
+        """
+        Update the environment extent of currently configured scenarios
+        Args:
+            environment([int,int,int]): update experiment simulation environment for all scenarios
+        """
+        for s in self.scenarios:
+            s.setEnvironment(environment)
 
     def addVariableRangeScenario(self, variable, value_range):
         """
@@ -643,7 +700,13 @@ class ExperimentManager(object):
             else:
                 s.addDefaultNode(count=invcount)
             self.scenarios.append(s)
-
+    def useDefaultScenario(self):
+        """
+        Stick to the defaults
+        """
+        s= Scenario(default_config=self._default_scenario.generateConfigObj(), title=self.title)
+        s.addDefaultNode(self.node_count)
+        self.scenarios.append(s)
 
     @staticmethod
     def printStats(experiment):
@@ -765,6 +828,14 @@ class ExperimentManager(object):
             print("Writing %s to %s"%(s.title, s_paths[i]))
             pickle.dump(s,open(s_paths[i], "wb"))
             print("Done in %f seconds"%(time.clock()-start))
+
+    def dump_dataruns(self):
+        """
+        Dump scenarios into the exp_path directory
+        """
+        for s in self.scenarios:
+            s.write()
+
 
     def dump_analysis(self):
         """

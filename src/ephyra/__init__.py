@@ -65,7 +65,7 @@ def main():
     )
     parser.add_argument('-x', '--autoexit',
                         dest='autoexit', action='store_true', default=False,
-                        help='Automatically exit after animation'
+                        help='Automatically exit (after animation with -a)'
     )
     parser.add_argument('-l', '--loop',
                         dest='loop', action='store_true', default=False,

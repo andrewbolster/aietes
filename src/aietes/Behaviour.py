@@ -20,10 +20,12 @@ from operator import attrgetter
 import logging
 
 import numpy as np
+from itertools import product
+from collections import namedtuple
 
-from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError
+from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between
 
-
+debug=False
 class Behaviour(object):
     """
     Generic Representation of a Nodes behavioural characteristics
@@ -35,8 +37,9 @@ class Behaviour(object):
         self.node = kwargs.get('node')
         self.bev_config = kwargs.get('bev_config')
         self.map = kwargs.get('map', None)
+        self.debug = debug and self.node.nodenum == 0
         self._start_log(self.node)
-        if debug:
+        if self.debug:
             self.logger.debug('from bev_config: %s' % self.bev_config)
             # self.logger.setLevel(logging.DEBUG)
         self.update_rate = 1
@@ -45,15 +48,13 @@ class Behaviour(object):
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
+        self.neighbourhood_max_rad = listfix(int, self.bev_config.neighbourhood_max_rad)
+        self.neighbour_min_rad = listfix(int, self.bev_config.neighbourhood_min_rad)
         self.positional_accuracy = listfix(float, self.bev_config.positional_accuracy)
         self.horizon = 200
 
     def _start_log(self, parent):
         self.logger = parent.logger.getChild("Bev:%s" % self.__class__.__name__)
-        self.logger.debug('creating instance')
-
-    def activate(self, *args, **kwargs):
-        pass
 
     def normalize_behaviour(self, forceVector):
         return forceVector
@@ -82,6 +83,7 @@ class Behaviour(object):
         """
         Process current map and memory information and update velocities
         """
+        self.debug = self.debug and self.node == self.node.fleet.nodes[0]
         self.neighbours = self.neighbour_map()
         self.nearest_neighbours = self.getNearestNeighbours(self.node.position,
                                                             n_neighbours=self.n_nearest_neighbours)
@@ -96,10 +98,11 @@ class Behaviour(object):
 
         forceVector = sum(contributions.values())
 
-        forceVector = self.avoidWall(self.node.position, self.node.velocity, forceVector)
-        if debug:
+        # TODO Under Drift, it's probably better to do wall-detection twice: once on node and once on environment
+        forceVector = self.avoidWall(self.node.getPos(), self.node.velocity, forceVector)
+        if self.debug:
             self.logger.debug("Response:%s" % forceVector)
-        if debug:
+        if self.debug:
             total = sum(map(mag, contributions.values()))
 
             self.logger.debug("contributions: %s of %3f" % (
@@ -108,7 +111,7 @@ class Behaviour(object):
                     for func, value in contributions.iteritems()
                 ], total)
             )
-        if debug:
+        if self.debug:
             total = sum(map(mag, contributions.values()))
             for func, value in contributions.iteritems():
                 self.logger.debug("%s:%.2f:%s" % (func, 100 * mag(value) / total, sixvec(value)))
@@ -120,7 +123,7 @@ class Behaviour(object):
         """
         Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         """
-        # Sort and filter Neighbours by distance
+        # Sort and filter Neighbours from self.map by distance
         neighbours_with_distance = [map_entry(key,
                                               value.position, value.velocity,
                                               name=self.simulation.reverse_node_lookup(key).name,
@@ -139,7 +142,7 @@ class Behaviour(object):
     def repulseFromPosition(self, position, repulsive_position, d_limit=1):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         distanceVal = distance(position, repulsive_position)
-        forceVector = unit(position - repulsive_position) * d_limit / float(distanceVal)
+        forceVector = unit(position - repulsive_position) * d_limit / float(min(distanceVal,self.neighbourhood_max_rad))
 
         if distanceVal < 2:
             raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
@@ -149,7 +152,7 @@ class Behaviour(object):
                                 self.node.position,
                                 sixvec(self.node.velocity)
                                ))
-        if debug:
+        if self.debug:
             self.logger.debug(
                 "Repulsion from %s: %s, at range of %s" % (forceVector, repulsive_position, distanceVal))
         return forceVector
@@ -157,8 +160,8 @@ class Behaviour(object):
     def attractToPosition(self, position, attractive_position, d_limit=1):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         distanceVal = distance(position, attractive_position)
-        forceVector = unit(attractive_position - position) * (distanceVal / d_limit)
-        if debug:
+        forceVector = unit(attractive_position - position) * (min(distanceVal,self.neighbourhood_max_rad)/ float(d_limit))
+        if self.debug:
             self.logger.debug(
                 "Attraction to %s: %s, at range of %s" % (forceVector, attractive_position, distanceVal))
         return forceVector
@@ -172,14 +175,14 @@ class Behaviour(object):
         avoid = False
         avoiding_position = None
         if np.any((np.zeros(3) + min_dist) > position):
-            if debug:
+            if self.debug:
                 self.logger.debug("Too Close to the Origin-surfaces: %s" % position)
             offending_dim = position.argmin()
             avoiding_position = position.copy()
             avoiding_position[offending_dim] = float(0.0)
             avoid = True
         elif np.any(position > (self.env_shape - min_dist)):
-            if debug:
+            if self.debug:
                 self.logger.debug("Too Close to the Upper-surfaces: %s" % position)
             offending_dim = position.argmax()
             avoiding_position = position.copy()
@@ -190,8 +193,13 @@ class Behaviour(object):
 
         if avoid:
             # response = 0.5 * (position-avoiding_position)
-            response = self.repulseFromPosition(position, avoiding_position, 1)
-            # response = (avoiding_position-position)
+            try:
+                response = self.repulseFromPosition(position, avoiding_position, 1)
+            except RuntimeError:
+                raise RuntimeError(
+                    "Crashed out of environment with given position:{}, wall position:{}".format(position,
+                                                                                                 avoiding_position))
+                # response = (avoiding_position-position)
             self.logger.error("Wall Avoidance:%s" % response)
 
         return response
@@ -208,8 +216,6 @@ class Flock(Behaviour):
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
         self.n_nearest_neighbours = listfix(int, self.bev_config.nearest_neighbours)
-        self.neighbourhood_max_rad = listfix(int, self.bev_config.neighbourhood_max_rad)
-        self.neighbour_min_rad = listfix(int, self.bev_config.neighbourhood_min_rad)
         self.clumping_factor = self.bev_config.clumping_factor
         self.repulsive_factor = listfix(float, self.bev_config.repulsive_factor)
         self.schooling_factor = listfix(float, self.bev_config.schooling_factor)
@@ -238,7 +244,7 @@ class Flock(Behaviour):
         try:
             # This assumes that the map contains one entry for each non-self node
             self.neighbourhood_com = vector / len(self.nearest_neighbours)
-            if debug:
+            if self.debug:
                 self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s" % (
                     self.neighbourhood_com, vector, self.clumping_factor, len(self.nearest_neighbours)))
                 # Return the fudged, relative vector to the centre of the cluster
@@ -250,7 +256,7 @@ class Flock(Behaviour):
             self.logger.error("FPE: vector=%s" % str(vector))
             raise
 
-        if debug:
+        if self.debug:
             self.logger.debug("Clump:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.clumping_factor
 
@@ -263,14 +269,14 @@ class Flock(Behaviour):
         for neighbour in self.nearest_neighbours:
             if distance(position, neighbour.position) < self.collision_avoidance_d:
                 partVector = self.repulseFromPosition(position, neighbour.position, self.collision_avoidance_d)
-                if debug:
+                if self.debug:
                     self.logger.debug(
                         "Avoiding %s:%f:%s" % (
                             neighbour.name, distance(position, neighbour.position), sixvec(partVector)))
                 forceVector += partVector
 
                 # Return an inverse vector to the obstacles
-        if debug:
+        if self.debug:
             self.logger.debug("Repulse:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.repulsive_factor
 
@@ -282,9 +288,9 @@ class Flock(Behaviour):
         for neighbour in self.nearest_neighbours:
             vector += fudge_normal(unit(neighbour.velocity), max(abs(unit(neighbour.velocity))) / 3)
         forceVector = (vector / (len(self.nearest_neighbours)))
-        if debug:
+        if self.debug:
             self.logger.debug("Schooling:%s" % forceVector)
-        if debug:
+        if self.debug:
             self.logger.debug("V:%s,F:%s, %f" % (
                 unit(velocity), unit(forceVector), spherical_distance(unit(velocity), unit(forceVector))))
         d = spherical_distance(unit(velocity), unit(forceVector))
@@ -317,7 +323,7 @@ class AlternativeFlockMixin():
                 v = -v
             f = np.log(d) + (self.collision_avoidance_d / float(d))  # force to go
             nforceVector = f * v
-            if debug:
+            if self.debug:
                 self.logger.debug("PotentialV: %s, for D:%s, F:%s, V:%s" % (nforceVector, d, f, v))
             forceVector += nforceVector
         return forceVector * self.clumping_factor
@@ -333,55 +339,23 @@ class WaypointMixin():
     """
     Waypoint MixIn Class defines the general waypoint behaviour and includes the inner 'waypoint' object class.
     """
-
-    class waypoint(object):
-        def __init__(self, positions, *args, **kwargs):
-            """
-            Defines waypoint paths:
-                positions = [ [ position, proximity ], *]
-            """
-            self.logger = kwargs.get("logger", logging.getLogger(__name__))
-            self.next = None
-            (self.position, self.prox) = positions[0]
-            if __debug__:
-                self.logger.debug("Waypoint: %s,%s" % (self.position, self.prox))
-            if len(positions) == 1:
-                if __debug__:
-                    self.logger.debug("End of Position List")
-            else:
-                self.append(positions[1:])
-
-        def append(self, position):
-            if self.next is None:
-                self.next = WaypointMixin.waypoint(position)
-            else:
-                self.next.append(position)
-
-        def insert(self, position):
-            temp_waypoint = self.next
-            self.next = WaypointMixin.waypoint(position)
-            self.next.next = temp_waypoint
-
-        def makeLoop(self, head):
-            if self.next is None:
-                self.next = head
-            else:
-                self.next.makeLoop(head)
+    waypoint = namedtuple("waypoint",['position','prox'])
 
     def __init__(self, *args, **kwargs):
         self.waypoint_factor = listfix(float, self.bev_config.waypoint_factor)
         self.waypoints = []
         self.nextwaypoint = None
+        self.waypointloop = True
+        self._nwpc = 0
         self.behaviours.append(self.waypointVector)
 
     def activate(self, *args, **kwargs):
         if not hasattr(self, str(self.bev_config.waypoint_style)):
-            raise ValueError("Cannot generate using waypoint definition:%s" % self.bev_config.waypoint_style)
+            raise ConfigError("Cannot generate using waypoint definition:%s" % self.bev_config.waypoint_style)
         else:
             generator = attrgetter(str(self.bev_config.waypoint_style))
             g = generator(self)
-            if __debug__:
-                self.logger.debug("Generating waypoints: %s" % g.__name__)
+            if self.debug: self.logger.debug("Generating waypoints: %s" % g.__name__)
             g()
 
     def patrolCube(self):
@@ -394,26 +368,37 @@ class WaypointMixin():
             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
              [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
         )
-        cubepatrolroute = [(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
-        self.nextwaypoint = self.waypoint(cubepatrolroute)
-        self.nextwaypoint.makeLoop(self.nextwaypoint)
-
-        self.waypoints = cubepatrolroute
+        self.waypoints = [self.waypoint(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
+        self.nextwaypoint = 0
 
     def waypointVector(self, position, velocity):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         if self.nextwaypoint is not None:
             neighbourhood_avg = sum(n.position for n in self.nearest_neighbours) / len(self.nearest_neighbours)
-            real_d = distance(position, self.nextwaypoint.position)
-            neighbourhood_d = distance(neighbourhood_avg, self.nextwaypoint.position)
-            if neighbourhood_d < self.nextwaypoint.prox:
-                # GRANT ACHIEVEMENT
-                self.node.grantAchievement((self.nextwaypoint.position, real_d))
-                if __debug__:
-                    self.logger.info("Moving to Next waypoint:%s" % self.nextwaypoint.position)
-                self.nextwaypoint = self.nextwaypoint.next
-            forceVector = self.attractToPosition(position, self.nextwaypoint.position, self.nextwaypoint.prox)
+            target = self.waypoints[self.nextwaypoint]
+            real_d = distance(position, target.position)
+            neighbourhood_d = distance(neighbourhood_avg, target.position)
+            if neighbourhood_d < target.prox or real_d < target.prox:
+                self.goto_next_waypoint(target.position, real_d)
+            else:
+                forceVector = self.attractToPosition(position, target.position, target.prox/2)
+        else:
+            if self.node.on_mission:
+                self.logger.info("No Waypoint")
+
         return self.normalize_behaviour(forceVector) * self.waypoint_factor
+
+    def goto_next_waypoint(self, position, real_d):
+        # GRANT ACHIEVEMENT
+        self.node.grantAchievement((position, real_d))
+        self.nextwaypoint=(self.nextwaypoint+1)
+
+        if self.nextwaypoint > len(self.waypoints)-1:
+            if self.waypointloop:
+                self.nextwaypoint = 0
+            else:
+                self.node.missionAccomplished()
+                self.nextwaypoint = None
 
 
 class Waypoint(Flock, WaypointMixin):
@@ -428,7 +413,7 @@ class AlternativeWaypoint(AlternativeFlock, Waypoint):
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
-class FleetWaypointer(Flock, WaypointMixin):
+class FleetLawnmower(Flock, WaypointMixin):
     """
     Repeating Lawnmower Behaviour across a 2D slice of the environment extent
         Subdivides environment into N-Overlapping patterns based on fleet size
@@ -442,29 +427,156 @@ class FleetWaypointer(Flock, WaypointMixin):
     factor config entry, but disregards other behaviours
     """
 
+    #TODO The guts of this are in notebook
+
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
+        WaypointMixin.__init__(self, *args, **kwargs)
+        self.waypointloop = False
         self.n_nearest_neighbours = listfix(int, self.bev_config.nearest_neighbours)
-        self.neighbourhood_max_rad = listfix(int, self.bev_config.neighbourhood_max_rad)
-        self.neighbour_min_rad = listfix(int, self.bev_config.neighbourhood_min_rad)
         self.repulsive_factor = listfix(float, self.bev_config.repulsive_factor)
         self.collision_avoidance_d = listfix(float, self.bev_config.collision_avoidance_d)
 
         self.behaviours.append(self.repulsiveVector)
+        self.behaviours.append(self.boresight)
+        self.behaviours.append(self.tracked_avoidance)
 
         assert self.n_nearest_neighbours > 0
         assert self.neighbourhood_max_rad > 0
         assert self.neighbour_min_rad > 0
 
     def activate(self, *args, **kwargs):
-        course = kwargs.get('waypoints', None)
-        if course is None:
-            raise ConfigError("No waypoints given to Waypoint Follower")
+        if self.debug: self.logger.debug("Generating waypoints: Lawnmower")
+        self.lawnmower(self.node.nodes)
 
-        self.nextwaypoint = self.waypoint(course)
-        self.nextwaypoint.makeLoop(self.nextwaypoint)
+    def boresight(self, position, velocity):
+        forceVector = np.array([0, 0, 0], dtype=np.float)
+        if self.nextwaypoint is not None:
+            target = self.waypoints[self.nextwaypoint]
+            angle = angle_between(target.position-position,velocity)
+            if self.debug: self.logger.info("Boresight:{}@{}".format(np.rad2deg(angle),distance(target.position,position)))
+            forceVector=-velocity * 2*angle * self.waypoint_factor
+        return forceVector
 
-        self.waypoints = course
+    def tracked_avoidance(self, position, velocity):
+        forceVector = np.array([0, 0, 0], dtype=np.float)
+        for neighbour in self.nearest_neighbours:
+            if distance(position, neighbour.position) < self.collision_avoidance_d:
+                partVector = self.repulseFromPosition(position, neighbour.position, self.collision_avoidance_d)
+                partVector = unit(partVector)*np.cos(angle_between(-velocity,partVector))
+                if self.debug:
+                    self.logger.debug(
+                        "Avoiding %s:%f:%s" % (
+                            neighbour.name, distance(position, neighbour.position), sixvec(partVector)))
+                forceVector += partVector
+
+                # Return an inverse vector to the obstacles
+        if self.debug:
+            self.logger.debug("Repulse:%s" % forceVector)
+        return self.normalize_behaviour(forceVector) * self.repulsive_factor
+
+
+    def per_node_lawnmower(self,shape, swath, base_axis=0, altitude=None):
+        """
+        Generates a flat segmented lawnmower waypoint loop
+        """
+        # Shape is 2D for waypoint generation
+
+        try:
+            front = max(shape[bool(base_axis)])
+            back = min(shape[bool(base_axis)])
+            left = min(shape[not bool(base_axis)])
+            right = max(shape[not bool(base_axis)])
+            if altitude is None and len(shape)!=3:
+                raise ConfigError("altitude makes no sense for shape %s"%shape)
+            elif altitude is None:
+                altitude = np.diff(shape[-1])
+
+            inc = np.sign(front-back)
+            swath = inc*swath
+        except Exception:
+            logging.error("Error on per node lawnmower %s"%str(shape))
+            raise
+
+        step = 0 #on a plateau going left or right
+        stepping = 0 # on a rise going up or down
+        current_y = back
+        current_x = left - swath
+
+        start = [current_x,current_y, altitude]
+
+        points = [start]
+
+        while current_y < front + (1+stepping%2)*swath:
+            # four phases to a lawnmower iteration from back-left last point
+            # 1) right to edge + swath
+            # 2) up to step (if not above front + swath) else origin
+            # 3) left to edge + swath
+            # 4) up to step (if not above front + swath) else origin
+            if stepping%2:
+                if step % 2: # If on rightward leg
+                    current_x = right + swath
+                else:
+                    current_x = left - swath
+            else:
+                current_y += swath
+                step += 1
+            points.append([current_x, current_y, altitude])
+            stepping += 1
+        if bool(base_axis):
+            points = np.asarray([[y,x,z] for (x,y,z) in points])
+        else:
+            points = np.asarray(points)
+
+
+        return points
+
+    def lawnmower(self, n, overlap = 0, base_axis = 0, twister = False, swath = 60, prox=25):
+        """
+        N is either a single number (i.e. n rows of a shape) or a tuple (x, 1/y rows)
+        """
+        extent = np.asarray(zip(np.zeros(3),np.asarray(self.env_shape)))
+        shape = np.asarray([ self.env_shape[0:2] * ((2*(vertex - 0.5) / 3) + 0.5) for vertex in np.asarray([[0,0],[0,1],[1,0],[1,1]])])
+
+        front = np.max(shape,axis=0)[bool(base_axis)]
+        back = np.min(shape,axis=0)[bool(base_axis)]
+        right = np.max(shape,axis=0)[not bool(base_axis)]
+        left = np.min(shape,axis=0)[not bool(base_axis)]
+        top = max(extent[2])
+        bottom = min(extent[2])
+        mid_z = (top+bottom)/2.0
+
+        self.logger.info("Survey area:{}km^2 ({})".format((front-back)*(right-left)/1e6,[front,back,right,left]))
+
+        inc = np.sign(front-back)
+        swath = inc*swath
+
+        if isinstance(n,tuple):
+            row_count = n[base_axis]
+            col_count = n[not base_axis]
+        elif not np.sqrt(n)%1>0:
+            row_count = col_count = int(np.sqrt(n))
+        else:
+            row_count = n
+            col_count = 1
+
+        row_height = (front-back)/col_count
+        row_width = (right-left)/row_count
+
+        courses = []
+
+        for r,c in product(range(row_count),range(col_count)):
+            sub_shape = [[(left+r*row_width)-overlap, (left+(r+1)*row_width)+overlap],
+                         [(back+c*row_height)-overlap, (back+(c+1)*row_height)+overlap]]
+            if twister:
+                axis = base_axis+c%2
+            else:
+                axis = base_axis
+            courses.append(self.per_node_lawnmower(sub_shape,swath=swath, altitude=mid_z, base_axis=axis))
+
+        self.waypoints = [self.waypoint(point,prox) for point in courses[self.node.nodenum]]
+        self.waypoints.append(self.waypoint(self.node.position,prox*2))
+        self.nextwaypoint = 0
 
 
 class Tail(Flock):
@@ -484,7 +596,7 @@ class Tail(Flock):
         localheadingVector = self.localHeading(position, velocity)
         forceVector = np.array([0, 0, 0], dtype=np.float)
         forceVector = -(clumpingVector + localheadingVector)
-        if debug:
+        if self.debug:
             self.logger.debug("Tail:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.clumping_factor
 
@@ -503,7 +615,7 @@ class SlowCoach(Flock):
     def slowcoachVector(self, position, velocity):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         forceVector = -(velocity)
-        if debug:
+        if self.debug:
             self.logger.debug("SlowCoach:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.clumping_factor
 

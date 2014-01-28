@@ -29,8 +29,14 @@ class Node(Sim.Process):
     """
     Generic Representation of a network node
     """
+    nodes = 0
 
     def __init__(self, name, simulation, node_config, vector=None, **kwargs):
+        self.nodenum = Node.nodes
+        Node.nodes += 1
+        self.debug = debug and self.nodenum == 0
+        self.on_mission = True
+
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
         self.logger = kwargs.get("logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
@@ -39,8 +45,6 @@ class Node(Sim.Process):
         self.config = node_config
         self.mass = 10  # kg modeling remus 100
         self.mass = 5   # fudge cus I'm bricking it #FIXME
-
-
 
         # Positions Initialised to None to highlight mistakes; as Any position could be a bad position
         self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
@@ -119,6 +123,7 @@ class Node(Sim.Process):
         try:
             behaviour = self.config['Behaviour']['protocol']
             behave_mod = getattr(Behaviour, str(behaviour))
+            assert issubclass(behave_mod, Behaviour.Behaviour), behave_mod
         except AttributeError:
             raise ConfigError("Can't find Behaviour: %s" % behaviour)
 
@@ -142,25 +147,27 @@ class Node(Sim.Process):
             import contrib.Ghia.uuv_position_drift_model as Driftmodels
 
             self.drift = getattr(Driftmodels, self.config['drift'])(self)
+            self.logger.debug("Drift activated from config: {}".format(self.config['drift']))
             self.drifting = True
         elif kwargs.has_key('drift'):
             self.drift = kwargs.get('drift')(self)
+            self.logger.debug("Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
-
-        self.logger.debug('instance created')
 
     def activate(self, launch_args=None):
         """
         Fired on Sim Start
         """
-        self.logger.debug("Initialised Node Lifecycle")
         Sim.activate(self, self.lifecycle())
         if launch_args is None:
             launch_args = {}
         self.app.activate()
         if self.app.layercake:
             self.layercake.activate()
-        self.behaviour.activate(**launch_args)
+
+        # Messy nasty way to deal with some behaviours that need activating
+        if hasattr(self.behaviour,'activate'):
+            self.behaviour.activate(**launch_args)
 
         # Tell the environment that we are here!
         self.update_environment()
@@ -170,6 +177,12 @@ class Node(Sim.Process):
         Assign or Re-assign a node to a given Fleet object
         """
         self.fleet = fleet
+
+    def missionAccomplished(self):
+        """
+        GWB
+        """
+        self.on_mission = False
 
     def wallCheck(self):
         """
@@ -220,8 +233,8 @@ class Node(Sim.Process):
         #
         # Positional information
         #
-        old_pos = self.position.copy()
-        old_vec = self.velocity.copy()
+        old_pos = self.getPos()
+        old_vec = self.getVec()
         dT = self.simulation.deltaT(Sim.now(), self._lastupdate)
         # Since you're an idiot and keep forgetting if this is right or not; it is;
         # src (http://physics.stackexchange.com/questions/17049/how-does-force-relate-to-velocity)
@@ -230,7 +243,11 @@ class Node(Sim.Process):
         # dv/dt = F(v,t)/m
         # dv/dt->(v(t+e)-v(t))/dt;
         # v(t+e) = v(t)+(F*dt)/m
-        new_velocity = self.velocity + ((self.acceleration_force * dT) / self.mass)
+        if np.all(self.acceleration_force == 0.0):
+            # Braking as there's no acceleration vector
+            new_velocity = np.zeros(3)
+        else:
+            new_velocity = self.velocity + ((self.acceleration_force * dT) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruiseControl(new_velocity, self.velocity)
             if debug:
@@ -244,9 +261,10 @@ class Node(Sim.Process):
             mag(self.velocity), self.cruising_speed
         )
 
+        # If we're drifting, the Node's concept of reality is NOT true
         if self.drifting:
             try:
-                self.position, self.velocity, error_dict = self.drift.update(self.position,
+                self.position, self.velocity, error_dict = self.drift.update(old_pos,
                                                                              self.velocity,
                                                                              old_vec,
                                                                              self._lastupdate,
@@ -277,14 +295,9 @@ class Node(Sim.Process):
         self._lastupdate = Sim.now()
 
     def update_environment(self):
-        if not self.drifting:
-            self.simulation.environment.update(self.id,
-                                               self.getPos(),
-                                               self.getVec())
-        else:
-            self.simulation.environment.update(self.id,
-                                               self.drift.getPos(),
-                                               self.drift.getVec())
+        self.simulation.environment.update(self.id,
+                                           self.getPos(),
+                                           self.getVec())
 
     def setPos(self, placeVector):
         assert isinstance(placeVector, np.array)
@@ -292,11 +305,31 @@ class Node(Sim.Process):
         self.logger.info("Vector focibly moved")
         self.position = placeVector
 
-    def getPos(self):
-        return self.position.copy()
+    def getPos(self, true=False):
+        """
+        Returns the current position of the node ACCORDING TO THE NODE
 
-    def getVec(self):
-        return self.velocity.copy()
+        If the node is drifting, the nodes position is incorrect, and
+            it's 'true' position is requested using the keyword arg
+        """
+        if self.drifting and true:
+                position = self.drift.getPos()
+        else:
+                position = self.position.copy()
+        return position
+
+    def getVec(self, true=False):
+        """
+        Returns the current velocity of the node ACCORDING TO THE NODE
+
+        If the node is drifting, the nodes velocity is incorrect, and
+            it's 'true' velocity is requested using the keyword arg
+        """
+        if self.drifting and true:
+                velocity = self.drift.getVec()
+        else:
+                velocity = self.velocity.copy()
+        return velocity
 
     def distance_to(self, their_position):
         d = distance(self.getPos(), their_position)
@@ -312,6 +345,20 @@ class Node(Sim.Process):
             self.achievements_log[self._lastupdate].append(achievement)
         else:
             raise RuntimeError("Non standard Achievement passed:%s" % achievement)
+
+    def timeSinceLastAchievement(self) :
+        try:
+            return [ i for i,l in enumerate(self.achievements_log) if len(l[i])][-1]
+        except IndexError:
+            return self._lastupdate
+
+    def meanAchievementTime(self):
+        try:
+            wins = [ i for i,l in enumerate(self.achievements_log) if len(l[0])]
+            return sum(wins)/len(wins)
+        except IndexError:
+            return self._lastupdate
+
 
     def lifecycle(self):
         """

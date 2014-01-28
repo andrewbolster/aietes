@@ -22,7 +22,7 @@ import numpy as np
 
 from SimPy import Simulation as Sim
 
-from aietes.Tools import map_entry, distance, debug
+from aietes.Tools import map_entry, distance, debug, ConfigError
 
 
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
@@ -44,11 +44,18 @@ class Environment():
         """
         self._start_log(simulation)
         self.map = {}
-        self.shape = shape if shape is not None else [100, 100, 100]
         self.pos_log = []
         self.depth = base_depth
         self.sos = 1400
         self.simulation = simulation
+        if shape is None or not isinstance(shape, np.ndarray):
+            try:
+                shape = np.asarray(shape)
+                if shape is None or not isinstance(shape, np.ndarray) or len(shape) != 3:
+                    raise ConfigError("Shape doesn't make sense: {}{}".format(shape, type(shape)))
+            except:
+                raise
+        self.shape = shape
 
     # TODO Random Surface Generation
     # self.generateSurface()
@@ -85,20 +92,31 @@ class Environment():
         """
         if position is None:
             position = np.asarray(self.shape) / 2
+        if isinstance(position,basestring):
+            if position == "surface":
+                position = np.zeros(3)
+                position[0] = (2 * stddev)
+                position[1] = self.shape[1] / 2
+                position[2] =self.shape[2] - (2 * stddev)
+            else:
+                raise ValueError("Incorrect position string")
 
         candidate_pos = None
 
         if self.is_outside(position):
-            raise ValueError("Position is not within volume")
+            raise ValueError("Position is not within volume: {}".format(position))
         else:
             valid = False
             while not valid:
                 candidate_pos = np.random.normal(np.asarray(position), stddev)
-                candidate_pos = tuple(np.asarray(candidate_pos, dtype=int))
-                valid = self.is_empty(candidate_pos)
+                candidate_pos = np.asarray(candidate_pos, dtype=int)
+                try:
+                    valid = self.is_empty(candidate_pos) and not self.is_outside(candidate_pos)
+                except:
+                    raise TypeError("{}".format(candidate_pos))
                 if debug:
                     self.logger.debug("Candidate position: %s:%s" % (candidate_pos, valid))
-        return candidate_pos
+        return tuple(candidate_pos)
 
     def is_outside(self, position):
         too_high = not all(position < self.shape)

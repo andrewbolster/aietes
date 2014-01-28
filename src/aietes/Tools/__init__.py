@@ -29,20 +29,23 @@ from pprint import pformat
 import numpy as np
 from datetime import datetime as dt
 from configobj import ConfigObj
+from time import time
 import validate
 
 from SimPy import SimulationStep as Sim
+from humanize_time import secondsToStr
 
 np.seterr(all='raise')
 # from os import urandom as randomstr #Provides unicode random String
 
 
 debug = False
-FUDGED = True
+FUDGED = False
 
 _ROOT = os.path.abspath(os.path.dirname(__file__) + '/../')
 
 _config_spec = '%s/configs/default.conf' % _ROOT
+_results_dir = '%s/../../results/' % _ROOT
 
 
 class ConfigError(Exception):
@@ -91,6 +94,38 @@ DEFAULT_CONVENTION = ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo',
 #
 # Measuring functions
 #
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.1415926535897931
+    """
+    v1_u = unit(v1)
+    v2_u = unit(v2)
+    if np.allclose(v1_u,v2_u):
+        return 0.0
+    else:
+        try:
+            angle = np.arccos(np.dot(v1_u, v2_u))
+        except FloatingPointError:
+            logging.warning("FPE: 1:{},2:{}".format(v1_u,v2_u))
+            raise
+    if np.isnan(angle):
+        return np.pi
+    else:
+        return angle
+
+def bearing(v):
+    """radian angle between a given vector and 'north'"""
+    if np.all(v==0):
+        return 0.0
+    else:
+        return angle_between(v,np.array([1,0]))
 
 def distance(pos_a, pos_b, scale=1):
     """
@@ -526,6 +561,15 @@ def log_level_lookup(log_level):
             if v == log_level:
                 return k
 
+def results_file(proposed_name):
+
+    if os.path.dirname(proposed_name) is not None:
+        # Have not been given a FQN Path: Assume to use the results directory
+        proposed_name=os.path.join(_results_dir,proposed_name)
+    return proposed_name
+
+
+
 
 def validateConfig(config=None, final_check=False):
     """
@@ -581,6 +625,19 @@ def try_forever(exceptions_to_catch, fn):
     return new_fn
 
 
+def timeit():
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            start = time()
+            res = func(*args, **kwargs)
+            logging.info("%s (%s)" % (func.__name__, time()-start))
+            return res
+
+
+        return wrapper
+
+    return decorator
 def are_equal_waypoints(wps):
     """Compare Waypoint Objects as used by WaypointMixin ([pos],prox)
         Will exclude 'None' records in wps and only compare valid waypoint lists
@@ -595,8 +652,6 @@ def are_equal_waypoints(wps):
         if not np.array_equal(prox, proxs[0]):
             retval = False
 
-    if retval is False:
-        logging.error(pformat(zip(poss, proxs)))
     return retval
 
 
@@ -604,7 +659,7 @@ def get_latest_aietes_datafile(dir=None):
     fqp = os.getcwd() if dir is None else dir
     candidate_data_files = os.listdir(fqp)
     candidate_data_files = [f for f in candidate_data_files if is_valid_aietes_datafile(f)]
-    candidate_data_files.sort(reverse=True)
+    candidate_data_files.sort(key=os.path.getmtime, reverse=True)
     if len(candidate_data_files) == 0:
         raise ValueError("There are no valid datafiles in the working directory:%s" % os.getcwd())
     return os.path.join(fqp, candidate_data_files[0])
@@ -615,23 +670,3 @@ def is_valid_aietes_datafile(file):
     test = re.compile(".npz$")
     return test.search(file)
 
-
-def angle_between(v1, v2, ndim=3):
-    """ Returns the angle in radians between vectors 'v1' and 'v2'::
-
-            >>> angle_between((1, 0, 0), (0, 1, 0))
-            1.5707963267948966
-            >>> angle_between((1, 0, 0), (1, 0, 0))
-            0.0
-            >>> angle_between((1, 0, 0), (-1, 0, 0))
-            3.141592653589793
-    """
-    v1_u = unit(v1[0:ndim - 1])
-    v2_u = unit(v2[0:ndim - 1])
-    angle = np.arccos(np.dot(v1_u, v2_u))
-    if np.isnan(angle):
-        if (v1_u == v2_u).all():
-            return 0.0
-        else:
-            return np.pi
-    return angle

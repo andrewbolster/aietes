@@ -17,11 +17,17 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
-import functools
+import functools, os
+from joblib import Parallel, delayed
+from joblib.pool import has_shareable_memory
+parallel = False # Doesn't make a damned difference.
+if parallel:
+    os.system("taskset -p 0xff %d" % os.getpid())
 
 from bounos import BounosModel
 from bounos.Metrics import *
-from aietes.Tools import itersubclasses
+from aietes.Tools import itersubclasses, timeit
+
 
 
 def log_and_call():
@@ -54,7 +60,8 @@ class EphyraController():
         self.model = BounosModel()
         self.view = None
         self._metrics_availiable = list(itersubclasses(Metric))
-        self._metrics_enabled = self._metrics_availiable
+        self._metrics_enabled = [ metric for metric in self._metrics_availiable if not getattr(metric, 'drift_enabled',False)]
+        self.metrics = []
         self.args = kw.get("exec_args", None)
 
         if self.args is not None and self.args.data_file is not None:
@@ -84,17 +91,30 @@ class EphyraController():
         self.update_metrics()
 
     @check_model()
+    @timeit()
     def update_metrics(self):
         # Update secondary metrics
+        if self.drifting():
+            for drift_metric in [m for m in self._metrics_availiable
+                                 if getattr(m, 'drift_enabled',False) and m not in self._metrics_enabled]:
+                logging.info("Adding {} to metrics as data is Drift-Enabled".format(drift_metric))
+                self._metrics_enabled.append(drift_metric)
         if not len(getattr(self, "metrics", [])) == len(self._metrics_enabled):
             self.rebuild_metrics()
-        for metric in self.metrics:
-            metric.update(self.model)
+
+        if parallel:
+            n_jobs=-1
+        else:
+            n_jobs=1
+        self.metrics = Parallel(n_jobs=n_jobs, verbose=30, max_nbytes='1M')(delayed(metric)(self.model) for metric in self.metrics)
 
     @check_model()
+    @timeit()
     def rebuild_metrics(self):
         # in the case of metrics_enabled being changed, this requires a complete rebuild
-        self.metrics = [metric() for metric in self._metrics_enabled]
+        logging.info("Rebuilding Metrics:{}".format(self._metrics_enabled))
+        self.metrics=map(lambda m:m(), self._metrics_enabled)
+        return self.metrics
 
     @check_model()
     def get_metrics(self, i=None, *args, **kw):
@@ -201,11 +221,11 @@ class EphyraController():
            """
         positions = self.get_fleet_positions(time)
         avg_pos = self.get_fleet_average_pos(time)
-        _distances_from_avg_pos = map(lambda v: np.linalg.norm(v - avg_pos), positions)
+        _distances_from_avg_pos = map(lambda v: mag(v - avg_pos), positions)
         stddev_pos = np.std(_distances_from_avg_pos)
         headings = self.get_fleet_headings(time)
         avg_head = np.average(headings, axis=0)
-        _distances_from_avg_head = map(lambda v: np.linalg.norm(v - avg_head), headings)
+        _distances_from_avg_head = map(lambda v: mag(v - avg_head), headings)
         stddev_head = np.std(_distances_from_avg_head)
 
         return dict({'positions':
@@ -244,3 +264,24 @@ class EphyraController():
     @check_model()
     def get_waypoints(self):
         return getattr(self.model, 'waypoints', None)
+
+    @check_model()
+    def drifting(self):
+        return self.model.drifting
+
+    @check_model()
+    def get_3D_drift(self, node=None, time_start=None, length=None):
+        """
+        Return the [X:][Y:][Z:] trail for a given node's drift from time_start backwards to
+        a given length
+
+        If no time given, assume the full time range
+        """
+        time_start = time_start if time_start is not None else self.get_final_tmax()
+        time_end = max(0 if length is None else (time_start - length), 0)
+
+        if node is None:
+            return self.model.drift_positions[:, :, time_start:time_end:-1].swapaxes(0, 1)
+        else:
+            return self.model.drift_positions[node, :, time_start:time_end:-1]
+

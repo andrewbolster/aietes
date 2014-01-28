@@ -40,6 +40,7 @@ class Metric(object):
     i.e. result[0] is the metric state of the system at time zero
     """
     signed = None
+    drift_enabled = False
 
     # Assumes that data is constant and only needs to be selected per node
     def __init__(self, *args, **kw):
@@ -58,7 +59,10 @@ class Metric(object):
         self.signed = kw.get('signed', self.signed) # True is positive, False is Negative, None isn't
         self.ndim = 0
         self.n = None
-        if __debug__: logging.debug("%s" % self)
+
+    def __call__(self, *args, **kwargs):
+        self.update(*args,**kwargs)
+        return self
 
     def generator(self, data):
         raise NotImplementedError("Uninitialised Metric generator")
@@ -143,3 +147,11 @@ class PerNode_Internode_Distance_Avg(Metric):
         self.highlight_data = [data.inter_distance_average(time) for time in range(int(data.tmax))]
         return [data.distances_from_average_at(time) for time in range(int(data.tmax))]
 
+class Drift_Error(Metric):
+    label = "Drift(m)"
+    signed = False
+    drift_enabled = True
+
+    def generator(self, data):
+        self.highlight_data = data.drift_RMS()
+        return data.drift_error().swapaxes(0,1)

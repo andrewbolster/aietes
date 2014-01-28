@@ -19,7 +19,6 @@ __email__ = "me@andrewbolster.info"
 import sys
 import traceback
 import optparse
-import time
 import cProfile
 
 from Layercake import Layercake
@@ -27,8 +26,8 @@ from Environment import Environment
 import Fleet
 from Node import Node
 import Behaviour
-from Animation import AIETESAnimation
 from Tools import *
+from Tools.humanize_time import secondsToStr
 from bounos.DataPackage import DataPackage
 
 
@@ -68,16 +67,11 @@ class Simulation():
             except KeyError:
                 """Assumes that this is the first one"""
                 pass
-        self.logger = logging.getLogger(__name__)
-        if logtoconsole is not None and not self.logger.root.handlers:
-            #i.e. if logging to console and no handlers enabled
-            ch = logging.StreamHandler()
-            ch.setLevel(logtoconsole)
-            ch.setFormatter(
-                logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-            )
-            self.logger.addHandler(ch)
-            self.logger.info("Launched Console Logger (%s)" % log_level_lookup(ch.level))
+        self.logger = kwargs.get("logger",None)
+        if self.logger is None:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logtoconsole)
+
         if logtofile is not None:
             hdlr = logging.FileHandler(logtofile)
             hdlr.setFormatter(logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
@@ -97,9 +91,12 @@ class Simulation():
             config['Node']['Nodes'].pop('__default__')
             self.config = dotdict(config.dict())
         else:
-            self.logger.info("creating instance from %s" % self.config_file)
-            self.config = validateConfig(self.config_file)
-            self.config = self.generateConfig(self.config)
+            if os.path.isfile(self.config_file):
+                self.logger.info("creating instance from %s" % self.config_file)
+                self.config = validateConfig(self.config_file)
+                self.config = self.generateConfig(self.config)
+            else:
+                raise ConfigError("Cannot open given config file:%s"% self.config_file)
         if "__default__" in self.config.Node.Nodes.keys():
             raise RuntimeError("Dun fucked up: __default__ node detected")
 
@@ -164,6 +161,7 @@ class Simulation():
             Simulation Duration in ticks (generally seconds)
         """
         self.logger.info("Initialising Simulation %s, to run for %s steps" % (self.title, self.duration_intervals))
+        starttime = time()
         for fleet in self.fleets:
             fleet.activate()
         if callback is not None:
@@ -171,7 +169,8 @@ class Simulation():
             Sim.startStepping()
         try:
             Sim.simulate(until=self.duration_intervals, callback=callback)
-            self.logger.info("Finished Simulation at %s" % Sim.now())
+            self.logger.info("Finished Simulation at %s(%s) after %s" % (
+            Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
         except RuntimeError as err:
             self.logger.exception("Simulation crashed at %s" % Sim.now())
             raise
@@ -247,6 +246,16 @@ class Simulation():
                 state.update({'waypoints': waypointss[0]})
             else:
                 state.update({'waypoints': waypointss})
+
+        # If drifting, take the drift positions
+        if any([node.drifting for node in self.nodes]):
+            drift_positions = []
+            for node in self.nodes:
+                drift = node.drift.pos_log[:, :Sim.now()]
+                drift = drift[np.isfinite(drift)].reshape(3, -1)
+                drift_positions.append(drift)
+            state.update({'drift_positions': drift_positions})
+
         return state
 
     def generateConfig(self, config):
@@ -390,7 +399,6 @@ class Simulation():
         # Configure specified nodes
         #
         for node_name, config in self.config.Node.Nodes.items():
-            self.logger.debug("Generating node %s with config %s" % (node_name, config))
             new_node = Node(
                 node_name,
                 self,
@@ -420,6 +428,9 @@ class Simulation():
             elif gen_style == "center":
                 vector = self.environment.position_around()
                 self.logger.debug("Gave node %s a center vector: %s" % (node_name, vector))
+            elif gen_style == "surface":
+                vector = self.environment.position_around(position="surface")
+                self.logger.debug("Gave node %s a surface vector: %s" % (node_name, vector))
             else:
                 vector = [0, 0, 0]
                 self.logger.debug("Gave node %s a zero vector from %s" % (node_name, gen_style))
@@ -462,10 +473,14 @@ class Simulation():
         dp = DataPackage(**(self.currentState()))
 
         n_frames = dp.tmax
-        filename = "%s.aietes" % outputFile
+
+        filename = "%s.aietes" % results_file(outputFile if outputFile is not None else dp.title)
         return_dict = {}
 
         if movieFile or plot or gif:
+            import matplotlib
+            matplotlib.use('Agg')
+            from Animation import AIETESAnimation
             import matplotlib.pyplot as plt
             import mpl_toolkits.mplot3d.axes3d as axes3
 
@@ -578,7 +593,7 @@ def option_parser():
         usage=globals()['__doc__'],
         version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
     parser.add_option('-q', '--quiet', action='store_true',
-                      default=False, help='quiet output')
+                      default=True, help='quiet output')
     parser.add_option('-v', '--verbose', action='store_true',
                       default=False, help='verbose output')
     parser.add_option('-P', '--profile', action='store_true',
@@ -614,7 +629,7 @@ def main():
     Everyone knows what the main does; it does everything!
     """
     try:
-        start_time = time.time()
+        start_time = time()
         (options, args) = option_parser().parse_args()
         exit_code = 0
         if options.verbose:
@@ -640,7 +655,7 @@ def main():
         if options.verbose:
             print 'TOTAL TIME IN MINUTES:',
         if options.verbose:
-            print (time.time() - start_time) / 60.0
+            print (time() - start_time) / 60.0
         sys.exit(exit_code)
     except KeyboardInterrupt, e:  # Ctrl-C
         raise e

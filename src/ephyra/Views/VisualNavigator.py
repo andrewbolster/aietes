@@ -18,8 +18,8 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
 
-WIDTH, HEIGHT = 8, 6
-SIDEBAR_WIDTH = 3
+WIDTH, HEIGHT = 16, 9
+SIDEBAR_WIDTH = 8
 
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
@@ -30,11 +30,14 @@ from matplotlib.colors import Normalize
 from matplotlib import cm
 
 from ephyra import wx
-from ephyra.Views import MetricView, Arrow3D
+from ephyra.Views import MetricView, Arrow3D, callsuper
+
+from aietes.Tools import timeit, mag
 
 
 # noinspection PyStringFormat
 class VisualNavigator(wx.Panel):
+    @timeit()
     def __init__(self, parent, frame, *args, **kw):
         wx.Panel.__init__(self, parent, *args, **kw)
         self.log = frame.log.getChild(self.__class__.__name__)
@@ -200,36 +203,44 @@ class VisualNavigator(wx.Panel):
 
         # Initialise 3D Plot Lines
         (xs, ys, zs) = self.ctl.get_3D_trail()
-        names = self.ctl.get_vector_names()
+        self.names = self.ctl.get_vector_names()
         self.log.info("Got %s" % str(xs.shape))
 
         self.lines = [
-            self.plot_axes.plot(x, y, z, label=names[i], alpha=self.trail_opacity)[0] for
+            self.plot_axes.plot(x, y, z, label=self.names[i], alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))]
-        self.plot_axes.legend(loc="lower right")
+        self._legend = self.plot_axes.legend(loc="lower right")
 
         self.labels = [
-            self.plot_axes.text(x[0],y[0],z[0], names[i][0])
-            for i,(x,y,z) in enumerate(zip(xs,ys,zs))
+            self.plot_axes.text(x[0], y[0], z[0], self.names[i][0])
+            for i, (x, y, z) in enumerate(zip(xs, ys, zs))
         ]
 
         # Initialise Metric Views
         metrics = self.ctl.get_metrics()
-        assert len(metrics) == HEIGHT, str(metrics)
-        for i, (axes, metric) in enumerate(zip(self.metric_axes, self.ctl.get_metrics())):
+        if len(metrics) != len(self.metric_axes):
+            self.log.info("Not enough height for selected metrics (%s) "%len(metrics))
+        for i, (axes, metric) in enumerate(zip(self.metric_axes, metrics)):
             self.metric_views[i] = MetricView(axes, metric)
 
         # Initialise Waypoints if present
         waypoints = self.ctl.get_waypoints()
-        if waypoints is not None:
-            self.log.debug("Found [%s] waypoints"%str(getattr(waypoints,"shape","No Shape")))
-            # Case where there is a single common waypoint set
+        if waypoints is not None and waypoints.size > 0:
+            self.log.debug("Found [%s] waypoints" % str(getattr(waypoints, "shape", "No Shape")))
+            # Case where there is a single common waypoint set, set up spheres
             if waypoints.ndim == 2:
-                for (x,y,z), r in waypoints:
+                for (x, y, z), r in waypoints:
                     xs, ys, zs = self.sphere(x, y, z, r)
-                    self.plot_axes.plot_wireframe(xs,ys,zs, alpha=0.1)
+                    self.plot_axes.plot_wireframe(xs, ys, zs, alpha=0.1)
             else:
-                raise NotImplementedError("Haven't implemented advanced Waypoint display yet:{}".format(waypoints))
+                # If there are multiple, sphere, colour, AND lines matching each index
+                for i, inner_waypoints in enumerate(waypoints):
+                    xs,ys,zs = [],[],[]
+                    for (x, y, z), r in inner_waypoints:
+                        xs.append(x)
+                        ys.append(y)
+                        zs.append(z)
+                    self.plot_axes.plot(xs,ys,zs, alpha=0.1, color=self.lines[i].get_color())
         else:
             self.log.debug("No Waypoints Defined")
 
@@ -243,7 +254,8 @@ class VisualNavigator(wx.Panel):
 
     def redraw_page(self, t=None):
         if not self._plot_initialised:
-            raise RuntimeError("Plot isn't ready yet!")
+            self.log.warn("Plot isn't ready yet!")
+            return
             ###
         # Update Time!
         ###
@@ -254,17 +266,16 @@ class VisualNavigator(wx.Panel):
         ###
         # MAIN PLOT AREA
         ###
-        names = self.ctl.get_vector_names()
         for n, (line, label) in enumerate(zip(self.lines, self.labels)):
             (xs, ys, zs) = self.ctl.get_3D_trail(node=n, time_start=self.t, length=self.trail_length)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
-            line.set_label(names[n])
+            line.set_label(self.names[n])
             try:
-                label.set_position((xs[0],ys[0]))
+                label.set_position((xs[0], ys[0]))
                 label.set_3d_properties(zs[0])
             except TypeError as err:
-                self.log.error("x:%s,y:%s,z:%s"%(xs[0],ys[0],zs[0]))
+                self.log.error("x:%s,y:%s,z:%s" % (xs[0], ys[0], zs[0]))
                 raise
             except IndexError:
                 # In the case of the 'first time'. This should probably be removed in the case
@@ -290,23 +301,30 @@ class VisualNavigator(wx.Panel):
         ###
         # UPDATE WINDOW PARAMETERS
         ###
-        if self._fleet_zoom:
-            positions = self.ctl.get_fleet_positions(self.t)
-            #(lx, rx) = self.plot_axes.get_xlim3d()
-            #(ly, ry) = self.plot_axes.get_ylim3d()
-            #(lz, rz) = self.plot_axes.get_zlim3d()
-            (lx,rx),(ly,ry),(lz,rz) = self.ctl.get_position_min_max(self.t)
+        if self.zoom_fleet_chk.IsChecked():
+            # On first time, zoom to fleet sphere, otherwise use whatever the width of the window is.
+            if not self._fleet_zoom:
+                self._fleet_zoom = True
+                (lx, rx) = self.plot_axes.get_xlim3d()
+                (ly, ry) = self.plot_axes.get_ylim3d()
+                (lz, rz) = self.plot_axes.get_zlim3d()
+            else:
+                (lx, rx), (ly, ry), (lz, rz) = self.ctl.get_position_min_max(self.t)
             x_width = abs(lx - rx)
             y_width = abs(ly - ry)
             z_width = abs(lz - rz)
             width = max(x_width, y_width, z_width) * 1.1
 
+            positions = self.ctl.get_fleet_positions(self.t)
             avg = np.average(positions, axis=0)
             self.plot_axes.set_xlim3d((avg[0] - (width / 2), avg[0] + (width / 2)))
             self.plot_axes.set_ylim3d((avg[1] - (width / 2), avg[1] + (width / 2)))
             self.plot_axes.set_zlim3d((avg[2] - (width / 2), avg[2] + (width / 2)))
 
-        self.canvas.draw()
+        if self._legend not in self.plot_axes.get_children():
+            self.plot_axes.add_artist(self._legend)
+
+        wx.CallAfter(self.canvas.draw)
 
     def move_T(self, delta_t=None):
         """ Seek the visual plot by delta_t while doing bounds checking and redraw
@@ -331,7 +349,7 @@ class VisualNavigator(wx.Panel):
                 self.log.debug("End Of The Line")
                 self.paused = True
                 t = tmax
-                if self.frame.args.autoexit:
+                if self.frame.args.autoexit and self.frame.args.autostart:
                     wx.CallAfter(self.frame.exit)
                     self.Destroy()
 
@@ -344,6 +362,7 @@ class VisualNavigator(wx.Panel):
         self.time_slider.SetValue(t)
         if self.ctl.model_is_ready():
             self.redraw_page(t=t)
+
 
 
     def sphere(self, x, y, z, r=1.0):
@@ -380,10 +399,10 @@ class VisualNavigator(wx.Panel):
         headings = self.ctl.get_fleet_headings(self.t)
 
         for node in range(self.ctl.get_n_vectors()):
-            mag = np.linalg.norm(np.asarray(headings[node]))
-            colorval = self.plot_head_mag_norm(mag)
+            magnitude = mag(np.asarray(headings[node]))
+            colorval = self.plot_head_mag_norm(magnitude)
             if self.frame.args.verbose: self.log.debug(
-                "Average heading: %s, Color: [%s], Speed: %s" % (str(headings[node]), str(colorval), str(mag)))
+                "Average heading: %s, Color: [%s], Speed: %s" % (str(headings[node]), str(colorval), str(magnitude)))
 
             xs, ys, zs = zip(positions[node], np.add(positions[node], (np.asarray(headings[node]) * 50)))
             self.node_vector_collections.append(Arrow3D(
@@ -399,12 +418,20 @@ class VisualNavigator(wx.Panel):
     def redraw_fleet_heading_contribs(self):
         self._remove_vectors(self.node_contrib_collections)
         positions = self.ctl.get_fleet_positions(self.t)
+        self._contrib_labels = []
         for node in range(self.ctl.get_n_vectors()):
-            for contributor, contribution in self.ctl.get_node_contribs(node, self.t).iteritems():
+            try:
+                contributions = self.ctl.get_node_contribs(node, self.t)
+            except Exception as e:
+                self.log.error("something went bad, quitting Contrib display: {}".format(e))
+                self.node_contrib_enabled = False
+                break
 
-                mag = np.linalg.norm(np.asarray(contribution))
+            for contributor, contribution in contributions.iteritems():
+
+                magnitude = mag(np.asarray(contribution))
                 # Getting FPE's due to suspected zero vectors in mpl.draw
-                if mag > 0.001:
+                if magnitude > 0.001:
                     xs, ys, zs = zip(positions[node], np.add(positions[node], (np.asarray(contribution) * 50)))
                     vector = Arrow3D(
                         xs, ys, zs,
@@ -413,10 +440,13 @@ class VisualNavigator(wx.Panel):
                     )
 
                     self.node_contrib_collections.append(vector)
+                    if contributor not in self._contrib_labels:
+                        self._contrib_labels.append(contributor)
                     #TODO Update to UPDATE DATA instead of re plotting
                     self.plot_axes.add_artist(
                         self.node_contrib_collections[-1],
                     )
+        self.plot_axes.legend(self.node_contrib_collections, self._contrib_labels,loc="lower left")
         self.plot_axes.autoscale()
 
 
@@ -456,6 +486,12 @@ class VisualNavigator(wx.Panel):
         collection = [None for _ in range(length)]
 
     def update_metric_charts(self):
+        # Cleanup Metrics
+        while None in self.metric_views:
+            ind = self.metric_views.index(None)
+            del self.metric_axes[ind]
+            del self.metric_views[ind]
+
         for i, plot in enumerate(self.metric_views):
             self.metric_axes[i] = plot.update(wanted=np.asarray(self.displayed_nodes))
             if self.metric_xlines[i] is not None:
@@ -487,11 +523,11 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page, t=0)
 
     def on_faster_btn(self, event):
-        self.d_t = int(min(max(1, self.d_t * 1.1), self.tmax / 2))
+        self.d_t = int(min(max(2,self.d_t * 1.1), self.tmax / 20))
         self.log.debug("Setting time step to: %s" % self.d_t)
 
     def on_slower_btn(self, event):
-        self.d_t = int(min(max(1, self.d_t * 0.9), self.tmax / 2))
+        self.d_t = int(min(max(2, self.d_t * 0.9), self.tmax / 20))
         self.log.debug("Setting time step to: %s" % self.d_t)
 
     def on_time_slider(self, event):
@@ -562,12 +598,12 @@ class VisualNavigator(wx.Panel):
     def on_zoom_fleet_chk(self, event):
         # When unchecking, return to default viewpoint
         if not self.zoom_fleet_chk.IsChecked() and self._fleet_zoom:
-            self.plot_axes.autoscale_view(scalex=True,scaley=True, scalez=True, tight=False)
+            self.plot_axes.autoscale_view(scalex=True, scaley=True, scalez=True, tight=False)
             environment = self.ctl.get_extent()
-            self.plot_axes.set_xlim3d(0,environment[0])
-            self.plot_axes.set_ylim3d(0,environment[1])
-            self.plot_axes.set_zlim3d(0,environment[2])
-        self._fleet_zoom= self.zoom_fleet_chk.IsChecked()
+            self.plot_axes.set_xlim3d(0, environment[0])
+            self.plot_axes.set_ylim3d(0, environment[1])
+            self.plot_axes.set_zlim3d(0, environment[2])
+            self._fleet_zoom = False
         wx.CallAfter(self.redraw_page)
 
     ####
@@ -618,7 +654,35 @@ class VisualNavigator(wx.Panel):
 
         self.plot_pnl.SetSize(plot_size)
         self.canvas.SetSize(plot_size)
-        canvas_inches = (float(plot_size[0]) / self.fig.get_dpi(),float(plot_size[1]) / self.fig.get_dpi())
-        self.log.debug("canvas_inch:%s"%str(canvas_inches))
+        canvas_inches = (float(plot_size[0]) / self.fig.get_dpi(), float(plot_size[1]) / self.fig.get_dpi())
+        self.log.debug("canvas_inch:%s" % str(canvas_inches))
         self.fig.set_size_inches(canvas_inches)
         wx.CallAfter(self.redraw_page)
+
+class DriftingNavigator(VisualNavigator):
+    def initialise_3d_plot(self):
+        VisualNavigator.initialise_3d_plot(self)
+        # Get Drift Plot info
+        (xs,ys,zs) = self.ctl.get_3D_drift()
+        self.drift_lines = [
+            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
+            i, (x, y, z) in enumerate(zip(xs, ys, zs))
+        ]
+
+    def redraw_page(self, t=None):
+        VisualNavigator.redraw_page(self,t=t)
+        for n, (line, label) in enumerate(zip(self.drift_lines, self.labels)):
+            (xs, ys, zs) = self.ctl.get_3D_drift(node=n, time_start=self.t, length=self.trail_length)
+            line.set_data(xs, ys)
+            line.set_3d_properties(zs)
+            line.set_label("({})".format(self.names[n]))
+            try:
+                label.set_position((xs[0], ys[0]))
+                label.set_3d_properties(zs[0])
+            except TypeError as err:
+                self.log.error("x:%s,y:%s,z:%s" % (xs[0], ys[0], zs[0]))
+                raise
+            except IndexError:
+                # In the case of the 'first time'. This should probably be removed in the case
+                # of any architectural changes.
+                pass

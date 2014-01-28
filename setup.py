@@ -33,6 +33,7 @@ setup(name='aietes',
           'ephyra': ['icons/*.png']
       },
       zip_safe=False,
+      setup_requires=['nose>=1.0'],
       install_requires=install_requires,
       entry_points={
           'console_scripts':
