@@ -29,12 +29,9 @@ class Node(Sim.Process):
     """
     Generic Representation of a network node
     """
-    nodes = 0
 
     def __init__(self, name, simulation, node_config, vector=None, **kwargs):
-        self.nodenum = Node.nodes
-        Node.nodes += 1
-        self.debug = debug and self.nodenum == 0
+        self.debug = debug
         self.on_mission = True
 
         self.id = uuid.uuid4()  # Hopefully unique id
@@ -154,6 +151,14 @@ class Node(Sim.Process):
             self.logger.debug("Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
 
+    def assignFleet(self, fleet):
+        """
+        Assign or Re-assign a node to a given Fleet object
+        """
+        self.fleet = fleet
+        self.nodenum = self.fleet.nodenum(self)
+        self.debug = self.debug and self.nodenum == 0
+
     def activate(self, launch_args=None):
         """
         Fired on Sim Start
@@ -171,12 +176,6 @@ class Node(Sim.Process):
 
         # Tell the environment that we are here!
         self.update_environment()
-
-    def assignFleet(self, fleet):
-        """
-        Assign or Re-assign a node to a given Fleet object
-        """
-        self.fleet = fleet
 
     def missionAccomplished(self):
         """
@@ -284,7 +283,6 @@ class Node(Sim.Process):
         if not self.wallCheck():
             self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
-            self.logger.critical("WE'RE OUT OF THE ENVIRONMENT! %s, v=%s" % (self.position, self.velocity))
             raise RuntimeError("%s Crashed out of the environment at %s m/s" % (self.name, mag(self.velocity)))
 
 

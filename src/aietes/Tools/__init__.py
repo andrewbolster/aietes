@@ -34,7 +34,7 @@ import validate
 
 from SimPy import SimulationStep as Sim
 from humanize_time import secondsToStr
-
+logging.basicConfig(level=logging.ERROR)
 np.seterr(all='raise')
 # from os import urandom as randomstr #Provides unicode random String
 

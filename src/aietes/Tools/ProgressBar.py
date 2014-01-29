@@ -26,19 +26,22 @@ class ProgressBar(object):
         block -- progress display character (default '█')
         empty -- bar display character (default ' ')
         """
-        if color:
-            self.color = getattr(terminal, color.upper())
+        if hasattr(terminal.COLUMNS) and terminal.COLUMNS > 1:
+            if color:
+                self.color = getattr(terminal, color.upper())
+            else:
+                self.color = ''
+            if width and width < terminal.COLUMNS - self.PADDING:
+                self.width = width
+            else:
+                # Adjust to the width of the terminal
+                self.width = terminal.COLUMNS - self.PADDING
+            self.block = block
+            self.empty = empty
+            self.progress = None
+            self.lines = 0
         else:
-            self.color = ''
-        if width and width < terminal.COLUMNS - self.PADDING:
-            self.width = width
-        else:
-            # Adjust to the width of the terminal
-            self.width = terminal.COLUMNS - self.PADDING
-        self.block = block
-        self.empty = empty
-        self.progress = None
-        self.lines = 0
+            raise TypeError("Probably running headless")
 
     def render(self, percent, message=''):
         """Print the progress bar

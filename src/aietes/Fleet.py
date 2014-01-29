@@ -22,7 +22,7 @@ import traceback
 import numpy as np
 from itertools import product
 
-from aietes.Tools import Sim, distance, mag
+from aietes.Tools import Sim, distance, mag, secondsToStr
 from aietes.Tools.ProgressBar import ProgressBar
 
 
@@ -47,6 +47,7 @@ class Fleet(Sim.Process):
     def activate(self):
         for node in self.nodes:
             node.assignFleet(self)
+        for node in self.nodes:
             node.activate()
         Sim.activate(self, self.lifecycle())
 
@@ -62,32 +63,61 @@ class Fleet(Sim.Process):
 
         if self.simulation.progress_display:
             try:
-                progress_bar = ProgressBar('green', width=20, block='▣', empty='□')
+                from random import choice
+                colors = ["BLUE","GREEN","CYAN","RED","MAGENTA","YELLOW"]
+                progress_bar = ProgressBar(choice(colors), width=20, block='▣', empty='□')
             except TypeError as exp:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.logger.info("Tried to start progress bar but failed with %s" % traceback.format_exc())
+                self.logger.critical("Tried to start progress bar but failed with %s" % traceback.format_exc())
                 progress_bar = None
+            except:
+                raise
         else:
             progress_bar = None
 
+        # Canary for mission completeness
+        USS_Abraham_Lincoln=True
+
         while True:
             self.simulation.waiting = True
-            if self.isMissionComplete():
-                Sim.stopSimulation()
             if debug: self.logger.debug("Yield for allPassive")
             yield Sim.waituntil, self, allPassive
+
+            # If all nodes have completed their missions, notify the user
+            if self.isMissionComplete():
+                if USS_Abraham_Lincoln:
+                    #Sim.stopSimulation()
+                    self.logger.critical("Mission accomplished at {}".format(secondsToStr(Sim.now())))
+                    USS_Abraham_Lincoln=False
+
+            # Pretty Printing
             if self.simulation.progress_display:
                 percent_now = ((100 * Sim.now()) / self.simulation.duration_intervals)
-                if __debug__ and percent_now % 5 == 0:
+                if debug and percent_now % 5 == 0:
                     self.logger.info("Fleet  %d%%: %s" % (percent_now, self.currentStats()))
-                if not __debug__ and percent_now % 1 == 0 and progress_bar is not None:
+                if not debug and percent_now % 1 == 0 and progress_bar is not None:
                     progress_bar.render(int(percent_now),
-                                        'step %s\nProcessing %s...' % (percent_now, self.simulation.title))
+                                        'step %s Processing %s...' % (percent_now, self.simulation.title))
+
+            # Yield for anything the simulation should wait on (i.e. GUI)
             if debug: self.logger.debug("Yield for not_waiting")
             yield Sim.waituntil, self, not_waiting
+
+            # Reactivate the nodes
             for node in self.nodes:
                 Sim.reactivate(node)
 
+    def nodenum(self,node):
+        """
+        Return the index of the requested node
+        """
+        return node in self.nodes and self.nodes.index(node)
+
+    def nodeCount(self):
+        """
+        Return the number of nodes in the fleet
+        """
+        return len(self.nodes)
 
     def isMissionComplete(self):
         """

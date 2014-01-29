@@ -65,12 +65,6 @@ class Environment():
         self.logger = parent.logger.getChild("%s" % self.__class__.__name__)
         self.logger.debug('creating instance')
 
-    def is_empty(self, position, tolerance=1):
-        """
-        Return if a given position is 'empty' for a given proximity tolerance
-        """
-        distances = [distance(position, entry.position) > tolerance for entry in self.map]
-        return all(distances)
 
     def random_position(self, want_empty=True):
         """
@@ -95,9 +89,9 @@ class Environment():
         if isinstance(position,basestring):
             if position == "surface":
                 position = np.zeros(3)
-                position[0] = (2 * stddev)
-                position[1] = self.shape[1] / 2
-                position[2] =self.shape[2] - (2 * stddev)
+                position[0] = 4*stddev
+                position[1] = 4*stddev
+                position[2] = self.shape[2] - (2 * stddev)
             else:
                 raise ValueError("Incorrect position string")
 
@@ -108,20 +102,27 @@ class Environment():
         else:
             valid = False
             while not valid:
-                candidate_pos = np.random.normal(np.asarray(position), stddev)
+                candidate_pos = np.random.normal(np.asarray(position), [stddev,stddev,stddev/3])
                 candidate_pos = np.asarray(candidate_pos, dtype=int)
-                try:
-                    valid = self.is_empty(candidate_pos) and not self.is_outside(candidate_pos)
-                except:
-                    raise TypeError("{}".format(candidate_pos))
+                valid = self.is_safe(candidate_pos, 50)
                 if debug:
                     self.logger.debug("Candidate position: %s:%s" % (candidate_pos, valid))
         return tuple(candidate_pos)
 
-    def is_outside(self, position):
-        too_high = not all(position < self.shape)
-        too_low = not all(position > 0)
+    def is_outside(self, position, tolerance=10):
+        too_high = any(position > self.shape-tolerance)
+        too_low = any(position < tolerance)
         return too_high or too_low
+
+    def is_safe(self, position, tolerance=30):
+        return self.is_empty(position, tolerance=tolerance) and not self.is_outside(position,tolerance=tolerance)
+
+    def is_empty(self, position, tolerance=10):
+        """
+        Return if a given position is 'empty' for a given proximity tolerance
+        """
+        distances = [distance(position, entry.position) > tolerance for entry in self.map]
+        return all(distances)
 
     def update(self, object_id, position, velocity):
         """

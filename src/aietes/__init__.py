@@ -69,7 +69,7 @@ class Simulation():
                 pass
         self.logger = kwargs.get("logger",None)
         if self.logger is None:
-            self.logger = logging.getLogger(__name__)
+            self.logger = logging.getLogger(self.title)
             self.logger.setLevel(logtoconsole)
 
         if logtofile is not None:
@@ -172,7 +172,7 @@ class Simulation():
             self.logger.info("Finished Simulation at %s(%s) after %s" % (
             Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
         except RuntimeError as err:
-            self.logger.exception("Simulation crashed at %s" % Sim.now())
+            self.logger.critical("Expected Exception, Quitting gracefully: {}".format(err))
             raise
         return Sim.now()
 

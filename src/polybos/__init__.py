@@ -42,6 +42,8 @@ from bounos import DataPackage, printAnalysis
 _config_spec = '%s/configs/default.conf' % _ROOT
 _results_dir = '%s/../../results/' % _ROOT
 
+# Mask in-sim progress display and let joblib do it's... job...
+progress_display=False
 
 def getConfig(source_config_file=None, config_spec=_config_spec):
     """
@@ -129,7 +131,7 @@ class Scenario(object):
             runcount = self._default_run_count
 
         self.mypath = os.path.join(kwargs.get("basepath",tempfile.mkdtemp()),self.title)
-        os.mkdir(self.mypath)
+        os.makedirs(self.mypath)
 
         pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
         self.datarun = [None for _ in range(runcount)]
@@ -144,7 +146,7 @@ class Scenario(object):
                                  title=title,
                                  logtofile=os.path.join(self.mypath,"%s.log"%title),
                                  logtoconsole=logging.ERROR,
-                                 progress_display=False)
+                                 progress_display=progress_display)
                 prep_stats = sim.prepare(sim_time=runtime)
                 protected_run = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
                                              sim.simulate)
@@ -193,7 +195,7 @@ class Scenario(object):
                                 title=title,
                                 logtofile=os.path.join(self.mypath,"%s.log"%title),
                                 logtoconsole=logging.ERROR,
-                                progress_display=False,
+                                progress_display=progress_display,
                                 sim_time=runtime),
                         pp_defaults
                     ), 10
@@ -247,7 +249,7 @@ class Scenario(object):
                                 title=title,
                                 logtofile=os.path.join(self.mypath,"%s.log"%title),
                                 logtoconsole=logging.ERROR,
-                                progress_display=False,
+                                progress_display=progress_display,
                                 sim_time=runtime),
                         deepcopy(pp_defaults)
                     )
@@ -554,9 +556,7 @@ class ExperimentManager(object):
             for scenario in self.scenarios:
                 scenario.commit()
                 if self.parallel:
-                    print("Parallel")
                     if self.future:
-                        print("Futuristic")
                         scenario.run_future(**kwargs)
                     else:
                         scenario.run_parallel(**kwargs)
@@ -619,8 +619,11 @@ class ExperimentManager(object):
         Args:
             environment([int,int,int]): update experiment simulation environment for all scenarios
         """
-        for s in self.scenarios:
-            s.setEnvironment(environment)
+        if isinstance(environment, np.ndarray) and environment.shape ==(3,):
+            for s in self.scenarios:
+                s.setEnvironment(environment)
+        else:
+            raise ValueError("Incorrect Environment Type given:{}{}".format(environment,type(environment)))
 
     def addVariableRangeScenario(self, variable, value_range):
         """

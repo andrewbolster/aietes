@@ -20,7 +20,7 @@ __author__ = 'andrewbolster'
 
 from multiprocessing import Process, JoinableQueue, cpu_count
 from multiprocessing.process import current_process
-import struct, os
+import struct, os, logging
 
 import futures
 
@@ -30,24 +30,28 @@ from aietes import Simulation
 from aietes.Tools import try_x_times
 
 def sim_mask(args):
+    # Properly Parallel
+    #http://stackoverflow.com/questions/444591/convert-a-string-of-bytes-into-an-int-python
+    myid=current_process()._identity[0]
+    np.random.seed(myid^struct.unpack("<L",os.urandom(4))[0])
     lives=5
+    kwargs, pp_defaults = args
+    sim_time = kwargs.pop("runtime", None)
     while True:
         try:
-            kwargs, pp_defaults = args
-            sim_time = kwargs.pop("runtime", None)
             sim = Simulation(**kwargs)
+            logging.critical("{} starting {}".format(current_process(), sim.title))
             prep_stats = sim.prepare(sim_time=sim_time)
             sim_time = sim.simulate()
             return_dict = sim.postProcess(**pp_defaults)
-            print("%s(%s):%f%%"
-                  % (current_process().name, return_dict.get('data_file', "N/A"),
-                     100.0 * float(sim_time) / prep_stats['sim_time']))
             return sim.generateDataPackage()
         except RuntimeError:
             lives-=1
             if lives <= 0:
                 raise
             else:
+                logging.critical("{} died, restarting".format(current_process()))
+                del sim
                 continue
 
 
@@ -72,8 +76,16 @@ def consumer(w_queue, r_queue):
 
 
 def futures_version(arglist):
+    import logging
+    logging.basicConfig(level=logging.ERROR)
     from joblib import Parallel, delayed
-    results=Parallel(n_jobs=-1, verbose=50)(delayed(sim_mask)(args) for args in arglist)
+    results = []
+    try:
+        results=Parallel(n_jobs=-1, verbose=10)(delayed(sim_mask)(args) for args in arglist)
+    except Exception as e:
+        logging.critical("Caught Exception: results is {}".format(len(results)))
+        raise
+
     return results
 
 
@@ -95,9 +107,9 @@ def boot():
 
 def kill():
     global running, workers
-    print "joining"
+    print "joining for death"
     work_queue.join()
-    print "joined"
+    print "joined "
     for worker in workers:
         worker.terminate()
         del worker

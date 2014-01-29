@@ -113,6 +113,29 @@ class DataPackage(object):
         if not hasattr(self,'drifting'):
             self.drifting = True
 
+    def pad_time(self,tmax,val=np.nan):
+        """
+        In some cases it's necessary to mis datapackage data, which can be difficult with different length
+        simulations.
+
+        `pad_time` extends the arrays in the package that are related to timing (pretty much everything)
+        Does NOT modify `self.tmax`
+
+        NOT TESTED
+        """
+        if tmax > self.tmax:
+            for datum in ['p','v','drift_positions']:
+                pad_val = np.array(3)
+                pad_val.fill(val)
+                orig_shape = self.__dict__[datum].shape
+                self.__dict__[datum] = np.asarray([
+                    np.pad(self.__dict__[datum],(pad_val,tmax-self.tmax), mode="constant")
+                ])
+        elif tmax<self.tmax:
+            raise ValueError("You can't trim my package!")
+        else:
+            # Same tmax, no problem
+            pass
 
     def update(self, p=None, v=None, names=None, environment=None, **kwargs):
         logging.debug("Updating from tmax %d" % self.tmax)

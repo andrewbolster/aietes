@@ -99,19 +99,21 @@ class Behaviour(object):
         forceVector = sum(contributions.values())
 
         # TODO Under Drift, it's probably better to do wall-detection twice: once on node and once on environment
-        forceVector = self.avoidWall(self.node.getPos(), self.node.velocity, forceVector)
-        if self.debug:
+        #forceVector = self.avoidWall(self.node.getPos(), self.node.velocity, forceVector)
+        if self.debug and False:
             self.logger.debug("Response:%s" % forceVector)
-        if self.debug:
+        if self.debug and True:
             total = sum(map(mag, contributions.values()))
-
-            self.logger.debug("contributions: %s of %3f" % (
-                [
-                    "%s:%.f%%" % (func, 100 * mag(value) / total)
-                    for func, value in contributions.iteritems()
-                ], total)
-            )
-        if self.debug:
+            if total > 0:
+                self.logger.debug("contributions: %s of %3f" % (
+                    [
+                        "%s:%.f%%" % (func, 100 * mag(value) / total)
+                        for func, value in contributions.iteritems()
+                    ], total)
+                )
+            else:
+                self.logger.debug("contributions: None")
+        if self.debug and False:
             total = sum(map(mag, contributions.values()))
             for func, value in contributions.iteritems():
                 self.logger.debug("%s:%.2f:%s" % (func, 100 * mag(value) / total, sixvec(value)))
@@ -171,7 +173,7 @@ class Behaviour(object):
         Called by responseVector to avoid walls to a distance of half min distance
         """
         response = np.zeros(shape=forceVector.shape)
-        min_dist = self.neighbour_min_rad
+        min_dist = self.neighbour_min_rad * 2
         avoid = False
         avoiding_position = None
         if np.any((np.zeros(3) + min_dist) > position):
@@ -179,22 +181,23 @@ class Behaviour(object):
                 self.logger.debug("Too Close to the Origin-surfaces: %s" % position)
             offending_dim = position.argmin()
             avoiding_position = position.copy()
-            avoiding_position[offending_dim] = min_dist
+            avoiding_position[offending_dim] = float(0.0)
             avoid = True
         elif np.any(position > (self.env_shape - min_dist)):
             if self.debug:
                 self.logger.debug("Too Close to the Upper-surfaces: %s" % position)
             offending_dim = position.argmax()
             avoiding_position = position.copy()
-            avoiding_position[offending_dim] = float(self.env_shape[offending_dim]+min_dist)
+            avoiding_position[offending_dim] = float(self.env_shape[offending_dim])
             avoid = True
         else:
             response = forceVector
 
         if avoid:
             # response = 0.5 * (position-avoiding_position)
+            self.debug = True
             try:
-                response = self.repulseFromPosition(position, avoiding_position, 1)
+                response = self.repulseFromPosition(position, avoiding_position, 2*min_dist)
             except RuntimeError:
                 raise RuntimeError(
                     "Crashed out of environment with given position:{}, wall position:{}".format(position,
@@ -276,7 +279,7 @@ class Flock(Behaviour):
                 forceVector += partVector
 
                 # Return an inverse vector to the obstacles
-        if self.debug:
+        if self.debug and not mag(forceVector)>0.0:
             self.logger.debug("Repulse:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.repulsive_factor
 
@@ -437,7 +440,6 @@ class FleetLawnmower(Flock, WaypointMixin):
         self.repulsive_factor = listfix(float, self.bev_config.repulsive_factor)
         self.collision_avoidance_d = listfix(float, self.bev_config.collision_avoidance_d)
 
-        self.behaviours.append(self.repulsiveVector)
         self.behaviours.append(self.boresight)
         self.behaviours.append(self.tracked_avoidance)
 
@@ -447,15 +449,18 @@ class FleetLawnmower(Flock, WaypointMixin):
 
     def activate(self, *args, **kwargs):
         if self.debug: self.logger.debug("Generating waypoints: Lawnmower")
-        self.lawnmower(self.node.nodes)
+        self.lawnmower(self.node.fleet.nodeCount(), overlap=30, twister=False)
 
     def boresight(self, position, velocity):
+
         forceVector = np.array([0, 0, 0], dtype=np.float)
-        if self.nextwaypoint is not None:
+        # We only care about boresight tracking while we're in survey
+        careAboutBoresight = self.nextwaypoint is not None and self.node.on_mission
+        if careAboutBoresight:
             target = self.waypoints[self.nextwaypoint]
             angle = angle_between(target.position-position,velocity)
             if self.debug: self.logger.info("Boresight:{}@{}".format(np.rad2deg(angle),distance(target.position,position)))
-            forceVector=-velocity * 2*angle * self.waypoint_factor
+            forceVector=-velocity * np.pi*angle * self.waypoint_factor
         return forceVector
 
     def tracked_avoidance(self, position, velocity):
@@ -471,43 +476,47 @@ class FleetLawnmower(Flock, WaypointMixin):
                 forceVector += partVector
 
                 # Return an inverse vector to the obstacles
-        if self.debug:
+        if self.debug and not mag(forceVector)>0.0:
             self.logger.debug("Repulse:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.repulsive_factor
 
 
-    def per_node_lawnmower(self,shape, swath, base_axis=0, altitude=None):
+    def per_node_lawnmower(self,environment, swath, base_axis=0, altitude=None):
         """
         Generates a flat segmented lawnmower waypoint loop
         """
         # Shape is 2D for waypoint generation
 
         try:
-            front = max(shape[bool(base_axis)])
-            back = min(shape[bool(base_axis)])
-            left = min(shape[not bool(base_axis)])
-            right = max(shape[not bool(base_axis)])
-            if altitude is None and len(shape)!=3:
-                raise ConfigError("altitude makes no sense for shape %s"%shape)
+            front = max(environment[bool(base_axis)])
+            back = min(environment[bool(base_axis)])
+            left = min(environment[not bool(base_axis)])
+            right = max(environment[not bool(base_axis)])
+            if altitude is None and len(environment)!=3:
+                raise ConfigError("altitude makes no sense for environment %s"%environment)
             elif altitude is None:
-                altitude = np.diff(shape[-1])
+                altitude = np.diff(environment[-1])
 
             inc = np.sign(front-back)
             swath = inc*swath
         except Exception:
-            logging.error("Error on per node lawnmower %s"%str(shape))
+            logging.error("Error on per node lawnmower %s"%str(environment))
             raise
 
-        step = 0 #on a plateau going left or right
-        stepping = 0 # on a rise going up or down
-        current_y = back
+        step = 0 #on a plateau going left or right (Odd-Rightward (max))
+        stepping = 0 # on a rise going up or down (Odd-Upward (max))
+        over_ratio = 8
+        current_y = back - swath
         current_x = left - swath
 
         start = [current_x,current_y, altitude]
 
-        points = [start]
+        if not stepping%2:
+            current_x = left - swath/over_ratio
 
-        while current_y < front + (1+stepping%2)*swath:
+        points = []
+
+        while current_y < front + (stepping%2)*swath:
             # four phases to a lawnmower iteration from back-left last point
             # 1) right to edge + swath
             # 2) up to step (if not above front + swath) else origin
@@ -515,10 +524,15 @@ class FleetLawnmower(Flock, WaypointMixin):
             # 4) up to step (if not above front + swath) else origin
             if stepping%2:
                 if step % 2: # If on rightward leg
-                    current_x = right + swath
+                    current_x = right + swath/over_ratio
                 else:
-                    current_x = left - swath
+                    current_x = left - swath/over_ratio
             else:
+                # Intermediate apex to smooth turns
+                if step % 2: # If on rightward leg
+                    points.append([current_x+(2*swath), current_y+(swath/2), altitude])
+                else:
+                    points.append([current_x-(2*swath), current_y+(swath/2), altitude])
                 current_y += swath
                 step += 1
             points.append([current_x, current_y, altitude])
@@ -531,22 +545,26 @@ class FleetLawnmower(Flock, WaypointMixin):
 
         return points
 
-    def lawnmower(self, n, overlap = 0, base_axis = 0, twister = False, swath = 200, prox=25):
+    def lawnmower(self, n, overlap = 0, base_axis = 0, twister = False, swath = 100, prox=25):
         """
         N is either a single number (i.e. n rows of a shape) or a tuple (x, 1/y rows)
         """
         extent = np.asarray(zip(np.zeros(3),np.asarray(self.env_shape)))
-        shape = np.asarray([ self.env_shape[0:2] * ((2*(vertex - 0.5) / 3) + 0.5) for vertex in np.asarray([[0,0],[0,1],[1,0],[1,1]])])
+        environment = np.asarray([ self.env_shape[0:2] * (((vertex - 0.5) / 3) + 0.5) for vertex in np.asarray([[0,0],[0,1],[1,0],[1,1]])])
 
-        front = np.max(shape,axis=0)[bool(base_axis)]
-        back = np.min(shape,axis=0)[bool(base_axis)]
-        right = np.max(shape,axis=0)[not bool(base_axis)]
-        left = np.min(shape,axis=0)[not bool(base_axis)]
+        front = np.max(environment,axis=0)[bool(base_axis)]
+        back = np.min(environment,axis=0)[bool(base_axis)]
+        right = np.max(environment,axis=0)[not bool(base_axis)]
+        left = np.min(environment,axis=0)[not bool(base_axis)]
         top = max(extent[2])
         bottom = min(extent[2])
         mid_z = 2*(top+bottom)/3.0
 
-        self.logger.info("Survey area:{}km^2 ({})".format((front-back)*(right-left)/1e6,[front,back,right,left]))
+        self.logger.info("Survey area:{}km^2 ({}), swath:{}, overlap:{}".format(
+            (front-back)*(right-left)/1e6,
+            [front,back,right,left],
+            swath,overlap)
+        )
 
         inc = np.sign(front-back)
         swath = inc*swath
