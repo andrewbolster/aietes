@@ -26,7 +26,7 @@ class ProgressBar(object):
         block -- progress display character (default '█')
         empty -- bar display character (default ' ')
         """
-        if hasattr(terminal.COLUMNS) and terminal.COLUMNS > 1:
+        if hasattr(terminal,"COLUMNS") and terminal.COLUMNS > 1:
             if color:
                 self.color = getattr(terminal, color.upper())
             else:

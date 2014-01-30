@@ -593,8 +593,14 @@ class FleetLawnmower(Flock, WaypointMixin):
             courses.append(self.per_node_lawnmower(sub_shape,swath=swath, altitude=mid_z, base_axis=axis))
 
         self.waypoints = [self.waypoint(point,prox) for point in courses[self.node.nodenum]]
-        self.waypoints.append(self.waypoint(self.node.position,prox*2))
+        if not self.waypointloop:
+            self.waypoints.append(self.waypoint(self.node.position.copy(),prox*2))
         self.nextwaypoint = 0
+
+class FleetLawnmowerLoop(FleetLawnmower):
+    def __init__(self, *args, **kwargs):
+        super(FleetLawnmowerLoop,self).__init__(*args,**kwargs)
+        self.waypointloop = True
 
 
 class Tail(Flock):

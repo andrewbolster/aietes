@@ -20,7 +20,7 @@ __author__ = 'andrewbolster'
 
 from multiprocessing import Process, JoinableQueue, cpu_count
 from multiprocessing.process import current_process
-import struct, os, logging
+import struct, os, logging, gc
 
 import futures
 
@@ -34,8 +34,8 @@ def sim_mask(args):
     #http://stackoverflow.com/questions/444591/convert-a-string-of-bytes-into-an-int-python
     myid=current_process()._identity[0]
     np.random.seed(myid^struct.unpack("<L",os.urandom(4))[0])
-    lives=5
-    kwargs, pp_defaults = args
+    lives=20
+    kwargs, pp_defaults, retain_data = args
     sim_time = kwargs.pop("runtime", None)
     while True:
         try:
@@ -44,7 +44,11 @@ def sim_mask(args):
             prep_stats = sim.prepare(sim_time=sim_time)
             sim_time = sim.simulate()
             return_dict = sim.postProcess(**pp_defaults)
-            return sim.generateDataPackage()
+            del sim
+            if retain_data:
+                return sim.generateDataPackage()
+            else:
+                return return_dict
         except RuntimeError:
             lives-=1
             if lives <= 0:
@@ -52,7 +56,7 @@ def sim_mask(args):
             else:
                 logging.critical("{} died, restarting".format(current_process()))
                 del sim
-                continue
+        gc.collect()
 
 
 def consumer(w_queue, r_queue):

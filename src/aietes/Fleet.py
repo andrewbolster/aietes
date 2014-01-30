@@ -86,9 +86,9 @@ class Fleet(Sim.Process):
             # If all nodes have completed their missions, notify the user
             if self.isMissionComplete():
                 if USS_Abraham_Lincoln:
-                    #Sim.stopSimulation()
                     self.logger.critical("Mission accomplished at {}".format(secondsToStr(Sim.now())))
                     USS_Abraham_Lincoln=False
+                    Sim.stopSimulation()
 
             # Pretty Printing
             if self.simulation.progress_display:

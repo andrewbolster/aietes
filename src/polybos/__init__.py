@@ -152,7 +152,10 @@ class Scenario(object):
                                              sim.simulate)
                 sim_time = protected_run()
                 return_dict = sim.postProcess(**pp_defaults)
-                self.datarun[run] = sim.generateDataPackage()
+                if kwargs.get("retain_data"):
+                    self.datarun[run] = sim.generateDataPackage()
+                else:
+                    self.datarun[run] = return_dict
                 print("%s(%s):%f%%"
                       % (run, return_dict['data_file'],
                          100.0 * float(sim_time) / prep_stats['sim_time']))
@@ -211,7 +214,10 @@ class Scenario(object):
                 raise response
             else:
                 try:
-                    self.datarun[uuids.index(uuid)] = response
+                    if kwargs.get("retain_data"):
+                        self.datarun[uuids.index(uuid)] = response
+                    else:
+                        self.datarun[run] = True
                 except ValueError:
                     print("Tripped over old hash?:%s" % uuid)
                     pass
@@ -251,7 +257,8 @@ class Scenario(object):
                                 logtoconsole=logging.ERROR,
                                 progress_display=progress_display,
                                 sim_time=runtime),
-                        deepcopy(pp_defaults)
+                        deepcopy(pp_defaults),
+                        kwargs.get("retain_data")
                     )
                 )
             except Exception:
@@ -492,6 +499,7 @@ class ExperimentManager(object):
             node_count(int): Define the standard fleet size (4)
             title(str): define a title for this experiment, to be used for file and folder naming,
                 if not set, this defaults to a timecode and initialisation (not execution)
+            retain_data(bool): Decides wether the scenario state data is maintained or allowed to be GC's
         """
         self.scenarios = []
         self._default_scenario = Scenario(title="__default__")
@@ -502,6 +510,7 @@ class ExperimentManager(object):
             self.title = title
         self._default_scenario.setNodeCount(self.node_count)
         self.parallel = parallel
+        self.retain_data = kwargs.get("retain_data", True)
         self.future = kwargs.get("future",False)
         if self.parallel and not self.future:
             ParSim.boot()
@@ -544,7 +553,7 @@ class ExperimentManager(object):
         self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
         self.orig_path = os.path.abspath(_results_dir)
         self.runcount = kwargs.get("runcount", 1)
-        kwargs.update({"basepath":self.exp_path})
+        kwargs.update({"basepath":self.exp_path, "retain_data":self.retain_data})
         start = time.time()
         try:
             os.mkdir(self.exp_path)

@@ -231,7 +231,8 @@ class Simulation():
                  'contributions': np.asarray(contributions),
                  'achievements': np.asarray(achievements),
                  'config': self.config,
-                 'title': self.title
+                 'title': self.title,
+                 'tmax': self.duration_intervals
         }
 
         # 'Quirky' Optional State Info

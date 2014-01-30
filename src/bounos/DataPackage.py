@@ -113,7 +113,7 @@ class DataPackage(object):
         if not hasattr(self,'drifting'):
             self.drifting = True
 
-    def pad_time(self,tmax,val=np.nan):
+    def pad_time(self,tmax,val=0.0):
         """
         In some cases it's necessary to mis datapackage data, which can be difficult with different length
         simulations.
