@@ -94,14 +94,13 @@ class DataPackage(object):
                 try:
                     self.__dict__[sink_attrib] = kwargs[sink_attrib]
                 except (AttributeError, KeyError) as exp:
-                    logging.error("Caught exception on source:(so:%s,si:%s)"%(source_attrib, sink_attrib))
                     self._handle_mapping_exceptions_(sink_attrib, source_attrib, "kwargs", exp)
         except (AttributeError, KeyError) as exp:
             raise ValueError("Can't work out what the hell you want!: %s missing" %
                              str([attr for attr in self._attrib_map.keys() if not kwargs.has_key(attr)])
             )
 
-        self.tmax = kwargs.get("tmax", len(self.p[0][0]))
+        self.tmax = int(kwargs.get("tmax", len(self.p[0][0])))
         self.n = len(self.p)
 
         #Fixes for Datatypes

@@ -52,8 +52,8 @@ class DataPackageCreation(unittest.TestCase):
         title = "TESTCONFIG"
 
         np.savez(source_file,
-                positions=positions,
-                vectors=vectors,
+                p=positions,
+                v=vectors,
                 names=names,
                 contributions=contributions,
                 achievements=achievements,
