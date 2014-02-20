@@ -31,6 +31,7 @@ from datetime import datetime as dt
 from configobj import ConfigObj
 from time import time
 import validate
+from copy import deepcopy
 
 from SimPy import SimulationStep as Sim
 from humanize_time import secondsToStr
@@ -344,19 +345,31 @@ class dotdictify(dict):
             for key in value:
                 self.__setitem__(key, value[key])
         else:
-            raise TypeError, 'expected dict'
+            raise TypeError, "expected dict, got {}"
 
     def __setitem__(self, key, value):
         if isinstance(value, dict) and not isinstance(value, dotdictify):
             value = dotdictify(value)
-        dict.__setitem__(self, key, value)
+        try:
+            dict.__setitem__(self, key, value)
+        except TypeError:
+            logging.error("NOPE! {},{},{},{}".format(type(key),key,type(value),value))
+            raise
 
     def __getitem__(self, key):
         found = self.get(key, dotdictify.marker)
         if found is dotdictify.marker:
-            found = dotdictify()
-            dict.__setitem__(self, key, found)
+            raise AttributeError("Key {} not found".format(key))
+
         return found
+
+    def __copy__(self):
+        newone = dotdictify()
+        newone.__dict__.update(dict(self.__dict__))
+        return newone
+
+    def __deepcopy__(self):
+        raise(NotImplementedError,"Don't deep copy! This already deepcopy's on assignment")
 
     __setattr__ = __setitem__
     __getattr__ = __getitem__
