@@ -8,6 +8,7 @@ Usage:
 """
 
 import sys
+import warnings
 
 import terminal
 
@@ -40,14 +41,18 @@ class ProgressBar(object):
             self.empty = empty
             self.progress = None
             self.lines = 0
+            self.alive = True
         else:
-            raise TypeError("Probably running headless")
+            self.alive = False
+            warnings.warn("Probably running headless",RuntimeWarning)
 
     def render(self, percent, message=''):
         """Print the progress bar
         percent -- the progress percentage %
         message -- message string (optional)
         """
+        if not self.alive:
+            return -1
         inline_msg_len = 0
         if message:
             # The length of the first line in the message
