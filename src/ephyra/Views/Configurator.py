@@ -18,13 +18,11 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
 import logging
-
-from ephyra import wx
-
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
 from wx.lib.intctrl import IntCtrl
 from wx.lib.agw.floatspin import FloatSpin
 
+from ephyra import wx
 from aietes.Tools import nameGeneration, timestamp, itersubclasses
 from aietes.Behaviour import Behaviour
 

@@ -30,9 +30,9 @@ from matplotlib.colors import Normalize
 from matplotlib import cm
 
 from ephyra import wx
-from ephyra.Views import MetricView, Arrow3D, callsuper
-
+from ephyra.Views import MetricView, Arrow3D
 from aietes.Tools import timeit, mag
+
 
 
 # noinspection PyStringFormat

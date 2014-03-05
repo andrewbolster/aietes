@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 """Unit tests for Polybos"""
 
 import unittest
-import os
+
 import polybos
 
 

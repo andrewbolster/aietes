@@ -18,7 +18,6 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
 
-import logging
 import numpy as np
 
 from aietes.Tools import mag

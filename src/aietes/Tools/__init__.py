@@ -18,23 +18,23 @@ __email__ = "me@andrewbolster.info"
 
 import math
 import functools
-import os
 import random
 import logging
 import re
+import os
 from inspect import getmembers, isfunction
 from itertools import groupby
 from operator import itemgetter
-from pprint import pformat
-import numpy as np
 from datetime import datetime as dt
-from configobj import ConfigObj
 from time import time
-import validate
-from copy import deepcopy
 
+import numpy as np
+from configobj import ConfigObj
+import validate
 from SimPy import SimulationStep as Sim
+
 from humanize_time import secondsToStr
+
 logging.basicConfig(level=logging.ERROR)
 np.seterr(all='raise')
 # from os import urandom as randomstr #Provides unicode random String
@@ -370,6 +370,30 @@ class dotdictify(dict):
 
     def __deepcopy__(self):
         raise(NotImplementedError,"Don't deep copy! This already deepcopy's on assignment")
+
+    def __eq__(self, other):
+        key_intersect = set(d1.keys()).intersection(d2.keys())
+
+        # Basic sanity check
+        if not len(key_intersect) > 0:
+            return False
+        if not key_intersect == d1.keys() and key_intersect == d2.keys():
+            return False
+
+        for k in key_intersect:
+            try:
+                if isinstance(d1[k], np.ndarray) and not np.allclose(d1[k],d2[k]):
+                    return False
+                elif isinstance(d1[k], dotdictify) and not d1[k] == d2[k]:
+                    return False
+                else:
+                    if not d1[k] == d2[k]:
+                        return False
+            except:
+                print("Crashed on key {}{}:{}{}".format(k,type(k), type(d1[k]),type(d2[k])))
+                raise
+
+        return True
 
     __setattr__ = __setitem__
     __getattr__ = __getitem__

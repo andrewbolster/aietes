@@ -18,9 +18,10 @@ __email__ = "me@andrewbolster.info"
 
 from numpy import *
 from numpy.random import poisson
-from aietes.Tools import Sim, debug, randomstr, broadcast_address
 
+from aietes.Tools import Sim, debug, randomstr, broadcast_address
 from Layercake.Packet import AppPacket
+
 
 #debug=True
 class Application(Sim.Process):

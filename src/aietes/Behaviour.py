@@ -18,12 +18,13 @@ __email__ = "me@andrewbolster.info"
 
 from operator import attrgetter
 import logging
-
-import numpy as np
 from itertools import product
 from collections import namedtuple
 
+import numpy as np
+
 from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between
+
 
 debug=False
 class Behaviour(object):

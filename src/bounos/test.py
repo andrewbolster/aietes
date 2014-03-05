@@ -19,9 +19,12 @@ __email__ = "me@andrewbolster.info"
 """Unit tests for bounos"""
 
 import unittest
-import bounos
 import tempfile
+
 import numpy as np
+
+import bounos
+
 
 class DataPackageCreation(unittest.TestCase):
     #TODO TMax testing

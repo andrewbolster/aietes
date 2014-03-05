@@ -18,7 +18,9 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'bolster'
 import logging
+
 from scipy.spatial.distance import pdist, squareform
+
 # used to reconstitute config from NP object
 from ast import literal_eval
 

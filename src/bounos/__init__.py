@@ -23,7 +23,6 @@ BOUNOS - Heir to the Kingdom of AIETES
 import sys
 import argparse
 from argparse import RawTextHelpFormatter
-
 from math import ceil
 
 import numpy as np

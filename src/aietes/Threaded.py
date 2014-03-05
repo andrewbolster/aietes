@@ -20,14 +20,16 @@ __author__ = 'andrewbolster'
 
 from multiprocessing import Process, JoinableQueue, cpu_count
 from multiprocessing.process import current_process
-import struct, os, logging, gc
-
-import futures
+import struct
+import os
+import logging
+import gc
 
 import numpy as np
 
 from aietes import Simulation
 from aietes.Tools import try_x_times
+
 
 def sim_mask(args):
     # Properly Parallel

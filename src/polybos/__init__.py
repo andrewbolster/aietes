@@ -23,19 +23,19 @@ import tempfile
 from uuid import uuid4 as get_uuid
 import logging
 from copy import deepcopy
-from configobj import ConfigObj
-import validate
-import numpy as np
 from datetime import datetime
 from pprint import pformat
 import pickle
 import time
-
 import collections
+
+from configobj import ConfigObj
+import validate
+import numpy as np
 
 from aietes import Simulation  # Must use the aietes path to get the config files
 import aietes.Threaded as ParSim
-from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, try_forever, secondsToStr
+from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr
 from bounos import DataPackage, printAnalysis
 
 

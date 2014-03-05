@@ -19,11 +19,12 @@ __email__ = "me@andrewbolster.info"
 
 import sys
 import traceback
+
 import numpy as np
-from itertools import product
 
 from aietes.Tools import Sim, distance, mag, secondsToStr
 from aietes.Tools.ProgressBar import ProgressBar
+
 
 
 #Local Debug

@@ -17,6 +17,7 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import time
+
 from ephyra import wx
 
 

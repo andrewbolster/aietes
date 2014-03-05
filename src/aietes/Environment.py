@@ -18,8 +18,8 @@ __email__ = "me@andrewbolster.info"
 
 from operator import attrgetter
 from collections import namedtuple
-import numpy as np
 
+import numpy as np
 from SimPy import Simulation as Sim
 
 from aietes.Tools import map_entry, distance, debug, ConfigError

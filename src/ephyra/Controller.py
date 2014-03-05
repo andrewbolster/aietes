@@ -17,9 +17,11 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
-import functools, os
+import functools
+import os
+
 from joblib import Parallel, delayed
-from joblib.pool import has_shareable_memory
+
 parallel = False # Doesn't make a damned difference.
 if parallel:
     os.system("taskset -p 0xff %d" % os.getpid())

@@ -28,7 +28,6 @@ import logging
 import argparse
 import cProfile
 import traceback
-from bounos import BounosModel as model
 from aietes.Tools import get_latest_aietes_datafile, is_valid_aietes_datafile
 
 logging.basicConfig(level=logging.DEBUG)
