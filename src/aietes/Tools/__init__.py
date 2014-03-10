@@ -32,6 +32,7 @@ import numpy as np
 from configobj import ConfigObj
 import validate
 from SimPy import SimulationStep as Sim
+from pprint import pformat
 
 from humanize_time import secondsToStr
 
