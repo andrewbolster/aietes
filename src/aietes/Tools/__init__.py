@@ -373,25 +373,25 @@ class dotdictify(dict):
         raise(NotImplementedError,"Don't deep copy! This already deepcopy's on assignment")
 
     def __eq__(self, other):
-        key_intersect = set(d1.keys()).intersection(d2.keys())
+        key_intersect = set(self.keys()).intersection(other.keys())
 
         # Basic sanity check
         if not len(key_intersect) > 0:
             return False
-        if not key_intersect == d1.keys() and key_intersect == d2.keys():
+        if not key_intersect == self.keys() and key_intersect == other.keys():
             return False
 
         for k in key_intersect:
             try:
-                if isinstance(d1[k], np.ndarray) and not np.allclose(d1[k],d2[k]):
+                if isinstance(self[k], np.ndarray) and not np.allclose(self[k],other[k]):
                     return False
-                elif isinstance(d1[k], dotdictify) and not d1[k] == d2[k]:
+                elif isinstance(self[k], dotdictify) and not self[k] == other[k]:
                     return False
                 else:
-                    if not d1[k] == d2[k]:
+                    if not self[k] == other[k]:
                         return False
             except:
-                print("Crashed on key {}{}:{}{}".format(k,type(k), type(d1[k]),type(d2[k])))
+                print("Crashed on key {}{}:{}{}".format(k,type(k), type(self[k]),type(other[k])))
                 raise
 
         return True

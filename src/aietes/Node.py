@@ -151,6 +151,14 @@ class Node(Sim.Process):
             self.logger.debug("Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
 
+        #
+        # Kalman Filter Characteristics from Contribs
+        self.ecea = False
+        if self.config['ecea'] != "Null":
+            from contrib.Ghia.ecea.EceaFilter import ECEAFilter, ECEAParams
+            self.ecea = ECEAFilter(self, ECEAParams.from_aietes_conf(self.simulation.config))
+
+
     def assignFleet(self, fleet):
         """
         Assign or Re-assign a node to a given Fleet object
@@ -296,6 +304,19 @@ class Node(Sim.Process):
                                            self.getPos(),
                                            self.getVec())
 
+    def update_fleet(self):
+        if self.ecea:
+            # if using ECEA, need to update the fleet with the *corrected* positions
+            # These corrected positions are currently only used by ECEA itself, not for
+            # behaviour decisions #TODO
+            self.fleet.environment.update(self.id,
+                                          self.ecea.getPos(),
+                                          self.ecea.getVec())
+        else:
+            self.fleet.environment.update(self.id,
+                                          self.getPos(),
+                                          self.getVec())
+
     def setPos(self, placeVector):
         assert isinstance(placeVector, np.array)
         assert len(placeVector) == 3
@@ -395,6 +416,7 @@ class Node(Sim.Process):
             yield Sim.hold, self, self.behaviour.update_rate
             try:
                 self.update_environment()
+                self.update_fleet()
             except Exception:
                 self.logger.error("Exception in Environment Update")
                 raise

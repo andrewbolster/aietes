@@ -24,6 +24,7 @@ import numpy as np
 
 from aietes.Tools import Sim, distance, mag, secondsToStr
 from aietes.Tools.ProgressBar import ProgressBar
+from aietes.Environment import Environment
 
 
 
@@ -42,6 +43,8 @@ class Fleet(Sim.Process):
         Sim.Process.__init__(self, name="Fleet")
         self.nodes = nodes
         self.environment = simulation.environment
+        self.shared_map = Environment(shape=self.environment.shape,
+                                      base_depth=self.environment.depth)
         self.simulation = simulation
         self.waiting = False
 
