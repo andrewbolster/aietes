@@ -43,7 +43,8 @@ class Fleet(Sim.Process):
         Sim.Process.__init__(self, name="Fleet")
         self.nodes = nodes
         self.environment = simulation.environment
-        self.shared_map = Environment(shape=self.environment.shape,
+        self.shared_map = Environment(simulation,
+                                      shape=self.environment.shape,
                                       base_depth=self.environment.depth)
         self.simulation = simulation
         self.waiting = False
