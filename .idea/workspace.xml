@@ -5,9 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a5ddbfea-59ae-4dc4-9840-92f0b3dbc75b" name="Default" comment="Drift now working, despite my stupidity. Tests for both octave and python implementations implemented but not perfect. About to start into the modifications to datapackage to handle multiple 'trails' per node. (i.e. drifttrails)">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/aietes/Fleet.py" afterPath="$PROJECT_DIR$/src/aietes/Fleet.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/aietes/configs/default.conf" afterPath="$PROJECT_DIR$/src/aietes/configs/default.conf" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/test_ecea.py" afterPath="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/test_ecea.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/contrib/Ghia" afterPath="$PROJECT_DIR$/src/contrib/Ghia" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/aietes.iml" afterPath="$PROJECT_DIR$/.idea/aietes.iml" />
     </list>
     <ignored path="aietes.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -42,7 +41,7 @@
     <SUITE FILE_PATH="coverage/aietes$Unittest_EquivalenceTests_testFilterAgainstCombinedKFSim.coverage" NAME="Unittest EquivalenceTests.testFilterAgainstCombinedKFSim Coverage Results" MODIFIED="1394471420541" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter" />
     <SUITE FILE_PATH="coverage/aietes$Unittest_DriftFactorTest_test_python.coverage" NAME="Unittest DriftFactorTest.test_python Coverage Results" MODIFIED="1394472571531" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model" />
     <SUITE FILE_PATH="coverage/aietes$AIETES.coverage" NAME="AIETES Coverage Results" MODIFIED="1390856185273" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/results" />
-    <SUITE FILE_PATH="coverage/aietes$Unittest_ECEA_Regression_Tests_test_reduced_data_analysis.coverage" NAME="Unittest ECEA_Regression_Tests.test_reduced_data_analysis Coverage Results" MODIFIED="1394554533929" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles" />
+    <SUITE FILE_PATH="coverage/aietes$Unittest_ECEA_Regression_Tests_test_reduced_data_analysis.coverage" NAME="Unittest ECEA_Regression_Tests.test_reduced_data_analysis Coverage Results" MODIFIED="1394623051305" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles" />
     <SUITE FILE_PATH="coverage/aietes$Unittest_ECEA_Regression_Tests_test_set_state_propagation_matrix.coverage" NAME="Unittest ECEA_Regression_Tests.test_set_state_propagation_matrix Coverage Results" MODIFIED="1394051071081" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles" />
     <SUITE FILE_PATH="coverage/aietes$Unittest_InitialisationTests_test_initial_design_matrix_h.coverage" NAME="Unittest InitialisationTests.test_initial_design_matrix_h Coverage Results" MODIFIED="1392314942811" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles" />
     <SUITE FILE_PATH="coverage/aietes$Unittest_InitialisationAndSimulationTests_test_set_state_propagation_matrix.coverage" NAME="Unittest InitialisationAndSimulationTests.test_set_state_propagation_matrix Coverage Results" MODIFIED="1392816820842" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles" />
@@ -116,103 +115,19 @@
   <component name="DaemonCodeAnalyzer">
     <disable_hints />
   </component>
-  <component name="DockManager">
-    <window id="105">
-      <content type="file-editors">
-        <state>
-          <splitter split-orientation="horizontal" split-proportion="0.8691345">
-            <split-first>
-              <leaf>
-                <file leaf-file-name="DriftFactors.py" pinned="false" current="false" current-in-tab="false">
-                  <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/DriftFactors.py">
-                    <provider selected="true" editor-type-id="text-editor">
-                      <state line="23" column="42" selection-start="636" selection-end="636" vertical-scroll-proportion="0.0" vertical-offset="216" max-vertical-offset="1962">
-                        <folding>
-                          <element signature="e#396#579#1" expanded="false" />
-                          <element signature="e#645#1543#0" expanded="false" />
-                          <element signature="e#1589#1645#0" expanded="false" />
-                          <element signature="e#1692#1748#0" expanded="false" />
-                          <element signature="e#1817#2185#1" expanded="false" />
-                          <element signature="e#5122#5149#0" expanded="false" />
-                          <element signature="e#5194#5923#0" expanded="false" />
-                          <element signature="e#5239#5381#0" expanded="false" />
-                          <element signature="e#5434#5723#0" expanded="false" />
-                          <element signature="e#5779#5923#0" expanded="false" />
-                          <element signature="e#5963#6327#0" expanded="false" />
-                          <element signature="e#6009#6194#0" expanded="false" />
-                          <element signature="e#6249#6327#0" expanded="false" />
-                          <element signature="e#6369#6853#0" expanded="false" />
-                          <element signature="e#6415#6477#0" expanded="false" />
-                          <element signature="e#6532#6575#0" expanded="false" />
-                          <element signature="e#6643#6853#0" expanded="false" />
-                        </folding>
-                      </state>
-                    </provider>
-                  </entry>
-                </file>
-                <file leaf-file-name="graphAndAnalysis.py" pinned="false" current="false" current-in-tab="false">
-                  <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/graphAndAnalysis.py">
-                    <provider selected="true" editor-type-id="text-editor">
-                      <state line="1445" column="4" selection-start="78797" selection-end="78797" vertical-scroll-proportion="0.0" vertical-offset="24822" max-vertical-offset="29034">
-                        <folding>
-                          <element signature="e#78#96#0" expanded="true" />
-                        </folding>
-                      </state>
-                    </provider>
-                  </entry>
-                </file>
-                <file leaf-file-name="test_filter.py" pinned="false" current="false" current-in-tab="true">
-                  <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/test_filter.py">
-                    <provider selected="true" editor-type-id="text-editor">
-                      <state line="97" column="58" selection-start="4025" selection-end="4025" vertical-scroll-proportion="1.7834525" vertical-offset="0" max-vertical-offset="2808">
-                        <folding>
-                          <element signature="e#24#60#0" expanded="true" />
-                        </folding>
-                      </state>
-                    </provider>
-                  </entry>
-                </file>
-              </leaf>
-            </split-first>
-            <split-second>
-              <leaf>
-                <file leaf-file-name="__init__.py" pinned="false" current="false" current-in-tab="true">
-                  <entry file="file://$PROJECT_DIR$/src/aietes/__init__.py">
-                    <provider selected="true" editor-type-id="text-editor">
-                      <state line="250" column="46" selection-start="9754" selection-end="9754" vertical-scroll-proportion="0.10973085" vertical-offset="4394" max-vertical-offset="12222">
-                        <folding>
-                          <element signature="e#604#614#0" expanded="true" />
-                        </folding>
-                      </state>
-                    </provider>
-                  </entry>
-                </file>
-              </leaf>
-            </split-second>
-          </splitter>
-        </state>
-      </content>
-    </window>
-  </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FavoritesManager">
     <favorites_list name="aietes" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.31362787">
+    <splitter split-orientation="horizontal" split-proportion="0.6231343">
       <split-first>
         <leaf>
           <file leaf-file-name="__init__.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/__init__.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="314" column="6" selection-start="13570" selection-end="13570" vertical-scroll-proportion="0.0" vertical-offset="118" max-vertical-offset="990">
-                  <folding>
-                    <element signature="e#23#74#0" expanded="true" />
-                    <element signature="e#296#3202#1" expanded="false" />
-                    <element signature="e#3244#13512#0" expanded="false" />
-                    <element signature="e#3244#4411#1" expanded="false" />
-                    <element signature="e#14144#16995#0" expanded="false" />
-                  </folding>
+                <state line="314" column="6" selection-start="13570" selection-end="13570" vertical-scroll-proportion="0.0" vertical-offset="5652" max-vertical-offset="7380">
+                  <folding />
                 </state>
               </provider>
             </entry>
@@ -220,16 +135,16 @@
           <file leaf-file-name="Node.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/aietes/Node.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="310" column="38" selection-start="12169" selection-end="12169" vertical-scroll-proportion="0.0" vertical-offset="4914" max-vertical-offset="7596">
+                <state line="332" column="11" selection-start="13012" selection-end="13012" vertical-scroll-proportion="0.0" vertical-offset="5976" max-vertical-offset="7704">
                   <folding />
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="Environment.py" pinned="false" current="false" current-in-tab="true">
+          <file leaf-file-name="Environment.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/aietes/Environment.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="148" column="9" selection-start="5938" selection-end="5938" vertical-scroll-proportion="5.013544" vertical-offset="335" max-vertical-offset="3240">
+                <state line="149" column="0" selection-start="5940" selection-end="5940" vertical-scroll-proportion="0.0" vertical-offset="2370" max-vertical-offset="3240">
                   <folding />
                 </state>
               </provider>
@@ -238,10 +153,8 @@
           <file leaf-file-name="__init__.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/__init__.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="364" column="0" selection-start="19201" selection-end="19201" vertical-scroll-proportion="0.0" vertical-offset="8906" max-vertical-offset="12330">
-                  <folding>
-                    <element signature="e#24#60#0" expanded="true" />
-                  </folding>
+                <state line="364" column="0" selection-start="19337" selection-end="19337" vertical-scroll-proportion="0.0" vertical-offset="6552" max-vertical-offset="12132">
+                  <folding />
                 </state>
               </provider>
             </entry>
@@ -249,16 +162,16 @@
           <file leaf-file-name="test_drift.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/test_drift.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="22" column="81" selection-start="656" selection-end="656" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="666">
+                <state line="22" column="0" selection-start="575" selection-end="575" vertical-scroll-proportion="0.0" vertical-offset="396" max-vertical-offset="738">
                   <folding />
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="test_ecea.py" pinned="false" current="false" current-in-tab="false">
+          <file leaf-file-name="test_ecea.py" pinned="false" current="true" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/test_ecea.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="7" column="31" selection-start="231" selection-end="231" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="14814">
+                <state line="57" column="45" selection-start="1882" selection-end="1882" vertical-scroll-proportion="0.38054967" vertical-offset="846" max-vertical-offset="14814">
                   <folding />
                 </state>
               </provider>
@@ -266,13 +179,13 @@
           </file>
           <file leaf-file-name="default.conf" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/aietes/configs/default.conf">
-              <provider editor-type-id="com.intellij.persistence.database.editor.CsvTableFileEditorProvider">
-                <state />
-              </provider>
               <provider selected="true" editor-type-id="text-editor">
-                <state line="28" column="11" selection-start="1700" selection-end="1700" vertical-scroll-proportion="-9.882353" vertical-offset="0" max-vertical-offset="1944">
+                <state line="29" column="11" selection-start="1752" selection-end="1752" vertical-scroll-proportion="0.0" vertical-offset="522" max-vertical-offset="1944">
                   <folding />
                 </state>
+              </provider>
+              <provider editor-type-id="com.intellij.persistence.database.editor.CsvTableFileEditorProvider">
+                <state />
               </provider>
             </entry>
           </file>
@@ -283,21 +196,29 @@
           <file leaf-file-name="__init__.py" pinned="false" current="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/__init__.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="365" column="87" selection-start="19415" selection-end="19415" vertical-scroll-proportion="0.0" vertical-offset="4374" max-vertical-offset="12330">
+                <state line="365" column="66" selection-start="19482" selection-end="19482" vertical-scroll-proportion="0.0" vertical-offset="6570" max-vertical-offset="12132">
+                  <folding />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file leaf-file-name="Fleet.py" pinned="false" current="false" current-in-tab="false">
+            <entry file="file://$PROJECT_DIR$/src/aietes/Fleet.py">
+              <provider selected="true" editor-type-id="text-editor">
+                <state line="51" column="23" selection-start="1584" selection-end="1584" vertical-scroll-proportion="0.0" vertical-offset="72" max-vertical-offset="2880">
                   <folding>
-                    <element signature="e#24#60#0" expanded="true" />
+                    <marker date="1394620509269" expanded="true" signature="884:5658" placeholder="..." />
+                    <marker date="1394620509269" expanded="true" signature="889:955" placeholder="&quot;&quot;&quot;...&quot;&quot;&quot;" />
                   </folding>
                 </state>
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="Fleet.py" pinned="false" current="true" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/src/aietes/Fleet.py">
+          <file leaf-file-name="test_filter.py" pinned="false" current="false" current-in-tab="true">
+            <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/test_filter.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state line="46" column="37" selection-start="1390" selection-end="1390" vertical-scroll-proportion="0.31" vertical-offset="673" max-vertical-offset="3006">
-                  <folding>
-                    <element signature="e#628#638#0" expanded="true" />
-                  </folding>
+                <state line="97" column="58" selection-start="4025" selection-end="4025" vertical-scroll-proportion="1.3044398" vertical-offset="1003" max-vertical-offset="2682">
+                  <folding />
                 </state>
               </provider>
             </entry>
@@ -320,46 +241,13 @@
     </option>
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/src/contrib/Ghia/shared_tools/__init__.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/ecea_smop.py" root0="SKIP_INSPECTION" />
     <setting file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/ecea_inter.py" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/ecea.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/ecea_smop.py" root0="SKIP_INSPECTION" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/uuv_time_delay_model/mfiles/__init__.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/shared_tools/__init__.py" />
-        <option value="$PROJECT_DIR$/src/aietes/Environment.py" />
-        <option value="$PROJECT_DIR$/src/aietes/Behaviour.py" />
-        <option value="$PROJECT_DIR$/src/aietes/configs/lawnmower.conf" />
-        <option value="$PROJECT_DIR$/src/aietes/__init__.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/rms_maker.py" />
-        <option value="$PROJECT_DIR$/src/aietes/Threaded.py" />
-        <option value="$PROJECT_DIR$/src/polybos/__init__.py" />
-        <option value="$PROJECT_DIR$/scripts/drift_run.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/README.md" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/shared_tools/__init__.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/Top_Level_Simulation.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Set_Initial_Design_Matrix_H.m" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/ecea_smop.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/ecea_inter.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/ecea.py" />
-        <option value="/usr/local/lib/python2.7/dist-packages/oct2py/matwrite.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Probe_Analysis.m" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Initial_Kalman_filter.m" />
-        <option value="/usr/lib/python2.7/dist-packages/scipy/io/matlab/mio5.py" />
-        <option value="$PROJECT_DIR$/requirements" />
-        <option value="$PROJECT_DIR$/src/bounos/test.py" />
-        <option value="$PROJECT_DIR$/src/bounos/DataPackage.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/graphing.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Initial_Simulation_and_Kalman_filter.py" />
-        <option value="$PROJECT_DIR$/src/aietes/Tools/ProgressBar.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/H.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/RMS_Results_Sum.m" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/RMS_Results_Sum_octave.m" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/test_files/__init__.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/test_uuv_pos_drift.py" />
         <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/test_ghia.py" />
         <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Form_X_Estimate.m" />
         <option value="$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/__init__.py" />
@@ -370,18 +258,19 @@
         <option value="$PROJECT_DIR$/src/aietes/Node.py" />
         <option value="$PROJECT_DIR$/src/aietes/Tools/__init__.py" />
         <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/__init__.py" />
-        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/test_ecea.py" />
         <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/graphAndAnalysis.py" />
         <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/test_filter.py" />
         <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/__init__.py" />
         <option value="$PROJECT_DIR$/src/aietes/configs/default.conf" />
         <option value="$PROJECT_DIR$/src/aietes/Fleet.py" />
+        <option value="$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/test_ecea.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="width" value="1916" />
-    <option name="height" value="1052" />
+    <option name="x" value="-2" />
+    <option name="width" value="1924" />
+    <option name="height" value="1057" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -504,6 +393,114 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
+              <option name="myItemId" value="contrib" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Ghia" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="aietes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="aietes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="contrib" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Ghia" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ecea" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="aietes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="aietes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="contrib" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Ghia" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ecea" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="mfiles" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="aietes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="aietes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="contrib" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Ghia" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ecea" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="EceaFilter" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="aietes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="aietes" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="src" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
               <option name="myItemId" value="aietes" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
@@ -542,17 +539,20 @@
     <property name="options.lastSelected" value="Errors" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatWidth0" value="219" />
     <property name="recentsLimit" value="5" />
+    <property name="LayoutCode.rearrangeEntries" value="false" />
     <property name="options.splitter.details.proportions" value="0.2" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatOrder3" value="3" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatOrder2" value="2" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeOrder0" value="0" />
     <property name="options.splitter.main.proportions" value="0.3" />
     <property name="options.searchVisible" value="true" />
+    <property name="SearchEverywhereHistory" value="/" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeOrder3" value="3" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeOrder2" value="2" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeOrder1" value="1" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="LayoutCode.rearrangeEntriesPython" value="false" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth0" value="219" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatOrder1" value="1" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_flatOrder0" value="0" />
@@ -561,9 +561,6 @@
     <property name="restartRequiresConfirmation" value="true" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth2" value="235" />
     <property name="FileHistory.git4idea.history.GitHistoryProvider_treeWidth1" value="232" />
-    <property name="LayoutCode.rearrangeEntriesPython" value="false" />
-    <property name="LayoutCode.rearrangeEntries" value="false" />
-    <property name="SearchEverywhereHistory" value="/" />
   </component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
@@ -587,7 +584,7 @@
       <recent name="$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Gotta Test Em All">
+  <component name="RunManager" selected="Python tests.Unittest ECEA_Regression_Tests.test_reduced_data_analysis">
     <configuration default="false" name="Unittest EquivalenceTests.testFilterEquivalence" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -917,7 +914,7 @@
       <ConfigurationWrapper RunnerId="PythonRunner" />
       <method />
     </configuration>
-    <list size="16">
+    <list size="13">
       <item index="0" class="java.lang.String" itemvalue="Python tests.Unittest DriftFactorTest.test_octave" />
       <item index="1" class="java.lang.String" itemvalue="Python.AIETES" />
       <item index="2" class="java.lang.String" itemvalue="Python.Develop" />
@@ -925,21 +922,18 @@
       <item index="4" class="java.lang.String" itemvalue="Python.Ephyra Profile Run" />
       <item index="5" class="java.lang.String" itemvalue="Python.Ephyra Release" />
       <item index="6" class="java.lang.String" itemvalue="Python.Ephyra Sim" />
-      <item index="7" class="java.lang.String" itemvalue="Python.DriftTesting_Oct" />
-      <item index="8" class="java.lang.String" itemvalue="Python.DriftTesting_Py" />
-      <item index="9" class="java.lang.String" itemvalue="Python.Lawnmower" />
-      <item index="10" class="java.lang.String" itemvalue="Python tests.Gotta Test Em All" />
-      <item index="11" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testFilterEquivalence" />
-      <item index="12" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testParamEquiv" />
-      <item index="13" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testParamOperationalEquivalence" />
-      <item index="14" class="java.lang.String" itemvalue="Python tests.Unittest ECEA_Regression_Tests.test_reduced_data_analysis" />
-      <item index="15" class="java.lang.String" itemvalue="Python tests.Unittests in test_ecea" />
+      <item index="7" class="java.lang.String" itemvalue="Python tests.Gotta Test Em All" />
+      <item index="8" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testFilterEquivalence" />
+      <item index="9" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testParamEquiv" />
+      <item index="10" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testParamOperationalEquivalence" />
+      <item index="11" class="java.lang.String" itemvalue="Python tests.Unittest ECEA_Regression_Tests.test_reduced_data_analysis" />
+      <item index="12" class="java.lang.String" itemvalue="Python tests.Unittests in test_ecea" />
     </list>
     <recent_temporary>
       <list size="5">
-        <item index="0" class="java.lang.String" itemvalue="Python tests.Unittests in test_ecea" />
-        <item index="1" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testFilterEquivalence" />
-        <item index="2" class="java.lang.String" itemvalue="Python tests.Unittest ECEA_Regression_Tests.test_reduced_data_analysis" />
+        <item index="0" class="java.lang.String" itemvalue="Python tests.Unittest ECEA_Regression_Tests.test_reduced_data_analysis" />
+        <item index="1" class="java.lang.String" itemvalue="Python tests.Unittests in test_ecea" />
+        <item index="2" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testFilterEquivalence" />
         <item index="3" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testParamOperationalEquivalence" />
         <item index="4" class="java.lang.String" itemvalue="Python tests.Unittest EquivalenceTests.testParamEquiv" />
       </list>
@@ -1001,20 +995,18 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1916" height="1052" extended-state="0" />
-    <editor active="false" />
+    <frame x="-2" y="0" width="1924" height="1057" extended-state="7" />
+    <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.3295099" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.14102565" sideWeight="0.56531286" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32976446" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.75803" sideWeight="0.5" order="11" side_tool="true" content_ui="tabs" />
-      <window_info id="Code Outline" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32942432" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.43576017" sideWeight="0.76816237" order="2" side_tool="false" content_ui="tabs" x="91" y="368" width="1223" height="349" />
-      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.22912206" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32942432" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.13972163" sideWeight="0.71961623" order="0" side_tool="false" content_ui="combo" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.17880085" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.43468717" sideWeight="0.76816237" order="2" side_tool="false" content_ui="tabs" x="91" y="368" width="1223" height="349" />
+      <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.22912206" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.20842217" sideWeight="0.7646396" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32942432" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.35546038" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32995737" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -1022,9 +1014,11 @@
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Code Outline" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32942432" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Coverage" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.14903846" sideWeight="0.5" order="3" side_tool="true" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="combo" />
       <window_info id="Duplicates" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32930845" sideWeight="0.86698717" order="10" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.17880085" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
     </layout>
     <layout-to-restore>
@@ -1081,307 +1075,19 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/ecea_inter.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="3309" column="0" selection-start="174878" selection-end="177071" vertical-scroll-proportion="0.0" vertical-offset="59166" max-vertical-offset="64854" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/mfiles/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="555" />
-      </provider>
-    </entry>
-    <entry file="file:///usr/local/lib/python2.7/dist-packages/oct2py/matwrite.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="75" column="0" selection-start="2411" selection-end="2411" vertical-scroll-proportion="0.7454874" vertical-offset="937" max-vertical-offset="3528" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/parsetab.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="3006" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/README.md">
-      <provider editor-type-id="MarkdownPreviewEditor">
-        <state />
-      </provider>
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="213" column="8" selection-start="11171" selection-end="11171" vertical-scroll-proportion="-17.192308" vertical-offset="3387" max-vertical-offset="4464" />
-      </provider>
-    </entry>
-    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pycharm/utrunner.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="141" column="0" selection-start="4282" selection-end="4282" vertical-scroll-proportion="0.98107255" vertical-offset="1880" max-vertical-offset="2790" />
-      </provider>
-    </entry>
-    <entry file="file:///usr/share/pyshared/scipy/io/matlab/mio5.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="851" column="0" selection-start="31024" selection-end="31024" vertical-scroll-proportion="0.58643323" vertical-offset="14782" max-vertical-offset="15696" />
-      </provider>
-    </entry>
-    <entry file="file:///usr/lib/python2.7/dist-packages/scipy/io/matlab/mio5.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="851" column="34" selection-start="31058" selection-end="31058" vertical-scroll-proportion="0.58643323" vertical-offset="14782" max-vertical-offset="15696" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/requirements">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="11" column="0" selection-start="107" selection-end="107" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="306">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/bounos/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="10062" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/bounos/test.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="55" column="16" selection-start="1847" selection-end="1847" vertical-scroll-proportion="0.0" vertical-offset="460" max-vertical-offset="1278" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/bounos/DataPackage.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="96" column="0" selection-start="3663" selection-end="3663" vertical-scroll-proportion="0.0" vertical-offset="1512" max-vertical-offset="8946">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file:///usr/lib/python2.7/multiprocessing/pool.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="553" column="0" selection-start="18350" selection-end="18350" vertical-scroll-proportion="0.0" vertical-offset="9646" max-vertical-offset="13140" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/setup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="918" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Updated(27-2-14)/Simulation_and_Kalman_Filter.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="-1.9578947" vertical-offset="1674" max-vertical-offset="7200" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Set_Configurable_Parameters.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="114" column="52" selection-start="4919" selection-end="4932" vertical-scroll-proportion="-0.8409344" vertical-offset="2808" max-vertical-offset="4338" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Initial_Simulation_and_Kalman_filter.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="5" column="9" selection-start="240" selection-end="240" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="180" />
-      </provider>
-    </entry>
-    <entry file="file:///usr/lib/python2.7/unittest/case.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="555" column="0" selection-start="20164" selection-end="20164" vertical-scroll-proportion="0.0" vertical-offset="9468" max-vertical-offset="19242">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file:///usr/local/lib/python2.7/dist-packages/numpy/linalg/linalg.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="598" column="0" selection-start="16959" selection-end="16959" vertical-scroll-proportion="0.0" vertical-offset="10567" max-vertical-offset="38322" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/aietes/Tools/ProgressBar.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="46" column="26" selection-start="1395" selection-end="1395" vertical-scroll-proportion="0.0" vertical-offset="451" max-vertical-offset="1692" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/RMS_Results_Sum.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="44" column="4" selection-start="2536" selection-end="2536" vertical-scroll-proportion="0.0" vertical-offset="378" max-vertical-offset="1116" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/test_uuv_pos_drift.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="17" column="0" selection-start="342" selection-end="342" vertical-scroll-proportion="0.5377856" vertical-offset="0" max-vertical-offset="1008" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/test_files/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="3" column="32" selection-start="119" selection-end="119" vertical-scroll-proportion="0.09490334" vertical-offset="0" max-vertical-offset="569">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="1533" column="0" selection-start="60527" selection-end="60527" vertical-scroll-proportion="0.0" vertical-offset="25892" max-vertical-offset="26550" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Orig/RMS_Results_Sum.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="53" column="0" selection-start="3115" selection-end="3115" vertical-scroll-proportion="0.9585799" vertical-offset="468" max-vertical-offset="1080" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/RMS_Results_Sum_octave.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="38" column="79" selection-start="2203" selection-end="2203" vertical-scroll-proportion="0.0" vertical-offset="255" max-vertical-offset="900" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Initial_Calibration.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="14" column="21" selection-start="787" selection-end="787" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2232" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Simulation_and_Kalman_Filter.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="186" column="77" selection-start="6864" selection-end="6864" vertical-scroll-proportion="-0.44954127" vertical-offset="3740" max-vertical-offset="7200" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Form_X_Estimate.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="25" column="0" selection-start="1397" selection-end="1397" vertical-scroll-proportion="0.81669694" vertical-offset="0" max-vertical-offset="630" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/Probe_Analysis.m">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="-4.3758388" vertical-offset="3912" max-vertical-offset="4806" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/H.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="134" column="0" selection-start="6321" selection-end="6321" vertical-scroll-proportion="0.99888146" vertical-offset="1519" max-vertical-offset="5508">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="258" column="12" selection-start="9592" selection-end="9592" vertical-scroll-proportion="0.43835616" vertical-offset="4356" max-vertical-offset="5256">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/rms_maker.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="1242">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file:///usr/local/lib/python2.7/dist-packages/pexpect/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="1023" column="0" selection-start="42562" selection-end="42562" vertical-scroll-proportion="0.3321739" vertical-offset="18223" max-vertical-offset="37026">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file:///usr/local/lib/python2.7/dist-packages/oct2py/session.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="444" column="0" selection-start="13414" selection-end="13414" vertical-scroll-proportion="0.0" vertical-offset="7638" max-vertical-offset="14112">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/aietes/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="250" column="46" selection-start="9754" selection-end="9754" vertical-scroll-proportion="0.10973085" vertical-offset="4394" max-vertical-offset="12222">
-          <folding>
-            <element signature="e#604#614#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/aietes/Tools/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="381" column="23" selection-start="9788" selection-end="9788" vertical-scroll-proportion="0.47706422" vertical-offset="6118" max-vertical-offset="13320">
-          <folding>
-            <marker date="1394489091199" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1394489091199" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1394489091199" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1394489091199" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1394489091199" expanded="true" signature="-1:-1" placeholder="..." />
-          </folding>
-        </state>
+        <state line="381" column="23" selection-start="9788" selection-end="9788" vertical-scroll-proportion="0.47706422" vertical-offset="6118" max-vertical-offset="13320" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/ecea.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="1252" column="37" selection-start="66022" selection-end="66022" vertical-scroll-proportion="0.5031056" vertical-offset="3294" max-vertical-offset="4824">
-          <folding>
-            <element signature="e#1025#1058#0" expanded="false" />
-            <element signature="e#1175#2492#0" expanded="false" />
-            <element signature="e#1175#1291#1" expanded="false" />
-            <element signature="e#2571#3727#0" expanded="false" />
-            <element signature="e#2571#2713#1" expanded="false" />
-            <element signature="e#3809#4761#0" expanded="false" />
-            <element signature="e#3809#4138#1" expanded="false" />
-            <element signature="e#4859#15530#0" expanded="false" />
-            <element signature="e#4859#5443#1" expanded="false" />
-            <element signature="e#15648#22036#0" expanded="false" />
-            <element signature="e#15648#16324#1" expanded="false" />
-            <element signature="e#22111#26284#0" expanded="false" />
-            <element signature="e#22111#23622#1" expanded="false" />
-            <element signature="e#26374#36794#0" expanded="false" />
-            <element signature="e#26374#30226#1" expanded="false" />
-            <element signature="e#36860#37846#0" expanded="false" />
-            <element signature="e#36860#37082#1" expanded="false" />
-            <element signature="e#37889#44672#0" expanded="false" />
-            <element signature="e#37889#40199#1" expanded="false" />
-            <element signature="e#44763#56044#0" expanded="false" />
-            <element signature="e#44763#47187#1" expanded="false" />
-            <element signature="e#56090#57278#1" expanded="false" />
-            <element signature="e#68607#76506#0" expanded="false" />
-            <element signature="e#68607#70654#1" expanded="false" />
-            <element signature="e#76564#83883#0" expanded="false" />
-            <element signature="e#76564#79701#1" expanded="false" />
-            <element signature="e#83940#94707#0" expanded="false" />
-          </folding>
-        </state>
+        <state line="1252" column="37" selection-start="66022" selection-end="66022" vertical-scroll-proportion="0.5031056" vertical-offset="3294" max-vertical-offset="4824" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="1" column="0" selection-start="23" selection-end="23" vertical-scroll-proportion="0.02739726" vertical-offset="0" max-vertical-offset="657">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/DriftFactors.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="23" column="42" selection-start="636" selection-end="636" vertical-scroll-proportion="0.0" vertical-offset="216" max-vertical-offset="1962">
-          <folding>
-            <element signature="e#396#579#1" expanded="false" />
-            <element signature="e#645#1543#0" expanded="false" />
-            <element signature="e#1589#1645#0" expanded="false" />
-            <element signature="e#1692#1748#0" expanded="false" />
-            <element signature="e#1817#2185#1" expanded="false" />
-            <element signature="e#5122#5149#0" expanded="false" />
-            <element signature="e#5194#5923#0" expanded="false" />
-            <element signature="e#5239#5381#0" expanded="false" />
-            <element signature="e#5434#5723#0" expanded="false" />
-            <element signature="e#5779#5923#0" expanded="false" />
-            <element signature="e#5963#6327#0" expanded="false" />
-            <element signature="e#6009#6194#0" expanded="false" />
-            <element signature="e#6249#6327#0" expanded="false" />
-            <element signature="e#6369#6853#0" expanded="false" />
-            <element signature="e#6415#6477#0" expanded="false" />
-            <element signature="e#6532#6575#0" expanded="false" />
-            <element signature="e#6643#6853#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/graphAndAnalysis.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="1445" column="4" selection-start="78797" selection-end="78797" vertical-scroll-proportion="0.0" vertical-offset="24822" max-vertical-offset="29034">
-          <folding>
-            <element signature="e#78#96#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/test_filter.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="97" column="58" selection-start="4025" selection-end="4025" vertical-scroll-proportion="1.7834525" vertical-offset="0" max-vertical-offset="2808">
-          <folding>
-            <element signature="e#24#60#0" expanded="true" />
-          </folding>
-        </state>
+        <state line="1" column="0" selection-start="23" selection-end="23" vertical-scroll-proportion="0.02739726" vertical-offset="0" max-vertical-offset="657" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/test_ecea.py">
@@ -1396,69 +1102,90 @@
     <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="314" column="6" selection-start="13570" selection-end="13570" vertical-scroll-proportion="0.0" vertical-offset="118" max-vertical-offset="990">
-          <folding>
-            <element signature="e#23#74#0" expanded="true" />
-            <element signature="e#296#3202#1" expanded="false" />
-            <element signature="e#3244#13512#0" expanded="false" />
-            <element signature="e#3244#4411#1" expanded="false" />
-            <element signature="e#14144#16995#0" expanded="false" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/aietes/Node.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="310" column="38" selection-start="12169" selection-end="12169" vertical-scroll-proportion="0.0" vertical-offset="4914" max-vertical-offset="7596">
+        <state line="332" column="11" selection-start="13012" selection-end="13012" vertical-scroll-proportion="0.0" vertical-offset="5976" max-vertical-offset="7704">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="365" column="87" selection-start="19415" selection-end="19415" vertical-scroll-proportion="0.0" vertical-offset="4374" max-vertical-offset="12330">
-          <folding>
-            <element signature="e#24#60#0" expanded="true" />
-          </folding>
+        <state line="364" column="0" selection-start="19337" selection-end="19337" vertical-scroll-proportion="0.0" vertical-offset="6552" max-vertical-offset="12132">
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/test_drift.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="22" column="81" selection-start="656" selection-end="656" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="666">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/test_ecea.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="7" column="31" selection-start="231" selection-end="231" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="14814">
+        <state line="22" column="0" selection-start="575" selection-end="575" vertical-scroll-proportion="0.0" vertical-offset="396" max-vertical-offset="738">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/aietes/configs/default.conf">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="29" column="11" selection-start="1752" selection-end="1752" vertical-scroll-proportion="0.0" vertical-offset="522" max-vertical-offset="1944">
+          <folding />
+        </state>
+      </provider>
       <provider editor-type-id="com.intellij.persistence.database.editor.CsvTableFileEditorProvider">
         <state />
       </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/uuv_position_drift_model/DriftFactors.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="28" column="11" selection-start="1700" selection-end="1700" vertical-scroll-proportion="-9.882353" vertical-offset="0" max-vertical-offset="1944">
+        <state line="23" column="38" selection-start="652" selection-end="652" vertical-scroll-proportion="0.0" vertical-offset="414" max-vertical-offset="3366">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/aietes/Environment.py">
+    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/graphAndAnalysis.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="148" column="9" selection-start="5938" selection-end="5938" vertical-scroll-proportion="5.013544" vertical-offset="335" max-vertical-offset="3240">
+        <state line="1445" column="4" selection-start="78797" selection-end="78797" vertical-scroll-proportion="0.0" vertical-offset="24822" max-vertical-offset="29034">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/aietes/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="250" column="46" selection-start="9754" selection-end="9754" vertical-scroll-proportion="0.0" vertical-offset="4500" max-vertical-offset="12222">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/aietes/Fleet.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="46" column="37" selection-start="1390" selection-end="1390" vertical-scroll-proportion="0.31" vertical-offset="673" max-vertical-offset="3006">
+        <state line="51" column="23" selection-start="1584" selection-end="1584" vertical-scroll-proportion="0.0" vertical-offset="72" max-vertical-offset="2880">
           <folding>
-            <element signature="e#628#638#0" expanded="true" />
+            <marker date="1394620509269" expanded="true" signature="884:5658" placeholder="..." />
+            <marker date="1394620509269" expanded="true" signature="889:955" placeholder="&quot;&quot;&quot;...&quot;&quot;&quot;" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/EceaFilter/test_filter.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="97" column="58" selection-start="4025" selection-end="4025" vertical-scroll-proportion="1.3044398" vertical-offset="1003" max-vertical-offset="2682">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/aietes/Environment.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="149" column="0" selection-start="5940" selection-end="5940" vertical-scroll-proportion="0.0" vertical-offset="2370" max-vertical-offset="3240">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/contrib/Ghia/ecea/mfiles/test_ecea.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="57" column="45" selection-start="1882" selection-end="1882" vertical-scroll-proportion="0.38054967" vertical-offset="846" max-vertical-offset="14814">
+          <folding />
         </state>
       </provider>
     </entry>
