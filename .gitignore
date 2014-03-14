@@ -42,7 +42,7 @@ env/
 distribute*.tar.gz
 
 # idea
-.idea/*
+.idea/*.xml
 
 # Results
 results/
