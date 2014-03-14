@@ -248,7 +248,11 @@ class Simulation():
             else:
                 state.update({'waypoints': waypointss})
 
-        # If drifting, take the drift positions
+        # If drifting, take the un-drifted, this is horrible worded but basically the position is the
+        # environmental version of the truth, i.e., original intent + drift
+        #
+        # THIS drift value is the original intended value, but to keep consistent naming for drift and
+        # non drift simulations, it kinda makes sense.
         if any([node.drifting for node in self.nodes]):
             drift_positions = []
             for node in self.nodes:
