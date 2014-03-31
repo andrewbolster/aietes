@@ -45,12 +45,11 @@ def sim_mask(args):
             logging.critical("{} starting {}".format(current_process(), sim.title))
             prep_stats = sim.prepare(sim_time=sim_time)
             sim_time = sim.simulate()
-            return_dict = sim.postProcess(**pp_defaults)
-            del sim
+            return_val = sim.postProcess(**pp_defaults)
             if retain_data:
-                return sim.generateDataPackage()
-            else:
-                return return_dict
+                return_val = sim.generateDataPackage()
+            del sim
+            return return_val
         except RuntimeError:
             lives-=1
             if lives <= 0:

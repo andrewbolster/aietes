@@ -511,7 +511,7 @@ class ExperimentManager(object):
         self._default_scenario.setNodeCount(self.node_count)
         self.parallel = parallel
         self.retain_data = kwargs.get("retain_data", True)
-        self.future = kwargs.get("future",False)
+        self.future = kwargs.get("future",True)
         if self.parallel and not self.future:
             ParSim.boot()
 

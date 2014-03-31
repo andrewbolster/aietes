@@ -16,7 +16,8 @@ def redirected(stdout):
 def set():
     exp = EXP(node_count=8,
               title="Malicious Behaviour Trust Comparison",
-              parallel=True
+              parallel=True,
+              future=True
              )
     exp.addVariableAttackerBehaviourSuite(["Waypoint", "Shadow", "SlowCoach"], n_attackers=1)
     return exp
@@ -24,8 +25,8 @@ def set():
 
 def run(exp):
     exp.run(title="8-bev-mal-64r-2000t",
-            runcount=64,
-            runtime=2000,
+            runcount=16,
+            runtime=8000,
             dataFile=True)
     return exp
 
