@@ -47,7 +47,8 @@ class DataPackage(object):
                    'config': 'config',
                    'title': 'title',
                    'waypoints': 'waypoints',
-                   'drift_positions': 'drift_positions'
+                   'drift_positions': 'drift_positions',
+                   'intent_positions': 'intent_positions'
     }
 
     version = 1.0
@@ -78,6 +79,9 @@ class DataPackage(object):
         elif sink is "drift_positions":
             logging.debug("Non-drifting Datapackage")
             self.drifting = False
+        elif sink is "intent_positions":
+            logging.debug("Non-ECEA Datapackage")
+            self.ecea = False
 
         else:
             logging.error("Can't find %s(%s) in source" % (source,sink))

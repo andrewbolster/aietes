@@ -22,6 +22,8 @@ import traceback
 
 import numpy as np
 
+from operator import attrgetter
+
 from aietes.Tools import Sim, distance, mag, secondsToStr
 from aietes.Tools.ProgressBar import ProgressBar
 from aietes.Environment import Environment
@@ -108,6 +110,9 @@ class Fleet(Sim.Process):
             if debug: self.logger.debug("Yield for not_waiting")
             yield Sim.waituntil, self, not_waiting
 
+            # Perform any out of loop preprocessing required
+            for node in self.nodes:
+                node.fleet_preprocesses()
             # Reactivate the nodes
             for node in self.nodes:
                 Sim.reactivate(node)
@@ -118,11 +123,66 @@ class Fleet(Sim.Process):
         """
         return node in self.nodes and self.nodes.index(node)
 
+    def nodenum_from_id(self, id):
+        """
+        Return the index of the requested node id
+        """
+        return map(attrgetter('id'), self.nodes).index(id)
+
+
     def nodeCount(self):
         """
         Return the number of nodes in the fleet
         """
         return len(self.nodes)
+
+    def nodePositions(self):
+        """
+        Return the fleet-list array of latest reported positions
+        (i.e. the global position list)
+        """
+        latest_logs = self.shared_map.latest_logs()
+        positions = [ None for _ in range(self.nodeCount())]
+        times = [ -1 for _ in range(self.nodeCount())]
+        for id,log in latest_logs.items():
+            index = self.nodenum_from_id(id)
+            positions[index]=log.position
+            times[index]=log.time
+            if debug: self.logger.debug("Node last seen at {} at {} @ {}".format(
+                log.name, log.position, log.time
+            ))
+
+        if len(set(times))>1:
+            raise ValueError("Latest shared logs not coalesced:{}".format(times))
+
+        return np.asarray(positions)
+
+    def nodePositionsAt(self, t, shared=True):
+        """
+        Return the fleet-list array of reported positions at a given time
+        """
+        if shared:
+            kb = self.shared_map.logs_at_time(t)
+        else:
+            kb = self.environment.logs_at_time(t)
+        positions = [ None for _ in range(self.nodeCount())]
+        for id, log in kb.items():
+            positions[self.nodenum_from_id(id)] = log.position
+        return np.asarray(positions)
+
+
+    def nodePosLogs(self, shared=True):
+        """
+        Return the fleet-list array of reported position logs
+        """
+        if shared:
+            kb = self.shared_map
+        else:
+            kb = self.environment
+        positions = [ None for _ in range(self.nodeCount())]
+        for nodeid in map(attrgetter('id'),self.nodes):
+            positions[self.nodenum_from_id(nodeid)] = kb.node_pos_log(nodeid)
+        return np.asarray(positions).swapaxes(2,1)
 
     def isMissionComplete(self):
         """

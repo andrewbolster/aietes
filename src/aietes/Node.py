@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
- * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
+ * This file is part of the Aietes Framework (https://github.co/andrewbolster/aietes)
  *
  * (C) Copyright 2013 Andrew Bolster (http://andrewbolster.info/) and others.
  *
@@ -127,7 +127,10 @@ class Node(Sim.Process):
         self.behaviour = behave_mod(node=self,
                                     bev_config=self.config['Behaviour'],
                                     map=self.simulation.environment.map) ##TODO FIX SLAM MAP
-
+        if hasattr(self.behaviour, "wallCheckDisabled"):
+            self.wallCheckDisabled = self.behaviour.wallCheckDisabled
+        else:
+            self.wallCheckDisabled = False
         #
         # Simulation Configuration
         self.internalEvent = Sim.SimEvent(self.name)
@@ -137,9 +140,19 @@ class Node(Sim.Process):
         # Fleet Partitioning
         self.fleet = None
 
+
+        # Optional Features
+        self.ecea = False # Kalman filtering of INS position
+        self.drifting = False # Drift simulation using DVR / GYR noise
+
         #
+        # Kalman Filter Characteristics from Contribs
+        if self.config['ecea'] != "Null":
+            from contrib.Ghia.ecea.EceaFilter import ECEAFilter, ECEAParams
+            confobj = ConfigObj(self.simulation.config)
+            self.ecea = ECEAFilter(self, ECEAParams.from_aietes_conf(confobj))        #
+
         # Drift Characteristics from Contribs?
-        self.drifting = False
         if self.config['drift'] != "Null":
             import contrib.Ghia.uuv_position_drift_model as Driftmodels
 
@@ -151,13 +164,6 @@ class Node(Sim.Process):
             self.logger.debug("Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
 
-        #
-        # Kalman Filter Characteristics from Contribs
-        self.ecea = False
-        if self.config['ecea'] != "Null":
-            from contrib.Ghia.ecea.EceaFilter import ECEAFilter, ECEAParams
-            self.ecea = ECEAFilter(self, ECEAParams.from_aietes_conf(self.simulation.config))
-
 
     def assignFleet(self, fleet):
         """
@@ -166,6 +172,9 @@ class Node(Sim.Process):
         self.fleet = fleet
         self.nodenum = self.fleet.nodenum(self)
         self.debug = self.debug and self.nodenum == 0
+#        self.fleet.shared_map.update(self.id,
+#                                     self.getPos(true=True),
+#                                     self.getVec(true=True))
 
     def activate(self, launch_args=None):
         """
@@ -194,8 +203,9 @@ class Node(Sim.Process):
     def wallCheck(self):
         """
         Are we still in the bloody box?
+        True if within bounds of the environment while we're doing wall checking (as defined by the behaviour)
         """
-        return all(self.position < np.asarray(self.simulation.environment.shape)) and all(np.zeros(3) < self.position)
+        return self.wallCheckDisabled or all(self.position < np.asarray(self.simulation.environment.shape)) and all(np.zeros(3) < self.position)
 
     def distanceTo(self, otherNode):
         assert hasattr(otherNode, "position"), "Other object has no position"
@@ -291,7 +301,7 @@ class Node(Sim.Process):
         if not self.wallCheck():
             self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
-            raise RuntimeError("%s Crashed out of the environment at %s m/s" % (self.name, mag(self.velocity)))
+            raise RuntimeError("{} Crashed out of the environment at {}".format(self.name, Sim.now()))
 
 
         assert not np.isnan(sum(self.pos_log[:, self._lastupdate]))
@@ -301,21 +311,62 @@ class Node(Sim.Process):
 
     def update_environment(self):
         self.simulation.environment.update(self.id,
-                                           self.getPos(),
-                                           self.getVec())
+                                           self.getPos(true=True),
+                                           self.getVec(true=True))
 
     def update_fleet(self):
         if self.ecea:
             # if using ECEA, need to update the fleet with the *corrected* positions
             # These corrected positions are currently only used by ECEA itself, not for
             # behaviour decisions #TODO
-            self.fleet.environment.update(self.id,
+
+            self.fleet.shared_map.update(self.id,
                                           self.ecea.getPos(),
                                           self.ecea.getVec())
         else:
-            self.fleet.environment.update(self.id,
+            self.fleet.shared_map.update(self.id,
                                           self.getPos(),
                                           self.getVec())
+    def fleet_preprocesses(self):
+        """
+        Perform operations that require fleet state to be coalesced before informing per-node behaviours
+        EG Ecea
+        :return:
+        """
+        if self.ecea:
+            if Sim.now() == 0:
+                self.ecea.params.set_initial_positions(positions=self.fleet.nodePositionsAt(0, shared=False),
+                                                       my_node_number=self.nodenum)
+                self.ecea.activate()
+                self.ecea.calibrate_clock()
+                self.logger.info("Set initial position and clock calibration")
+            elif (Sim.now()) % self.ecea.params.Delta == 0:
+                # If in a delta period, update the kalman filter with the requires deltas
+                # need to collect:
+                #   Delta from each node's current reported position to t-Delta
+                #   Current positions (what way does this need to be permuted?)
+
+                fleet_positions = self.fleet.nodePositions()
+                drifted_deltas = fleet_positions - self.fleet.nodePositionsAt(max(1,Sim.now()-self.ecea.params.Delta-1))
+                true_deltas = np.asarray(
+                    [node.pos_log[:,Sim.now()] - node.pos_log[:,max(1,Sim.now()-self.ecea.params.Delta-1)] for node in self.fleet.nodes]
+                )
+                improved_pos = self.ecea.update(given_positions=fleet_positions,
+                                                drifted_deltas=drifted_deltas
+                )
+                original_pos = fleet_positions[self.fleet.nodenum(self)]
+                if self.fleet.nodenum(self) == 0:
+                    try:
+                        self.logger.debug("ECEA: {} between i:{}, o:{} @ {}".format(np.linalg.norm(original_pos-improved_pos),
+                                                                           improved_pos,
+                                                                           original_pos,
+                                                                           Sim.now()))
+                    except FloatingPointError:
+                        self.logger.critical("Overflow on Norm: {} - {}".format(original_pos, improved_pos))
+                        raise
+            else:
+                # Pass for processing in between deltas
+                pass
 
     def setPos(self, placeVector):
         assert isinstance(placeVector, np.array)
@@ -331,9 +382,14 @@ class Node(Sim.Process):
             it's 'true' position is requested using the keyword arg
         """
         if self.drifting and true:
-                position = self.drift.getPos()
+            position = self.drift.getPos()
+
+        ## FIXME For the time being assume that the control output is a fixed track and don't use the KF for  updated info
+        #elif self.drifting and self.ecea:
+            # If using the kalman filter, get the corrected position
+        #    position = self.ecea.getPos()
         else:
-                position = self.position.copy()
+            position = self.position.copy()
         return position
 
     def getVec(self, true=False):
@@ -345,8 +401,12 @@ class Node(Sim.Process):
         """
         if self.drifting and true:
                 velocity = self.drift.getVec()
+        ## FIXME For the time being assume that the control output is a fixed track and don't use the KF for  updated info
+        #elif self.drifting and self.ecea:
+            # If using the kalman filter, get the corrected position
+        #    velocity = self.ecea.getVec()
         else:
-                velocity = self.velocity.copy()
+            velocity = self.velocity.copy()
         return velocity
 
     def distance_to(self, their_position):
@@ -383,6 +443,12 @@ class Node(Sim.Process):
         Called to update internal awareness and motion:
             THESE CALLS ARE NOT GUARANTEED TO BE ALIGNED ACROSS NODES
         """
+
+        # Nasty ECEA initialisation because it needs to be started AFTER the nodes
+        # have exposed their positions to the fleet and BEFORE t>0
+
+
+        debug=False
         while True:
             #
             # Update Node State
@@ -412,7 +478,7 @@ class Node(Sim.Process):
             # Update Fleet State
             #
             if debug:
-                self.logger.info('updating map')
+                self.logger.info('updating map at {}'.format(Sim.now()))
             yield Sim.hold, self, self.behaviour.update_rate
             try:
                 self.update_environment()

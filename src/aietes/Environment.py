@@ -27,7 +27,6 @@ from aietes.Tools import map_entry, distance, debug, ConfigError
 
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
 
-
 class Environment():
     """
     Environment Class representing the physical environment inc any objects
@@ -132,21 +131,61 @@ class Environment():
         try:
             assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
             update_distance = distance(self.map[object_id].position, position)
-            if __debug__ and debug:
-                self.logger.debug("Moving %s %f from %s to %s" % (object_name,
+            if debug:
+                self.logger.debug("Moving %s %f from %s to %s @ %f" % (object_name,
                                                                   update_distance,
                                                                   self.map[object_id].position,
-                                                                  position))
+                                                                  position, Sim.now()))
             self.map[object_id] = map_entry(object_id, position, velocity, object_name)
         except KeyError:
-            if __debug__ and debug:
+            if debug:
                 self.logger.debug("Creating map entry for %s at %s" % (object_name, position))
             self.map[object_id] = map_entry(object_id, position, velocity, object_name)
+        time = Sim.now()
         self.pos_log.append(Log(name=object_name,
                                 position=position,
                                 object_id=object_id,
-                                time=Sim.now()
+                                time=time
         ))
+
+    def node_pos_log(self, uid):
+        """
+        Returns the poslog (3,t) for a node of a given uuid
+        """
+        pos_get = attrgetter('position')
+        node_get = lambda l: l.object_id==uid
+        pos_log = np.asarray(map(pos_get,filter(node_get,self.pos_log)))
+        return pos_log
+
+    def logs_at_time(self, t):
+        """
+        Return the object logs for the fleet at a given time
+        """
+        return { l.object_id:l for l in filter(lambda l:l.time == t, self.pos_log)}
+
+    def latest_logs(self):
+        """
+        Returns the latest positions (n,3) for the nodes in the fleet
+        """
+        last_log = { id: None for id in self.object_ids()}
+        for log in reversed(self.pos_log):
+            if last_log[log.object_id] is None:
+                last_log[log.object_id] = log
+                if debug: self.logger.debug("Object {} last seen at {} @ {}".format(log.name, log.position, log.time))
+            if None not in last_log.values():
+                break
+
+        return last_log
+
+
+
+
+    def object_ids(self):
+        """
+        Returns the number of unique objects in the fleet's shared map
+        """
+        return set(map(attrgetter('object_id'), self.pos_log))
+
 
     def pointPlane(self, index=-1):
         """

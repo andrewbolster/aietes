@@ -172,8 +172,12 @@ class Simulation():
             self.logger.info("Finished Simulation at %s(%s) after %s" % (
             Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
         except RuntimeError as err:
-            self.logger.critical("Expected Exception, Quitting gracefully: {}".format(err))
-            raise
+            if __debug__:
+                import pdb
+                pdb.set_trace()
+            else:
+                self.logger.critical("Expected Exception, Quitting gracefully: {}".format(err))
+                raise
         return Sim.now()
 
     def inner_join(self):
@@ -241,9 +245,10 @@ class Simulation():
 
         if any([isinstance(node.behaviour, Behaviour.WaypointMixin) for node in self.nodes]):
             waypointss = [getattr(node.behaviour, "waypoints", None) for node in self.nodes]
-            waypointss = np.asarray(waypointss)
+            if all(w is None for w in waypointss):
+                state.update({'waypoints': None})
             #If All the valid waypoints are the same, only report one.
-            if are_equal_waypoints(waypointss):
+            elif are_equal_waypoints(waypointss):
                 state.update({'waypoints': waypointss[0]})
             else:
                 state.update({'waypoints': waypointss})
@@ -259,7 +264,13 @@ class Simulation():
                 drift = node.drift.pos_log[:, :Sim.now()]
                 drift = drift[np.isfinite(drift)].reshape(3, -1)
                 drift_positions.append(drift)
-            state.update({'drift_positions': drift_positions})
+            state.update({'drift_positions': np.asarray(drift_positions)})
+
+        if any([node.ecea for node in self.nodes]):
+            intent_positions = []
+            # ECEA does not operate at every time step, (delta),
+            # therefore use the shared map data that tracks the error information (hopefully)
+            state.update({'intent_positions': self.fleets[0].nodePosLogs(shared=True)})
 
         return state
 

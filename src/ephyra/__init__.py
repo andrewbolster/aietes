@@ -21,8 +21,8 @@ import sys
 
 if not sys.modules.has_key("wx"):
     import wxversion
-
     wxversion.ensureMinimal("2.8")
+
 import wx
 import logging
 import argparse
@@ -83,10 +83,11 @@ def main():
 
     if args.data_file is 'latest_aietes.npz_from_pwd':
         args.data_file = get_latest_aietes_datafile()
-        logging.info("Using Latest AIETES file: %s" % args.data_file)
     elif args.data_file is not None:
         if not is_valid_aietes_datafile(args.data_file):
             raise ValueError("Provided data file does not appear to be an aietes dataset:%s" % args.data_file)
+
+    logging.info("Using Latest AIETES file: %s" % args.data_file)
 
     if True:
         app = wx.PySimpleApp()

@@ -37,7 +37,7 @@ from pprint import pformat
 from humanize_time import secondsToStr
 
 logging.basicConfig(level=logging.ERROR)
-np.seterr(all='raise')
+np.seterr(all='raise', under='warn')
 # from os import urandom as randomstr #Provides unicode random String
 
 
@@ -135,8 +135,8 @@ def distance(pos_a, pos_b, scale=1):
     """
     try:
         return mag(pos_a - pos_b) * scale
-    except TypeError as Err:
-        logging.error("TypeError on Distances (%s,%s): %s" % (pos_a, pos_b, Err))
+    except (TypeError, FloatingPointError) as Err:
+        logging.error("Type/FP Error on Distances (%s,%s): %s" % (pos_a, pos_b, Err))
         raise
 
 
@@ -156,6 +156,21 @@ def unit(vector):
     else:
         return vector / mag(vector)
 
+
+def random_three_vector():
+    """
+    Generates a random 3D unit vector (direction) with a uniform spherical distribution
+    Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
+    :return:
+    """
+    phi = np.random.uniform(0,np.pi*2)
+    costheta = np.random.uniform(-1,1)
+
+    theta = np.arccos( costheta )
+    x = np.sin( theta) * np.cos( phi )
+    y = np.sin( theta) * np.sin( phi )
+    z = np.cos( theta )
+    return (x,y,z)
 
 def sixvec(xyz):
     ptsnew = np.hstack((xyz, np.zeros(xyz.shape)))
@@ -680,17 +695,16 @@ def are_equal_waypoints(wps):
     """Compare Waypoint Objects as used by WaypointMixin ([pos],prox)
         Will exclude 'None' records in wps and only compare valid waypoint lists
     """
-    retval = True
     poss = [[w[0] for w in wp] for wp in wps if wp is not None]
     proxs = [[w[1] for w in wp] for wp in wps if wp is not None]
     for pos in poss:
         if not np.array_equal(pos, poss[0]):
-            retval = False
+            return False
     for prox in proxs:
         if not np.array_equal(prox, proxs[0]):
-            retval = False
+            return False
 
-    return retval
+    return True
 
 
 def get_latest_aietes_datafile(dir=None):

@@ -75,6 +75,7 @@ class EphyraController():
         Raises IOError on File not found
         """
         self.model.import_datafile(file_path)
+        logging.debug("Loaded Datafile from {}".format(file_path))
         self.update_metrics()
 
     def model_is_ready(self):
@@ -266,25 +267,39 @@ class EphyraController():
 
     @check_model()
     def get_waypoints(self):
-        return getattr(self.model, 'waypoints', None)
+        wp = getattr(self.model, 'waypoints', None)
+        if isinstance(wp,np.ndarray) and wp.ndim == 0:
+            return None
+        else:
+            return wp
 
     @check_model()
     def drifting(self):
         return self.model.drifting
 
     @check_model()
-    def get_3D_drift(self, node=None, time_start=None, length=None):
+    def ecea(self):
+        return self.model.ecea
+
+    @check_model()
+    def get_3D_drift(self, source=None, node=None, time_start=None, length=None):
         """
         Return the [X:][Y:][Z:] trail for a given node's drift from time_start backwards to
         a given length
 
         If no time given, assume the full time range
         """
+        if source is None:
+            source = self.model.drift_positions
+        elif source == "intent":
+            source = self.model.intent_positions
+        else:
+            raise(ValueError("Unknown 3D Drift Source"))
         time_start = time_start if time_start is not None else self.get_final_tmax()
         time_end = max(0 if length is None else (time_start - length), 0)
 
         if node is None:
-            return self.model.drift_positions[:, :, time_start:time_end:-1].swapaxes(0, 1)
+            return source[:, :, time_start:time_end:-1].swapaxes(0, 1)
         else:
-            return self.model.drift_positions[node, :, time_start:time_end:-1]
+            return source[node, :, time_start:time_end:-1]
 

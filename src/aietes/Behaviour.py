@@ -23,10 +23,10 @@ from collections import namedtuple
 
 import numpy as np
 
-from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between
+from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector
 
 
-debug=False
+debug=True
 class Behaviour(object):
     """
     Generic Representation of a Nodes behavioural characteristics
@@ -38,7 +38,7 @@ class Behaviour(object):
         self.node = kwargs.get('node')
         self.bev_config = kwargs.get('bev_config')
         self.map = kwargs.get('map', None)
-        self.debug = debug and self.node.nodenum == 0
+        self.debug = debug and self.node.debug
         self._start_log(self.node)
         if self.debug:
             self.logger.debug('from bev_config: %s' % self.bev_config)
@@ -49,6 +49,7 @@ class Behaviour(object):
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
+        self.n_nearest_neighbours = listfix(int, self.bev_config.nearest_neighbours)
         self.neighbourhood_max_rad = listfix(int, self.bev_config.neighbourhood_max_rad)
         self.neighbour_min_rad = listfix(int, self.bev_config.neighbourhood_min_rad)
         self.positional_accuracy = listfix(float, self.bev_config.positional_accuracy)
@@ -208,6 +209,21 @@ class Behaviour(object):
 
         return response
 
+class RandomWalk(Behaviour):
+    """
+    Generic Wandering Behaviour
+    """
+    def __init__(self, *args, **kwargs):
+        Behaviour.__init__(self, *args, **kwargs)
+        self.behaviours.append(self.randomWalk)
+        self.wallCheckDisabled = True
+        self.my_random_direction = random_three_vector()
+
+    def randomWalk(self, position, velocity):
+        if angle_between(velocity, self.my_random_direction) < 0.2: #Roughly 6 degrees or pi/32 rad
+            self.my_random_direction = random_three_vector()
+        return np.asarray(self.my_random_direction)
+
 
 class Flock(Behaviour):
     """
@@ -219,7 +235,6 @@ class Flock(Behaviour):
 
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
-        self.n_nearest_neighbours = listfix(int, self.bev_config.nearest_neighbours)
         self.clumping_factor = self.bev_config.clumping_factor
         self.repulsive_factor = listfix(float, self.bev_config.repulsive_factor)
         self.schooling_factor = listfix(float, self.bev_config.schooling_factor)
