@@ -660,11 +660,10 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page)
 
 class DriftingNavigator(VisualNavigator):
-    source = "intent"
     def initialise_3d_plot(self):
         VisualNavigator.initialise_3d_plot(self)
         # Get Drift Plot info
-        (xs,ys,zs) = self.ctl.get_3D_drift(source=self.source)
+        (xs,ys,zs) = self.ctl.get_3D_drift()
         self.drift_lines = [
             self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
@@ -673,6 +672,35 @@ class DriftingNavigator(VisualNavigator):
     def redraw_page(self, t=None):
         VisualNavigator.redraw_page(self,t=t)
         for n, (line, label) in enumerate(zip(self.drift_lines, self.labels)):
+            (xs, ys, zs) = self.ctl.get_3D_drift(node=n, time_start=self.t, length=self.trail_length)
+            line.set_data(xs, ys)
+            line.set_3d_properties(zs)
+            line.set_label("({})".format(self.names[n]))
+            try:
+                label.set_position((xs[0], ys[0]))
+                label.set_3d_properties(zs[0])
+            except TypeError as err:
+                self.log.error("x:%s,y:%s,z:%s" % (xs[0], ys[0], zs[0]))
+                raise
+            except IndexError:
+                # In the case of the 'first time'. This should probably be removed in the case
+                # of any architectural changes.
+                pass
+
+class ECEANavigator(DriftingNavigator):
+    source = "intent"
+    def initialise_3d_plot(self):
+        DriftingNavigator.initialise_3d_plot(self)
+        # Get Drift Plot info
+        (xs,ys,zs) = self.ctl.get_3D_drift(source=self.source)
+        self.intent_lines = [
+            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
+            i, (x, y, z) in enumerate(zip(xs, ys, zs))
+        ]
+
+    def redraw_page(self, t=None):
+        DriftingNavigator.redraw_page(self,t=t)
+        for n, (line, label) in enumerate(zip(self.intent_lines, self.labels)):
             (xs, ys, zs) = self.ctl.get_3D_drift(node=n, time_start=self.t, length=self.trail_length, source=self.source)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)

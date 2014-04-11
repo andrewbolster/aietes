@@ -23,7 +23,7 @@ import os
 
 from joblib import Parallel, delayed
 
-parallel = False # Doesn't make a damned difference.
+parallel = True # Doesn't make a damned difference.
 if parallel:
     os.system("taskset -p 0xff %d" % os.getpid())
 

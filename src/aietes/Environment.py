@@ -65,15 +65,18 @@ class Environment():
         self.logger.debug('creating instance')
 
 
-    def random_position(self, want_empty=True):
+    def random_position(self, want_empty=True, on_a_plane=False):
         """
         Return a random empty map reference within the environment volume
         """
         is_empty = False
+        if on_a_plane:
+            z_plane = np.random.uniform(0, self.shape[2])
+
         while not is_empty:
             ran_x = np.random.uniform(0, self.shape[0])
             ran_y = np.random.uniform(0, self.shape[1])
-            ran_z = np.random.uniform(0, self.shape[2])
+            ran_z = np.random.uniform(0, self.shape[2]) if not on_a_plane else z_plane
             candidate_pos = (ran_x, ran_y, ran_z)
             is_empty = self.is_empty(candidate_pos)
 

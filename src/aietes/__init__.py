@@ -441,6 +441,10 @@ class Simulation():
             if gen_style == "random":
                 vector = self.environment.random_position()
                 self.logger.debug("Gave node %s a random vector: %s" % (node_name, vector))
+
+            elif gen_style == "randomPlane":
+                vector = self.environment.random_position(on_a_plane=True)
+                self.logger.debug("Gave node %s a random vector: %s" % (node_name, vector))
             elif gen_style == "center":
                 vector = self.environment.position_around()
                 self.logger.debug("Gave node %s a center vector: %s" % (node_name, vector))

@@ -136,12 +136,15 @@ class Fleet(Sim.Process):
         """
         return len(self.nodes)
 
-    def nodePositions(self):
+    def nodePositions(self, shared=True):
         """
         Return the fleet-list array of latest reported positions
-        (i.e. the global position list)
+        (If shared: Use the 'drifted' reported positions)
         """
-        latest_logs = self.shared_map.latest_logs()
+        if shared:
+            latest_logs = self.shared_map.latest_logs()
+        else:
+            latest_logs = self.environment.latest_logs()
         positions = [ None for _ in range(self.nodeCount())]
         times = [ -1 for _ in range(self.nodeCount())]
         for id,log in latest_logs.items():

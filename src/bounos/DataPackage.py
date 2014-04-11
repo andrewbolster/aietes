@@ -478,21 +478,26 @@ class DataPackage(object):
         """
         return np.average(self.position_matrix(time))
 
-    def drift_error(self):
+    def drift_error(self, source = "drift"):
         """
         Returns the drift errors for each node
         in real meters
         """
         if self.drifting:
-            return np.linalg.norm(self.drift_positions-self.p, axis=1)
+            if source == "drift":
+                return np.linalg.norm(self.drift_positions-self.p, axis=1)
+            elif source == "intent":
+                return np.linalg.norm(self.intent_positions-self.p, axis=1)
+            else:
+                raise ValueError("Invalid Drift Source: {}".format(source))
         else:
             raise ValueError("Not Drifting")
 
-    def drift_RMS(self):
+    def drift_RMS(self, source="drift"):
         """
         Returns the RMS of drift across all nodes over time
         """
-        return np.sqrt(np.sum(self.drift_error(), axis=0)/self.n)
+        return np.sqrt(np.sum(self.drift_error(source), axis=0)/self.n)
 
 
 

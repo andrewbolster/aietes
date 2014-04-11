@@ -43,6 +43,8 @@ class Node(Sim.Process):
         self.mass = 10  # kg modeling remus 100
         self.mass = 5   # fudge cus I'm bricking it #FIXME
 
+        self.settling_time = 30
+
         # Positions Initialised to None to highlight mistakes; as Any position could be a bad position
         self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
         self.pos_log.fill(None)
@@ -122,7 +124,9 @@ class Node(Sim.Process):
             behave_mod = getattr(Behaviour, str(behaviour))
             assert issubclass(behave_mod, Behaviour.Behaviour), behave_mod
         except AttributeError:
-            raise ConfigError("Can't find Behaviour: %s" % behaviour)
+            raise ConfigError("Can't find Behaviour: {}, available behaviours are ({}) ".format(
+                behaviour, map(lambda c: c.__name__, itersubclasses(Behaviour.Behaviour)))
+            )
 
         self.behaviour = behave_mod(node=self,
                                     bev_config=self.config['Behaviour'],
@@ -213,6 +217,9 @@ class Node(Sim.Process):
         return distance(self.position, otherNode.position)
 
     def push(self, forceVector, contributions=None):
+        if Sim.now() < self.settling_time:
+            forceVector = np.zeros(shape=forceVector.shape)
+            contributions = {}
         assert len(forceVector) == 3 and not np.isnan(sum(forceVector)), "Out of spec vector: %s,%s" % (
             forceVector, type(forceVector))
         self.acceleration_force = forceVector
@@ -351,16 +358,26 @@ class Node(Sim.Process):
                 true_deltas = np.asarray(
                     [node.pos_log[:,Sim.now()] - node.pos_log[:,max(1,Sim.now()-self.ecea.params.Delta-1)] for node in self.fleet.nodes]
                 )
-                improved_pos = self.ecea.update(given_positions=fleet_positions,
+                improved_error_delta = self.ecea.update(given_positions=fleet_positions,
                                                 drifted_deltas=drifted_deltas
                 )
-                original_pos = fleet_positions[self.fleet.nodenum(self)]
-                if self.fleet.nodenum(self) == 0:
+                original_pos = fleet_positions[self.nodenum]
+                improved_pos = original_pos + improved_error_delta[self.nodenum]
+                if self.nodenum == 0:
                     try:
                         self.logger.debug("ECEA: {} between i:{}, o:{} @ {}".format(np.linalg.norm(original_pos-improved_pos),
                                                                            improved_pos,
                                                                            original_pos,
                                                                            Sim.now()))
+                        for node in self.fleet.nodes:
+                            self.logger.debug(
+                                "ECEA: Believes {} is {} away from where it actually is ({})({} away from me)".format(
+                                    node.name,
+                                    np.linalg.norm(improved_error_delta[self.fleet.nodenum(node)]),
+                                    improved_error_delta[self.fleet.nodenum(node)],
+                                    np.linalg.norm(node.position-self.position)
+                                )
+                            )
                     except FloatingPointError:
                         self.logger.critical("Overflow on Norm: {} - {}".format(original_pos, improved_pos))
                         raise

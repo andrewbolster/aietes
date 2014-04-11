@@ -154,3 +154,13 @@ class Drift_Error(Metric):
     def generator(self, data):
         self.highlight_data = data.drift_RMS()
         return data.drift_error().swapaxes(0,1)
+
+class ECEA_Error(Metric):
+    label = "ECEA Var (m)"
+    signed = False
+    ecea_enabled = True
+
+    def generator(self, data):
+        self.highlight_data = data.drift_RMS(source="intent")
+        return data.drift_error(source="intent").swapaxes(0,1)
+

@@ -163,7 +163,7 @@ class GenericFrame(wx.Frame):
         self.Layout()
 
 
-from ephyra.Views.VisualNavigator import VisualNavigator, DriftingNavigator
+from ephyra.Views.VisualNavigator import VisualNavigator, DriftingNavigator, ECEANavigator
 from ephyra.Views.Configurator import Configurator
 from ephyra.Views.Simulator import Simulator
 
@@ -188,8 +188,12 @@ class EphyraNotebook(wx.Frame):
         pages = [VisualNavigator]
 
         if self.ctl.model_is_ready() and self.ctl.drifting():
-            pages.append(DriftingNavigator)
+            if self.ctl.ecea is not None:
+                pages.append(ECEANavigator)
+            else:
+                pages.append(DriftingNavigator)
             pages.remove(VisualNavigator)
+
 
         for page in pages:
             self.log.debug("Adding Page: %s" % page.__name__)
