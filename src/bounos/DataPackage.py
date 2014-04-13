@@ -117,6 +117,8 @@ class DataPackage(object):
         # Convoluted logic to by DEFAULT assume drifting, unless it's set by the failing case in _handle
         if not hasattr(self,'drifting'):
             self.drifting = True
+        if not hasattr(self,'ecea'):
+            self.ecea = True
 
     def pad_time(self,tmax,val=0.0):
         """

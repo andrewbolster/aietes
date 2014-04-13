@@ -452,8 +452,7 @@ class Simulation():
                 vector = self.environment.position_around(position="surface")
                 self.logger.debug("Gave node %s a surface vector: %s" % (node_name, vector))
             else:
-                vector = [0, 0, 0]
-                self.logger.debug("Gave node %s a zero vector from %s" % (node_name, gen_style))
+                raise ConfigError("Invalid Position option: {}".format(gen_style))
         assert len(vector) == 3, "Incorrectly sized vector"
 
         return vector

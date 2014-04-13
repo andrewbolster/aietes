@@ -188,7 +188,7 @@ class EphyraNotebook(wx.Frame):
         pages = [VisualNavigator]
 
         if self.ctl.model_is_ready() and self.ctl.drifting():
-            if self.ctl.ecea is not None:
+            if self.ctl.ecea():
                 pages.append(ECEANavigator)
             else:
                 pages.append(DriftingNavigator)

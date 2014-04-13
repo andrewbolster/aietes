@@ -390,6 +390,15 @@ class WaypointMixin():
         self.waypoints = [self.waypoint(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
         self.nextwaypoint = 0
 
+    def thereAndBackAgain(self):
+        """
+        Generates a linear patrol path, assumed to be from the centre of the environment, to an x-dimension face, and back to centre
+        """
+        shape = np.asarray(self.env_shape)
+        prox = 50
+        self.waypoints = [self.waypoint(shape * (((vertex - 0.5) /3) + 0.5), prox) for vertex in np.asarray([[0.5,0,0.5],[0.5,0.5,0.5]])]
+        self.nextwaypoint = 0
+
     def waypointVector(self, position, velocity):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         if self.nextwaypoint is not None:

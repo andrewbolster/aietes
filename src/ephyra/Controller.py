@@ -63,7 +63,8 @@ class EphyraController():
         self.model = BounosModel()
         self.view = None
         self._metrics_availiable = list(itersubclasses(Metric))
-        self._metrics_enabled = [ metric for metric in self._metrics_availiable if not getattr(metric, 'drift_enabled',False)]
+        self._metrics_enabled = [ metric for metric in self._metrics_availiable
+                                  if not getattr(metric, 'drift_enabled',False) and not getattr(metric, 'ecea_enabled', False)]
         self.metrics = []
         self.args = kw.get("exec_args", None)
 
@@ -103,6 +104,11 @@ class EphyraController():
                                  if getattr(m, 'drift_enabled',False) and m not in self._metrics_enabled]:
                 logging.info("Adding {} to metrics as data is Drift-Enabled".format(drift_metric))
                 self._metrics_enabled.append(drift_metric)
+        if self.ecea():
+            for ecea_metric in [m for m in self._metrics_availiable
+                                 if getattr(m, 'ecea_enabled',False) and m not in self._metrics_enabled]:
+                logging.info("Adding {} to metrics as data is ECEA-Enabled".format(ecea_metric))
+                self._metrics_enabled.append(ecea_metric)
         if not len(getattr(self, "metrics", [])) == len(self._metrics_enabled):
             self.rebuild_metrics()
 
