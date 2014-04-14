@@ -348,17 +348,20 @@ class Node(Sim.Process):
                     self.ecea.activate()
                     self.ecea.calibrate_clock()
                     self.logger.info("Set initial position and clock calibration")
-                    fleet_positions = self.fleet.nodePositionsAt(0, shared=False)
-                    drifted_deltas = np.zeros_like(fleet_positions)
+                    true_positions = self.fleet.nodePositionsAt(0, shared=False)
+                    drifted_positions = self.fleet.nodePositionsAt(0, shared=False) # Assume it's perfect initially
+                    drifted_deltas = np.zeros_like(true_positions)
                     # Need to cycle the filter with the 0th update
                 else:
                     # This must be the real environmental data to simulate TOF
-                    fleet_positions = self.fleet.nodePositions(shared=False)
+                    true_positions = self.fleet.nodePositions(shared=False)
                     # Drift is based on each nodes REPORTED position from the previous REPORTED position
-                    drifted_deltas = self.fleet.nodePositions(shared=True) - self.fleet.nodePositionsAt(max(1,Sim.now()-self.ecea.params.Delta), shared=True)
+                    drifted_positions = self.fleet.nodePositions(shared=True)
+                    drifted_deltas = drifted_positions - self.fleet.nodePositionsAt(max(1,Sim.now()-self.ecea.params.Delta), shared=True)
 
-                improved_error_delta = self.ecea.update(given_positions=fleet_positions,
-                                                drifted_deltas=drifted_deltas
+                improved_error_delta = self.ecea.update(true_positions=true_positions,
+                                                        given_positions=drifted_positions,
+                                                        drifted_deltas=drifted_deltas
                 )
                 original_positions = self.ecea.getOriginalPositions()
                 current_positions = self.ecea.getCurrentPositions()
@@ -375,26 +378,17 @@ class Node(Sim.Process):
                                                                            original_pos,
                                                                            Sim.now(),
                                                                            ))
-                        # for node in self.fleet.nodes:
-                        #     self.logger.debug(
-                        #         "ECEA: Believes {} is {} away from where it actually is ({})({} away from me)".format(
-                        #             node.name,
-                        #             np.linalg.norm(improved_error_delta[self.fleet.nodenum(node)]),
-                        #             improved_error_delta[self.fleet.nodenum(node)],
-                        #             np.linalg.norm(node.position-self.position)
-                        #         )
-                        #     )
-                        # for node in self.fleet.nodes:
-                        #     self.logger.debug(
-                        #         "{} is at {} but ecea says its at {} ({}) and drift says its at {} ({})".format(
-                        #             node.name,
-                        #             node.position,
-                        #             improved_positions[node.nodenum],
-                        #             np.linalg.norm(node.position-improved_positions[node.nodenum]),
-                        #             node.drift.getPos(),
-                        #             np.linalg.norm(node.position-node.drift.getPos())
-                        #         )
-                        #     )
+                        for node in self.fleet.nodes:
+                            self.logger.debug(
+                                "{} is at {} but ecea says its at {} ({}) and drift says its at {} ({})".format(
+                                    node.name,
+                                    node.position,
+                                    improved_positions[node.nodenum],
+                                    np.linalg.norm(node.position-improved_positions[node.nodenum]),
+                                    node.drift.getPos(),
+                                    np.linalg.norm(node.position-node.drift.getPos())
+                                )
+                            )
                     except FloatingPointError:
                         self.logger.critical("Overflow on Norm: {} - {}".format(original_pos, improved_pos))
                         raise
