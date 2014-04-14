@@ -29,6 +29,8 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize
 from matplotlib import cm
 
+import logging
+
 from ephyra import wx
 from ephyra.Views import MetricView, Arrow3D
 from aietes.Tools import timeit, mag
@@ -387,6 +389,7 @@ class VisualNavigator(wx.Panel):
             str((x, y, z)), str(self.plot_sphere_cm(colorval)), str(colorval), str(s)))
 
         self._remove_sphere()
+
         #TODO Update to UPDATE DATA instead of re plotting
         self.sphere_line_collection = self.plot_axes.plot_wireframe(xs, ys, zs,
                                                                     alpha=self.sphere_opacity,
@@ -461,7 +464,7 @@ class VisualNavigator(wx.Panel):
             try:
                 return self._contrib_colour_dict[contrib_key]
             except KeyError as ke:
-                self.logger.error("CDict:%s" % self._contrib_colour_dict)
+                logging.error("CDict:%s" % self._contrib_colour_dict)
                 raise ke("CDict:%s" % self._contrib_colour_dict)
 
 

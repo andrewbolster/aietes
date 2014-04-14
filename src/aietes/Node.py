@@ -314,8 +314,8 @@ class Node(Sim.Process):
 
     def update_environment(self):
         self.simulation.environment.update(self.id,
-                                           self.getPos(),
-                                           self.getVec())
+                                           self.getPos(true=True),
+                                           self.getVec(true=True))
 
     def update_fleet(self):
         if self.ecea:
@@ -354,13 +354,13 @@ class Node(Sim.Process):
                     # Need to cycle the filter with the 0th update
                 else:
                     # This must be the real environmental data to simulate TOF
-                    true_positions = self.fleet.nodePositions(shared=False)
+                    true_positions = self.fleet.nodePositionsAt(Sim.now(), shared=False)
                     # Drift is based on each nodes REPORTED position from the previous REPORTED position
-                    drifted_positions = self.fleet.nodePositions(shared=True)
-                    drifted_deltas = drifted_positions - self.fleet.nodePositionsAt(max(1,Sim.now()-self.ecea.params.Delta), shared=True)
+                    drifted_positions = self.fleet.nodePositionsAt(Sim.now(), shared=True)
+                    drifted_deltas = drifted_positions - self.fleet.nodePositionsAt(max(1,Sim.now()-self.ecea.params.Delta+1), shared=True)
 
                 improved_error_delta = self.ecea.update(true_positions=true_positions,
-                                                        given_positions=drifted_positions,
+                                                        drifted_positions=drifted_positions,
                                                         drifted_deltas=drifted_deltas
                 )
                 original_positions = self.ecea.getOriginalPositions()

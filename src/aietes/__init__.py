@@ -20,6 +20,7 @@ import sys
 import traceback
 import optparse
 import cProfile
+import collections
 
 from Layercake import Layercake
 from Environment import Environment
@@ -275,6 +276,14 @@ class Simulation():
         return state
 
     def generateConfig(self, config):
+        def update(d, u):
+            for k, v in u.iteritems():
+                if isinstance(v, collections.Mapping):
+                    r = update(d.get(k, {}), v)
+                    d[k] = r
+                else:
+                    d[k] = u[k]
+            return d
         #
         # NODE CONFIGURATION
         #
@@ -374,7 +383,7 @@ class Simulation():
         for node_name in node_names:
             # Bare Dict/update instead of copy()
             nodes_config[node_name] = {}
-            nodes_config[node_name].update(node_default_config_dict)
+            update(nodes_config[node_name], node_default_config_dict.copy())
 
         # Give auto-config default
         for node_name, node_app in zip(auto_node_names, applications):
@@ -384,12 +393,12 @@ class Simulation():
         # Overlay Preconfigured with their own settings
         for node_name, node_config in config_dict.Node.Nodes.items():
             # Import the magic!
-            nodes_config[node_name].update(node_config)
+            update(nodes_config[node_name],node_config.copy())
 
         #
         # Confirm
         #
-        config_dict.Node.Nodes.update(nodes_config)
+        config_dict.Node.Nodes.update(dotdict(nodes_config))
         self.logger.debug("Built Config: %s" % pformat(config))
         return config_dict
 

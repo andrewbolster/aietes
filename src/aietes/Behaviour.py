@@ -90,6 +90,7 @@ class Behaviour(object):
         self.nearest_neighbours = self.getNearestNeighbours(self.node.position,
                                                             n_neighbours=self.n_nearest_neighbours)
         contributions = {}
+        forceVector = np.zeros(3)
 
         for behaviour in self.behaviours:
             try:
@@ -98,7 +99,7 @@ class Behaviour(object):
                 self.logger.error("%s(%s,%s)" % (behaviour.__name__, self.node.position, self.node.velocity))
                 raise
 
-        forceVector = sum(contributions.values())
+        forceVector += sum(contributions.values())
 
         # TODO Under Drift, it's probably better to do wall-detection twice: once on node and once on environment
         #forceVector = self.avoidWall(self.node.getPos(), self.node.velocity, forceVector)
@@ -224,6 +225,12 @@ class RandomWalk(Behaviour):
             self.my_random_direction = random_three_vector()
         return np.asarray(self.my_random_direction)
 
+class Nothing(Behaviour):
+    """
+    Do Nothing
+    """
+    def __init__(self, *args, **kwargs):
+        Behaviour.__init__(self, *args, **kwargs)
 
 class Flock(Behaviour):
     """
@@ -402,7 +409,11 @@ class WaypointMixin():
     def waypointVector(self, position, velocity):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         if self.nextwaypoint is not None:
-            neighbourhood_avg = sum(n.position for n in self.nearest_neighbours) / len(self.nearest_neighbours)
+            if isinstance(self, SoloWaypoint):
+                neighbourhood_avg = position
+            else:
+                neighbourhood_avg = sum(n.position for n in self.nearest_neighbours) / len(self.nearest_neighbours)
+
             target = self.waypoints[self.nextwaypoint]
             real_d = distance(position, target.position)
             neighbourhood_d = distance(neighbourhood_avg, target.position)
@@ -439,6 +450,12 @@ class AlternativeWaypoint(AlternativeFlock, Waypoint):
     def __init__(self, *args, **kwargs):
         AlternativeFlock.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
+
+class SoloWaypoint(Nothing, WaypointMixin):
+    def __init__(self, *args, **kwargs):
+        Nothing.__init__(self, *args, **kwargs)
+        WaypointMixin.__init__(self, *args, **kwargs)
+
 
 
 class FleetLawnmower(Flock, WaypointMixin):
