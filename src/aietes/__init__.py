@@ -227,7 +227,7 @@ class Simulation():
             achievements.append(node.achievements_log)
 
         for fleet in self.fleets:
-            positions.extend(fleet.nodePosLogs(shared=False)) # Environmental State Log
+            positions.extend(fleet.nodePosLogs(shared=False)) # Environmental State Log; 'guaranteed perfect'
 
         state = {'p': np.asarray(positions),
                  'v': np.asarray(vectors),
@@ -262,7 +262,7 @@ class Simulation():
         if any([node.drifting for node in self.nodes]):
             drift_positions = []
             for node in self.nodes:
-                drift = node.drift.pos_log[:, :Sim.now()]
+                drift = node.pos_log[:, :Sim.now()]
                 drift = drift[np.isfinite(drift)].reshape(3, -1)
                 drift_positions.append(drift)
             state.update({'drift_positions': np.asarray(drift_positions)})
