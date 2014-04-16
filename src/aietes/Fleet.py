@@ -21,6 +21,7 @@ import sys
 import traceback
 
 import numpy as np
+from scipy.spatial.distance import squareform, pdist
 
 from operator import attrgetter
 
@@ -186,6 +187,60 @@ class Fleet(Sim.Process):
         for nodeid in map(attrgetter('id'),self.nodes):
             positions[self.nodenum_from_id(nodeid)] = kb.node_pos_log(nodeid)
         return np.asarray(positions).swapaxes(2,1)
+
+    def nodeCheatDriftPositions(self):
+        """
+        I hate this so much
+        """
+        return np.asarray([node.getPos() for node in self.nodes])
+
+    def nodeCheatPositions(self):
+        """
+        I Hate this so much
+        """
+        return np.asarray([node.getPos(true=True) for node in self.nodes])
+
+
+    def nodeCheatDriftPositionsAt(self, t):
+        """
+        I hate this so much
+        """
+        return np.asarray([node.pos_log[:,t] for node in self.nodes])
+
+    def nodeCheatPositionsAt(self, t):
+        """
+        I Hate this so much
+        """
+        return np.asarray([node.drift.pos_log[:,t] for node in self.nodes])
+
+    def nodePositionErrors(self, shared=True, error=0.001, fudge=True):
+        """
+        Fleet order Node position errors based on generic accuracy from origin of each node.
+
+        THIS IS PERFECT IN THE Z-AXIS, DON'T USE FOR ANYTHING IMPORTANT
+        """
+        original_positions = self.nodePositionsAt(0, shared=False)
+        t = Sim.now()
+        if t>0:
+            current_positions = self.nodePositionsAt(t, shared=shared)
+        else:
+            current_positions = original_positions.copy()
+
+        delta = ((current_positions-original_positions)*error) + error
+        delta *=[1,1,0] # THIS IS A TERRIBLE HACK TO AVOID NANS IN THE WEIGHTING
+        return np.abs(delta)
+
+
+    def timeOfFlightMatrix(self, shared=False, speed_of_sound=1490.0):
+        """
+        Fleet order time of flight matrix
+        There are very few reasons why this would ever need to be from the shared database....
+        (0-n,0-n)
+        """
+        latest_positions = self.nodeCheatPositions()
+        tof = squareform(pdist(latest_positions))
+        tof /= speed_of_sound
+        return tof
 
     def isMissionComplete(self):
         """

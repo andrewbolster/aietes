@@ -131,25 +131,28 @@ class Environment():
         Update the environment to reflect a movement
         """
         object_name = self.simulation.reverse_node_lookup(object_id).name
-        try:
-            assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
-            update_distance = distance(self.map[object_id].position, position)
-            if debug:
-                self.logger.debug("Moving %s %f from %s to %s @ %f" % (object_name,
-                                                                  update_distance,
-                                                                  self.map[object_id].position,
-                                                                  position, Sim.now()))
-            self.map[object_id] = map_entry(object_id, position, velocity, object_name)
-        except KeyError:
-            if debug:
-                self.logger.debug("Creating map entry for %s at %s" % (object_name, position))
-            self.map[object_id] = map_entry(object_id, position, velocity, object_name)
-        time = Sim.now()
-        self.pos_log.append(Log(name=object_name,
-                                position=position,
-                                object_id=object_id,
-                                time=time
-        ))
+        t = Sim.now()
+        if t < self.simulation.duration_intervals:
+            try:
+                assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
+                update_distance = distance(self.map[object_id].position, position)
+                if debug:
+                    self.logger.debug("Moving %s %f from %s to %s @ %f" % (object_name,
+                                                                      update_distance,
+                                                                      self.map[object_id].position,
+                                                                      position, t))
+                self.map[object_id] = map_entry(object_id, position, velocity, object_name)
+            except KeyError:
+                if debug:
+                    self.logger.debug("Creating map entry for %s at %s" % (object_name, position))
+                self.map[object_id] = map_entry(object_id, position, velocity, object_name)
+            self.pos_log.append(Log(name=object_name,
+                                    position=position,
+                                    object_id=object_id,
+                                    time=t
+            ))
+        else:
+            self.logger.debug("Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t,t,t+1))
 
     def node_pos_log(self, uid):
         """

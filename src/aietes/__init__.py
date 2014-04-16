@@ -132,7 +132,7 @@ class Simulation():
         if sim_time is not None:
             self.config.Simulation.sim_duration = int(sim_time)
 
-        self.duration_intervals = self.config.Simulation.sim_duration / self.config.Simulation.sim_interval
+        self.duration_intervals = np.ceil(self.config.Simulation.sim_duration / self.config.Simulation.sim_interval)
 
         self.environment = self.configureEnvironment(self.config.Environment)
         self.nodes = self.configureNodes()
@@ -218,16 +218,16 @@ class Simulation():
         achievements = []
         for node in self.nodes:
             # Universal Stats
-            pos = node.pos_log[:, :Sim.now()]
             vec = node.vec_log[:, :Sim.now()]
-            pos = pos[np.isfinite(pos)].reshape(3, -1)
             vec = vec[np.isfinite(vec)].reshape(3, -1)
 
-            positions.append(pos)
             vectors.append(vec)
             names.append(node.name)
             contributions.append(node.contributions_log)
             achievements.append(node.achievements_log)
+
+        for fleet in self.fleets:
+            positions.extend(fleet.nodePosLogs(shared=False)) # Environmental State Log
 
         state = {'p': np.asarray(positions),
                  'v': np.asarray(vectors),

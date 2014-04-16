@@ -150,10 +150,13 @@ class Node(Sim.Process):
 
         #
         # Kalman Filter Characteristics from Contribs
-        if self.config['ecea'] != "Null":
+        if self.config['ecea'] == "KF":
             from contrib.Ghia.ecea.EceaFilter import ECEAFilter, ECEAParams
             confobj = ConfigObj(self.simulation.config)
             self.ecea = ECEAFilter(self, ECEAParams.from_aietes_conf(confobj))        #
+        elif self.config['ecea'] == "Simple":
+            from contrib.Ghia.ecea.LSEFilter import SimpleFilter
+            self.ecea = SimpleFilter(self)
 
         # Drift Characteristics from Contribs?
         if self.config['drift'] != "Null":
@@ -175,6 +178,7 @@ class Node(Sim.Process):
         self.fleet = fleet
         self.nodenum = self.fleet.nodenum(self)
         self.debug = self.debug and self.nodenum == 0
+        self.update_fleet()
 
     def activate(self, launch_args=None):
         """
@@ -336,6 +340,8 @@ class Node(Sim.Process):
         EG Ecea
         :return:
         """
+        FULL = 0
+        SIMPLE = 1
         if self.ecea:
             if (Sim.now()) % self.ecea.params.Delta == 0:
                 # If in a delta period, update the kalman filter with the requires deltas
@@ -343,59 +349,42 @@ class Node(Sim.Process):
                 #   Delta from each node's current reported position to t-Delta
                 #   Current positions (what way does this need to be permuted?)
                 if Sim.now() == 0:
-                    self.ecea.params.set_initial_positions(positions=self.fleet.nodePositionsAt(0, shared=False),
-                                                           my_node_number=self.nodenum)
                     self.ecea.activate()
-                    self.ecea.calibrate_clock()
-                    self.logger.info("Set initial position and clock calibration")
-                    true_positions = self.fleet.nodePositionsAt(0, shared=False)
-                    drifted_positions = self.fleet.nodePositionsAt(0, shared=False) # Assume it's perfect initially
+                    true_positions = self.fleet.nodeCheatPositions()
+                    drifted_positions = self.fleet.nodeCheatDriftPositions()
                     drifted_deltas = np.zeros_like(true_positions)
+                    est_positions = None
                     # Need to cycle the filter with the 0th update
                 else:
                     # This must be the real environmental data to simulate TOF
-                    true_positions = self.fleet.nodePositionsAt(Sim.now(), shared=False)
                     # Drift is based on each nodes REPORTED position from the previous REPORTED position
-                    drifted_positions = self.fleet.nodePositionsAt(Sim.now(), shared=True)
-                    drifted_deltas = drifted_positions - self.fleet.nodePositionsAt(max(1,Sim.now()-self.ecea.params.Delta+1), shared=True)
+                    true_positions = self.fleet.nodeCheatPositions()
+                    drifted_positions = self.fleet.nodeCheatDriftPositions()
+                    drifted_deltas = drifted_positions-self.fleet.nodeCheatDriftPositionsAt(max(1,Sim.now()-self.ecea.params.Delta)) # This is the global drift estimation state)
+                    est_positions = self.fleet.nodePositionsAt(max(1,Sim.now()-self.ecea.params.Delta-1), shared=True) + drifted_deltas# This is the global Filter estimation state (last + delta)
+                    actual_errors = true_positions-est_positions
 
-                improved_error_delta = self.ecea.update(true_positions=true_positions,
-                                                        drifted_positions=drifted_positions,
-                                                        drifted_deltas=drifted_deltas
-                )
-                original_positions = self.ecea.getOriginalPositions()
-                current_positions = self.ecea.getCurrentPositions()
-                improved_positions = self.ecea.getImprovedPositions()
+                if self.ecea.type == SIMPLE:
+                    error_estimates=self.fleet.nodePositionErrors() * self.ecea.params.Delta
+                    tof = self.fleet.timeOfFlightMatrix()
+                    # True positions only used for statistics
+                    improved_positions = self.ecea.update(tof,drifted_positions,last_estimate=drifted_positions, error_estimates=error_estimates, true_positions=true_positions, iterations=5)
+                    drift_d =  np.linalg.norm(true_positions[self.nodenum]-drifted_positions[self.nodenum])
+                    improved_d =  np.linalg.norm(true_positions[self.nodenum]-improved_positions[self.nodenum])
+                    self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
+                        self.name, true_positions[self.nodenum],
+                        drifted_positions[self.nodenum],drift_d,
+                        improved_positions[self.nodenum], improved_d, (1.0-(improved_d/drift_d))*100.0
+                    ))
+                else:
+                    raise RuntimeError("There's no way you should be in here...:{}".format(self.ecea))
 
-                original_pos = original_positions[self.nodenum]
-                current_pos = current_positions[self.nodenum]
-                improved_pos = improved_positions[self.nodenum]
-
-                if self.nodenum == 0:
-                    try:
-                        self.logger.debug("ECEA: {} between i:{}, o:{} @ {}".format(np.linalg.norm(improved_error_delta[self.nodenum]),
-                                                                           improved_pos,
-                                                                           original_pos,
-                                                                           Sim.now(),
-                                                                           ))
-                        for node in self.fleet.nodes:
-                            self.logger.debug(
-                                "{} is at {} but ecea says its at {} ({}) and drift says its at {} ({})".format(
-                                    node.name,
-                                    node.position,
-                                    improved_positions[node.nodenum],
-                                    np.linalg.norm(node.position-improved_positions[node.nodenum]),
-                                    node.drift.getPos(),
-                                    np.linalg.norm(node.position-node.drift.getPos())
-                                )
-                            )
-                    except FloatingPointError:
-                        self.logger.critical("Overflow on Norm: {} - {}".format(original_pos, improved_pos))
-                        raise
             else:
                 # Pass for processing in between deltas
                 pass
             pass
+
+
 
     def setPos(self, placeVector):
         assert isinstance(placeVector, np.array)
@@ -412,14 +401,10 @@ class Node(Sim.Process):
         """
         if self.drifting and true:
             position = self.drift.getPos()
-
-        ## FIXME For the time being assume that the control output is a fixed track and don't use the KF for  updated info
-        #elif self.drifting and self.ecea:
-            # If using the kalman filter, get the corrected position
-        #    position = self.ecea.getPos()
         else:
             position = self.position.copy()
         return position
+
 
     def getVec(self, true=False):
         """

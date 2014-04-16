@@ -58,6 +58,8 @@ class Behaviour(object):
     def _start_log(self, parent):
         self.logger = parent.logger.getChild("Bev:%s" % self.__class__.__name__)
 
+        self.logger.debug("Launched Behaviour")
+
     def normalize_behaviour(self, forceVector):
         return forceVector
 
