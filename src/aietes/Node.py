@@ -154,9 +154,17 @@ class Node(Sim.Process):
             from contrib.Ghia.ecea.EceaFilter import ECEAFilter, ECEAParams
             confobj = ConfigObj(self.simulation.config)
             self.ecea = ECEAFilter(self, ECEAParams.from_aietes_conf(confobj))        #
-        elif self.config['ecea'] == "Simple":
+        elif self.config['ecea'].startswith("Simple"):
             from contrib.Ghia.ecea.LSEFilter import SimpleFilter
-            self.ecea = SimpleFilter(self)
+            params_dict= {'Delta':int(self.config['beacon_rate'])}
+            iterations = self.config['ecea'].split("Simple")
+            if len(iterations)>1 and iterations[1] !='':
+                params_dict.update({'iterations':int(iterations[1])})
+
+            if params_dict:
+                self.ecea = SimpleFilter(self, params=params_dict)
+            else:
+                self.ecea = SimpleFilter(self)
 
         # Drift Characteristics from Contribs?
         if self.config['drift'] != "Null":

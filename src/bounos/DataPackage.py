@@ -48,7 +48,8 @@ class DataPackage(object):
                    'title': 'title',
                    'waypoints': 'waypoints',
                    'drift_positions': 'drift_positions',
-                   'intent_positions': 'intent_positions'
+                   'intent_positions': 'intent_positions',
+                   'additional': 'additional'
     }
 
     version = 1.0
@@ -82,6 +83,8 @@ class DataPackage(object):
         elif sink is "intent_positions":
             logging.debug("Non-ECEA Datapackage")
             self.ecea = False
+        elif sink is "additional":
+            self.additional = None
 
         else:
             logging.error("Can't find %s(%s) in source" % (source,sink))
@@ -500,6 +503,22 @@ class DataPackage(object):
         Returns the RMS of drift across all nodes over time
         """
         return np.sqrt(np.sum(self.drift_error(source), axis=0)/self.n)
+
+    def ecea_error(self):
+        """
+        Nasty hacky dirty stuff to get the RMS statistics out of the 'additional' section across executions
+        :return:
+        """
+        truth = np.asarray(map(lambda x: x['true'], self.additional))
+        drift = np.asarray(map(lambda x: x['drift'], self.additional))
+        estimate = np.asarray(map(lambda x: x['estimate'], self.additional))
+
+        drift_err = np.linalg.norm(drift - truth, axis=0)
+        estimate_err = np.linalg.norm(estimate - truth, axis=0)
+
+        return (drift_err, estimate_err, self.n)
+
+
 
 
 

@@ -79,6 +79,7 @@ class Scenario(object):
         'waypointing': ['Behaviour', 'waypoint_factor'],
         'waypoint_style': ['Behaviour', 'waypoint_style'],
         'drifting': ['drift'],
+        'ecea': ['ecea'],
         'positioning': ['position_generation'],
         'fudging': ['Behaviour', 'positional_accuracy'],
     }
@@ -133,7 +134,7 @@ class Scenario(object):
         self.mypath = os.path.join(kwargs.get("basepath",tempfile.mkdtemp()),self.title)
         os.makedirs(self.mypath)
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True), 'outputPath':self.mypath}
         self.datarun = [None for _ in range(runcount)]
         for run in range(runcount):
             if runcount > 1:
@@ -146,14 +147,21 @@ class Scenario(object):
                                  title=title,
                                  logtofile=os.path.join(self.mypath,"%s.log"%title),
                                  logtoconsole=logging.ERROR,
-                                 progress_display=progress_display)
+                                 progress_display=progress_display
+            )
                 prep_stats = sim.prepare(sim_time=runtime)
                 protected_run = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
                                              sim.simulate)
                 sim_time = protected_run()
                 return_dict = sim.postProcess(**pp_defaults)
-                if kwargs.get("retain_data"):
+                data_retention_policy = kwargs.get("retain_data", False)
+                if data_retention_policy is True: #Implicitly implies boolean datatype
                     self.datarun[run] = sim.generateDataPackage()
+                elif data_retention_policy == "additional_only":
+                    dp = sim.generateDataPackage()
+                    self.datarun[run] = dp.additional.copy()
+                elif data_retention_policy == "file":
+                    self.datarun[run] = sim.generateDataPackage().write(title)
                 else:
                     self.datarun[run] = return_dict
                 print("%s(%s):%f%%"
@@ -181,7 +189,7 @@ class Scenario(object):
         if not ParSim.running:
             raise RuntimeError("Attempted parrallel without booting, breaking")
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True), 'outputPath':self.mypath}
         self.datarun = [None for _ in range(runcount)]
         uuids = [get_uuid() for _ in range(runcount)]
         for run in range(runcount):
@@ -241,7 +249,7 @@ class Scenario(object):
         if runcount is None:
             runcount = self._default_run_count
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True)}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True), 'outputPath':self.mypath}
         self.datarun = [None for _ in range(runcount)]
         self.runlist = []
         for run in range(runcount):
@@ -293,7 +301,10 @@ class Scenario(object):
         Dump the datafiles into a path but creating a folder with our name
         """
         for i,d in enumerate(self.datarun):
-            d.write(filename=os.path.join(self.mypath,str(i)))
+            filename=os.path.join(self.mypath,str(i))
+            if hasattr(d,'write'):
+                d.write(filename=filename)
+            pickle.dump(d,open(filename,'wb'))
 
     def commit(self):
         """
@@ -643,9 +654,24 @@ class ExperimentManager(object):
             value_range(range or generator): values to be tested against.
         """
         for v in value_range:
-            s = Scenario(title="%s(%f)" % (variable, v),
+            s = Scenario(title="{}({})".format(variable, v),
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({variable: v}, count=self.node_count)
+            self.scenarios.append(s)
+
+
+    def addVariableNodeScenario(self, node_range):
+        """
+        Add a scenario with a range of configuration values to the experimental run
+
+        Args:
+            variable(str): mutable value description
+            value_range(range or generator): values to be tested against.
+        """
+        for node_count in node_range:
+            s = Scenario(title="{}({})".format("Nodes", node_count),
+                         default_config=self._default_scenario.generateConfigObj())
+            s.addDefaultNode(node_count)
             self.scenarios.append(s)
 
     def addVariableAttackerBehaviourSuite(self, behaviour_list, n_attackers=1):

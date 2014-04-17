@@ -45,9 +45,16 @@ def sim_mask(args):
             logging.critical("{} starting {}".format(current_process(), sim.title))
             prep_stats = sim.prepare(sim_time=sim_time)
             sim_time = sim.simulate()
-            return_val = sim.postProcess(**pp_defaults)
-            if retain_data:
+            return_dict = sim.postProcess(**pp_defaults)
+            if retain_data is True: #Implicitly implies boolean datatype
                 return_val = sim.generateDataPackage()
+            elif retain_data == "additional_only":
+                dp = sim.generateDataPackage()
+                return_val = dp.additional.copy()
+            elif retain_data == "file":
+                return_val = sim.generateDataPackage().write(kwargs.get("title"))
+            else:
+                return_val = return_dict
             del sim
             return return_val
         except RuntimeError:

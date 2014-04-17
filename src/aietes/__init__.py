@@ -173,12 +173,8 @@ class Simulation():
             self.logger.info("Finished Simulation at %s(%s) after %s" % (
             Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
         except RuntimeError as err:
-            if __debug__:
-                import pdb
-                pdb.set_trace()
-            else:
-                self.logger.critical("Expected Exception, Quitting gracefully: {}".format(err))
-                raise
+            self.logger.critical("Expected Exception, Quitting gracefully: {}".format(err))
+            raise
         return Sim.now()
 
     def inner_join(self):
@@ -272,6 +268,8 @@ class Simulation():
             # ECEA does not operate at every time step, (delta),
             # therefore use the shared map data that tracks the error information (hopefully)
             state.update({'intent_positions': self.fleets[0].nodePosLogs(shared=True)})
+
+            state.update({'additional':[node.ecea.dump() for node in self.nodes if node.ecea]})
 
         return state
 
@@ -476,7 +474,7 @@ class Simulation():
         return dp
 
 
-    def postProcess(self, log=None, outputFile=None, displayFrames=None, dataFile=False, movieFile=False, gif=False,
+    def postProcess(self, log=None, outputFile=None, outputPath=None, displayFrames=None, dataFile=False, movieFile=False, gif=False,
                     inputFile=None, plot=False, xRes=1024, yRes=768, fps=24, extent=True):
         """
         Performs output and positions generation for a given simulation
@@ -502,7 +500,10 @@ class Simulation():
 
         n_frames = dp.tmax
 
-        filename = "%s.aietes" % results_file(outputFile if outputFile is not None else dp.title)
+        filename = outputFile if outputFile is not None else dp.title
+        if outputPath is not None:
+            filename = os.path.join(outputPath,filename)
+        filename = "%s.aietes" % results_file(filename)
         return_dict = {}
 
         if movieFile or plot or gif:

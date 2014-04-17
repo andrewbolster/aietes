@@ -222,7 +222,7 @@ class Fleet(Sim.Process):
         original_positions = self.nodePositionsAt(0, shared=False)
         t = Sim.now()
         if t>0:
-            current_positions = self.nodePositionsAt(t, shared=shared)
+            current_positions = self.nodePositions(shared=shared)
         else:
             current_positions = original_positions.copy()
 
