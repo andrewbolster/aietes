@@ -618,6 +618,15 @@ class FleetLawnmower(Flock, WaypointMixin):
             col_count = n[not base_axis]
         elif not np.sqrt(n)%1>0:
             row_count = col_count = int(np.sqrt(n))
+        elif n%4 == 0:
+            row_count = n/4
+            col_count = 4
+        elif n%3 == 0:
+            row_count = n/3
+            col_count = 3
+        elif n%2 == 0:
+            row_count = n/2
+            col_count = 2
         else:
             row_count = n
             col_count = 1

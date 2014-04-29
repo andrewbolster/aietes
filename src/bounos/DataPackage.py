@@ -160,7 +160,7 @@ class DataPackage(object):
         self.tmax = len(self.p[0][0])
         self.n = len(self.p)
 
-    def write(self, filename=None):
+    def write(self, filename=None, track_mat=True):
         logging.info("Writing datafile to %s" % results_file(filename))
 
         data = {i:self.__dict__[i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
@@ -171,6 +171,8 @@ class DataPackage(object):
         co = ConfigObj(self.config, list_values=False)
         co.filename = "%s.conf" % filename
         co.write()
+        if track_mat:
+            self.export_track_mat(filename)
         return ("%s.npz"%filename, co.filename)
 
     #Data has the format:
@@ -518,6 +520,26 @@ class DataPackage(object):
 
         return (drift_err, estimate_err, self.n)
 
+
+    def export_track_mat(self, filename=None):
+        """
+        Export the True, Drift and ECEA (if available) for each node into a <title>.tracks.mat file,
+        {   true_positions:
+            drift_positions:
+            ecea_positions
+        }
+        :return:
+        """
+
+        from scipy.io import savemat
+        if filename is None:
+            filename = self.title
+        path = "{}.track".format(filename)
+        savemat(path, {
+            'true_positions':self.p,
+            'drift_positions': self.drift_positions,
+            'ecea_positions':self.intent_positions
+        })
 
 
 

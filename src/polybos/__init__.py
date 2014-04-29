@@ -739,13 +739,14 @@ class ExperimentManager(object):
             else:
                 s.addDefaultNode(count=invcount)
             self.scenarios.append(s)
-    def useDefaultScenario(self):
+    def useDefaultScenario(self, runcount=1):
         """
         Stick to the defaults
         """
-        s= Scenario(default_config=self._default_scenario.generateConfigObj(), title=self.title)
-        s.addDefaultNode(self.node_count)
-        self.scenarios.append(s)
+        for i in range(runcount):
+            s= Scenario(default_config=self._default_scenario.generateConfigObj(), title="{}({})".format(self.title,i))
+            s.addDefaultNode(self.node_count)
+            self.scenarios.append(s)
 
     @staticmethod
     def printStats(experiment):

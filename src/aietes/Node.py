@@ -368,15 +368,18 @@ class Node(Sim.Process):
                     # Drift is based on each nodes REPORTED position from the previous REPORTED position
                     true_positions = self.fleet.nodeCheatPositions()
                     drifted_positions = self.fleet.nodeCheatDriftPositions()
-                    drifted_deltas = drifted_positions-self.fleet.nodeCheatDriftPositionsAt(max(1,Sim.now()-self.ecea.params.Delta)) # This is the global drift estimation state)
-                    est_positions = self.fleet.nodePositionsAt(max(1,Sim.now()-self.ecea.params.Delta-1), shared=True) + drifted_deltas# This is the global Filter estimation state (last + delta)
+                    last_index = max(0,Sim.now()-self.ecea.params.Delta-1)
+                    drifted_deltas = drifted_positions-self.fleet.nodeCheatDriftPositionsAt(last_index) # INS Delta since last
+                    true_deltas = true_positions-self.fleet.nodeCheatPositionsAt(last_index) # True Delta since last
+                    last_est_positions = self.fleet.nodePositionsAt(last_index, shared=True) # Last Shared Position (i.e. last filter round)
+                    est_positions = last_est_positions + drifted_deltas# This is the global Filter estimation state for this round (last + delta)
                     actual_errors = true_positions-est_positions
 
                 if self.ecea.type == SIMPLE:
-                    error_estimates=self.fleet.nodePositionErrors() * self.ecea.params.Delta
+                    error_estimates=self.fleet.nodePositionErrors()
                     tof = self.fleet.timeOfFlightMatrix()
                     # True positions only used for statistics
-                    improved_positions = self.ecea.update(tof,drifted_positions,last_estimate=est_positions, error_estimates=error_estimates, true_positions=true_positions, iterations=2)
+                    improved_positions = self.ecea.update(tof,drifted_positions,last_estimate=None, error_estimates=error_estimates, true_positions=true_positions)
                     drift_d =  np.linalg.norm(true_positions[self.nodenum]-drifted_positions[self.nodenum])
                     improved_d =  np.linalg.norm(true_positions[self.nodenum]-improved_positions[self.nodenum])
                     self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
