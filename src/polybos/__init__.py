@@ -82,6 +82,7 @@ class Scenario(object):
         'ecea': ['ecea'],
         'positioning': ['position_generation'],
         'fudging': ['Behaviour', 'positional_accuracy'],
+        'beacon_rate': ['beacon_rate']
     }
 
     def __init__(self, *args, **kwargs):

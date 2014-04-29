@@ -17,10 +17,9 @@ def set_exp():
     exp.updateDuration(21600)
     return exp
 
-
 def run_exp(exp):
     exp.run(title="ECEA_Iteration_Test",
-            runcount=8)
+            runcount=64)
 
     return exp
 

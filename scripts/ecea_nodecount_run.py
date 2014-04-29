@@ -3,8 +3,9 @@ __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 
 def set_exp():
+    variations=[2,4,8,9,12,16,18]
     exp = EXP(node_count=4,
-              title="FleetLawnmower ECEA Model with varying filter iterations(1-8)",
+              title="FleetLawnmower ECEA Model with varying node counts ({})".format(variations),
               parallel=True, future=True,
               retain_data='files')
     exp.updateDefaultNode({
@@ -14,7 +15,7 @@ def set_exp():
         'drifting':'DriftFactorPy',
         'ecea':'Simple2'
     })
-    exp.addVariableNodeScenario(range(2,17,2))
+    exp.addVariableNodeScenario(variations)
     exp.updateDuration(21600)
     return exp
 

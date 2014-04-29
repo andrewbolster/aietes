@@ -376,7 +376,7 @@ class Node(Sim.Process):
                     error_estimates=self.fleet.nodePositionErrors() * self.ecea.params.Delta
                     tof = self.fleet.timeOfFlightMatrix()
                     # True positions only used for statistics
-                    improved_positions = self.ecea.update(tof,drifted_positions,last_estimate=drifted_positions, error_estimates=error_estimates, true_positions=true_positions, iterations=2)
+                    improved_positions = self.ecea.update(tof,drifted_positions,last_estimate=est_positions, error_estimates=error_estimates, true_positions=true_positions, iterations=2)
                     drift_d =  np.linalg.norm(true_positions[self.nodenum]-drifted_positions[self.nodenum])
                     improved_d =  np.linalg.norm(true_positions[self.nodenum]-improved_positions[self.nodenum])
                     self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
