@@ -34,14 +34,14 @@ class Environment():
     simulated entities i.e. wind, tides, speed of sound at depth, etc
     """
 
-    def __init__(self, simulation, shape=None, resolution=1, base_depth=-1000, sos_model=None, **kwargs):
+    def __init__(self, simulation, shape=None, resolution=1, base_depth=-1000, sos_model=None, name="", **kwargs):
         """
         Generate a box with points from 0 to (size) in each dimension, where
         each point represents a cube of side resolution metres:
                 Volume is the representation of the physical environment (XYZ)
                 Map is the
         """
-        self._start_log(simulation)
+        self._start_log(simulation, name)
         self.map = {}
         self.pos_log = []
         self.depth = base_depth
@@ -60,8 +60,8 @@ class Environment():
     # self.generateSurface()
     # TODO 'Tidal motion' factor
 
-    def _start_log(self, parent):
-        self.logger = parent.logger.getChild("%s" % self.__class__.__name__)
+    def _start_log(self, parent, name):
+        self.logger = parent.logger.getChild("{}{}".format(name,self.__class__.__name__))
         self.logger.debug('creating instance')
 
 
@@ -132,19 +132,20 @@ class Environment():
         """
         object_name = self.simulation.reverse_node_lookup(object_id).name
         t = Sim.now()
+        #debug=True
         if t < self.simulation.duration_intervals:
             try:
                 assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
                 update_distance = distance(self.map[object_id].position, position)
                 if debug:
-                    self.logger.debug("Moving %s %f from %s to %s @ %f" % (object_name,
+                    self.logger.debug("Moving %s %f from %s to %s @ %d" % (object_name,
                                                                       update_distance,
                                                                       self.map[object_id].position,
                                                                       position, t))
                 self.map[object_id] = map_entry(object_id, position, velocity, object_name)
             except KeyError:
                 if debug:
-                    self.logger.debug("Creating map entry for %s at %s" % (object_name, position))
+                    self.logger.debug("Creating map entry for %s at %s @ %d" % (object_name, position, Sim.now()))
                 self.map[object_id] = map_entry(object_id, position, velocity, object_name)
             self.pos_log.append(Log(name=object_name,
                                     position=position,

@@ -16,7 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-import pydot
 
 from Packet import MACPacket
 from aietes.Tools import debug, Sim
@@ -170,6 +169,8 @@ class MAC():
         self.logger.info("Queueing Data")
 
     def draw(self):
+        import pydot
+
         graph = pydot.Dot(graph_type='digraph')
 
         #create base state nodes (set of destination states)

@@ -112,6 +112,10 @@ class DataPackage(object):
         self.tmax = int(kwargs.get("tmax", len(self.p[0][0])))
         self.n = len(self.p)
 
+        if self.tmax != len(self.p[0][0]):
+            raise NotImplementedError("Need to pad missized datapackage")
+
+
         #Fixes for Datatypes
         self.config = literal_eval(str(self.config))
         if isinstance(self.names, np.ndarray):
@@ -535,11 +539,12 @@ class DataPackage(object):
         if filename is None:
             filename = self.title
         path = "{}.track".format(filename)
-        savemat(path, {
+        data={
             'true_positions':self.p,
-            'drift_positions': self.drift_positions,
-            'ecea_positions':self.intent_positions
-        })
+        }
+        if hasattr(self,"drift_positions"): data.update({'drift_positions': self.drift_positions})
+        if hasattr(self,"intent_positions"): data.update({'ecea_positions':self.intent_positions})
+        savemat(path, data)
 
 
 

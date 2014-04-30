@@ -3,7 +3,7 @@ __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 
 def set_exp():
-    variations = [5,10,15,30,45,60,120]
+    variations = [1,2,4,8,10,15]
     exp = EXP(node_count=4,
               title="FleetLawnmower ECEA Model with varying beacon rate ({})".format(variations),
               parallel=True, future=True,
@@ -22,7 +22,7 @@ def set_exp():
 
 def run_exp(exp):
     exp.run(title="ECEA_DeltaRange_Test",
-            runcount=64,
+            runcount=4,
             )
     return exp
 

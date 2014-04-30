@@ -48,7 +48,8 @@ class Fleet(Sim.Process):
         self.environment = simulation.environment
         self.shared_map = Environment(simulation,
                                       shape=self.environment.shape,
-                                      base_depth=self.environment.depth)
+                                      base_depth=self.environment.depth,
+                                      name="Shared")
         self.simulation = simulation
         self.waiting = False
 
@@ -88,7 +89,7 @@ class Fleet(Sim.Process):
 
         while True:
             self.simulation.waiting = True
-            if debug: self.logger.debug("Yield for allPassive")
+            if debug: self.logger.debug("Yield for allPassive: Node Processing")
             yield Sim.waituntil, self, allPassive
 
             # If all nodes have completed their missions, notify the user
@@ -113,10 +114,9 @@ class Fleet(Sim.Process):
 
             # Perform any out of loop preprocessing required
             for node in self.nodes:
-                node.fleet_preprocesses()
-            # Reactivate the nodes
-            for node in self.nodes:
                 Sim.reactivate(node)
+            if debug: self.logger.debug("Yield for allPassive: Process Updates")
+            yield Sim.waituntil, self, allPassive
 
     def nodenum(self,node):
         """
@@ -200,6 +200,11 @@ class Fleet(Sim.Process):
         """
         return np.asarray([node.getPos(true=True) for node in self.nodes])
 
+    def nodeCheatLastECEAEstimates(self, update_index):
+        """
+        I Hate this so much
+        """
+        return np.asarray([node.ecea.pos_log[:, update_index] for node in self.nodes])
 
     def nodeCheatDriftPositionsAt(self, t):
         """

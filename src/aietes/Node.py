@@ -351,13 +351,12 @@ class Node(Sim.Process):
         FULL = 0
         SIMPLE = 1
         if self.ecea:
+            if not self.ecea.activated:
+                self.ecea.activate()
             if (Sim.now()) % self.ecea.params.Delta == 0:
                 # If in a delta period, update the kalman filter with the requires deltas
                 # need to collect:
-                #   Delta from each node's current reported position to t-Delta
-                #   Current positions (what way does this need to be permuted?)
                 if Sim.now() == 0:
-                    self.ecea.activate()
                     true_positions = self.fleet.nodeCheatPositions()
                     drifted_positions = self.fleet.nodeCheatDriftPositions()
                     drifted_deltas = np.zeros_like(true_positions)
@@ -368,25 +367,33 @@ class Node(Sim.Process):
                     # Drift is based on each nodes REPORTED position from the previous REPORTED position
                     true_positions = self.fleet.nodeCheatPositions()
                     drifted_positions = self.fleet.nodeCheatDriftPositions()
-                    last_index = max(0,Sim.now()-self.ecea.params.Delta-1)
+                    last_index = max(0,Sim.now()-self.ecea.params.Delta)
+                    this_index = Sim.now()
                     drifted_deltas = drifted_positions-self.fleet.nodeCheatDriftPositionsAt(last_index) # INS Delta since last
-                    true_deltas = true_positions-self.fleet.nodeCheatPositionsAt(last_index) # True Delta since last
-                    last_est_positions = self.fleet.nodePositionsAt(last_index, shared=True) # Last Shared Position (i.e. last filter round)
-                    est_positions = last_est_positions + drifted_deltas# This is the global Filter estimation state for this round (last + delta)
+                    last_true_positions = self.fleet.nodeCheatPositionsAt(last_index) # True Delta since last
+                    true_deltas = true_positions-last_true_positions
+                    last_est_positions = self.fleet.nodePositionsAt(last_index+1, shared=True) # Last Shared Position (i.e. last filter round)
+                    # There's a race condition in the drift position log that is causing the 0-th position to be forgotten.
+                    if np.any(np.abs(drifted_deltas)>0) and this_index > 2*self.ecea.params.Delta:
+                        est_positions = last_est_positions + true_deltas# This is the global Filter estimation state for this round (last + delta)
+                        #est_positions[:,2] = drifted_positions[:,2]
+                    else:
+                        est_positions = drifted_positions.copy()
                     actual_errors = true_positions-est_positions
 
                 if self.ecea.type == SIMPLE:
-                    error_estimates=self.fleet.nodePositionErrors()
+                    error_estimates=self.fleet.nodePositionErrors() * self.ecea.params.Delta
                     tof = self.fleet.timeOfFlightMatrix()
                     # True positions only used for statistics
-                    improved_positions = self.ecea.update(tof,drifted_positions,last_estimate=None, error_estimates=error_estimates, true_positions=true_positions)
+                    improved_positions = self.ecea.update(tof,drifted_positions,last_estimate=est_positions, error_estimates=error_estimates, true_positions=true_positions)
                     drift_d =  np.linalg.norm(true_positions[self.nodenum]-drifted_positions[self.nodenum])
                     improved_d =  np.linalg.norm(true_positions[self.nodenum]-improved_positions[self.nodenum])
-                    self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
-                        self.name, true_positions[self.nodenum],
-                        drifted_positions[self.nodenum],drift_d,
-                        improved_positions[self.nodenum], improved_d, (1.0-(improved_d/drift_d))*100.0
-                    ))
+                    with np.errstate(divide='ignore', invalid='ignore'):
+                        self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
+                            self.name, true_positions[self.nodenum],
+                            drifted_positions[self.nodenum],drift_d,
+                            improved_positions[self.nodenum], improved_d, (1.0-(improved_d/drift_d))*100.0
+                        ))
                 else:
                     raise RuntimeError("There's no way you should be in here...:{}".format(self.ecea))
 
@@ -508,6 +515,8 @@ class Node(Sim.Process):
             try:
                 self.update_environment()
                 self.update_fleet()
+                yield Sim.passivate, self
+                self.fleet_preprocesses()
             except Exception:
                 self.logger.error("Exception in Environment Update")
                 raise
