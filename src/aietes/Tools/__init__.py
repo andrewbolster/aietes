@@ -115,7 +115,7 @@ def angle_between(v1, v2):
         try:
             angle = np.arccos(np.dot(v1_u, v2_u))
         except FloatingPointError:
-            logging.warning("FPE: 1:{},2:{}".format(v1_u,v2_u))
+            logging.critical("FPE: 1:{},2:{}".format(v1_u,v2_u))
             raise
     if np.isnan(angle):
         return np.pi

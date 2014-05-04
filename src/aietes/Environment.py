@@ -91,8 +91,8 @@ class Environment():
         if isinstance(position,basestring):
             if position == "surface":
                 position = np.zeros(3)
-                position[0] = 4*stddev
-                position[1] = 4*stddev
+                position[0] = 3*stddev
+                position[1] = self.shape[1] / 2
                 position[2] = self.shape[2] - (2 * stddev)
             else:
                 raise ValueError("Incorrect position string")
@@ -132,6 +132,13 @@ class Environment():
         """
         object_name = self.simulation.reverse_node_lookup(object_id).name
         t = Sim.now()
+
+        if np.isnan(np.sum(position)):
+            raise RuntimeError("Invalid Position Update from {name}@{time}:{pos}".format(name=object_name,
+                                                                                         time=t,
+                                                                                         pos=position)
+            )
+
         #debug=True
         if t < self.simulation.duration_intervals:
             try:

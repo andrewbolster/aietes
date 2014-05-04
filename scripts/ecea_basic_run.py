@@ -4,7 +4,7 @@ from polybos import ExperimentManager as EXP
 
 def set_exp():
     exp = EXP(node_count=4,
-              title="FleetLawnmower ECEA Model Verification Test Run(4 nodes no changes)",
+              title="FleetLawnmowerBasicRun",
               parallel=True, future=True,
               retain_data='files')
     exp.updateDefaultNode({
@@ -20,7 +20,7 @@ def set_exp():
 
 def run_exp(exp):
     exp.run(title="ECEA_Basic_Test",
-            runcount=4)
+            runcount=16)
 
     return exp
 

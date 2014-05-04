@@ -48,7 +48,8 @@ class DataPackage(object):
                    'title': 'title',
                    'waypoints': 'waypoints',
                    'drift_positions': 'drift_positions',
-                   'intent_positions': 'intent_positions',
+                   'intent_positions': 'ecea_positions',
+                   'ecea_positions': 'ecea_positions',
                    'additional': 'additional'
     }
 
@@ -81,8 +82,15 @@ class DataPackage(object):
             logging.debug("Non-drifting Datapackage")
             self.drifting = False
         elif sink is "intent_positions":
+            """ ECEA_Positions used to be called Intent
+            """
             logging.debug("Non-ECEA Datapackage")
-            self.ecea = False
+            if not hasattr(self,'ecea'):
+                self.ecea = False
+        elif sink is "ecea_positions":
+            logging.debug("Non-ECEA Datapackage")
+            if not hasattr(self,'ecea'):
+                self.ecea = False
         elif sink is "additional":
             self.additional = None
 
@@ -112,9 +120,9 @@ class DataPackage(object):
         self.tmax = int(kwargs.get("tmax", len(self.p[0][0])))
         self.n = len(self.p)
 
-        if self.tmax != len(self.p[0][0]):
-            raise NotImplementedError("Need to pad missized datapackage")
-
+        if self.tmax > self.p.shape[2]:
+            logging.warn("Missized datapackage({} vs {}): hopefully a mission success: resetting tmax".format(self.tmax, self.p.shape))
+            self.tmax = self.p.shape[2]
 
         #Fixes for Datatypes
         self.config = literal_eval(str(self.config))
@@ -498,7 +506,7 @@ class DataPackage(object):
             if source == "drift":
                 return np.linalg.norm(self.drift_positions-self.p, axis=1)
             elif source == "intent":
-                return np.linalg.norm(self.intent_positions-self.p, axis=1)
+                return np.linalg.norm(self.ecea_positions-self.p, axis=1)
             else:
                 raise ValueError("Invalid Drift Source: {}".format(source))
         else:
@@ -510,19 +518,29 @@ class DataPackage(object):
         """
         return np.sqrt(np.sum(self.drift_error(source), axis=0)/self.n)
 
-    def ecea_error(self):
+    def ecea_error(self, periodic=True):
         """
         Nasty hacky dirty stuff to get the RMS statistics out of the 'additional' section across executions
         :return:
         """
-        truth = np.asarray(map(lambda x: x['true'], self.additional))
-        drift = np.asarray(map(lambda x: x['drift'], self.additional))
-        estimate = np.asarray(map(lambda x: x['estimate'], self.additional))
+        period = np.asarray(map(lambda x: x['params']['Delta'], self.additional))
+        if np.all(period == period[0]):
+            period = period[0]
+        if periodic:
+            truth = np.asarray(map(lambda x: x['true'], self.additional))
+            drift = np.asarray(map(lambda x: x['drift'], self.additional))
+            estimate = np.asarray(map(lambda x: x['estimate'], self.additional))
+        else:
+            truth = self.p
+            drift = self.drift_positions
+            estimate = self.ecea_positions
+            period=-period
 
-        drift_err = np.linalg.norm(drift - truth, axis=0)
-        estimate_err = np.linalg.norm(estimate - truth, axis=0)
 
-        return (drift_err, estimate_err, self.n)
+        drift_err = np.linalg.norm(drift - truth, axis=1)
+        estimate_err = np.linalg.norm(estimate - truth, axis=1)
+
+        return (drift_err, estimate_err, self.n, period)
 
 
     def export_track_mat(self, filename=None):
@@ -543,9 +561,100 @@ class DataPackage(object):
             'true_positions':self.p,
         }
         if hasattr(self,"drift_positions"): data.update({'drift_positions': self.drift_positions})
-        if hasattr(self,"intent_positions"): data.update({'ecea_positions':self.intent_positions})
+        if hasattr(self,"ecea_positions"): data.update({'ecea_positions':self.ecea_positions})
         savemat(path, data)
 
+
+    def generate_animation(self, filename=None, fps=24, gif=False, movieFile=True, xRes=1024, yRes=768, extent=True, displayFrames=None):
+        """
+
+        :param filename: Defaults to Title if not given; appended with mp4 / gif
+        :param fps:
+        :param gif: Bool to build gif
+        :param movieFile: bool to build movie
+        :param xRes: Frame Size
+        :param yRes: Frame Size
+        :param extent: Automatically zoom to the extent of operation rather than the environment
+        :return:
+        """
+        import matplotlib
+
+        matplotlib.use('Agg')
+        from Animation import AIETESAnimation
+        import matplotlib.pyplot as plt
+        import mpl_toolkits.mplot3d.axes3d as axes3
+
+        def updatelines(i, positions, lines, displayFrames):
+            """
+            Update the currently displayed line positions
+            positions contains [x,y,z],[t] positions for each vector
+            displayFrames configures the display cache size
+            """
+            if isinstance(displayFrames, int):
+                j = max(i - displayFrames, 0)
+            else:
+                j = 0
+            for line, dat in zip(lines, positions):
+                line.set_data(dat[0:2, j:i])  # x,y axis
+                line.set_3d_properties(dat[2, j:i])  # z axis
+
+            return lines
+
+        if filename is None:
+            filename = self.title
+
+        return_dict = {}
+
+        dpi = 80
+        ipp = 80
+        n_frames = self.tmax
+        fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
+        ax = axes3.Axes3D(fig)
+        lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=self.names[i])[0] for i, dat in
+                 enumerate(self.p)]
+        ax.legend()
+
+        if extent is True:
+            extent = tuple(zip(np.min(np.min(self.p, axis=0), axis=1), np.max(np.max(self.p, axis=0), axis=1)))
+            (lx, rx), (ly, ry), (lz, rz) = extent
+            x_width = abs(lx - rx)
+            y_width = abs(ly - ry)
+            z_width = abs(lz - rz)
+            width = max(x_width, y_width, z_width) * 1.2
+
+            avg = np.average(np.average(self.p, axis=0), axis=1)
+            ax.set_xlim3d((avg[0] - (width / 2), avg[0] + (width / 2)))
+            ax.set_ylim3d((avg[1] - (width / 2), avg[1] + (width / 2)))
+            ax.set_zlim3d((avg[2] - (width / 2), avg[2] + (width / 2)))
+        else:
+            ax.set_xlim3d((0, self.environment[0]))
+            ax.set_ylim3d((0, self.environment[1]))
+            ax.set_zlim3d((0, self.environment[2]))
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(self.p, lines, displayFrames),
+                                   interval=1000 / fps, repeat_delay=300, blit=True, )
+        if movieFile:
+            logging.info("Writing animation to %s.mp4" % filename)
+            line_ani.save(
+                filename=filename,
+                fps=fps,
+                codec='mpeg4',
+                clear_temp=True
+            )
+            return_dict['ani_file'] = "%s.mp4" % filename
+        if gif:
+            logging.info("Writing animation to %s.gif" % filename)
+            from matplotlib import animation as MPLanimation
+            from matplotlib import verbose
+
+            verbose.level = "debug"
+
+            return_dict['ani_file'] = "%s.gif" % filename
+            MPLanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8",
+                                            writer='imagemagick', bitrate=-1, fps=fps)
+        return plt, return_dict
 
 
 

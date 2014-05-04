@@ -36,13 +36,17 @@ def sim_mask(args):
     #http://stackoverflow.com/questions/444591/convert-a-string-of-bytes-into-an-int-python
     myid=current_process()._identity[0]
     np.random.seed(myid^struct.unpack("<L",os.urandom(4))[0])
-    lives=20
+
+    # Be Nice
+    os.nice(5)
+
+    lives=10
     kwargs, pp_defaults, retain_data = args
     sim_time = kwargs.pop("runtime", None)
     while True:
         try:
             sim = Simulation(**kwargs)
-            logging.critical("{} starting {}".format(current_process(), sim.title))
+            logging.info("{} starting {}".format(current_process(), sim.title))
             prep_stats = sim.prepare(sim_time=sim_time)
             sim_time = sim.simulate()
             return_dict = sim.postProcess(**pp_defaults)
@@ -62,7 +66,7 @@ def sim_mask(args):
             if lives <= 0:
                 raise
             else:
-                logging.critical("{} died, restarting".format(current_process()))
+                logging.critical("{} died, restarting: {} lives remain".format(current_process(), lives ))
                 del sim
         gc.collect()
 

@@ -264,10 +264,9 @@ class Simulation():
             state.update({'drift_positions': np.asarray(drift_positions)})
 
         if any([node.ecea for node in self.nodes]):
-            intent_positions = []
             # ECEA does not operate at every time step, (delta),
             # therefore use the shared map data that tracks the error information (hopefully)
-            state.update({'intent_positions': self.fleets[0].nodePosLogs(shared=True)})
+            state.update({'ecea_positions': self.fleets[0].nodePosLogs(shared=True)})
 
             state.update({'additional':[node.ecea.dump() for node in self.nodes if node.ecea]})
 
@@ -480,25 +479,8 @@ class Simulation():
         Performs output and positions generation for a given simulation
         """
 
-        def updatelines(i, positions, lines, displayFrames):
-            """
-            Update the currently displayed line positions
-            positions contains [x,y,z],[t] positions for each vector
-            displayFrames configures the display cache size
-            """
-            if isinstance(displayFrames, int):
-                j = max(i - displayFrames, 0)
-            else:
-                j = 0
-            for line, dat in zip(lines, positions):
-                line.set_data(dat[0:2, j:i])  # x,y axis
-                line.set_3d_properties(dat[2, j:i])  # z axis
-
-            return lines
-
         dp = DataPackage(**(self.currentState()))
 
-        n_frames = dp.tmax
 
         filename = outputFile if outputFile is not None else dp.title
         if outputPath is not None:
@@ -507,60 +489,8 @@ class Simulation():
         return_dict = {}
 
         if movieFile or plot or gif:
-            import matplotlib
-            matplotlib.use('Agg')
-            from Animation import AIETESAnimation
-            import matplotlib.pyplot as plt
-            import mpl_toolkits.mplot3d.axes3d as axes3
-
-            dpi = 80
-            ipp = 80
-            fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
-            ax = axes3.Axes3D(fig)
-            lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=dp.names[i])[0] for i, dat in
-                     enumerate(dp.p)]
-
-            ax.legend()
-            if extent is True:
-                extent = tuple(zip(np.min(np.min(dp.p, axis=0), axis=1), np.max(np.max(dp.p, axis=0), axis=1)))
-                (lx, rx), (ly, ry), (lz, rz) = extent
-                x_width = abs(lx - rx)
-                y_width = abs(ly - ry)
-                z_width = abs(lz - rz)
-                width = max(x_width, y_width, z_width) * 1.2
-
-                avg = np.average(np.average(dp.p, axis=0), axis=1)
-                ax.set_xlim3d((avg[0] - (width / 2), avg[0] + (width / 2)))
-                ax.set_ylim3d((avg[1] - (width / 2), avg[1] + (width / 2)))
-                ax.set_zlim3d((avg[2] - (width / 2), avg[2] + (width / 2)))
-            else:
-                ax.set_xlim3d((0, dp.environment[0]))
-                ax.set_ylim3d((0, dp.environment[1]))
-                ax.set_zlim3d((0, dp.environment[2]))
-            ax.set_xlabel('X')
-            ax.set_ylabel('Y')
-            ax.set_zlabel('Z')
-            line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(dp.p, lines, displayFrames),
-                                       interval=1000 / fps, repeat_delay=300, blit=True, )
-            if movieFile:
-                self.logger.info("Writing animation to %s.mp4" % filename)
-                line_ani.save(
-                    filename=filename,
-                    fps=fps,
-                    codec='mpeg4',
-                    clear_temp=True
-                )
-                return_dict['ani_file'] = "%s.mp4" % filename
-            if gif:
-                self.logger.info("Writing animation to %s.gif" % filename)
-                from matplotlib import animation as MPLanimation
-                from matplotlib import verbose
-
-                verbose.level="debug"
-
-                return_dict['ani_file'] = "%s.gif" % filename
-                MPLanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8",
-                                                writer='imagemagick', bitrate=-1, fps=fps)
+            plt, ani_dict = dp.generate_animation(filename, fps, gif, movieFile, xRes, yRes, extent, displayFrames)
+            return_dict.update(ani_dict)
 
         if outputFile is not None:
             if dataFile:

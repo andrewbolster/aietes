@@ -11,7 +11,7 @@ NAMES = [('second', 'seconds'),
          ('year', 'years')]
 
 
-def humanize_time(amount, units):
+def humanize_time(amount, units=None):
     '''
        Divide `amount` in time periods.
        Useful for making time intervals more human readable.
@@ -32,6 +32,9 @@ def humanize_time(amount, units):
        [(5.0, 'seconds')]
     '''
     result = []
+
+    if units is None:
+        units = 'seconds'
 
     unit = map(lambda a: a[1], NAMES).index(units)
     # Convert to seconds

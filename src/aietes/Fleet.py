@@ -89,6 +89,9 @@ class Fleet(Sim.Process):
 
         while True:
             self.simulation.waiting = True
+            if debug: self.logger.debug("Yield for allPassive: Environment Processing")
+            yield Sim.waituntil, self, allPassive
+
             if debug: self.logger.debug("Yield for allPassive: Node Processing")
             yield Sim.waituntil, self, allPassive
 
@@ -115,7 +118,7 @@ class Fleet(Sim.Process):
             # Perform any out of loop preprocessing required
             for node in self.nodes:
                 Sim.reactivate(node)
-            if debug: self.logger.debug("Yield for allPassive: Process Updates")
+            if debug: self.logger.debug("Yield for allPassive: Fleet Updates")
             yield Sim.waituntil, self, allPassive
 
     def nodenum(self,node):

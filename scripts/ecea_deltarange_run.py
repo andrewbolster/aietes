@@ -3,13 +3,13 @@ __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 
 def set_exp():
-    variations = [1,2,4,8,10,15]
+    variations = [1,5,15,30,60,120,300,600]
     exp = EXP(node_count=4,
-              title="FleetLawnmower ECEA Model with varying beacon rate ({})".format(variations),
+              title="FleetLawnmowerBeaconVar-{}".format(variations),
               parallel=True, future=True,
               retain_data='files')
     exp.updateDefaultNode({
-        'behaviour':'FleetLawnmowerLoop',
+        'behaviour':'FleetLawnmower',
         'waypoint_style':'lawnmower',
         'positioning':'surface',
         'drifting':'DriftFactorPy',
@@ -22,7 +22,7 @@ def set_exp():
 
 def run_exp(exp):
     exp.run(title="ECEA_DeltaRange_Test",
-            runcount=4,
+            runcount=16,
             )
     return exp
 

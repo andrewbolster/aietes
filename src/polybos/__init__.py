@@ -561,7 +561,8 @@ class ExperimentManager(object):
                 value set on init
         """
         title = kwargs.get("title", self.title)
-        title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        if not kwargs.get("no_time", False):
+            title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
         self.orig_path = os.path.abspath(_results_dir)
         self.runcount = kwargs.get("runcount", 1)

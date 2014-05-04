@@ -411,7 +411,7 @@ class WaypointMixin():
     def waypointVector(self, position, velocity):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         if self.nextwaypoint is not None:
-            if isinstance(self, SoloWaypoint):
+            if isinstance(self, SoloWaypoint) or len(self.nearest_neighbours)==0:
                 neighbourhood_avg = position
             else:
                 neighbourhood_avg = sum(n.position for n in self.nearest_neighbours) / len(self.nearest_neighbours)

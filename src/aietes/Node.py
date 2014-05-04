@@ -203,8 +203,8 @@ class Node(Sim.Process):
         if hasattr(self.behaviour,'activate'):
             self.behaviour.activate(**launch_args)
 
-        # Tell the environment that we are here!
         self.update_environment()
+
 
     def missionAccomplished(self):
         """
@@ -277,6 +277,7 @@ class Node(Sim.Process):
         # v(t+e) = v(t)+(F*dt)/m
         if np.all(self.acceleration_force == 0.0):
             # Braking as there's no acceleration vector
+            #FIXME This should be -0.2*self.velocity or something
             new_velocity = np.zeros(3)
         else:
             new_velocity = self.velocity + ((self.acceleration_force * dT) / self.mass)
@@ -292,6 +293,8 @@ class Node(Sim.Process):
         assert mag(self.velocity) < max(self.max_speed), "Breaking the speed limit: %s, %s" % (
             mag(self.velocity), self.cruising_speed
         )
+
+        self._lastupdate = Sim.now()
 
         # If we're drifting, the Node's concept of reality is NOT true
         if self.drifting:
@@ -322,12 +325,12 @@ class Node(Sim.Process):
         assert not np.isnan(sum(self.pos_log[:, self._lastupdate]))
 
         self.highest_attained_speed = max(self.highest_attained_speed, mag(self.velocity))
-        self._lastupdate = Sim.now()
 
     def update_environment(self):
         self.simulation.environment.update(self.id,
                                            self.getPos(true=True),
                                            self.getVec(true=True))
+        pass
 
     def update_fleet(self):
         if self.ecea:
@@ -368,32 +371,31 @@ class Node(Sim.Process):
                     true_positions = self.fleet.nodeCheatPositions()
                     drifted_positions = self.fleet.nodeCheatDriftPositions()
                     last_index = max(0,Sim.now()-self.ecea.params.Delta)
-                    this_index = Sim.now()
-                    drifted_deltas = drifted_positions-self.fleet.nodeCheatDriftPositionsAt(last_index) # INS Delta since last
+                    #this_index = Sim.now()
+                    last_drifted_positions = self.fleet.nodeCheatDriftPositionsAt(last_index) # INS Delta since last
+                    drifted_deltas = drifted_positions - last_drifted_positions
                     last_true_positions = self.fleet.nodeCheatPositionsAt(last_index) # True Delta since last
-                    true_deltas = true_positions-last_true_positions
-                    last_est_positions = self.fleet.nodePositionsAt(last_index+1, shared=True) # Last Shared Position (i.e. last filter round)
-                    # There's a race condition in the drift position log that is causing the 0-th position to be forgotten.
-                    if np.any(np.abs(drifted_deltas)>0) and this_index > 2*self.ecea.params.Delta:
-                        est_positions = last_est_positions + true_deltas# This is the global Filter estimation state for this round (last + delta)
-                        #est_positions[:,2] = drifted_positions[:,2]
-                    else:
-                        est_positions = drifted_positions.copy()
-                    actual_errors = true_positions-est_positions
+                    #true_deltas = true_positions-last_true_positions
 
                 if self.ecea.type == SIMPLE:
                     error_estimates=self.fleet.nodePositionErrors() * self.ecea.params.Delta
                     tof = self.fleet.timeOfFlightMatrix()
                     # True positions only used for statistics
-                    improved_positions = self.ecea.update(tof,drifted_positions,last_estimate=est_positions, error_estimates=error_estimates, true_positions=true_positions)
-                    drift_d =  np.linalg.norm(true_positions[self.nodenum]-drifted_positions[self.nodenum])
-                    improved_d =  np.linalg.norm(true_positions[self.nodenum]-improved_positions[self.nodenum])
-                    with np.errstate(divide='ignore', invalid='ignore'):
-                        self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
-                            self.name, true_positions[self.nodenum],
-                            drifted_positions[self.nodenum],drift_d,
-                            improved_positions[self.nodenum], improved_d, (1.0-(improved_d/drift_d))*100.0
-                        ))
+                    improved_positions = self.ecea.update(time_of_flight_matrix=tof,
+                                                          drifted_positions=drifted_positions,
+                                                          error_estimates=error_estimates,
+                                                          true_positions=true_positions,
+                                                          est_deltas=drifted_deltas) #Swap these lines commenting to enable feedback
+                                                          #last_estimate=drifted_positions) #Or disable feedback
+                    if __debug__:
+                        drift_d =  np.linalg.norm(true_positions[self.nodenum]-drifted_positions[self.nodenum])
+                        improved_d =  np.linalg.norm(true_positions[self.nodenum]-improved_positions[self.nodenum])
+                        with np.errstate(divide='ignore', invalid='ignore'):
+                            self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
+                                self.name, true_positions[self.nodenum],
+                                drifted_positions[self.nodenum],drift_d,
+                                improved_positions[self.nodenum], improved_d, (1.0-(improved_d/drift_d))*100.0
+                            ))
                 else:
                     raise RuntimeError("There's no way you should be in here...:{}".format(self.ecea))
 
@@ -481,7 +483,9 @@ class Node(Sim.Process):
 
 
         debug=False
-        while True:
+        while Sim.now()<self.simulation.duration_intervals:
+
+            yield Sim.passivate, self
             #
             # Update Node State
             #
@@ -506,17 +510,28 @@ class Node(Sim.Process):
                 self.logger.error("Exception in Move")
                 raise
 
+
             #
             # Update Fleet State
+            # Initial fleet is instantiated in activate; so if it's the first interval, skip this
             #
-            if debug:
-                self.logger.info('updating map at {}'.format(Sim.now()))
-            yield Sim.hold, self, self.behaviour.update_rate
-            try:
-                self.update_environment()
+            if Sim.now() > 0:
                 self.update_fleet()
-                yield Sim.passivate, self
-                self.fleet_preprocesses()
-            except Exception:
-                self.logger.error("Exception in Environment Update")
-                raise
+
+            yield Sim.passivate, self
+            self.fleet_preprocesses()
+            #
+            # Update Environment State
+            # Initial environment is instantiated in activate; so if it's the first interval, skip this
+            #
+            if Sim.now()>0:
+                if debug:
+                    self.logger.info('updating map at {}'.format(Sim.now()))
+                try:
+                    self.update_environment()
+                except Exception:
+                    self.logger.error("Exception in Environment Update")
+                    raise
+
+            # Clock Tick
+            yield Sim.hold, self, self.behaviour.update_rate

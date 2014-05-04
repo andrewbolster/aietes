@@ -4,7 +4,7 @@ from polybos import ExperimentManager as EXP
 
 def set_exp():
     exp = EXP(node_count=4,
-              title="FleetLawnmower ECEA Model with varying filter iterations(1-8)",
+              title="FleetLawnmowerFilterIterVar-1-4",
               parallel=True, future=True,
               retain_data='files')
     exp.updateDefaultNode({
@@ -13,13 +13,13 @@ def set_exp():
         'positioning':'surface',
         'drifting':'DriftFactorPy',
     })
-    exp.addVariableRangeScenario('ecea',["Simple{}".format(n) for n in range(1,8)])
+    exp.addVariableRangeScenario('ecea',["Simple{}".format(n) for n in range(1,4)])
     exp.updateDuration(21600)
     return exp
 
 def run_exp(exp):
     exp.run(title="ECEA_Iteration_Test",
-            runcount=64)
+            runcount=32)
 
     return exp
 

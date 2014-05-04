@@ -3,13 +3,13 @@ __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 
 def set_exp():
-    variations=[2,4,8,9,12,16,18]
+    variations=[1,2,4,6,9]
     exp = EXP(node_count=4,
-              title="FleetLawnmower ECEA Model with varying node counts ({})".format(variations),
+              title="FleetLawnmowerNodeVar-{}".format(variations),
               parallel=True, future=True,
               retain_data='files')
     exp.updateDefaultNode({
-        'behaviour':'FleetLawnmowerLoop',
+        'behaviour':'FleetLawnmower',
         'waypoint_style':'lawnmower',
         'positioning':'surface',
         'drifting':'DriftFactorPy',
