@@ -160,7 +160,7 @@ class Node(Sim.Process):
             iterations = self.config['ecea'].split("Simple")
             if len(iterations)>1 and iterations[1] !='':
                 params_dict.update({'iterations':int(iterations[1])})
-
+            self.tof_type = self.config['tof_type']
             if params_dict:
                 self.ecea = SimpleFilter(self, params=params_dict)
             else:
@@ -168,10 +168,12 @@ class Node(Sim.Process):
 
         # Drift Characteristics from Contribs?
         if self.config['drift'] != "Null":
-            import contrib.Ghia.uuv_position_drift_model as Driftmodels
+            import contrib.Ghia.uuv_position_drift_model.DriftFactors as Driftmodels
+            drift_scales = getattr(self.config,'drift_scales',{})
+            drift_noises = getattr(self.config,'drift_noises',{})
 
-            self.drift = getattr(Driftmodels, self.config['drift'])(self)
-            self.logger.debug("Drift activated from config: {}".format(self.config['drift']))
+            self.drift = getattr(Driftmodels, self.config['drift'])(self, scales=drift_scales, noises=drift_noises)
+            self.logger.debug("Drift activated from config: {} with {}, {}".format(self.config['drift'], drift_scales, drift_noises))
             self.drifting = True
         elif kwargs.has_key('drift'):
             self.drift = kwargs.get('drift')(self)
@@ -379,7 +381,7 @@ class Node(Sim.Process):
 
                 if self.ecea.type == SIMPLE:
                     error_estimates=self.fleet.nodePositionErrors() * self.ecea.params.Delta
-                    tof = self.fleet.timeOfFlightMatrix()
+                    tof = self.fleet.timeOfFlightMatrix(guess_index=self.tof_type)
                     # True positions only used for statistics
                     improved_positions = self.ecea.update(time_of_flight_matrix=tof,
                                                           drifted_positions=drifted_positions,

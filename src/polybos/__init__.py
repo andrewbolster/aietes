@@ -37,7 +37,7 @@ from aietes import Simulation  # Must use the aietes path to get the config file
 import aietes.Threaded as ParSim
 from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr
 from bounos import DataPackage, printAnalysis
-
+from contrib.Ghia.ecea.data_grapher import data_grapher
 
 _config_spec = '%s/configs/default.conf' % _ROOT
 _results_dir = '%s/../../results/' % _ROOT
@@ -82,7 +82,11 @@ class Scenario(object):
         'ecea': ['ecea'],
         'positioning': ['position_generation'],
         'fudging': ['Behaviour', 'positional_accuracy'],
-        'beacon_rate': ['beacon_rate']
+        'beacon_rate': ['beacon_rate'],
+        'drift_dvl_scale': ['drift_scales','dvl'],
+        'drift_gyro_scale': ['drift_scales','gyro'],
+        'tof_type': ['tof_type'],
+        'drift_noises': ['drift_noises']
     }
 
     def __init__(self, *args, **kwargs):
@@ -315,8 +319,9 @@ class Scenario(object):
         """
         if self.committed:
             raise (RuntimeError("Attempted to commit twice (or more)"))
-        print("Scenario Committed with %d nodes configured and %d defined"
-              % (len(self.nodes.keys()), self.node_count))
+        print("Scenario {} Committed with {} nodes configured and {} defined".format(self.title,
+                                                                                     len(self.nodes.keys()),
+                                                                                     self.node_count))
         if self.node_count > len(self.nodes.keys()):
             self.addDefaultNode(count=self.node_count - len(self.nodes.keys()))
 
@@ -569,7 +574,8 @@ class ExperimentManager(object):
         kwargs.update({"basepath":self.exp_path, "retain_data":self.retain_data})
         start = time.time()
         try:
-            os.mkdir(self.exp_path)
+            if not os.path.isdir(self.exp_path):
+                os.mkdir(self.exp_path)
         except:
             self.exp_path = tempfile.mkdtemp()
             print("Filepath collision, using %s"%self.exp_path)
@@ -647,7 +653,7 @@ class ExperimentManager(object):
         else:
             raise ValueError("Incorrect Environment Type given:{}{}".format(environment,type(environment)))
 
-    def addVariableRangeScenario(self, variable, value_range):
+    def addVariableRangeScenario(self, variable, value_range, title_range=None):
         """
         Add a scenario with a range of configuration values to the experimental run
 
@@ -655,8 +661,10 @@ class ExperimentManager(object):
             variable(str): mutable value description
             value_range(range or generator): values to be tested against.
         """
-        for v in value_range:
-            s = Scenario(title="{}({})".format(variable, v),
+        if title_range is None:
+            title_range = ["{}({})".format(variable, v) for v in value_range]
+        for i,v in enumerate(value_range):
+            s = Scenario(title=title_range[i],
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({variable: v}, count=self.node_count)
             self.scenarios.append(s)
@@ -876,6 +884,8 @@ class ExperimentManager(object):
         """
         for s in self.scenarios:
             s.write()
+
+        data_grapher(dir=self.exp_path, title=self.title)
 
 
     def dump_analysis(self):

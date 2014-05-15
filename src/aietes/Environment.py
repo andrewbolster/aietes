@@ -92,7 +92,7 @@ class Environment():
             if position == "surface":
                 position = np.zeros(3)
                 position[0] = 3*stddev
-                position[1] = self.shape[1] / 2
+                position[1] = 3*stddev
                 position[2] = self.shape[2] - (2 * stddev)
             else:
                 raise ValueError("Incorrect position string")

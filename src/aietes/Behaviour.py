@@ -23,7 +23,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector
+from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, agitate_position
 
 
 debug=True
@@ -151,7 +151,7 @@ class Behaviour(object):
         distanceVal = distance(position, repulsive_position)
         forceVector = unit(position - repulsive_position) * d_limit / float(min(distanceVal,self.neighbourhood_max_rad))
 
-        if distanceVal < 2:
+        if distanceVal < 1:
             raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
                                (self.getNearestNeighbours(repulsive_position)[0].name,
                                 self.getNearestNeighbours(repulsive_position)[0].position,
@@ -512,7 +512,7 @@ class FleetLawnmower(Flock, WaypointMixin):
         for neighbour in self.nearest_neighbours:
             if distance(position, neighbour.position) < self.collision_avoidance_d:
                 partVector = self.repulseFromPosition(position, neighbour.position, self.collision_avoidance_d)
-                partVector = unit(partVector)*np.cos(angle_between(-velocity,partVector))
+                partVector = unit(-velocity)*mag(partVector)
                 if self.debug:
                     self.logger.debug(
                         "Avoiding %s:%f:%s" % (
@@ -647,7 +647,11 @@ class FleetLawnmower(Flock, WaypointMixin):
 
         self.waypoints = [self.waypoint(point,prox) for point in courses[self.node.nodenum]]
         if not self.waypointloop:
-            self.waypoints.append(self.waypoint(self.node.position.copy(),prox*2))
+            self.waypoints.append(
+                self.waypoint(
+                    agitate_position(self.node.position.copy(), maximum=self.env_shape, var=prox*2),
+                    prox*2)
+            )
         self.nextwaypoint = 0
 
 class FleetLawnmowerLoop(FleetLawnmower):

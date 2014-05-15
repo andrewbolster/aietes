@@ -24,10 +24,16 @@ import numpy as np
 from scipy.spatial.distance import squareform, pdist
 
 from operator import attrgetter
+from itertools import combinations
 
 from aietes.Tools import Sim, distance, mag, secondsToStr
 from aietes.Tools.ProgressBar import ProgressBar
+from aietes.Tools.Memoize import lru_cache
 from aietes.Environment import Environment
+
+##### FIXME
+from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex
+#####
 
 
 
@@ -239,15 +245,19 @@ class Fleet(Sim.Process):
         return np.abs(delta)
 
 
-    def timeOfFlightMatrix(self, shared=False, speed_of_sound=1490.0):
+
+    def timeOfFlightMatrix(self, shared=False, speed_of_sound=1490.0, guess_index=0):
         """
         Fleet order time of flight matrix
         There are very few reasons why this would ever need to be from the shared database....
         (0-n,0-n)
         """
         latest_positions = self.nodeCheatPositions()
-        tof = squareform(pdist(latest_positions))
-        tof /= speed_of_sound
+        if guess_index > 0:
+            tof = timeOfFlightMatrix_Complex(latest_positions, self.environment.shape[2], guess_index)
+        else:
+            tof = squareform(pdist(latest_positions))
+            tof /= speed_of_sound
         return tof
 
     def isMissionComplete(self):

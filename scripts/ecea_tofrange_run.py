@@ -3,8 +3,9 @@ __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 
 def set_exp():
+    variations = [1, 0]
     exp = EXP(node_count=4,
-              title="FleetLawnmowerBasicRun",
+              title="FleetLawnmowerTOFVar-{}".format(variations),
               parallel=True, future=True,
               retain_data='files')
     exp.updateDefaultNode({
@@ -12,16 +13,18 @@ def set_exp():
         'waypoint_style':'lawnmower',
         'positioning':'surface',
         'drifting':'DriftFactor',
-        'ecea': 'Simple2'
+        'ecea':'Simple2',
+        'beacon_rate':15
     })
-    exp.useDefaultScenario()
-    exp.updateDuration(21600)
+    exp.addVariableRangeScenario('tof_type', variations)
+    exp.updateDuration(28800)
     return exp
 
-def run_exp(exp):
-    exp.run(title="ECEA_Basic_Test",
-            runcount=16)
 
+def run_exp(exp):
+    exp.run(title="ECEA_TOFRange_Test",
+            runcount=16,
+            )
     return exp
 
 

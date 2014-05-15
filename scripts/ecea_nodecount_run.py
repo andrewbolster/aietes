@@ -3,7 +3,7 @@ __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 
 def set_exp():
-    variations=[1,2,4,6,9]
+    variations=list(reversed([1,2,4,6,9]))
     exp = EXP(node_count=4,
               title="FleetLawnmowerNodeVar-{}".format(variations),
               parallel=True, future=True,

@@ -36,6 +36,11 @@ from pprint import pformat
 
 from humanize_time import secondsToStr
 
+from joblib import Memory
+from tempfile import mkdtemp
+memoize = Memory(cachedir=mkdtemp(), verbose=0)
+
+
 logging.basicConfig(level=logging.ERROR)
 np.seterr(all='raise', under='warn')
 # from os import urandom as randomstr #Provides unicode random String
@@ -143,8 +148,12 @@ def distance(pos_a, pos_b, scale=1):
 def mag(vector):
     """
     Return the magnitude of a given vector
+    %timeit np.sqrt((uu1[0]-uu2[0])**2 +(uu1[1]-uu2[1])**2 +(uu1[2]-uu2[2])**2)-> 7.08us,
+    %timeit np.linalg.norm(uu1-uu2) -> 11.7us.
     """
+    #FIXME  Might be faster unrolled
     return np.linalg.norm(vector)
+
 
 
 def unit(vector):
@@ -156,6 +165,30 @@ def unit(vector):
     else:
         return vector / mag(vector)
 
+
+def agitate_position(position,maximum,var=10,minimum=None):
+    """
+    Fluff a position i by randn*var, limited to maximum/minimum
+    :param position:
+    :param maximum:
+    :param var:
+    :param minimum:
+    :return:
+    """
+    if minimum is None:
+        minimum = np.zeros(3)+var
+    return np.max(
+        np.vstack((
+            minimum,
+            np.min(
+                np.vstack((
+                    maximum-var,
+                    position+np.random.randn(3)*var
+                )),
+                axis=0)
+        )),
+        axis=0
+    )
 
 def random_three_vector():
     """

@@ -38,7 +38,8 @@ def sim_mask(args):
     np.random.seed(myid^struct.unpack("<L",os.urandom(4))[0])
 
     # Be Nice
-    os.nice(5)
+    niceness=os.nice(0)
+    os.nice(5-niceness)
 
     lives=10
     kwargs, pp_defaults, retain_data = args

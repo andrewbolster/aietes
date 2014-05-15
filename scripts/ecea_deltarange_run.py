@@ -22,7 +22,7 @@ def set_exp():
 
 def run_exp(exp):
     exp.run(title="ECEA_DeltaRange_Test",
-            runcount=16,
+            runcount=64,
             )
     return exp
 
