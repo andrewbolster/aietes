@@ -57,6 +57,7 @@ class Metric(object):
         self.data = kw.get('data', None)
         self.signed = kw.get('signed', self.signed) # True is positive, False is Negative, None isn't
         self.ndim = 0
+        self.scale = None
         self.n = None
 
     def __call__(self, *args, **kwargs):
@@ -94,6 +95,7 @@ class StdDev_of_Distance(Metric):
     Measures the level of variation (stddev) of the distance between each node and the centre of
         the fleet
     """
+    scale = 'm'
     def generator(self, data):
         return data.distance_from_average_stddev_range()
 
@@ -120,7 +122,7 @@ class Deviation_Of_Heading(Metric):
     Measured the per node deviation from the fleet path, therefore the 'average' is zero
     However, since INHD is unsigned, this isn're really the case, so take the avg of the vals
     """
-    label = "INHD"
+    label = "INHD($ms^-1)$"
     signed = True
 
     def generator(self, data):
@@ -130,7 +132,7 @@ class Deviation_Of_Heading(Metric):
 
 
 class PerNode_Speed(Metric):
-    label = "Node Speed"
+    label = "Node Speed ($ms^-1$)"
     signed = False
 
     def generator(self, data):
@@ -139,7 +141,7 @@ class PerNode_Speed(Metric):
 
 
 class PerNode_Internode_Distance_Avg(Metric):
-    label = "INDD"
+    label = "INDD ($m$)"
     signed = True
 
     def generator(self, data):
@@ -147,7 +149,7 @@ class PerNode_Internode_Distance_Avg(Metric):
         return [data.distances_from_average_at(time) for time in range(int(data.tmax))]
 
 class Drift_Error(Metric):
-    label = "Drift(m)"
+    label = "Drift($m$)"
     signed = False
     drift_enabled = True
 
@@ -156,7 +158,7 @@ class Drift_Error(Metric):
         return data.drift_error().swapaxes(0,1)
 
 class ECEA_Error(Metric):
-    label = "ECEA Var (m)"
+    label = "Corrected Drift ($m$)"
     signed = False
     ecea_enabled = True
 

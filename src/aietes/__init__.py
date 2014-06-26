@@ -27,9 +27,9 @@ from Environment import Environment
 import Fleet
 from Node import Node
 import Behaviour
+from bounos.DataPackage import DataPackage
 from Tools import *
 from Tools.humanize_time import secondsToStr
-from bounos.DataPackage import DataPackage
 
 
 np.set_printoptions(precision=3)

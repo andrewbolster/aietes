@@ -172,10 +172,11 @@ class DataPackage(object):
         self.tmax = len(self.p[0][0])
         self.n = len(self.p)
 
-    def write(self, filename=None, track_mat=True):
+    def write(self, filename=None, track_mat=False):
         logging.info("Writing datafile to %s" % results_file(filename))
 
         data = {i:self.__dict__[i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
+        data['filename'] = "{}.npz".format(filename)
 
         np.savez(filename,
                  **(data)

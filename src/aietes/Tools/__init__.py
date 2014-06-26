@@ -27,6 +27,7 @@ from itertools import groupby
 from operator import itemgetter
 from datetime import datetime as dt
 from time import time
+import pickle
 
 import numpy as np
 from configobj import ConfigObj
@@ -637,6 +638,18 @@ def unext(filename):
 def kwarger(**kwargs):
     return kwargs
 
+def unpickle(filename):
+    with open(filename, 'rb') as f:
+        data=pickle.load(f)
+    return f
+
+def mkpickle(filename, object):
+    with open(filename, 'wb') as f:
+        data=pickle.dump(object,f)
+    return f
+
+
+
 
 def log_level_lookup(log_level):
     if isinstance(log_level, str):
@@ -728,8 +741,8 @@ def are_equal_waypoints(wps):
     """Compare Waypoint Objects as used by WaypointMixin ([pos],prox)
         Will exclude 'None' records in wps and only compare valid waypoint lists
     """
-    poss = [[w[0] for w in wp] for wp in wps if wp is not None]
-    proxs = [[w[1] for w in wp] for wp in wps if wp is not None]
+    poss = [[w.position for w in wp] for wp in wps if wp is not None]
+    proxs = [[w.prox for w in wp] for wp in wps if wp is not None]
     for pos in poss:
         if not np.array_equal(pos, poss[0]):
             return False

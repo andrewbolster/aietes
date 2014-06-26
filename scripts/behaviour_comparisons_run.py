@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 __author__ = 'andrewbolster'
 
 from polybos import ExperimentManager as EXP
@@ -24,9 +25,9 @@ def set():
 
 
 def run(exp):
-    exp.run(title="8-bev-mal-64r-2000t",
-            runcount=16,
-            runtime=8000,
+    exp.run(title="8-bev-mal",
+            runcount=8,
+            runtime=400,
             dataFile=True)
     return exp
 
@@ -37,6 +38,15 @@ def set_run():
 if __name__ == "__main__":
     exp = set()
     exp = run(exp)
+    logpath = "{path}/{title}.log".format(path=exp.exp_path,title=exp.title.replace(' ','_'))
+    exp.dump_self()
     exp.dump_analysis()
-    with redirected(stdout="%s.log"%exp.title):
-        EXP.printStats(exp)
+    with redirected(stdout=logpath):
+        EXP.printStats(exp, verbose=True)
+
+    with open(logpath, 'r') as fin:
+        print fin.read()
+
+    print("Saved detection stats to {}".format(logpath))
+
+

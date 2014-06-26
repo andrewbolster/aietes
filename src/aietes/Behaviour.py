@@ -25,13 +25,25 @@ import numpy as np
 
 from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, agitate_position
 
-
 debug=True
+
+class _waypoint(object):
+    position=None
+    prox=None
+    def __init__(self, position, prox):
+        self.position=position
+        self.prox=prox
+    def __repr__(self):
+        return "({},{})".format(self.position,self.prox)
+
+waypoint = namedtuple("waypoint",['position','prox'])
+
 class Behaviour(object):
     """
     Generic Representation of a Nodes behavioural characteristics
     #TODO should be a state machine?
     """
+
 
     def __init__(self, *args, **kwargs):
         # TODO internal representation of the environment
@@ -367,7 +379,6 @@ class WaypointMixin():
     """
     Waypoint MixIn Class defines the general waypoint behaviour and includes the inner 'waypoint' object class.
     """
-    waypoint = namedtuple("waypoint",['position','prox'])
 
     def __init__(self, *args, **kwargs):
         self.waypoint_factor = listfix(float, self.bev_config.waypoint_factor)
@@ -396,7 +407,7 @@ class WaypointMixin():
             [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
              [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
         )
-        self.waypoints = [self.waypoint(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
+        self.waypoints = [waypoint(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
         self.nextwaypoint = 0
 
     def thereAndBackAgain(self):
@@ -405,7 +416,7 @@ class WaypointMixin():
         """
         shape = np.asarray(self.env_shape)
         prox = 50
-        self.waypoints = [self.waypoint(shape * (((vertex - 0.5) /3) + 0.5), prox) for vertex in np.asarray([[0.5,0,0.5],[0.5,0.5,0.5]])]
+        self.waypoints = [waypoint(shape * (((vertex - 0.5) /3) + 0.5), prox) for vertex in np.asarray([[0.5,0,0.5],[0.5,0.5,0.5]])]
         self.nextwaypoint = 0
 
     def waypointVector(self, position, velocity):
@@ -645,10 +656,10 @@ class FleetLawnmower(Flock, WaypointMixin):
                 axis = base_axis
             courses.append(self.per_node_lawnmower(sub_shape,swath=swath, altitude=mid_z, base_axis=axis))
 
-        self.waypoints = [self.waypoint(point,prox) for point in courses[self.node.nodenum]]
+        self.waypoints = [waypoint(point,prox) for point in courses[self.node.nodenum]]
         if not self.waypointloop:
             self.waypoints.append(
-                self.waypoint(
+                waypoint(
                     agitate_position(self.node.position.copy(), maximum=self.env_shape, var=prox*2),
                     prox*2)
             )

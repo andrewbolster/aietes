@@ -13,6 +13,7 @@
  * Contributors:
  *     Andrew Bolster, Queen's University Belfast
 """
+from __future__ import division
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
@@ -758,7 +759,7 @@ class ExperimentManager(object):
             self.scenarios.append(s)
 
     @staticmethod
-    def printStats(experiment):
+    def printStats(experiment, verbose=False):
         """
         Perform and print a range of summary experiment statistics including
             Fleet Distance (sum of velocities),
@@ -811,6 +812,7 @@ class ExperimentManager(object):
         for s in scenario_iterable:
             correctness_stats[s.title]=[]
             stats = [d.package_statistics() for d in s.datarun]
+            #stats = temp_pool.map(lambda d: d.package_statistics(),s.datarun)
             suspects = []
             if isinstance(s, Scenario):
                 # Running on a real scenario so use information we shouldn't have
@@ -821,34 +823,37 @@ class ExperimentManager(object):
                     for node in nodelist:
                             suspects.append(node)
             print("%s,%s" % (s.title, suspects))
-            print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
-                  % (avg_of_dict(stats, ['motion', 'fleet_distance']),
-                     avg_of_dict(stats, ['motion', 'fleet_efficiency']),
-                     avg_of_dict(stats, ['motion', 'std_of_INDA']),
-                     avg_of_dict(stats, ['motion', 'std_of_INDD']),
-                     avg_of_dict(stats, ['achievements', 'max_ach']),
-                     avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0))
+
 
             for i, r in enumerate(stats):
                 analysis = printAnalysis(s.datarun[i])
                 confident = analysis['trust_stdev'] > 100
                 correct_detection = (not bool(suspects) and not confident) or analysis['suspect_name'] in suspects
                 correctness_stats[s.title].append((correct_detection, confident))
-                print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%) %s, %s, %.2f, %.2f, %s" % (
-                    i,
-                    r['motion']['fleet_distance'], r['motion']['fleet_efficiency'],
-                    r['motion']['std_of_INDA'], r['motion']['std_of_INDD'],
-                    r['achievements']['max_ach'], r['achievements']['avg_completion'] * 100.0,
-                    "%s(%.2f)"%(str((correct_detection,confident)), analysis['trust_stdev']),
-                    analysis['suspect_name']+" %d"%analysis["suspect"],
-                    analysis['suspect_distruct'],
-                    analysis['suspect_confidence'],
-                    str(analysis["trust_average"])
-                )
+                if verbose:
+                    print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%) %s, %s, %.2f, %.2f, %s" % (
+                        i,
+                        r['motion']['fleet_distance'], r['motion']['fleet_efficiency'],
+                        r['motion']['std_of_INDA'], r['motion']['std_of_INDD'],
+                        r['achievements']['max_ach'], r['achievements']['avg_completion'] * 100.0,
+                        "%s(%.2f)"%(str((correct_detection,confident)), analysis['trust_stdev']),
+                        analysis['suspect_name']+" %d"%analysis["suspect"],
+                        analysis['suspect_distrust'],
+                        analysis['suspect_confidence'],
+                        str(analysis["trust_average"])
+                    )
                 )
 
+            print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
+              % (avg_of_dict(stats, ['motion', 'fleet_distance']),
+                 avg_of_dict(stats, ['motion', 'fleet_efficiency']),
+                 avg_of_dict(stats, ['motion', 'std_of_INDA']),
+                 avg_of_dict(stats, ['motion', 'std_of_INDD']),
+                 avg_of_dict(stats, ['achievements', 'max_ach']),
+                 avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0))
+
         # Print out Correctness stats per scenario
-        print("Scenario\t\t++\t+-\t--\t-+\t\t (Correct,Confident)")
+        print("Scenario\t\t++\t+-\t-+\t--\t\t (Correct,Confident)")
         cct=cnt=nct=nnt=0
         for run, stats in sorted(correctness_stats.items()):
             cc=sum([correct and confident for (correct,confident) in stats])
@@ -864,6 +869,30 @@ class ExperimentManager(object):
 
         print("Subtot\t\t\t%d\t%d\t%d\t%d"%(cct,cnt,nct,nnt))
         print("Total\t\t\t%d\t\t\t%d"%(cct+cnt,nct+nnt))
+
+        correct = cct+cnt
+        confident = cct+nct
+        incorrect = nct+nnt
+        unconfident = cnt+nnt
+        total = correct+incorrect
+        n_scenarios =  len(scenario_iterable)
+
+        print("Detection Accuracy pct with {} runs: {:.2%}".format(
+            total, correct/total
+        ))
+
+        print("False-Confidence pct with {} runs: {:.2%}".format(
+            total, nct/total
+        ))
+
+        print("True-Confidence pct with {} runs: {:.2%}".format(
+            total, cct/total
+        ))
+
+        print("True-Confidence pct with {} runs factoring in the Waypoint state (i.e. positive negatives or missed-detections via lack of confidence): {:.2%}".format(
+            total, (cnt-(total*(1/n_scenarios)))/total
+        ))
+
 
     def dump(self):
         """
@@ -886,6 +915,21 @@ class ExperimentManager(object):
             s.write()
 
         data_grapher(dir=self.exp_path, title=self.title)
+
+    def dump_self(self):
+        """
+        Attempt to dump the entire experiment state
+        """
+        try:
+            dumppath = os.path.abspath(os.path.join(self.exp_path, self.title+".exp"))
+            start = time.clock()
+            print("Writing Experiment to {}".format(dumppath))
+            pickle.dump(self, open(dumppath, 'wb'))
+            print("Done in %f seconds"%(time.clock()-start))
+        except Exception:
+            import traceback
+            print traceback.format_exc()
+            print "Pickle Failed Miserably"
 
 
     def dump_analysis(self):
