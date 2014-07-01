@@ -9,3 +9,4 @@ SimPy == 2.3.1
 pubsub
 futures
 joblib >=0.8.0a3
+openpyxl==1.8.6

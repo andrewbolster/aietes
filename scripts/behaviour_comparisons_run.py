@@ -5,7 +5,8 @@ from polybos import ExperimentManager as EXP
 from bounos import Analyses, _metrics
 
 from contextlib import contextmanager
-import sys
+import sys, os
+from subprocess import call
 
 @contextmanager
 def redirected(stdout):
@@ -26,8 +27,8 @@ def set():
 
 def run(exp):
     exp.run(title="8-bev-mal",
-            runcount=8,
-            runtime=400,
+            runcount=16,
+            runtime=600,
             dataFile=True)
     return exp
 
@@ -41,6 +42,7 @@ if __name__ == "__main__":
     logpath = "{path}/{title}.log".format(path=exp.exp_path,title=exp.title.replace(' ','_'))
     exp.dump_self()
     exp.dump_analysis()
+
     with redirected(stdout=logpath):
         EXP.printStats(exp, verbose=True)
 
@@ -48,5 +50,7 @@ if __name__ == "__main__":
         print fin.read()
 
     print("Saved detection stats to {}".format(logpath))
+    os.chdir(exp.exp_path)
+    call(['bounos','-M'])
 
 

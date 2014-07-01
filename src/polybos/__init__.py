@@ -947,3 +947,15 @@ class ExperimentManager(object):
             pickle.dump(stats,open(s_paths[i], "wb"))
             print("Done in %f seconds"%(time.clock()-start))
 
+    @classmethod
+    def write_analysis(exp):
+        """
+        big lazy multi-run write up that I'll change whenever I like
+
+        CURRENTLY DOES
+            Write intermediate fusion graphs for each scenario
+            Best (Worst if Waypoint behaviour) case fusion presentation across N scenarios
+        :param experiment:
+        :return:
+        """
+

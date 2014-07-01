@@ -27,6 +27,7 @@ from math import ceil
 from joblib import Parallel, delayed
 from natsort import natsorted
 import collections
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -106,13 +107,77 @@ def npz_in_dir(path):
     return sources
 
 
-def main():
+def custom_fusion_run(args, data, title):
+    # Write intermediate fusion graphs into directories for funzies
+    subgraphargs = deepcopy(args)
+    subgraphargs.output = 'png'
+    subgraphargs.title = title
+    subgraphargs.noplot = False
+    run_detection_fusion(data=data, args=subgraphargs)
+
+
+def custom_metric_run(args, data, title):
+    # Write intermediate fusion graphs into directories for funzies
+    subgraphargs = deepcopy(args)
+    subgraphargs.output = 'png'
+    subgraphargs.title = title
+    subgraphargs.noplot = False
+    run_metric_comparison(data=data, args=subgraphargs)
+
+def multirun(args, basedir=os.curdir):
     """
-    Initial Entry Point; Does very little other that option parsing
-    Raises:
-        ValueError if graph selection doesn't make any sense
+    :param args:
+    :return:
     """
-    global args
+    # If doing a multi-run with no given sources, assume we are 1 step away from NPZ's
+    if args.source is None:
+        sources = filter(os.path.isdir, map(os.path.abspath, os.listdir(basedir)))
+    args.noplot = True
+    get_confidence = lambda x: x['suspect_confidence']
+    get_distrust = lambda x: x['suspect_distrust']
+    get_name = lambda x: x['suspect_name']
+    panel = {}
+    best_runs = {}
+    for sourcedir in filter(os.path.isdir, sources):
+        name = os.path.split(sourcedir)[-1]
+        data = load_sources(npz_in_dir(sourcedir))
+        result_generator = Parallel(n_jobs=-1)(delayed(detect_and_identify)(d) for d in data.itervalues())
+        _, _, identification_list = zip(*result_generator)
+
+        # Write a standard fusion run back to the source dir. This might be removed later for speed.
+        custom_fusion_run(args, data, sourcedir)
+
+        keys = ['suspect_name', 'suspect_confidence', 'suspect_distrust']
+        frame = {}
+        for key in keys:
+            frame[key] = pd.Series(
+                [identification_dict[key] for identification_dict in identification_list]
+            )
+        frame = pd.DataFrame(frame)
+        anonframe = frame.drop('suspect_name', 1)
+        filterkey = 'suspect_confidence'
+        if "Waypoint" in name:
+            best_run_id = anonframe.idxmin(axis=0)[filterkey]
+        else:
+            best_run_id = anonframe.idxmax(axis=0)[filterkey]
+
+        # Data is an ordered dict so have to flatten it first
+        best_runs[name] = deepcopy(data.values()[best_run_id])
+
+        panel[name] = frame
+    panel = pd.Panel.from_dict(panel)
+    mkpickle("panel.pkl", panel)
+    mkpickle("bestruns.pkl", best_runs)
+    # ### Best Worse results plots
+    args.strip_title = True
+    args.annotate_achievements=1 # annotate achievements in metric, not fusion
+    plot_runner = custom_metric_run(data=best_runs, args=args, title="metric_run")
+
+    args.annotate_achievements=0 # annotate achievements in metric, not fusion
+    plot_runner = custom_fusion_run(data=best_runs, args=args, title="fusion_run")
+
+
+def custom_parser():
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description="Simulation Visualisation and Analysis Suite for AIETES",
@@ -122,7 +187,7 @@ def main():
                "    Plot metric fusion (trust fusion with lag-lead)\n"
                "        bounos --fusion --source Stuff.npz\n")
     parser.add_argument('--source', '-s',
-                        dest='source', action='store', nargs='+',default=None,
+                        dest='source', action='store', nargs='+', default=None,
                         metavar='XXX.npz',
                         help='AIETES Simulation Data Package to be analysed')
     parser.add_argument('--output', '-o',
@@ -174,12 +239,28 @@ def main():
                         dest='font_size', action='store', default=font['size'],
                         metavar=font['size'], type=int,
                         help="Change the Default Font size for axis labels")
-
-    parser.add_argument('--multirun','-M',
+    parser.add_argument('--multirun', '-M',
                         dest='multirun', action='store_true', default=False,
-                        help="Override normal behaviour to operate with <sources> as directories of simulation runs, to take the best and worst from each, and compare them together (implies fusion and no-noplot along with lots of other hacks)"
-    )
-    args = parser.parse_args()
+                        help="Override normal behaviour to operate with <sources> as directories of simulation runs, to take the best and worst from each, and compare them together (implies fusion and no-noplot along with lots of other hacks)")
+    parser.add_argument('--strip-title',
+                        dest='strip_title', action='store_true', default=False,
+                        help="Strip the title from the last '-', useful for eliminating run-numbers from graphs (only fusion)")
+    parser.add_argument('--annotate-achievements', dest='annotate_achievements',
+                        type=int, metavar='N',
+                        action='store', default=0,
+                        help="Annotate the N achievements with info text")
+    return parser
+
+
+def main():
+    """
+    Initial Entry Point; Does very little other that option parsing
+    Raises:
+        ValueError if graph selection doesn't make any sense
+    """
+    global args
+
+    args = custom_parser().parse_args()
 
     if args.xkcd:
         from XKCDify import XKCDify
@@ -187,45 +268,17 @@ def main():
         XKCDify = None
 
     if args.multirun:
-        # If doing a multi-run with no given sources, assume we are 1 step away from NPZ's
-        if args.source is None:
-            sources = filter(os.path.isdir, map(os.path.abspath,os.listdir(os.curdir)))
-        args.noplot = True
-
-        get_confidence = lambda x: x['suspect_confidence']
-        get_distrust = lambda x: x['suspect_distrust']
-        get_name = lambda x: x['suspect_name']
-
-        panel = {}
-
-        for sourcedir in filter(os.path.isdir, sources):
-            data = load_sources(npz_in_dir(sourcedir))
-            result_generator = Parallel(n_jobs=-1)(delayed(detect_and_identify)(d) for d in data.itervalues())
-            _,_,identification_list = zip(*result_generator)
-
-            keys = ['suspect_name','suspect_confidence','suspect_distrust']
-            frame = {}
-            for key in keys:
-                frame[key]=pd.Series(
-                    [identification_dict[key] for identification_dict in identification_list]
-                )
-            panel[os.path.split(sourcedir)[-1]]=pd.DataFrame(frame)
-
-        print panel
-        print pd.Panel(panel)
-        mkpickle("pnlpkl", pd.Panel.from_dict(panel))
-
-
+        multirun(args)
 
     else:
         # if sources is not given, use curdir
-        if isinstance(args.source, list):
+        if not args.source:
+            sources = npz_in_dir(os.curdir)
+        elif isinstance(args.source, list):
             sources = args.source
         else:
             sources = [args.source]
 
-        if not sources:
-            sources = npz_in_dir(os.curdir)
 
         data = load_sources(sources)
 
@@ -351,6 +404,9 @@ def run_detection_fusion(data, args=None):
 
     for i, (run, d) in enumerate(sorted(data.items())):
         deviation_fusion, deviation_windowed, identification_dict = detect_and_identify(d)
+        if args.strip_title and  '-' in d.title:
+            # Stripping from the last '-' from the title
+            d.title = '-'.join(d.title.split('-')[:-1])
 
         if topconfidence and topconfidence > identification_dict['suspect_confidence']:
             #Not top
@@ -380,12 +436,10 @@ def run_detection_fusion(data, args=None):
 
             ax.grid(True, alpha=0.2)
             ax.autoscale_view(scalex=False, tight=True)
-            # First Dataset Behaviour
-            if i == 0:
-                ax.set_ylabel(_metric.label)
-                # First Metric Behaviour (Title)
+            ax.set_ylabel(_metric.label)
+            # First Metric Behaviour (Title)
             if j == 0:
-                ax.set_title("{title}\n{confidence:.3f}/{distrust:.3f}".format(
+                ax.set_title("{title}\n$\sigma${confidence:.3f}/M-{distrust:.3f}".format(
                              title=str(d.title).replace("_", " "),
                              confidence=identification_dict['suspect_confidence'],
                              distrust=identification_dict['suspect_distrust'],
@@ -399,12 +453,12 @@ def run_detection_fusion(data, args=None):
                     leg_w = 1.0 / n_leg
                     leg_x = 0 + (leg_w * (i))
 
-                    ax.legend(d.names, "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
+                    ax.legend(sorted(d.names), "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
                               ncol=int(ceil(float(len(d.names) + 1) / (n_leg))))
                 #First Legend
                 elif i == 0:
-                    ax.legend(d.names, "lower center",
+                    ax.legend(sorted(d.names), "lower center",
                               bbox_to_anchor=(0, 0, 1, 1),
                               bbox_transform=fig.transFigure,
                               ncol=len(d.names))
@@ -414,7 +468,7 @@ def run_detection_fusion(data, args=None):
                 [l.set_visible(False) for l in ax.get_xticklabels()]
 
             if 'XKCDify' in sys.modules:
-                ax = XKCDify(ax)
+                ax = sys.modules.get("XKCDify")(ax)
             axes[i][j] = ax
         j = len(_metrics)
         ax = fig.add_subplot(gs[j, i],
@@ -423,7 +477,7 @@ def run_detection_fusion(data, args=None):
         ax.plot(deviation_windowed)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time ($s$)")
-        if i == 0: ax.set_ylabel("Fuzed Trust")
+        ax.set_ylabel("Fuzed Trust")
         axes[i][j] = ax
 
     if args.noplot:
@@ -462,9 +516,18 @@ def run_detection_fusion(data, args=None):
         show()
 
 
-def add_achievements(ax, d):
+def add_achievements(ax, d, annotate_achievements = False):
     if hasattr(d, "achievements"):
+
         for achievement in d.achievements.nonzero()[1]:
+            if annotate_achievements:
+                ax.annotate("Vertical lines show\n checkpoint passing points",
+                            xy=(achievement,0.75),
+                            xytext=(0.1,0.8),
+                            xycoords='data',
+                            textcoords='axes fraction',
+                            arrowprops=dict(arrowstyle="->"))
+                annotate_achievements=False
             ax.axvline(x=achievement, color='b', alpha=0.1)
 
 
@@ -493,7 +556,10 @@ def run_metric_comparison(data, args=None):
     per_run_names = len(namelist) / len(data) != len(nameset)
 
     axes = [[None for _ in range(len(_metrics))] for _ in range(len(data))]
-    for i, (run, d) in enumerate(data.iteritems()):
+    for i, (run, d) in enumerate(sorted(data.iteritems())):
+        if args.strip_title and '-' in d.title:
+            # Stripping from the last '-' from the title
+            d.title = '-'.join(d.title.split('-')[:-1])
         for j, _metric in enumerate(_metrics):
             metric = _metric(data=d)
             metric.update()
@@ -515,17 +581,19 @@ def run_metric_comparison(data, args=None):
                 ax.plot(metric.highlight_data, color='k', linestyle='--')
 
             if args.achievements:
-                add_achievements(ax, d)
+                if args.annotate_achievements>=1:
+                    add_achievements(ax, d, annotate_achievements=args.annotate_achievements)
+                    args.annotate_achievements -= 1
+                else:
+                    add_achievements(ax, d, annotate_achievements=args.annotate_achievements)
+
 
             if args is not None and args.attempt_detection:
                 plot_detections(ax, metric, d, shade_region=args.shade_region)
 
             ax.grid(True, alpha=0.2)
             ax.autoscale_view(scalex=False, tight=True)
-            # First Dataset Behaviour
-            if i == 0:
-                ax.set_ylabel(_metric.label)
-                # First Metric Behaviour (Title)
+            # First Metric Behaviour (Title)
             if j == 0:
                 ax.set_title(str(d.title).replace("_", " "))
                 # Last Metric Behaviour (Legend)
@@ -548,8 +616,6 @@ def run_metric_comparison(data, args=None):
                               ncol=len(d.names))
             else:
                 [l.set_visible(False) for l in ax.get_xticklabels()]
-            if 'XKCDify' in sys.modules:
-                ax = XKCDify(ax)
             axes[i][j] = ax
 
     # Now go left to right to adjust the scaling to match
@@ -659,9 +725,10 @@ def global_adjust(figure, axes, scale=2):
     """
     for axe in axes:
         for ax in axe:
-            ax.set_ylabel(ax.get_ylabel(), size=args.font_size)
+            if 'args' in locals():
+                ax.set_ylabel(ax.get_ylabel(), size=args.font_size)
             if 'XKCDify' in sys.modules:
-                ax = XKCDify(ax)
+                ax = sys.modules.get("XKCDify")(ax)
     figure.set_size_inches(figure.get_size_inches() * scale)
     figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
 

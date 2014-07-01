@@ -536,10 +536,10 @@ def nameGeneration(count, naming_convention=None, existing_names=None):
     existing_names = existing_names if existing_names is not None else []
 
     for n in range(count):
-        candidate_name = naming_convention[np.random.randint(0, len(naming_convention))]
-
+        candidate_name = naming_convention[n]
         while candidate_name in node_names or candidate_name in existing_names:
-            candidate_name = naming_convention[np.random.randint(0, len(naming_convention))]
+            n+=1
+            candidate_name = naming_convention[n]
 
         node_names.append(candidate_name)
     assert len(node_names) == count

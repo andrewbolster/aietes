@@ -113,8 +113,10 @@ class DataPackage(object):
                 except (AttributeError, KeyError) as exp:
                     self._handle_mapping_exceptions_(sink_attrib, source_attrib, "kwargs", exp)
         except (AttributeError, KeyError) as exp:
-            raise ValueError("Can't work out what the hell you want!: %s missing" %
-                             str([attr for attr in self._attrib_map.keys() if not kwargs.has_key(attr)])
+            raise ValueError("Inappropriate / incomplete source of type {} : {} missing" .format(
+                            type(source),
+                            str([attr for attr in self._attrib_map.keys() if not kwargs.has_key(attr)])
+                            )
             )
 
         self.tmax = int(kwargs.get("tmax", len(self.p[0][0])))
