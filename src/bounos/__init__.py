@@ -428,7 +428,7 @@ def run_detection_fusion(data, args=None):
             ax = fig.add_subplot(gs[j, i],
                                  sharex=axes[0][0] if i > 0 or j > 0 else None,
                                  sharey=axes[i - 1][j] if i > 0 else None)
-            ax.plot(deviation_fusion[j])
+            ax.plot(deviation_fusion[j], alpha=0.6)
 
 
             if args.achievements:
@@ -475,6 +475,7 @@ def run_detection_fusion(data, args=None):
                              sharex=axes[0][0] if i > 0 or j > 0 else None,
                              sharey=axes[i - 1][j] if i > 0 else None)
         ax.plot(deviation_windowed)
+        ax.grid(True, alpha=0.2)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time ($s$)")
         ax.set_ylabel("Fuzed Trust")
@@ -508,6 +509,21 @@ def run_detection_fusion(data, args=None):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
+    # Add  Annotation to Speed for Shadow mode
+    axes[1][2].annotate("Very few deviations \n in  node speed",
+                        xy=(780, 0.2),
+                        xytext=(0.6,0.6),
+                        xycoords='data',
+                        textcoords='axes fraction',
+                        arrowprops=dict(arrowstyle="->")
+                        )
+    axes[2][2].annotate("Consistent and periodic\n deviation in node speed",
+                        xy=(780, 0.75),
+                        xytext=(0.3,0.3),
+                        xycoords='data',
+                        textcoords='axes fraction',
+                        arrowprops=dict(arrowstyle="->")
+    )
     global_adjust(fig, axes)
 
     if args is not None and args.output is not None:
@@ -576,7 +592,7 @@ def run_metric_comparison(data, args=None):
             else:
                 sharedy = None
             ax = fig.add_subplot(gs[j, i], sharex=sharedx, sharey=sharedy)
-            ax.plot(metric.data, alpha=0.3)
+            ax.plot(metric.data, alpha=0.6)
             if metric.highlight_data is not None:
                 ax.plot(metric.highlight_data, color='k', linestyle='--')
 
