@@ -46,6 +46,10 @@ from pprint import pformat
 font = {'family': 'normal',
         'weight': 'normal',
         'size': 10}
+from matplotlib.ticker import FuncFormatter
+
+plot_alpha=0.9
+
 _metrics = [Metrics.Deviation_Of_Heading,
             Metrics.PerNode_Speed,
             Metrics.PerNode_Internode_Distance_Avg]
@@ -428,7 +432,7 @@ def run_detection_fusion(data, args=None):
             ax = fig.add_subplot(gs[j, i],
                                  sharex=axes[0][0] if i > 0 or j > 0 else None,
                                  sharey=axes[i - 1][j] if i > 0 else None)
-            ax.plot(deviation_fusion[j], alpha=0.6)
+            ax.plot(deviation_fusion[j], alpha=plot_alpha)
 
 
             if args.achievements:
@@ -474,8 +478,9 @@ def run_detection_fusion(data, args=None):
         ax = fig.add_subplot(gs[j, i],
                              sharex=axes[0][0] if i > 0 or j > 0 else None,
                              sharey=axes[i - 1][j] if i > 0 else None)
-        ax.plot(deviation_windowed)
         ax.grid(True, alpha=0.2)
+        ax.plot(pd.stats.moments.ewma((1-np.prod(deviation_fusion, axis=0))/3.0, halflife=100),
+                alpha=plot_alpha)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time ($s$)")
         ax.set_ylabel("Fuzed Trust")
@@ -510,19 +515,29 @@ def run_detection_fusion(data, args=None):
         fig.set_size_inches((int(d) for d in args.dims))
 
     # Add  Annotation to Speed for Shadow mode
-    axes[1][2].annotate("Very few deviations \n in  node speed",
-                        xy=(780, 0.2),
-                        xytext=(0.6,0.6),
-                        xycoords='data',
+    axes[0][1].annotate("Very few, minor\ndeviations in \nnode speed",
+                        xy=(0.75, 0.2),
+                        xytext=(0.8,0.6),
+                        xycoords='axes fraction',
                         textcoords='axes fraction',
-                        arrowprops=dict(arrowstyle="->")
-                        )
-    axes[2][2].annotate("Consistent and periodic\n deviation in node speed",
-                        xy=(780, 0.75),
+                        arrowprops=dict(arrowstyle="->"),
+                        ha='center', va = 'center'
+    )
+    axes[1][1].annotate("Consistent and periodic\ndeviation in node speed",
+                        xy=(0.7, 0.75),
+                        xytext=(0.25,0.3),
+                        xycoords='axes fraction',
+                        textcoords='axes fraction',
+                        arrowprops=dict(arrowstyle="->"),
+                        ha='center', va = 'center'
+    )
+    axes[2][3].annotate("Low and distributed deviations\nacross metrics leading to\nhigh trust assessment",
+                        xy=(0.8, 0.9),
                         xytext=(0.3,0.3),
-                        xycoords='data',
+                        xycoords='axes fraction',
                         textcoords='axes fraction',
-                        arrowprops=dict(arrowstyle="->")
+                        arrowprops=dict(arrowstyle="->"),
+                        ha='center', va = 'center'
     )
     global_adjust(fig, axes)
 
@@ -592,9 +607,9 @@ def run_metric_comparison(data, args=None):
             else:
                 sharedy = None
             ax = fig.add_subplot(gs[j, i], sharex=sharedx, sharey=sharedy)
-            ax.plot(metric.data, alpha=0.6)
+            ax.plot(metric.data, alpha=plot_alpha)
             if metric.highlight_data is not None:
-                ax.plot(metric.highlight_data, color='k', linestyle='--')
+                ax.plot(metric.highlight_data, color='k', linestyle='--', alpha=plot_alpha)
 
             if args.achievements:
                 if args.annotate_achievements>=1:
@@ -609,6 +624,7 @@ def run_metric_comparison(data, args=None):
 
             ax.grid(True, alpha=0.2)
             ax.autoscale_view(scalex=False, tight=True)
+            ax.set_ylabel(_metric.label)
             # First Metric Behaviour (Title)
             if j == 0:
                 ax.set_title(str(d.title).replace("_", " "))
@@ -630,8 +646,8 @@ def run_metric_comparison(data, args=None):
                               bbox_to_anchor=(0, 0, 1, 1),
                               bbox_transform=fig.transFigure,
                               ncol=len(d.names))
-            else:
-                [l.set_visible(False) for l in ax.get_xticklabels()]
+            # Turn off ALL metric xticks
+            [l.set_visible(False) for l in ax.get_xticklabels()]
             axes[i][j] = ax
 
     # Now go left to right to adjust the scaling to match
@@ -701,7 +717,7 @@ def run_overlay(data, args=None):
         else:
             pass
 
-        ax.plot(metrics, label=str(data[source].title).replace("_", " "))
+        ax.plot(metrics, label=str(data[source].title).replace("_", " "), alpha=plot_alpha)
         try:
             if args.attempt_detection:
                 ax.fill_between(range(len(metrics)),
@@ -739,12 +755,17 @@ def global_adjust(figure, axes, scale=2):
         figure(Figure): figure to be adjusted
         scale(int/float): adjust figure to scale (optional:2)
     """
+    def math_formatter(x, pos):
+        return "$%s$" % x
+
     for axe in axes:
         for ax in axe:
             if 'args' in locals():
                 ax.set_ylabel(ax.get_ylabel(), size=args.font_size)
             if 'XKCDify' in sys.modules:
                 ax = sys.modules.get("XKCDify")(ax)
+            ax.yaxis.set_major_formatter(FuncFormatter(math_formatter))
+
     figure.set_size_inches(figure.get_size_inches() * scale)
     figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
 

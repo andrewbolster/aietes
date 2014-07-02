@@ -228,7 +228,7 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
             deviance_accumulator[m, np.array(times), culprit] = (
                 np.abs(deviance[np.array(times), culprit] / stddev[np.array(times)]))
 
-    deviance_windowed_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
+    windowed_trust_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
     deviance_lag_lead_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
 
     for t in range(tmax):
@@ -236,9 +236,9 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
         deviance_lag_lead_accumulator[t] = np.sum(
             np.prod(deviance_accumulator[:, head:t, :], axis=0),
             axis=0)
-        deviance_windowed_accumulator[t] = deviance_lag_lead_accumulator[t] - (t - head)
+        windowed_trust_accumulator[t] = deviance_lag_lead_accumulator[t] - (t - head)
 
-    return deviance_accumulator, deviance_windowed_accumulator
+    return deviance_accumulator, windowed_trust_accumulator
 
 
 def behaviour_identification(deviance, trust, metrics, names=None, verbose=False):

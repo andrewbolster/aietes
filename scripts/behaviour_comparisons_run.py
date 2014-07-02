@@ -27,8 +27,8 @@ def set():
 
 def run(exp):
     exp.run(title="8-bev-mal",
-            runcount=16,
-            runtime=600,
+            runcount=4,
+            runtime=400,
             dataFile=True)
     return exp
 
