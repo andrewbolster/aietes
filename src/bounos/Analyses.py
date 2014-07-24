@@ -19,9 +19,10 @@ __email__ = "me@andrewbolster.info"
 __author__ = 'andrewbolster'
 
 import numpy as np
+from pandas.stats.moments import ewma
 
 from DataPackage import DataPackage
-
+from aietes.Tools import mkpickle
 
 def Find_Convergence(data, *args, **kwargs):
     """
@@ -42,6 +43,35 @@ def Find_Convergence(data, *args, **kwargs):
     detection_points = data
     metrics = data
     return detection_points, metrics
+
+
+def get_valid_metric(metric):
+    """
+    Returns an instantiated, valid, metric if possible.
+
+    Inspects the TOP of the MRO of an attempted class to check if it matches the class name (i.e. not the id)
+
+    issubclass doesn't work across execution instances  (i.e. saved data files / parralel execution)
+
+    Class structure of metric is expected to be [ something -> bounos.Metrics.Metric -> object ]
+    :param metric:
+    :return:
+    """
+    import bounos.Metrics as Metrics
+
+    metric_arg = metric
+    if isinstance(metric_arg, type) and hasattr(metric_arg,'mro') and metric_arg.mro()[-2].__name__ == 'Metric':
+        metric_class = metric_arg
+    elif isinstance(metric_arg, str):
+        metric_class = getattr(Metrics, metric_arg)
+    else:
+        raise ValueError("Invalid object give for metric, should be either subclass of bounos.Metrics.Metric or string: got type {} containing {}:{}".format(
+            type(metric_arg), metric_arg, metric_arg.__bases__
+        ))
+    metric = metric_class()
+    if metric is None:
+        raise ValueError("No Metric! Cannot Contine")
+    return metric
 
 
 def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
@@ -72,24 +102,8 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
             'metrics': as metric.data
                 Raw metric data
     """
-    import bounos.Metrics
+    metric = get_valid_metric(metric)
 
-    metric_arg = metric
-
-    if not isinstance(metric_arg, str) and issubclass(metric_arg, bounos.Metrics.Metric):
-        metric_class = metric_arg
-    else:
-        metric_name = metric_arg
-        print(type(metric_name))
-        try:
-            metric_class = getattr(bounos.Metrics, metric_name)
-        except Exception as e:
-            print(metric_name)
-            print(type(metric_name))
-            raise e
-    metric = metric_class()
-    if metric is None:
-        raise ValueError("No Metric! Cannot Contine")
     metric.update(data)
     # IND has the highlight data to be the average of internode distances
     #TODO implement scrolling stddev calc to adjust smearing value (5)
@@ -130,8 +144,8 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
                 rolling_detections[t].append(culprit)
 
             #Check if culprit is in all the last $envelope detection lists
-            if all(culprit in detection_list for detection_list in
-                   rolling_detections[t - confirmation_envelope:t]) and t > confirmation_envelope:
+            if all(culprit in detection_list for detection_list in rolling_detections[t - confirmation_envelope:t]) \
+                    and t > confirmation_envelope:
                 confirmed_detections[t].append(culprit)
 
     return {'detections': np.asarray(confirmed_detections),
@@ -164,23 +178,7 @@ def Deviation(data, *args, **kwargs):
     import bounos.Metrics
 
     metric_arg = kwargs.get("metric", "PerNode_Internode_Distance_Avg")
-    if not isinstance(metric_arg, str) and issubclass(metric_arg, bounos.Metrics.Metric):
-        metric_class = metric_arg
-    else:
-        metric_name = metric_arg
-        print(type(metric_name))
-        try:
-            metric_class = getattr(bounos.Metrics, metric_name)
-        except Exception as e:
-            print(metric_name)
-            print(type(metric_name))
-            raise e
-    metric = metric_class()
-    if metric is None:
-        raise ValueError("No Metric! Cannot Contine")
-    else:
-        print("Performing Deviation analysis with %s"
-              % (metric.__class__.__name__))
+    metric = get_valid_metric(metric_arg)
     metric.update(data)
     # IND has the highlight data to be the average of internode distances
     #TODO implement scrolling stddev calc to adjust smearing value (5)
@@ -200,7 +198,7 @@ def Deviation(data, *args, **kwargs):
             'metrics': metric.data}
 
 
-def Combined_Detection_Rank(data, metrics, *args, **kwargs):
+def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs):
     # Combine multiple metrics detections into a general trust rating per node over time.
     if not isinstance(metrics, list):
         raise ValueError("Should be passed a list of analyses")
@@ -211,7 +209,7 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
     n_nodes = data.n
     deviance_accumulator = np.zeros((n_met, tmax, n_nodes), dtype=np.float64)
 
-    deviance_accumulator.fill(1.0)
+    deviance_accumulator.fill(0.0)
     for m, metric in enumerate(metrics):
         # Get Detections, Stddevs, Misbehavors, Deviance from Detect_MisBehaviour
         if override_detection:
@@ -224,13 +222,23 @@ def Combined_Detection_Rank(data, metrics, *args, **kwargs):
 
         stddev, deviance = results['detection_envelope'], results['deviance']
 
-        for culprit, times in misbehavors.iteritems():
-            deviance_accumulator[m, np.array(times), culprit] = (
-                np.abs(deviance[np.array(times), culprit] / stddev[np.array(times)]))
+        # Using culprits as a filter only searches for distrust, not 'good behaviour'
+        if suspects_only:
+            for culprit, times in misbehavors.iteritems():
+                deviance_accumulator[m, np.array(times), culprit] = (
+                    np.abs(np.divide(deviance[np.array(times), culprit], stddev[np.array(times)].clip(min=np.finfo(np.float64).eps)))
+                )
+        else:
+            for culprit in xrange(n_nodes):
+                deviance_accumulator[m, : , culprit] = (
+                    np.abs(np.divide(deviance[:, culprit], stddev.clip(min=np.finfo(np.float64).eps)))
+                )
+
 
     windowed_trust_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
     deviance_lag_lead_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
 
+    # Prod-Sum smooth individual metrics based on a window
     for t in range(tmax):
         head = max(0, t - window)
         deviance_lag_lead_accumulator[t] = np.sum(
@@ -253,6 +261,7 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
     trust_average = np.average(trust, axis=0)
     trust_stdev = np.std(trust_average)
     prime_distrusted_node = np.argmax(trust_average)
+    mkpickle("trust", trust)
     if trust_stdev > 100:
         if verbose:
             print("Untrustworthy behaviour detected")
@@ -271,8 +280,93 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
               "detection_totals": detection_totals}
     return result
 
+def GRC_t(measurements, bias='zero', rho=0.5, w=None):
+    """
+    Grey relational coefficient calculation per time slice
+
+    measurement should be in [node,metric] order
+
+    Assumes that measurements are zero-based (i.e. deviation from norm).
+
+    Output is in the order [node,metric,[grc]]
+
+    :param measurements:
+    :return:
+    """
+
+    # Quick Checks
+    n_nodes, n_metrics = measurements.shape
+    zero_based = bias == 'zero'
+
+    # Take the best reference sequence
+
+    if zero_based:
+        g = np.zeros(n_metrics)
+    else:
+        g = np.min(measurements, axis=0)
+
+    # And the worst
+    b = np.max(measurements, axis=0)
+
+    def grc(delta):
+        """
+        GRC Inner function
 
 
+        :param delta:
+        :param rho:
+        :return:
+        """
+        delta = abs(delta)
+        upper = np.min(delta,axis=0) + (rho * np.max(delta, axis=0))
+        lower = (delta) + (rho * np.max(delta, axis=0))
+        with np.errstate(invalid='ignore', ):
+            parterval = np.divide(upper,lower)
+        return parterval
 
+    intervals = np.asarray(map(grc, [measurements-g,measurements-b]))
 
+    # Now we have the per-metric theta and sigmas
+    # return as [node,metric,[interval]]
+    return np.rollaxis(intervals,0,3)
 
+def GRG_t(c_intervals, weights=None):
+    """
+    Grey Relational Grade
+
+    Weighted sum given input structure
+
+        [node,metric,[interval]]
+
+    returns
+        [node, [interval]]
+    :param grcs:
+    :return:
+    """
+    return np.average(c_intervals, axis=1,weights=None)
+
+def T_kt(interval):
+    """
+    Generate a single trust value from a GRG
+    1/ (1+ sigma^2/theta^2)
+    :param interval:
+    :return:
+    """
+    theta, sigma = interval
+    return 1.0/(
+        1.0+(
+            np.power(sigma,2)/np.power(theta,2)
+            )
+    )
+
+def dev_to_trust(per_metric_deviations):
+    #rotate pmdev to node-primary ([node,metric])
+    per_node_deviations = np.rollaxis(per_metric_deviations,0,3)
+    grcs = map(GRC_t, per_node_deviations)
+    grgs = map(GRG_t, grcs)
+    trust_values = np.asarray([
+        np.asarray([
+            T_kt(interval) for interval in node
+        ]) for node in grgs
+    ])
+    return trust_values

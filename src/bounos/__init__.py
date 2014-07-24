@@ -32,9 +32,6 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 
-
-np.seterr(under="ignore")
-
 import Metrics
 import Analyses
 from DataPackage import DataPackage
@@ -145,8 +142,12 @@ def multirun(args, basedir=os.curdir):
     for sourcedir in filter(os.path.isdir, sources):
         name = os.path.split(sourcedir)[-1]
         data = load_sources(npz_in_dir(sourcedir))
-        result_generator = Parallel(n_jobs=-1)(delayed(detect_and_identify)(d) for d in data.itervalues())
-        _, _, identification_list = zip(*result_generator)
+        execute_generator = lambda d: detect_and_identify(d)
+        #execute_generator = lambda d: delayed(detect_and_identify(d))
+        result_generator = (execute_generator(d) for d in data.itervalues())
+        #result_generator = Parallel(n_jobs=-1)(execute_generator)
+        # TODO This is amazingly wasteful
+        _, _, _, identification_list = zip(*result_generator)
 
         # Write a standard fusion run back to the source dir. This might be removed later for speed.
         custom_fusion_run(args, data, sourcedir)
@@ -367,13 +368,14 @@ def plot_detections(ax, metric, orig_data,
 
 
 def detect_and_identify(d):
-    deviation_fusion, deviation_windowed = Analyses.Combined_Detection_Rank(d,
-                                                                            _metrics,
-                                                                            stddev_frac=2)
-    identification_dict = Analyses.behaviour_identification(deviation_fusion, deviation_windowed, _metrics,
+    per_metric_deviations, deviation_windowed = Analyses.Combined_Detection_Rank(d,
+                                                                                 _metrics,
+                                                                                 stddev_frac=2)
+    trust_values = Analyses.dev_to_trust(per_metric_deviations)
+    identification_dict = Analyses.behaviour_identification(per_metric_deviations, deviation_windowed, _metrics,
                                                             names=d.names,
                                                             verbose=False)
-    return deviation_fusion, deviation_windowed, identification_dict
+    return trust_values, per_metric_deviations, deviation_windowed, identification_dict
 
 
 def run_detection_fusion(data, args=None):
@@ -407,7 +409,7 @@ def run_detection_fusion(data, args=None):
 
 
     for i, (run, d) in enumerate(sorted(data.items())):
-        deviation_fusion, deviation_windowed, identification_dict = detect_and_identify(d)
+        trust_values, per_metric_deviations, deviation_windowed, identification_dict = detect_and_identify(d)
         if args.strip_title and  '-' in d.title:
             # Stripping from the last '-' from the title
             d.title = '-'.join(d.title.split('-')[:-1])
@@ -432,7 +434,7 @@ def run_detection_fusion(data, args=None):
             ax = fig.add_subplot(gs[j, i],
                                  sharex=axes[0][0] if i > 0 or j > 0 else None,
                                  sharey=axes[i - 1][j] if i > 0 else None)
-            ax.plot(deviation_fusion[j], alpha=plot_alpha)
+            ax.plot(per_metric_deviations[j], alpha=plot_alpha)
 
 
             if args.achievements:
@@ -479,8 +481,8 @@ def run_detection_fusion(data, args=None):
                              sharex=axes[0][0] if i > 0 or j > 0 else None,
                              sharey=axes[i - 1][j] if i > 0 else None)
         ax.grid(True, alpha=0.2)
-        ax.plot(pd.stats.moments.ewma((1-np.prod(deviation_fusion, axis=0))/3.0, halflife=100),
-                alpha=plot_alpha)
+        mkpickle("trust",trust_values)
+        ax.plot(np.asarray([pd.stats.moments.ewma(t, span=600) for t in trust_values.T]).T, alpha=plot_alpha)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time ($s$)")
         ax.set_ylabel("Fuzed Trust")
@@ -514,31 +516,7 @@ def run_detection_fusion(data, args=None):
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
 
-    # Add  Annotation to Speed for Shadow mode
-    axes[0][1].annotate("Very few, minor\ndeviations in \nnode speed",
-                        xy=(0.75, 0.2),
-                        xytext=(0.8,0.6),
-                        xycoords='axes fraction',
-                        textcoords='axes fraction',
-                        arrowprops=dict(arrowstyle="->"),
-                        ha='center', va = 'center'
-    )
-    axes[1][1].annotate("Consistent and periodic\ndeviation in node speed",
-                        xy=(0.7, 0.75),
-                        xytext=(0.25,0.3),
-                        xycoords='axes fraction',
-                        textcoords='axes fraction',
-                        arrowprops=dict(arrowstyle="->"),
-                        ha='center', va = 'center'
-    )
-    axes[2][3].annotate("Low and distributed deviations\nacross metrics leading to\nhigh trust assessment",
-                        xy=(0.8, 0.9),
-                        xytext=(0.3,0.3),
-                        xycoords='axes fraction',
-                        textcoords='axes fraction',
-                        arrowprops=dict(arrowstyle="->"),
-                        ha='center', va = 'center'
-    )
+
     global_adjust(fig, axes)
 
     if args is not None and args.output is not None:
@@ -775,3 +753,6 @@ def printAnalysis(d):
     deviation, trust = Analyses.Combined_Detection_Rank(d, _metrics, stddev_frac=2)
     result_dict = Analyses.behaviour_identification(deviation, trust, _metrics, names=d.names)
     return result_dict
+
+if __name__ == '__main__':
+    main()

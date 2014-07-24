@@ -641,7 +641,7 @@ def kwarger(**kwargs):
 def unpickle(filename):
     with open(filename, 'rb') as f:
         data=pickle.load(f)
-    return f
+    return data
 
 def mkpickle(filename, object):
     with open(filename, 'wb') as f:
