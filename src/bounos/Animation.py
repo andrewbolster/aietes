@@ -10,7 +10,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *     Andrew Bolster, Queen's University Belfast
+ *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
 __author__ = "Andrew Bolster"
 __license__ = "EPL"

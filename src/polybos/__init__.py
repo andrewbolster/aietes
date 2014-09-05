@@ -11,7 +11,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *     Andrew Bolster, Queen's University Belfast
+ *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
 from __future__ import division
 __author__ = "Andrew Bolster"
@@ -685,19 +685,19 @@ class ExperimentManager(object):
             s.addDefaultNode(node_count)
             self.scenarios.append(s)
 
-    def addVariableAttackerBehaviourSuite(self, behaviour_list, n_attackers=1):
+    def addMinorityNBehaviourSuite(self, behaviour_list, n_minority=1):
         """
         Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
 
         Args:
             behaviour_list(list): minority behaviours
-            n_attackers(int): number of minority attackers (optional)
+            n_minority(int): number of minority attackers in each scenario (optional)
         """
         for v in behaviour_list:
             s = Scenario(title="Behaviour(%s)" % (v),
                          default_config=self._default_scenario.generateConfigObj())
-            s.addCustomNode({"behaviour": v}, count=n_attackers)
-            s.addDefaultNode(count=self.node_count - n_attackers)
+            s.addCustomNode({"behaviour": v}, count=n_minority)
+            s.addDefaultNode(count=self.node_count - n_minority)
             self.scenarios.append(s)
 
     def addVariable2RangeScenario(self, v_dict):
@@ -749,7 +749,7 @@ class ExperimentManager(object):
             else:
                 s.addDefaultNode(count=invcount)
             self.scenarios.append(s)
-    def useDefaultScenario(self, runcount=1):
+    def addDefaultScenario(self, runcount=1):
         """
         Stick to the defaults
         """

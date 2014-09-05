@@ -14,7 +14,7 @@ def set_exp():
         'drifting':'DriftFactor',
         'ecea': 'Simple2'
     })
-    exp.useDefaultScenario()
+    exp.addDefaultScenario()
     exp.updateDuration(21600)
     return exp
 

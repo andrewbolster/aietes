@@ -10,7 +10,7 @@
  * http://www.eclipse.org/legal/epl-v10.html
  *
  * Contributors:
- *     Andrew Bolster, Queen's University Belfast
+ *     Andrew Bolster, Queen's University Belfast (-July 2013), University of Liverpool (Sept 2014-)
 """
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
@@ -237,7 +237,25 @@ class RandomWalk(Behaviour):
     def randomWalk(self, position, velocity):
         if angle_between(velocity, self.my_random_direction) < 0.2: #Roughly 6 degrees or pi/32 rad
             self.my_random_direction = random_three_vector()
-        return np.asarray(self.my_random_direction)
+        return np.asarray(self.my_random_direction
+
+        )
+    class RandomWalk(Behaviour):
+    """
+    Generic Wandering Behaviour on a plane
+    """
+    def __init__(self, *args, **kwargs):
+        Behaviour.__init__(self, *args, **kwargs)
+        self.behaviours.append(self.randomWalk)
+        self.wallCheckDisabled = True
+        self.my_random_direction = random_xy_vector()
+
+    def randomWalk(self, position, velocity):
+        if angle_between(velocity, self.my_random_direction) < 0.2: #Roughly 6 degrees or pi/32 rad
+            self.my_random_direction = random_xy_vector()
+        return np.asarray(self.my_random_direction
+
+        )
 
 class Nothing(Behaviour):
     """

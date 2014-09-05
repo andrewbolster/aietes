@@ -16,12 +16,26 @@ def redirected(stdout):
     sys.stdout = saved_stdout
 
 def set():
-    exp = EXP(node_count=8,
-              title="Malicious Behaviour Trust Comparison",
+    exp = EXP(node_count=6,
+              title="Comms Behaviour Testing Scenarios",
               parallel=True,
               future=True
              )
-    exp.addMinorityNBehaviourSuite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
+
+    default_updates = {
+        'behaviour':"StationKeep",
+        'positioning':"randomPlane"
+    }
+    # Set the default behaviour to static
+    exp.updateDefaultBehaviour("StationKeep")
+    # Scenario 1: All static
+    exp.addDefaultScenario()
+    # Scenario 2: 1 mobile
+    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=1)
+    # Scenario 3: n-1 mobile
+    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=exp.node_count-1)
+    # Scenario 2: n mobile
+    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=exp.node_count)
     return exp
 
 

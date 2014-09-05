@@ -13,7 +13,7 @@ def set_exp():
         'positioning':'surface',
         'drifting':'DriftFactorPy',
     })
-    exp.useDefaultScenario()
+    exp.addDefaultScenario()
     exp.updateDuration(21600)
     return exp
 
