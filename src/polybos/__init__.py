@@ -685,7 +685,7 @@ class ExperimentManager(object):
             s.addDefaultNode(node_count)
             self.scenarios.append(s)
 
-    def addMinorityNBehaviourSuite(self, behaviour_list, n_minority=1):
+    def addMinorityNBehaviourSuite(self, behaviour_list, n_minority=1, title="Behaviour"):
         """
         Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
 
@@ -694,13 +694,13 @@ class ExperimentManager(object):
             n_minority(int): number of minority attackers in each scenario (optional)
         """
         for v in behaviour_list:
-            s = Scenario(title="Behaviour(%s)" % (v),
+            s = Scenario(title="%s(%s)" % (title,v),
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({"behaviour": v}, count=n_minority)
             s.addDefaultNode(count=self.node_count - n_minority)
             self.scenarios.append(s)
 
-    def addVariable2RangeScenario(self, v_dict):
+    def addVariable2RangeScenarios(self, v_dict):
         """
         Add a 2dim range of scenarios based on a dictionary of value ranges.
         This generates a meshgrid and samples scenarios across the 2dim space
@@ -726,7 +726,7 @@ class ExperimentManager(object):
             s.addCustomNode(d, count=self.node_count)
             self.scenarios.append(s)
 
-    def addRatioScenario(self, badbehaviour, goodbehaviour=None):
+    def addRatioScenarios(self, badbehaviour, goodbehaviour=None):
         """
         Add scenarios based on a ratio of behaviours of identical nodes
 
@@ -749,12 +749,13 @@ class ExperimentManager(object):
             else:
                 s.addDefaultNode(count=invcount)
             self.scenarios.append(s)
-    def addDefaultScenario(self, runcount=1):
+    def addDefaultScenario(self, runcount=1, title=None):
         """
         Stick to the defaults
         """
         for i in range(runcount):
-            s= Scenario(default_config=self._default_scenario.generateConfigObj(), title="{}({})".format(self.title,i))
+            s= Scenario(default_config=self._default_scenario.generateConfigObj(),
+                        title=title if title is not None else "{}({})".format(self.title,i))
             s.addDefaultNode(self.node_count)
             self.scenarios.append(s)
 

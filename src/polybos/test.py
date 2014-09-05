@@ -29,7 +29,7 @@ class ScenarioGeneration(unittest.TestCase):
         count = 4
         behaviour = "Flock"
         with polybos.ExperimentManager(node_count=count) as e:
-            e.addRatioScenario(behaviour)
+            e.addRatioScenarios(behaviour)
             self.assertEqual(len(e.scenarios), count + 1)
             s = e.scenarios[count / 2]
         self.assertEqual(len(s.getBehaviourDict()[behaviour]), count / 2)
@@ -42,7 +42,7 @@ class ScenarioGeneration(unittest.TestCase):
         runtime = 100
         behaviour = "Flock"
         with polybos.ExperimentManager(node_count=count, parralel=True) as e:
-            e.addRatioScenario(behaviour)
+            e.addRatioScenarios(behaviour)
             e.run(runcount=runcount,
                   runtime=runtime)
             multistats = e.generateSimulationStats()
@@ -57,7 +57,7 @@ class ScenarioGeneration(unittest.TestCase):
         runtime = 100
         behaviour = "Flock"
         with polybos.ExperimentManager(node_count=count) as e:
-            e.addRatioScenario(behaviour)
+            e.addRatioScenarios(behaviour)
             e.run(runcount=runcount,
                   runtime=runtime)
             multistats = e.generateSimulationStats()

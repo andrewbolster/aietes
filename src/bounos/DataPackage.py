@@ -659,5 +659,9 @@ class DataPackage(object):
                                             writer='imagemagick', bitrate=-1, fps=fps)
         return plt, return_dict
 
+    def plot_axes_views(self):
+        """
 
+        :return:
+        """
 

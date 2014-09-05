@@ -23,7 +23,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, agitate_position
+from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
 debug=True
 
@@ -240,7 +240,7 @@ class RandomWalk(Behaviour):
         return np.asarray(self.my_random_direction
 
         )
-    class RandomWalk(Behaviour):
+class RandomWalk(Behaviour):
     """
     Generic Wandering Behaviour on a plane
     """

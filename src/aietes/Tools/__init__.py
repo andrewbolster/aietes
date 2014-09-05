@@ -212,9 +212,7 @@ def random_xy_vector():
     this is a horrible cheat but it works.
     :return:
     """
-    result = random_three_vector()
-    result[2]=0.0
-    return result
+    return (random_three_vector()[0:2]+(0,))
 
 def sixvec(xyz):
     ptsnew = np.hstack((xyz, np.zeros(xyz.shape)))

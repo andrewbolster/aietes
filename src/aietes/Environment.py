@@ -71,18 +71,18 @@ class Environment():
         """
         is_empty = False
         if on_a_plane:
-            z_plane = np.random.uniform(buff, self.shape[2]-buff)
+            z_plane = self.shape[2]/2.0
 
         while not is_empty:
             ran_x = np.random.uniform(buff, self.shape[0]-buff)
             ran_y = np.random.uniform(buff, self.shape[1]-buff)
             ran_z = np.random.uniform(buff, self.shape[2]-buff) if not on_a_plane else z_plane
-            candidate_pos = self.position_around(np.asarray((ran_x, ran_y, ran_z)))
+            candidate_pos = self.position_around(np.asarray((ran_x, ran_y, ran_z)),on_a_plane=on_a_plane)
             is_empty = self.is_empty(candidate_pos)
 
         return candidate_pos
 
-    def position_around(self, position=None, stddev=30):
+    def position_around(self, position=None, stddev=30, on_a_plane=False):
         """
         Return a nearly-random map entry within the environment volume around a given position
         """
@@ -106,6 +106,9 @@ class Environment():
             while not valid:
                 candidate_pos = np.random.normal(np.asarray(position), [stddev,stddev,stddev/3])
                 candidate_pos = np.asarray(candidate_pos, dtype=int)
+                # if generating a position on a plane, retain the zaxis
+                if on_a_plane:
+                    candidate_pos[2]=position[2]
                 valid = self.is_safe(candidate_pos, 50)
                 if debug:
                     self.logger.debug("Candidate position: %s:%s" % (candidate_pos, valid))

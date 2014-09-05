@@ -27,20 +27,20 @@ def set():
         'positioning':"randomPlane"
     }
     # Set the default behaviour to static
-    exp.updateDefaultBehaviour("StationKeep")
+    exp.updateDefaultNode(default_updates)
     # Scenario 1: All static
-    exp.addDefaultScenario()
+    exp.addDefaultScenario(title="Scenario1")
     # Scenario 2: 1 mobile
-    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=1)
+    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=1,title="Scenario2")
     # Scenario 3: n-1 mobile
-    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=exp.node_count-1)
+    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=exp.node_count-1,title="Scenario3")
     # Scenario 2: n mobile
-    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=exp.node_count)
+    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=exp.node_count,title="Scenario4")
     return exp
 
 
 def run(exp):
-    exp.run(title="8-bev-mal",
+    exp.run(title="Mobi-static scenarios",
             runcount=4,
             runtime=400,
             dataFile=True)
@@ -55,16 +55,16 @@ if __name__ == "__main__":
     exp = run(exp)
     logpath = "{path}/{title}.log".format(path=exp.exp_path,title=exp.title.replace(' ','_'))
     exp.dump_self()
-    exp.dump_analysis()
+    #exp.dump_analysis()
 
-    with redirected(stdout=logpath):
-        EXP.printStats(exp, verbose=True)
+    #with redirected(stdout=logpath):
+    #    EXP.printStats(exp, verbose=True)
 
     with open(logpath, 'r') as fin:
         print fin.read()
 
     print("Saved detection stats to {}".format(logpath))
     os.chdir(exp.exp_path)
-    call(['bounos','-M'])
+    #call(['bounos','-M'])
 
 
