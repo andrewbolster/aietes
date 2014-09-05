@@ -482,6 +482,7 @@ def run_detection_fusion(data, args=None):
                              sharey=axes[i - 1][j] if i > 0 else None)
         ax.grid(True, alpha=0.2)
         mkpickle("trust",trust_values)
+        # TODO TRY WITHOUT EWMA
         ax.plot(np.asarray([pd.stats.moments.ewma(t, span=600) for t in trust_values.T]).T, alpha=plot_alpha)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time ($s$)")

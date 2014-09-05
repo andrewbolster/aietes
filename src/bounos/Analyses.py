@@ -251,7 +251,8 @@ def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs)
 
 def behaviour_identification(deviance, trust, metrics, names=None, verbose=False):
     """
-    Attempts to detect and guess malicious/'broken' behaviour
+    #TODO THIS DOES NOT IDENTIFY BEHAVIOUR
+    Attempts to detect and guess malicious/'broken' node
     Deviance is unitless, in a shape [metrics,t,nodes]
     """
     detection_sums = np.sum(deviance, axis=1) - deviance.shape[1] #Removes the 1.0 initial bias

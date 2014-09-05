@@ -470,6 +470,12 @@ class SoloWaypoint(Nothing, WaypointMixin):
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
+class StationKeep(Nothing):
+    """
+    Simple behaviour that represents a station-keeping state / buoy.
+    """
+    def __init__(self, *args, **kwargs):
+        Nothing.__init__(self,*args, **kwargs)
 
 class FleetLawnmower(Flock, WaypointMixin):
     """
