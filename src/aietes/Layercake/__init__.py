@@ -85,10 +85,11 @@ class Layercake():
             raise ConfigError("Can't find Network: %s" % config['net'])
 
 
-    def activate(self):
+    def activate(self, rx_handler=None):
         """
         Fired on Sim Start
         """
+        self.app_rx_handler = rx_handler
         self.mac.activate()
 
     def send(self, payload):
@@ -101,5 +102,8 @@ class Layercake():
         """
         Trigger reception action from below
         """
-        self.app.recv()
+        if self.app_rx_handler:
+            self.app_rx_handler(payload)
+        else:
+            raise NotImplementedError("No App RX Handler configured")
 

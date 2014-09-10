@@ -44,8 +44,6 @@ memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
 logging.basicConfig(level=logging.ERROR)
 np.seterr(all='raise', under='warn')
-# from os import urandom as randomstr #Provides unicode random String
-
 
 debug = False
 FUDGED = False
@@ -75,8 +73,6 @@ class ConfigError(Exception):
 # 170dB re uPa is the sound intensity created over a sphere of 1m by a
 # radiated acoustic power of 1 Watt with the source in the center
 I_ref = 172.0
-# Speed of sound in water (m/s)
-speed_of_sound = 1482
 # Transducer Capacity (Arbitrary)
 transducer_capacity = 1000
 broadcast_address = 'Any'
@@ -680,7 +676,7 @@ def results_file(proposed_name):
 
 def validateConfig(config=None, final_check=False):
     """
-    Generate valid configuration information by interpolating a given config
+    Generate valid confobj configuration information by interpolating a given config
     file with the defaults
 
     NOTE: This does not verify if any of the functionality requested in the config is THERE

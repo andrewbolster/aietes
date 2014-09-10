@@ -199,7 +199,7 @@ class Node(Sim.Process):
             launch_args = {}
         self.app.activate()
         if self.app.layercake:
-            self.layercake.activate()
+            self.layercake.activate(self.app.recv)
 
         # Messy nasty way to deal with some behaviours that need activating
         if hasattr(self.behaviour,'activate'):

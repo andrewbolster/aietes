@@ -40,6 +40,10 @@ class DataPackage(object):
     """
     _attrib_map = {'p': 'positions',
                    'v': 'vectors',
+                   'plr': 'plr',
+                   'rssi': 'rssi',
+                   'data_rate': 'data_rate',
+                   'delay': 'delay',
                    'names': 'names',
                    'contributions': 'contributions',
                    'achievements': 'achievements',

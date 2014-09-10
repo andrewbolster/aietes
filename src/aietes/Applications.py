@@ -67,6 +67,10 @@ class Application(Sim.Process):
     def activate(self):
         Sim.activate(self, self.lifecycle())
 
+    def tick(self):
+        """ Method called at each simulation instance"""
+        pass
+
     def lifecycle(self, destination=None):
 
         if destination is None:
@@ -144,6 +148,15 @@ class AccessibilityTest(Application):
         assert isinstance(packet, AppPacket)
         del packet
 
+CommsTrust = AccessibilityTest
+# class CommsTrust(Application):
+#     Trust = collections.namedtuple('Trust', ['plr','rssi','delay','throughput'])
+#     my_trust = Trust()
+#     network_trust = []
+#     def tick(self):
+#         pass
+#     def packetGen(self, period, destination, *args, **kwargs):
+#         data =
 
 class Null(Application):
     HAS_LAYERCAKE = False

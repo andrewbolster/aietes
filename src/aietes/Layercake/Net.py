@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 from Packet import RoutePacket
 from aietes.Tools import debug
 
-debug = True
+debug = False
 
 
 class RoutingTable():
@@ -58,8 +58,8 @@ class RoutingTable():
         if not self.hasDuplicate(packet):
             self.packets.add(packet.id)
             if packet.next_hop == packet.destination:
-                if packet.destination == self.host.name:
-                    self.layercake.recv(self.incoming_packet)
+                if packet.isFor(self.host):
+                    self.layercake.recv(packet)
             else:
                 self.logger.error("Don't know what to do with packet " + packet.data + " from " + \
                                   packet.source + " going to " + packet.destination + " with hop " + packet.next_hop)

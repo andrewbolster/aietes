@@ -82,15 +82,19 @@ class Simulation():
 
         self.config_file = kwargs.get("config_file", None)
         self.config = kwargs.get("config", None)
+
+        # If given nothing, assume default.conf
         if self.config_file is None and self.config is None:
             self.logger.info("creating instance from default")
             self.config = validateConfig(None)
             self.config = self.generateConfig(self.config)
+        # If given a manual, **string** config, use it.
         elif self.config_file is None and self.config is not None:
             self.logger.info("using given config")
             config = validateConfig(self.config, final_check=True)
             config['Node']['Nodes'].pop('__default__')
             self.config = dotdict(config.dict())
+        # Otherwise the config is (hopefully) in a given file
         else:
             if os.path.isfile(self.config_file):
                 self.logger.info("creating instance from %s" % self.config_file)
@@ -209,6 +213,9 @@ class Simulation():
     def currentState(self):
         positions = []
         vectors = []
+        plr = []
+        data_rate = []
+
         names = []
         contributions = []
         achievements = []
@@ -375,22 +382,25 @@ class Simulation():
             naming_convention=config_dict.Node.naming_convention
         )
         node_names = auto_node_names + pre_node_names
+        try:
+            # Give defaults to all
+            for node_name in node_names:
+                # Bare Dict/update instead of copy()
+                nodes_config[node_name] = {}
+                update(nodes_config[node_name], node_default_config_dict.copy())
 
-        # Give defaults to all
-        for node_name in node_names:
-            # Bare Dict/update instead of copy()
-            nodes_config[node_name] = {}
-            update(nodes_config[node_name], node_default_config_dict.copy())
+            # Give auto-config default
+            for node_name, node_app in zip(auto_node_names, applications):
+                # Add derived application
+                nodes_config[node_name]['app'] = str(node_app)
 
-        # Give auto-config default
-        for node_name, node_app in zip(auto_node_names, applications):
-            # Add derived application
-            nodes_config[node_name]['app'] = str(node_app)
+            # Overlay Preconfigured with their own settings
+            for node_name, node_config in config_dict.Node.Nodes.items():
+                # Import the magic!
+                update(nodes_config[node_name],node_config.copy())
+        except AttributeError as e:
+            raise ConfigError("Probably a value conflict in a config file"), None, traceback.print_tb(sys.exc_info()[2])
 
-        # Overlay Preconfigured with their own settings
-        for node_name, node_config in config_dict.Node.Nodes.items():
-            # Import the magic!
-            update(nodes_config[node_name],node_config.copy())
 
         #
         # Confirm
@@ -520,11 +530,18 @@ class Simulation():
 
 
 def go(options, args=None):
-    logging.basicConfig(level=logging.INFO)
+    if options.quiet:
+        logtoconsole=logging.ERROR
+    elif options.verbose:
+        logtoconsole=logging.DEBUG
+    else:
+        logtoconsole=logging.INFO
+
+    logging.basicConfig(level=logtoconsole)
     sim = Simulation(config_file=options.config,
                      title=options.title,
-                     logger=logging.getLogger('Aietes'),
-                     logtoconsole=logging.ERROR if options.quiet else logging.INFO,
+                     logger=logging.getLogger(),
+                     logtoconsole=logtoconsole,
                      progress_display=not options.quiet
     )
 
@@ -552,7 +569,7 @@ def option_parser():
         usage=globals()['__doc__'],
         version='$Id: py.tpl 332 2008-10-21 22:24:52Z root $')
     parser.add_option('-q', '--quiet', action='store_true',
-                      default=True, help='quiet output')
+                      default=False, help='quiet output')
     parser.add_option('-v', '--verbose', action='store_true',
                       default=False, help='verbose output')
     parser.add_option('-P', '--profile', action='store_true',
@@ -591,8 +608,6 @@ def main():
         start_time = time()
         (options, args) = option_parser().parse_args()
         exit_code = 0
-        if options.verbose:
-            print time.asctime()
         if options.title is None:                               # if no custom title
             if options.config is not None:                      # and have a config
                 options.title = os.path.splitext(os.path.splitext(os.path.basename(options.config))[0])[

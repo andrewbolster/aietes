@@ -165,4 +165,10 @@ class ECEA_Error(Metric):
     def generator(self, data):
         self.highlight_data = data.drift_RMS(source="intent")
         return data.drift_error(source="intent").swapaxes(0,1)
-
+#
+# class Packet_Loss_Rate(Metric):
+#     label = "Packet Loss Rate (%p\%%)"
+#     signed = False
+#
+#     def generator(self, data):
+#         return data.plr()

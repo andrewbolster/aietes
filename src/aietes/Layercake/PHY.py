@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 from aietes.Tools import *
 from Packet import PHYPacket
 
-debug = False
+debug = True
 
 #####################################################################
 # Physical Layer
@@ -101,8 +101,7 @@ class PHY():
         """Function called from upper layers to send packet
         """
         if not self.isIdle():
-            self.PrintMessage(
-                "I should not do this... the channel is not idle!") # The MAC protocol is the one that should check this before transmitting
+            self.logger.warn("Channel is not idle!") # The MAC protocol is the one that should check this before transmitting
 
         self.collision = False
 
@@ -271,6 +270,9 @@ class ArrivalScheduler(Sim.Process):
     """
 
     def schedule_arrival(self, transducer, params, pos):
+        """Params is the channel event (packet tx) parameters set in PHYPacket.send()"""
+        debug = False
+
         packet = params['packet']
         if debug:    transducer.logger.debug("Scheduling Arrival of packet %s from %s at %s" % \
                                              (packet.data,
@@ -281,15 +283,16 @@ class ArrivalScheduler(Sim.Process):
         distance_to = distance(pos, params['pos'])
 
         if distance_to > 0.01:  # I should not receive my own transmissions
-            attenuation_loss = Attenuation(params["frequency"], distance_to)
+            attenuation_loss_db = Attenuation(params["frequency"], distance_to)
 
-            receive_power_db = Linear2DB(params["power"]) - attenuation_loss
-            travel_time = distance_to / speed_of_sound  # Speed of sound in water = 1482.0 m/s
+            receive_power_db = params["power"] - attenuation_loss_db
+            travel_time = distance_to / params["speed"]
 
             receive_power = DB2Linear(receive_power_db)
 
-            transducer.logger.debug("Packet from %s to %s will take %s to cover %s" % (
-            packet.source, packet.destination, travel_time, distance_to))
+            # transducer.logger.debug("Packet from %s to %s will take %s to cover %s" % (
+            #     packet.source, packet.destination, travel_time, distance_to)
+            # )
 
             yield Sim.hold, self, travel_time
 
@@ -300,6 +303,7 @@ class ArrivalScheduler(Sim.Process):
             Sim.activate(new_incoming_packet,
                          new_incoming_packet.recv(transducer=transducer, duration=params["duration"]))
         else:
-            transducer.logger.debug("Transmission too close")
+            #transducer.logger.debug("Transmission too close")
+            pass
 
 

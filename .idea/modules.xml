@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/aietes.iml" filepath="$PROJECT_DIR$/.idea/aietes.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../auvnetsim-code/.idea/auvnetsim-code.iml" filepath="$PROJECT_DIR$/../auvnetsim-code/.idea/auvnetsim-code.iml" />
     </modules>
   </component>
 </project>

@@ -22,7 +22,7 @@ from aietes.Tools import debug, Sim
 from aietes.Tools.FSM import *
 
 
-debug = True
+debug = False
 
 
 class MAC():
@@ -137,7 +137,7 @@ class MAC():
         Sends packet up to higher level
         """
         origin = self.incoming_packet.last_sender()
-        self.logger.info("RX-d packet from %s" % origin)
+        self.logger.info("RX-d packet from %s" % origin['name'])
 
         if self.layercake.net.explicitACK(self.incoming_packet) \
             or len(self.outgoing_queue) != 0 \
