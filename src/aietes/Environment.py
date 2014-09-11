@@ -65,7 +65,7 @@ class Environment():
         self.logger.debug('creating instance')
 
 
-    def random_position(self, want_empty=True, on_a_plane=False, buff=250):
+    def random_position(self, want_empty=True, on_a_plane=False, buff=30):
         """
         Return a random empty map reference within the environment volume
         """

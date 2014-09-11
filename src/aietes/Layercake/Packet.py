@@ -160,6 +160,11 @@ class PHYPacket(Sim.Process, Packet):
     """
 
     def __init__(self, packet, power):
+        """
+        :param packet: Upper level packet being encapsulated
+        :param power: linear power (mW)
+        :return:
+        """
         Packet.__init__(self, packet)
         Sim.Process.__init__(self, name=self.__class__.__name__)
         self.doomed = False
@@ -220,10 +225,10 @@ class PHYPacket(Sim.Process, Packet):
             yield Sim.hold, self, duration
             yield Sim.release, self, transducer
 
-            self.logger.debug("RX from %s with power %e: %s" % (
-                self.source, self.power, self.data))
+            self.logger.debug("RX from %s with power %.2fdB: %s" % (
+                self.source, Linear2DB(self.power), self.data))
             # Even if a packet is not received properly, we have consumed power
-            transducer.phy.rx_energy += DB2Linear(self.power) * duration #TODO shouldn't this be listen power?
+            transducer.updatePowerOnRecieve(duration)
         else:
             self.logger.debug("RX from %s with power %e below lis" % (
             self.source, self.power))

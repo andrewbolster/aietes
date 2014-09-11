@@ -168,17 +168,17 @@ class Transducer(Sim.Resource):
 
         [x.updateInterference(self.interference) for x in self.activeQ]
 
-    def _request(self, arg):
+    def _request(self, event):
         """Overiding SimPy's to update interference information upon queuing of a new incoming packet from the channel
         """
-        Sim.Resource._request(self, arg)
+        Sim.Resource._request(self, event)
         #Arg[1] is a reference to the newly queued incoming packet
-        self.updateInterference(arg[1])
+        self.updateInterference(event[1])
 
     # Override SimPy Resource's "_release" function to update SIR for all incoming messages.
-    def _release(self, arg):
+    def _release(self, event):
         # "arg[1] is a reference to the Packet instance that just completed
-        packet = arg[1]
+        packet = event[1]
         assert isinstance(packet, PHYPacket), \
             "%s is not a PHY Packet" % str(packet)
         doomed = packet.doomed
@@ -193,7 +193,7 @@ class Transducer(Sim.Resource):
         self.interference = max(self.interference, self.phy.ambient_noise)
 
         # Delete this from the transducer queue by calling the Parent form of "_release"
-        Sim.Resource._release(self, arg)
+        Sim.Resource._release(self, event)
 
         # If it isn't doomed due to transmission & it is not interfered
         if minSIR > 0:
@@ -235,6 +235,13 @@ class Transducer(Sim.Resource):
 
     def postTX(self):
         self.transmitting = False
+
+    def updatePowerOnRecieve(self, duration):
+        """
+        :param duration: Length of time in an RX state
+        :return: none
+        """
+        self.phy.rx_energy+=DB2Linear(self.phy.receive_power) * duration
 
 
 #####################################################################
@@ -283,12 +290,12 @@ class ArrivalScheduler(Sim.Process):
         distance_to = distance(pos, params['pos'])
 
         if distance_to > 0.01:  # I should not receive my own transmissions
-            attenuation_loss_db = Attenuation(params["frequency"], distance_to)
+            attenuation_loss = Attenuation(params["frequency"], distance_to)
 
-            receive_power_db = params["power"] - attenuation_loss_db
+            receive_power = params["power"] - attenuation_loss
             travel_time = distance_to / params["speed"]
 
-            receive_power = DB2Linear(receive_power_db)
+            receive_power = DB2Linear(receive_power)
 
             # transducer.logger.debug("Packet from %s to %s will take %s to cover %s" % (
             #     packet.source, packet.destination, travel_time, distance_to)

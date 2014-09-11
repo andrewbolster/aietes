@@ -111,7 +111,7 @@ class Application(Sim.Process):
             self.packet_log[source] = [packet]
         delay = Sim.now() - packet.launch_time
         # Ignore first hop (source)
-        hops = len(packet.route) - 1
+        hops = len(packet.route)
 
         self.stats['packets_time'] += delay
         self.stats['packets_hops'] += hops
