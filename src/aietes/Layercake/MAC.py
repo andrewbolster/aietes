@@ -17,9 +17,11 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 
-from Packet import MACPacket
+from Packet import MACPacket, ACK
 from aietes.Tools import debug, Sim
 from aietes.Tools.FSM import *
+
+from random import random
 
 
 debug = False
@@ -38,14 +40,20 @@ class MAC():
         self.node = self.layercake.host
 
         self.macBuilder()
-        self.outgoing_queue = []
-        self.incoming_packet = None
+
+        self.max_retransmit = 4
+        self.retransmit_timeout = 10
+        self.ack_timeout = 4
         self.InitialiseStateEngine()
 
     def activate(self):
         self.logger.info('activating instance')
         self.timer = self.InternalTimer(self.sm)                             #Instance of Internal Timer
         self.timer_event = Sim.SimEvent("timer_event")                    #SimPy Event for signalling
+        self.channel_access_retries = 0
+        self.transmission_attempts = 0
+        self.outgoing_queue = []
+        self.incoming_packet = None
         Sim.activate(self.timer, self.timer.lifecycle(self.timer_event))  #Tie the event to lifecycle function
 
     def macBuilder(self):
@@ -89,15 +97,25 @@ class MAC():
 
     def transmit(self):
         """Real Transmission of packet to physical layer
+        On successful channel acquisition, bails out to "WAIT_ACK"
         """
         packet = self.outgoing_queue[0]
-        if debug: self.logger.debug("MAC Packet, %s, sent to %s" % (packet.data, packet.next_hop))
-        self.layercake.phy.send(packet)
+
+        if self.layercake.phy.isIdle():
+            self.transmission_attempts += 1
+            self.channel_access_retries = 0
+            self.layercake.phy.send(packet)
+            self.sm.current_state = "WAIT_ACK"
+            self.logger.error("Timeout {}".format(self.ack_timeout))
+            self.timer_event.signal(self.ack_timeout, "timeout")
+        else:
+            self.channel_access_retries
+
 
     def onTX_success(self):
         """When an ACK has been recieved, we can assume it all went well
         """
-        self.logger.info("Successful TX to " + self.outgoing_queue[0].next_hop)
+        Sim.Process().interrupt(self.timer)
         self.postTX()
 
     def onTX_fail(self):
@@ -109,12 +127,14 @@ class MAC():
     def postTX(self):
         """Succeeded or given up, either way, tidy up
         """
-        if debug: self.logger.info("Tidying up packet to " + self.outgoing_queue[0].next_hop)
+        self.logger.info("Tidying up packet to " + self.outgoing_queue[0].next_hop)
         self.outgoing_queue.pop(0)
         self.transmission_attempts = 0
 
         if len(self.outgoing_queue) > 0:
-            self.queueNext()
+            random_delay = random()*self.retransmit_timeout
+            self.timer_event.signal(random_delay, "send_DATA")
+
 
     def recv(self, FromBelow):
         """Function Called from lower layers to recieve a packet
@@ -123,10 +143,8 @@ class MAC():
         self.incoming_packet = FromBelow.decap()
         if FromBelow.isFor(self.node.name):
             self.sm.process(self.signals[FromBelow.type])
-            if debug: self.logger.info("MAC[%s] Packet Recieved: %s" % (FromBelow.type, FromBelow.data))
         else:
             self.overheard()
-            self.logger.info("MAC Packet Overheard! For:%s" % self.incoming_packet.destination)
 
     def overheard(self):
         pass
@@ -142,26 +160,30 @@ class MAC():
         if self.layercake.net.explicitACK(self.incoming_packet) \
             or len(self.outgoing_queue) != 0 \
             or self.layercake.net:
-            # Send up to next level in stack
-            if debug: self.logger.info("Packet Recieved")
+            self.logger.info("Sending ACK to {pkt.source}".format(pkt=self.incoming_packet))
+            self.layercake.phy.send(ACK(self.node,self.incoming_packet))
+        # Send up to next level in stack
         self.layercake.net.recv(self.incoming_packet)
 
     def onError(self):
         """ Called via state machine when unexpected input symbol in a determined state
         """
         self.logger.error(
-            "Unexpected transition by %s from %s because of symbol %s from %s" %
-            (self.node.name,
-             self.sm.current_state,
-             self.sm.input_symbol,
-             self.incoming_packet
+            "Unexpected transition by {node.name} from {sm.current_state} because of symbol {sm.input_symbol}".format(
+                node=self.node,
+                sm=self.sm,
             )
         )
 
     def onTimeout(self):
         """When it all goes wrong
         """
-        pass
+        self.transmission_attempts +=1
+        self.logger.info("ACK Timeout")
+        if self.transmission_attempts > self.max_retransmit:
+            self.sm.process("fail")
+        else:
+            self.timer_event.signal(random()*self.retransmit_timeout, "resend")
 
     def queueData(self):
         """Log queueing
@@ -199,7 +221,6 @@ class MAC():
 class ALOHA(MAC):
     """A very simple algorithm
     """
-
     def macBuilder(self):
         self.signals = {
             'ACK': "got_ACK",
@@ -240,9 +261,12 @@ class ALOHA(MAC):
         i.e. implicit ACK: Source hears forwarding transmission of its own packet
         """
         if self.incoming_packet.type == "DATA" and self.sm.current_state == "WAIT_ACK":
-            last_hop = self.incoming_packet.route[-1][0]
+            last_hop = self.incoming_packet.route[-1]['name']
             if self.outgoing_queue[0].next_hop == last_hop and self.outgoing_queue[0].id == self.incoming_packet.id:
-                self.logger.info("Recieved an implicit ACK from routing node %s" % last_hop)
+                self.logger.info("Recieved an implicit ACK from routing node {lh}: Data={packet.data}".format(
+                    lh=last_hop,
+                    packet=self.incoming_packet
+                ))
                 self.sm.process("got_ACK")
 
 

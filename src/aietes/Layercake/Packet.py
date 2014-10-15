@@ -33,7 +33,7 @@ import uuid
 from aietes.Tools import *
 
 
-class Packet(dict):
+class Packet(object):
     """Base Packet Class
     """
 
@@ -77,7 +77,7 @@ class Packet(dict):
         else:
             return self.payload.destination == node_name
 
-    def __repr__(self):
+    def __str__(self):
         return str("To: %s, From: %s, at %d, %s" % (self.destination, self.source, self.launch_time, self.data))
 
 #####################################################################
@@ -115,9 +115,9 @@ class RoutePacket(Packet):
     """Routing Level Packet
     """
 
-    def __init__(self, route_layer, packet, level=0.0):
+    def __init__(self, route_layer, packet, tx_level=0.0):
         Packet.__init__(self, packet)
-        self.level = 0.0
+        self.tx_level = tx_level
         self.next_hop = None #Analogue to packet['through'] in AUVNetSim
         self.source_position = None
         self.destination_position = None
@@ -128,11 +128,43 @@ class RoutePacket(Packet):
         if debug: self.logger.info("Net Packet Route:%s" % self.route)
         self.source_position = route_layer.host.getPos()
 
-    def set_level(self, level):
-        self.level = level
+    def set_level(self, tx_level):
+        self.tx_level = tx_level
 
     def set_next_hop(self, hop):
         self.next_hop = hop
+
+#####################################################################
+# Acknowledgement Packet
+#####################################################################
+class ACK(Packet):
+    """
+    Simple Acknowledgement packet + generation in response to a recieved packet
+
+    Overrides init and payload relevant
+    """
+    length=24
+    def __init__(self, node, packet):
+        if hasattr(packet, 'logger'):
+            self._start_log(logger=packet.logger)
+        else:
+            self._start_log()
+
+        if not isinstance(packet, MACPacket):
+            raise ValueError("Expecting MACPacket, got {}".format(packet.__class__.__name__))
+
+        self.type = "ACK"
+        self.source = node.name
+        self.source_position = node.getPos()
+        self.destination = packet.source
+        self.destination_position = packet.source_position
+        self.launch_time = Sim.now()
+        self.route = packet.route[::-1]
+        self.tx_level = packet.tx_level
+        self.data = str(packet.id)
+        self.next_hop = self.route[0]
+        self.length = len(self.data)
+
 
 ####################################################################
 # Media Access Control Packet
@@ -184,7 +216,7 @@ class PHYPacket(Sim.Process, Packet):
 
         #Generate Bandwidth info
         if phy.variable_bandwidth:
-            distance = phy.var_power['levelToDistance'][self.packet.p_level] #TODO Packet description
+            distance = phy.var_power['levelToDistance'][self.packet.tx_level] #TODO Packet description
             bandwidth = distance2Bandwidth(self.power,
                                            phy.frequency,
                                            distance,
@@ -230,7 +262,7 @@ class PHYPacket(Sim.Process, Packet):
             # Even if a packet is not received properly, we have consumed power
             transducer.updatePowerOnRecieve(duration)
         else:
-            self.logger.debug("RX from %s with power %e below lis" % (
+            self.logger.debug("RX from %s with power %.2fdB below lis" % (
             self.source, self.power))
 
     def updateInterference(self, interference):

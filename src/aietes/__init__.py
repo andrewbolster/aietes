@@ -624,12 +624,6 @@ def main():
                 exit_code = cProfile.runctx("""go(options,args)""", globals(), locals(), filename="Aietes.profile")
             else:
                 exit_code = go(options, args)
-        if options.verbose:
-            print time.asctime()
-        if options.verbose:
-            print 'TOTAL TIME IN MINUTES:',
-        if options.verbose:
-            print (time() - start_time) / 60.0
         sys.exit(exit_code)
     except KeyboardInterrupt, e:  # Ctrl-C
         raise e

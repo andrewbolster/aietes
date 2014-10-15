@@ -17,6 +17,8 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 __author__ = 'bolster'
+import sys
+import traceback
 import logging
 
 from scipy.spatial.distance import pdist, squareform
@@ -97,10 +99,12 @@ class DataPackage(object):
                 self.ecea = False
         elif sink is "additional":
             self.additional = None
+        # This method may fail miserable is sink and source are named differently
+        elif sink in ['data_rate', 'plr', 'delay', 'rssi']:
+            setattr(self,sink,None)
 
         else:
-            logging.error("Can't find %s(%s) in source" % (source,sink))
-            raise exp
+            raise ValueError("Can't find %s(%s) in source" % (source,sink))
 
     def __init__(self, source=None, *args, **kwargs):
         """
@@ -121,7 +125,7 @@ class DataPackage(object):
                             type(source),
                             str([attr for attr in self._attrib_map.keys() if not kwargs.has_key(attr)])
                             )
-            )
+            ),  None, traceback.print_tb(sys.exc_info()[2])
 
         self.tmax = int(kwargs.get("tmax", len(self.p[0][0])))
         self.n = len(self.p)
@@ -179,7 +183,7 @@ class DataPackage(object):
         self.n = len(self.p)
 
     def write(self, filename=None, track_mat=False):
-        logging.info("Writing datafile to %s" % results_file(filename))
+        logging.info("Writing datafile to {}.npz".format(results_file(filename)))
 
         data = {i:self.__dict__[i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
         data['filename'] = "{}.npz".format(filename)

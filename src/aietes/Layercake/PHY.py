@@ -116,7 +116,7 @@ class PHY():
 
         #generate PHYPacket with set power
         packet = PHYPacket(packet=FromAbove, power=power)
-        if debug: self.logger.debug("PHY Packet, %s, sent to %s, with power %s" % (packet.data, packet.next_hop, power))
+        if debug: self.logger.debug("{p.type} Packet sent to {p.destination}, with power {p.power}mW".format(p=packet))
         Sim.activate(packet, packet.send(phy=self))
 
     def bandwidth_to_bit(self, bandwidth):
