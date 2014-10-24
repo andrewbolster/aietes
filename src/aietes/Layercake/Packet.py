@@ -68,14 +68,17 @@ class Packet(object):
     def decap(self):
         return self.payload #Should return the upper level packet class
 
-    def isFor(self, node_name):
+    def isFor(self, node):
         """ Boolean if packet directed at node by either
         name or broadcast
         """
         if self.payload.destination == broadcast_address:
             return True
+        elif hasattr(node,'name'):
+            # Non-invasive way of assessing if it's a node object or not
+            return self.payload.destination == node.name
         else:
-            return self.payload.destination == node_name
+            return self.payload.destination == node
 
     def __str__(self):
         return str("To: %s, From: %s, at %d, %s" % (self.destination, self.source, self.launch_time, self.data))
@@ -100,10 +103,10 @@ class AppPacket(Packet):
         self.launch_time = Sim.now()
         self.route = route if route is not None else []
         if data is not None:
-            self.data = data
+            self.data = "{}:{}".format(data,source)
             self.length = len(data)
         else:
-            self.data = AppPacket.data
+            self.data = "{}:{}".format(AppPacket.data,source)
             self.length = AppPacket.length
 
         self.id = uuid.uuid4() #Hopefully unique id
@@ -161,7 +164,7 @@ class ACK(Packet):
         self.launch_time = Sim.now()
         self.route = packet.route[::-1]
         self.tx_level = packet.tx_level
-        self.data = str(packet.id)
+        self.data = "ACK:{}".format(packet.data)
         self.next_hop = self.route[0]
         self.length = len(self.data)
 

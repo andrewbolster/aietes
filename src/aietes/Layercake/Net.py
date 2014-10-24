@@ -52,7 +52,6 @@ class RoutingTable():
 
     def recv(self, FromBelow):
         packet = FromBelow.decap()
-        if debug: self.logger.info("Net Packet Recieved:%s" % packet.data)
 
         #IF it's for us, send it up to the app layer, if not, send if back
         if not self.hasDuplicate(packet):
@@ -60,16 +59,20 @@ class RoutingTable():
             if packet.next_hop == packet.destination:
                 if packet.isFor(self.host):
                     self.layercake.recv(packet)
+                else:
+                    raise RuntimeError("WTFMATE?")
             else:
                 self.logger.error("Don't know what to do with packet " + packet.data + " from " + \
                                   packet.source + " going to " + packet.destination + " with hop " + packet.next_hop)
                 raise NotImplemented
+        else:
+            self.logger.info("Already Have Pkt {}:{}".format(packet.data, packet.id))
 
     def explicitACK(self, FromBelow):
         """Assume we always want to call for ACK
         i.e. no implicit ACK
         """
-        return True
+        return FromBelow.type is not "ACK"
 
     def hasDuplicate(self, packet):
         """ Checks if the packet has already been dealt with"""

@@ -19,6 +19,9 @@ __email__ = "me@andrewbolster.info"
 from numpy import *
 from numpy.random import poisson
 
+from collections import Counter
+import networkx as nx
+
 from aietes.Tools import Sim, debug, randomstr, broadcast_address
 from Layercake.Packet import AppPacket
 
@@ -74,16 +77,14 @@ class Application(Sim.Process):
     def lifecycle(self, destination=None):
 
         if destination is None:
-            if debug: self.logger.debug("No Destination defined, defaulting to \"%s\"" % broadcast_address)
-            destination = broadcast_address
+            destination = self.default_destination
 
         while True:
             (packet, period) = self.packetGen(period=self.period,
                                               data=randomstr(24),
                                               destination=destination)
             if packet is not None:
-                if debug:
-                    self.logger.debug("Generated Payload %s: Waiting %s" % (packet.data, period))
+                if debug: self.logger.debug("Generated Payload %s: Waiting %s" % (packet.data, period))
                 self.layercake.send(packet)
                 self.stats['packets_sent'] += 1
             yield Sim.hold, self, period
@@ -117,7 +118,7 @@ class Application(Sim.Process):
         self.stats['packets_hops'] += hops
         self.stats['packets_dhops'] += (delay / hops)
 
-        self.logger.info("Packet recieved from %s over %d hops with a delay of %s (d/h=%s)" % (
+        self.logger.debug("Packet recieved from %s over %d hops with a delay of %s (d/h=%s)" % (
             source, hops, str(delay), str(delay / hops)))
 
     def packetGen(self, period, destination, *args, **kwargs):
@@ -129,6 +130,8 @@ class Application(Sim.Process):
 
 
 class AccessibilityTest(Application):
+    default_destination= broadcast_address
+
     def packetGen(self, period, destination, data=None, *args, **kwargs):
         """
         Copy of behaviour from AUVNetSim for default class,
@@ -146,6 +149,45 @@ class AccessibilityTest(Application):
 
     def packetRecv(self, packet):
         assert isinstance(packet, AppPacket)
+        del packet
+
+class RoutingTest(Application):
+
+    default_destination= None
+
+    def __init__(self,*args,**kwargs):
+        super(RoutingTest,self).__init__(*args,**kwargs)
+        self.packet_counters = Counter()
+        self.graph = nx.Graph()
+
+    def packetGen(self, period, destination=None, data=None, *args, **kwargs):
+        """
+        Lowest-count node gets a message
+        """
+        if destination is not None:
+            raise RuntimeWarning("This isn't the kind of application you use with a destination bub")
+
+        try:
+            most_common = self.packet_counters.most_common()
+            destination,count = most_common[-1]
+            self.logger.info("Sending to {} with count {}({})".format(destination, count, most_common))
+        except IndexError:
+            self.logger.warn("No Packet Count List set up yet; fudging it with an broadcast first")
+            destination=broadcast_address
+
+        packet = AppPacket(
+            source=self.layercake.host.name,
+            dest=destination,
+            pkt_type='DATA',
+            data=data,
+            logger=self.logger
+        )
+        period = poisson(float(period))
+        return packet, period
+
+    def packetRecv(self, packet):
+        assert isinstance(packet, AppPacket)
+        self.packet_counters[packet.source]+=1
         del packet
 
 CommsTrust = AccessibilityTest

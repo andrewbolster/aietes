@@ -123,9 +123,10 @@ class MAC():
             self.channel_access_retries = 0
             self.layercake.phy.send(packet)
             self.sm.current_state = "WAIT_ACK"
-            self.logger.info("TX to {}".format(packet.next_hop))
+            self.logger.debug("Waiting on ACK from {}".format(packet.next_hop))
             self.timer_event.signal((timeout, "timeout"))
         else:
+            self.logger.info("Channel Not Idle")
             self.channel_access_retries +=1
             timeout = random()*(2*in_air_time)
             self.timer_event.signal((timeout, self.sm.input_symbol))
@@ -135,7 +136,10 @@ class MAC():
         """When an ACK has been recieved, we can assume it all went well
         """
         Sim.Process().interrupt(self.timer)
-        #self.logger.info("Got Ack from " + self.outgoing_queue[0].next_hop)
+        self.logger.debug("Got Ack from {incoming.source}({out.next_hop}: {incoming.data})".format(
+            out=self.outgoing_queue[0],
+            incoming=self.incoming_packet
+        ))
         self.postTX()
 
     def onTX_fail(self):
@@ -159,9 +163,11 @@ class MAC():
     def recv(self, FromBelow):
         """Function Called from lower layers to recieve a packet
         Decapsulates the packet from the physical
+        equiv to OnNewPacket
         """
         self.incoming_packet = FromBelow.decap()
         if FromBelow.isFor(self.node.name):
+            if debug: self.logger.debug("Processing {} from {}".format(self.signals[FromBelow.type],FromBelow.payload))
             self.sm.process(self.signals[FromBelow.type])
         else:
             self.overheard()
@@ -186,11 +192,13 @@ class MAC():
 
     def onError(self):
         """ Called via state machine when unexpected input symbol in a determined state
+
+        This is usually caused by packet duplication in the air or broadcast destination addresses with multiple nodes
         """
         self.logger.error(
-            "Unexpected transition by {node.name} from {sm.current_state} because of symbol {sm.input_symbol}".format(
-                node=self.node,
+            "Unexpected transition from {sm.current_state} because of symbol {sm.input_symbol} with Packet {pkt}".format(
                 sm=self.sm,
+                pkt=self.incoming_packet
             )
         )
 
@@ -287,6 +295,4 @@ class ALOHA(MAC):
                     packet=self.incoming_packet
                 ))
                 self.sm.process("got_ACK")
-
-
                 #TODO Expand/Duplicate with overhearing position information

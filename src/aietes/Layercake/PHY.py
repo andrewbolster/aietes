@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 from aietes.Tools import *
 from Packet import PHYPacket
 
-debug = False
+debug = True
 
 #####################################################################
 # Physical Layer
