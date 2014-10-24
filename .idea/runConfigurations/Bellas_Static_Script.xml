@@ -16,8 +16,10 @@
     <option name="PARAMETERS" value="-c $PROJECT_DIR$/src/aietes/configs/bella_static.conf -d -v" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <RunnerSettings RunnerId="PyDebugRunner" />
+    <RunnerSettings RunnerId="PythonCover" />
     <RunnerSettings RunnerId="PythonRunner" />
     <ConfigurationWrapper RunnerId="PyDebugRunner" />
+    <ConfigurationWrapper RunnerId="PythonCover" />
     <ConfigurationWrapper RunnerId="PythonRunner" />
     <method />
   </configuration>

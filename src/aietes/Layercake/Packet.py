@@ -248,7 +248,6 @@ class PHYPacket(Sim.Process, Packet):
         power_w = DB2Linear(AcousticPower(self.power))
         phy.tx_energy += (power_w * duration)
 
-        self.logger.debug("PHY Packet Sent")
 
     def recv(self, transducer, duration):
         if self.power >= transducer.threshold['listen']:

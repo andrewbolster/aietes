@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 from aietes.Tools import *
 from Packet import PHYPacket
 
-debug = True
+debug = False
 
 #####################################################################
 # Physical Layer
@@ -93,7 +93,7 @@ class PHY():
         """
         if len(self.transducer.activeQ) > 0:
             self.logger.info(
-                "The Channel is not idle: %d packets currently in flight" % str(len(self.transducer.activeQ)))
+                "The Channel is not idle: {} packets currently in flight".format(len(self.transducer.activeQ)))
             return False
         return True
 
@@ -116,7 +116,6 @@ class PHY():
 
         #generate PHYPacket with set power
         packet = PHYPacket(packet=FromAbove, power=power)
-        if debug: self.logger.debug("{p.type} Packet sent to {p.destination}, with power {p.power}mW".format(p=packet))
         Sim.activate(packet, packet.send(phy=self))
 
     def bandwidth_to_bit(self, bandwidth):
@@ -202,7 +201,7 @@ class Transducer(Sim.Resource):
                 and packet.power >= self.phy.threshold['receive']:
                 # Properly received: enough power, not enough interference
                 self.collision = False
-                if debug: self.logger.info("PHY Packet Recieved: %s" % packet.data)
+                if debug: self.logger.debug("PHY Packet Recieved: %s" % packet.data)
                 self.layercake.mac.recv(packet.decap())
 
             elif packet.power >= self.phy.threshold['receive']:
@@ -211,7 +210,7 @@ class Transducer(Sim.Resource):
                     self.collision = True
                     self.collisions.append(payload)
                     if debug:
-                        self.logger.info("PHY Packet Sensed but not Recieved (%s < %s)" % (
+                        self.logger.debug("PHY Packet Sensed but not Recieved (%s < %s)" % (
                             packet.power,
                             self.phy.threshold['listen']
                         ))

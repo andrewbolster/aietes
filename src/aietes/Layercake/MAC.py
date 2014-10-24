@@ -18,7 +18,7 @@ __email__ = "me@andrewbolster.info"
 
 
 from Packet import MACPacket, ACK
-from aietes.Tools import debug, Sim
+from aietes.Tools import debug, Sim, distance2Bandwidth
 from aietes.Tools.FSM import *
 
 from random import random
@@ -41,9 +41,11 @@ class MAC():
 
         self.macBuilder()
 
+        # These need to be configurabled
         self.max_retransmit = 4
         self.retransmit_timeout = 10
         self.ack_timeout = 4
+
         self.InitialiseStateEngine()
 
     def activate(self):
@@ -74,11 +76,11 @@ class MAC():
         def lifecycle(self, Request):
             while True:
                 yield Sim.waitevent, self, Request
-                yield Sim.hold, self, Request.signalparam[1]  #Wait for a given time
+                yield Sim.hold, self, Request.signalparam[0]  #Wait for a given time
                 if self.interrupted():
                     self.interruptReset()
                 else:
-                    self.sm.process(Request.signalparam[0])   #Do something
+                    self.sm.process(Request.signalparam[1])   #Do something
 
 
     def InitialiseStateEngine(self):
@@ -100,40 +102,58 @@ class MAC():
         On successful channel acquisition, bails out to "WAIT_ACK"
         """
         packet = self.outgoing_queue[0]
+        if self.layercake.phy.variable_bandwidth:
+            distance = self.layercake.phy.var_power['levelToDistance'][packet.tx_level]
+            bandwidth = distance2Bandwidth(self.power,
+                                           self.layercake.phy.frequency,
+                                           distance,
+                                           self.layercake.phy.threshold['SNR']
+            )
+        else:
+            bandwidth = self.layercake.phy.bandwidth
+
+        duration = packet.length / self.layercake.phy.bandwidth_to_bit(bandwidth)
+
+        in_air_time = self.layercake.phy.range/self.layercake.phy.medium_speed
+
+        timeout = 2*duration + 2*in_air_time
 
         if self.layercake.phy.isIdle():
             self.transmission_attempts += 1
             self.channel_access_retries = 0
             self.layercake.phy.send(packet)
             self.sm.current_state = "WAIT_ACK"
-            self.logger.error("Timeout {}".format(self.ack_timeout))
-            self.timer_event.signal(self.ack_timeout, "timeout")
+            self.logger.info("TX to {}".format(packet.next_hop))
+            self.timer_event.signal((timeout, "timeout"))
         else:
-            self.channel_access_retries
+            self.channel_access_retries +=1
+            timeout = random()*(2*in_air_time)
+            self.timer_event.signal((timeout, self.sm.input_symbol))
 
 
     def onTX_success(self):
         """When an ACK has been recieved, we can assume it all went well
         """
         Sim.Process().interrupt(self.timer)
+        #self.logger.info("Got Ack from " + self.outgoing_queue[0].next_hop)
         self.postTX()
 
     def onTX_fail(self):
         """When an ACK has timedout, we can assume it is impossible to contact the next hop
         """
-        self.logger.info("Timed out TX to " + self.outgoing_queue[0].next_hop)
+        self.logger.warn("Timed out TX to " + self.outgoing_queue[0].next_hop)
         self.postTX()
 
     def postTX(self):
         """Succeeded or given up, either way, tidy up
         """
-        self.logger.info("Tidying up packet to " + self.outgoing_queue[0].next_hop)
+        self.logger.debug("Tidying up packet to " + self.outgoing_queue[0].next_hop)
         self.outgoing_queue.pop(0)
         self.transmission_attempts = 0
 
         if len(self.outgoing_queue) > 0:
             random_delay = random()*self.retransmit_timeout
-            self.timer_event.signal(random_delay, "send_DATA")
+            self.timer_event.signal((random_delay, "send_DATA"))
 
 
     def recv(self, FromBelow):
@@ -147,6 +167,7 @@ class MAC():
             self.overheard()
 
     def overheard(self):
+
         pass
 
     def onRX(self):
@@ -155,12 +176,10 @@ class MAC():
         Sends packet up to higher level
         """
         origin = self.incoming_packet.last_sender()
-        self.logger.info("RX-d packet from %s" % origin['name'])
 
         if self.layercake.net.explicitACK(self.incoming_packet) \
             or len(self.outgoing_queue) != 0 \
             or self.layercake.net:
-            self.logger.info("Sending ACK to {pkt.source}".format(pkt=self.incoming_packet))
             self.layercake.phy.send(ACK(self.node,self.incoming_packet))
         # Send up to next level in stack
         self.layercake.net.recv(self.incoming_packet)
@@ -183,7 +202,7 @@ class MAC():
         if self.transmission_attempts > self.max_retransmit:
             self.sm.process("fail")
         else:
-            self.timer_event.signal(random()*self.retransmit_timeout, "resend")
+            self.timer_event.signal((random()*self.retransmit_timeout, "resend"))
 
     def queueData(self):
         """Log queueing
