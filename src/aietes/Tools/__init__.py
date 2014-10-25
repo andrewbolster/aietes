@@ -34,11 +34,14 @@ from configobj import ConfigObj
 import validate
 from SimPy import SimulationStep as Sim
 from pprint import pformat
+import collections
+import weakref
 
 from humanize_time import secondsToStr
 
 from joblib import Memory
 from tempfile import mkdtemp
+
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
 
@@ -269,10 +272,12 @@ def Attenuation(f, d):
 
     f - Frequency in kHz
     d - Distance in m
+
+    SHOULD RETURN DB
     """
 
     f2 = f ** 2
-    k = 1.5  # Practical Spreading, see http://rpsea.org/forums/auto_stojanovic.pdf
+    k = 1.5  # Practical Spreading, see http://www.mit.edu/~millitsa/resources/pdfs/bwdx.pdf
     DistanceInKm = d / 1000.0
 
     # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on the frequency
@@ -621,6 +626,18 @@ def itersubclasses(cls, _seen=None):
             yield sub
             for sub in itersubclasses(sub, _seen):
                 yield sub
+
+class KeepRefs(object):
+    __refs__ = collections.defaultdict(list)
+    def __init__(self):
+        self.__refs__[self.__class__].append(weakref.ref(self))
+
+    @classmethod
+    def get_instances(cls):
+        for inst_ref in cls.__refs__[cls]:
+            inst = inst_ref()
+            if inst is not None:
+                yield inst
 
 
 def updateDict(d, keys, value, safe=False):

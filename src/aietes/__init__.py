@@ -319,7 +319,19 @@ class Simulation():
         #   i.e. app = ["App A","App B"]
         #        dist = [ 4, 5 ]
         try:
-            app = node_default_config_dict.Application.protocol
+            appp = node_default_config_dict.Application.protocol
+            app = node_default_config_dict.app
+
+            if app != appp:
+                if app == "Null":
+                    node_default_config_dict.app = appp
+                else:
+                    raise ConfigError("Conflicting app and Application.Protcols ({},{})".format(
+                        app,
+                        appp
+                    ))
+
+
             dist = node_default_config_dict.Application.distribution
             nodes_count = config_dict.Node.count
         except AttributeError as e:
@@ -398,6 +410,13 @@ class Simulation():
             for node_name, node_config in config_dict.Node.Nodes.items():
                 # Import the magic!
                 update(nodes_config[node_name],node_config.copy())
+                # Cross-check Default Mismatches (i.e. app undefined but Application.Protocol defined)
+                # phy/PHY is unnecessary (almost completly actually... #TODO)
+                # mac /MAC.protocol
+                if hasattr(node_config,'MAC'):
+                    pass
+
+
         except AttributeError as e:
             raise ConfigError("Probably a value conflict in a config file"), None, traceback.print_tb(sys.exc_info()[2])
 
@@ -450,8 +469,8 @@ class Simulation():
         otherwise, use configured behaviour to assign an initial vector
         """
         try:  # If there is an entry, use it
-            vector = node_config['initial_vector']
-            self.logger.info("Gave node %s a configured initial vector: %s" % (node_name, str(vector)))
+            vector = node_config['initial_position']
+            self.logger.info("Gave node %s a configured initial position: %s" % (node_name, str(vector)))
         except KeyError:
             gen_style = node_config['position_generation']
             if gen_style == "random":

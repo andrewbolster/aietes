@@ -81,8 +81,8 @@ class Layercake():
             self.net = net_mod(self, config['Network'])
         except KeyError:
             logging.warn("No NET Configured")
-        except AttributeError:
-            raise ConfigError("Can't find Network: %s" % config['net'])
+        #except AttributeError as e:
+        #    raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
 
 
     def activate(self, rx_handler=None):

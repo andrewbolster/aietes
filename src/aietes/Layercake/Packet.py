@@ -95,7 +95,7 @@ class AppPacket(Packet):
     data = None
     length = 24 # Default Packet Length
 
-    def __init__(self, source, dest, pkt_type=None, data=None, route=None, logger=None):
+    def __init__(self, source, dest, pkt_type="DATA", data=None, route=None, logger=None):
         self._start_log(logger=logger)
         self.source = source
         self.destination = dest
@@ -103,11 +103,13 @@ class AppPacket(Packet):
         self.launch_time = Sim.now()
         self.route = route if route is not None else []
         if data is not None:
-            self.data = "{}:{}".format(data,source)
+            self.data = data
             self.length = len(data)
         else:
             self.data = "{}:{}".format(AppPacket.data,source)
             self.length = AppPacket.length
+
+        self.requests_ack = True
 
         self.id = uuid.uuid4() #Hopefully unique id
 
@@ -186,12 +188,15 @@ class MACPacket(Packet):
 #####################################################################
 # Physical Packet
 #####################################################################
-class PHYPacket(Sim.Process, Packet):
+class PHYPacket(Sim.Process, Packet, KeepRefs):
     """Generic Physical Layer Packet Class
     Executed as a process and actually performs the send and recieve functions
     for the physical layer.
+
     This is because the transducer and modem are RESOURCES that are used, not
-    processing units.
+    processing units
+
+    Should only ever be ONE phy packet with any given ID.
     """
 
     def __init__(self, packet, power):
@@ -200,8 +205,10 @@ class PHYPacket(Sim.Process, Packet):
         :param power: linear power (mW)
         :return:
         """
+        KeepRefs.__init__(self)
         Packet.__init__(self, packet)
         Sim.Process.__init__(self, name=self.__class__.__name__)
+
         self.doomed = False
         self.max_interference = None
 

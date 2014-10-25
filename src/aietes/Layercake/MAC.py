@@ -33,7 +33,7 @@ class MAC():
     """
 
     def __init__(self, layercake, config=None):
-        self.logger = layercake.logger.getChild("MAC[%s]" % self.__class__.__name__)
+        self.logger = layercake.logger.getChild("%s" % self.__class__.__name__)
         self.logger.info('creating instance')
         self.config = config
         self.layercake = layercake
@@ -122,9 +122,13 @@ class MAC():
             self.transmission_attempts += 1
             self.channel_access_retries = 0
             self.layercake.phy.send(packet)
-            self.sm.current_state = "WAIT_ACK"
-            self.logger.debug("Waiting on ACK from {}".format(packet.next_hop))
-            self.timer_event.signal((timeout, "timeout"))
+            if packet.requests_ack:
+                self.sm.current_state = "WAIT_ACK"
+                self.logger.info("Waiting on ACK for {}".format(packet))
+                self.timer_event.signal((timeout, "timeout"))
+            else:
+                self.sm.current_state = "READY_WAIT"
+                self.logger.info("NOT Waiting on ACK for {}".format(packet))
         else:
             self.logger.info("Channel Not Idle")
             self.channel_access_retries +=1
@@ -183,9 +187,7 @@ class MAC():
         """
         origin = self.incoming_packet.last_sender()
 
-        if self.layercake.net.explicitACK(self.incoming_packet) \
-            or len(self.outgoing_queue) != 0 \
-            or self.layercake.net:
+        if self.layercake.net.explicitACK(self.incoming_packet):
             self.layercake.phy.send(ACK(self.node,self.incoming_packet))
         # Send up to next level in stack
         self.layercake.net.recv(self.incoming_packet)

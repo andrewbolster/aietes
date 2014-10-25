@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 from aietes.Tools import *
 from Packet import PHYPacket
 
-debug = True
+debug = False
 
 #####################################################################
 # Physical Layer
@@ -60,7 +60,6 @@ class PHY():
         self.logger.info('creating instance:%s' % config)
         #Inherit values from config
         for k, v in config.items():
-            self.logger.info("Updating: [%s]=%s" % (k, v))
             setattr(self, k, v)
         self.layercake = layercake
 
@@ -157,22 +156,18 @@ class Transducer(Sim.Resource):
                 self.host.getPos)
         )
 
-    def updateInterference(self, packet):
-        """ Update interferences of the active queue
+    def _request(self, event):
+        """Overiding SimPy's to update interference information upon queuing of a new incoming packet from the channel
         """
+        Sim.Resource._request(self, event)
+        #Arg[1] is a reference to the newly queued incoming packet
+        packet = event[1]
         if self.transmitting:
             packet.Doom()
 
         self.interference += packet.power
 
         [x.updateInterference(self.interference) for x in self.activeQ]
-
-    def _request(self, event):
-        """Overiding SimPy's to update interference information upon queuing of a new incoming packet from the channel
-        """
-        Sim.Resource._request(self, event)
-        #Arg[1] is a reference to the newly queued incoming packet
-        self.updateInterference(event[1])
 
     # Override SimPy Resource's "_release" function to update SIR for all incoming messages.
     def _release(self, event):
@@ -210,14 +205,17 @@ class Transducer(Sim.Resource):
                     self.collision = True
                     self.collisions.append(payload)
                     if debug:
-                        self.logger.debug("PHY Packet Sensed but not Recieved (%s < %s)" % (
+                        self.logger.debug("Packet-for-me Collision (%s < %s)" % (
                             packet.power,
                             self.phy.threshold['listen']
                         ))
 
                 else:
                     # Not enough power to be properly received: just heard.
-                    self.phy.logger.debug("This packet was not addressed to me.")
+                    if debug:
+                        self.phy.logger.debug("Out of band Collision")
+                    else:
+                        pass
             else:
                 self.phy.logger.debug("Packet Not Recieved")
 
