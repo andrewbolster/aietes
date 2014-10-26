@@ -19,18 +19,21 @@ __email__ = "me@andrewbolster.info"
 from numpy import *
 from numpy.random import poisson
 
-from collections import Counter
+from collections import Counter, OrderedDict
 import networkx as nx
 
 from aietes.Tools import Sim, debug, randomstr, broadcast_address
 
 
-#debug=True
+debug = True
+
+
 class Application(Sim.Process):
     """
     Generic Class for top level application layers
     """
     HAS_LAYERCAKE = True
+    random_delay = False
 
     def __init__(self, node, config, layercake):
         self._start_log(node)
@@ -41,7 +44,8 @@ class Application(Sim.Process):
                       'packets_hops': 0,
                       'packets_dhops': 0
         }
-        self.packet_log = {}
+        self.received_log = OrderedDict()
+        self.sent_log = []
         self.config = config
         self.layercake = layercake
         self.sim_duration = node.simulation.config.Simulation.sim_duration
@@ -77,20 +81,28 @@ class Application(Sim.Process):
         if destination is None:
             destination = self.default_destination
 
+        if self.random_delay:
+            yield Sim.hold, self, random.random() * self.random_delay
+
         while True:
             (packet, period) = self.packetGen(period=self.period,
                                               data=randomstr(24),
                                               destination=destination)
             if packet is not None:
-                if debug: self.logger.debug("Generated Payload %s: Waiting %s" % (packet.data, period))
+                if debug: self.logger.debug("Generated Payload %s: Waiting %s" % (packet['data'], period))
                 self.layercake.send(packet)
                 self.stats['packets_sent'] += 1
+                self.sent_log.append(packet)
             yield Sim.hold, self, period
 
     def recv(self, FromBelow):
         """
         Called by RoutingTable on packet reception
         """
+        if debug: self.logger.info("Got Packet {id} from {src}".format(
+            id=FromBelow['ID'],
+            src=FromBelow['source']
+        ))
         self.logPacket(FromBelow)
         self.packetRecv(FromBelow)
 
@@ -99,14 +111,18 @@ class Application(Sim.Process):
         Grab packet statistics
         """
         source = packet["route"][0][0]
-        self.log.append(packet)
+        if hasattr(self.received_log,source):
+            self.received_log[source].append(packet)
+        else:
+            self.received_log[source]=[packet]
+
         if debug:
             self.logger.info("App Packet received from %s" % source)
-        self.stats['packets_recieved'] += 1
-        if source in self.packet_log.keys():
-            self.packet_log[source].append(packet)
+        self.stats['packets_received'] += 1
+        if source in self.received_log.keys():
+            self.received_log[source].append(packet)
         else:
-            self.packet_log[source] = [packet]
+            self.received_log[source] = [packet]
         delay = Sim.now() - packet['initial_time']
         # Ignore first hop (source)
         hops = len(packet['route'])
@@ -119,13 +135,43 @@ class Application(Sim.Process):
             source, hops, str(delay), str(delay / hops)))
 
     def dump_stats(self):
-        return {
-            "rx_counts":self.stats['packets_received'],
-            "tx_counts":self.stats['packets_sent'],
-            "delays":self.stats['packets_time'],
-            "hops":self.stats['packets_hops'],
-            "dhops":self.stats['packets_dhops'],
+
+
+        total_bits_in = total_bits_out = 0
+        for txr, pkts in self.received_log.items():
+            for pkt in pkts:
+                total_bits_in += pkt['length']
+
+        for pkt in self.sent_log:
+            total_bits_out += pkt['length']
+
+        throughput = total_bits_in/Sim.now()*self.stats['packets_hops']
+        offeredload = total_bits_out/Sim.now()*self.stats['packets_hops']
+        try:
+            avg_length = total_bits_in / self.stats['packets_received']
+        except ZeroDivisionError:
+            if self.stats['packets_received'] == 0:
+                avg_length = 0
+            else:
+                raise RuntimeError("Got a zero in a weird place: {}/{}".format(
+                    total_bits_in,
+                    self.stats['packets_received']
+                ))
+
+        print self.stats
+
+        app_stats = {
+            "rx_counts": self.stats['packets_received'],
+            "tx_counts": self.stats['packets_sent'],
+            "delays": self.stats['packets_time'],
+            "hops": self.stats['packets_hops'],
+            "dhops": self.stats['packets_dhops'],
+            "average_legth": avg_length,
+            "throughput": throughput,
+            "offeredload": offeredload,
         }
+        app_stats.update(self.layercake.phy.dump_stats())
+        return app_stats
 
     def packetGen(self, period, destination, *args, **kwargs):
         """
@@ -136,35 +182,33 @@ class Application(Sim.Process):
 
 
 class AccessibilityTest(Application):
-    default_destination= broadcast_address
+    default_destination = broadcast_address
 
     def packetGen(self, period, destination, data=None, *args, **kwargs):
         """
         Copy of behaviour from AUVNetSim for default class,
         exhibiting poisson departure behaviour
         """
-        packet_ID =  self.layercake.hostname+str(self.stats['packets_sent'])
+        packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
         packet = {"ID": packet_ID, "dest": destination, "source": self.layercake.hostname, "route": [], "type": "DATA", "initial_time": Sim.now(), "length": self.node.config["DataPacketLength"]}
         period = poisson(float(period))
         return packet, period
 
     def packetRecv(self, packet):
-        delay = Sim.now()-packet["initial_time"]
+        delay = Sim.now() - packet["initial_time"]
         hops = len(packet["route"])
 
-        self.logger.warn("Packet "+packet["ID"]+" received over "+str(hops)+" hops with a delay of "+str(delay)+"s (delay/hop="+str(delay/hops)+").")
-
-
+        self.logger.warn("Packet " + packet["ID"] + " received over " + str(hops) + " hops with a delay of " + str(delay) + "s (delay/hop=" + str(delay / hops) + ").")
 
 
 class RoutingTest(Application):
+    default_destination = None
+    random_delay = 10
 
-    default_destination= None
-
-    def __init__(self,*args,**kwargs):
-        super(RoutingTest,self).__init__(*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(RoutingTest, self).__init__(*args, **kwargs)
         self.sent_counter = Counter()
-        self.recieved_counter = Counter()
+        self.received_counter = Counter()
         self.total_counter = Counter()
         self.graph = nx.Graph()
 
@@ -180,53 +224,63 @@ class RoutingTest(Application):
         if len(indirect_nodes):
             self.logger.warning("Inferred new nodes: {}".format(indirect_nodes))
             for node in indirect_nodes:
-                self.total_counter[node]=0
+                self.total_counter[node] = 0
 
         self.mergeCounters()
 
         if len(self.total_counter):
             most_common = self.total_counter.most_common()
-            destination,count = most_common[-1]
-            self.sent_counter[destination]+=1
+            destination, count = most_common[-1]
+            self.sent_counter[destination] += 1
             self.logger.info("Sending to {} with count {}({})".format(destination, count, most_common))
         else:
             self.logger.warn("No Packet Count List set up yet; fudging it with an broadcast first")
-            destination=broadcast_address
+            destination = broadcast_address
 
-
-        packet_ID =  self.layercake.hostname+str(self.stats['packets_sent'])
-        packet = {"ID": packet_ID, "dest": destination, "source": self.layercake.hostname, "route": [], "type": "DATA", "initial_time": Sim.now(), "length": self.config["packet_length"]}
+        packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
+        packet = {"ID": packet_ID,
+                  "dest": destination,
+                  "source": self.layercake.hostname,
+                  "route": [], "type": "DATA",
+                  "initial_time": Sim.now(),
+                  "length": self.config["packet_length"],
+                  "data": None}
         period = poisson(float(period))
         return packet, period
 
     def packetRecv(self, packet):
         self.mergeCounters()
-        self.recieved_counter[packet['source']]+=1
+        self.received_counter[packet['source']] += 1
         del packet
 
     def mergeCounters(self):
-        self.total_counter = self.sent_counter + self.recieved_counter
-        not_in_rx = filter(lambda n: n not in self.recieved_counter.keys(), self.total_counter.keys())
-        not_in_tx = filter(lambda n: n not in self.sent_counter.keys(), self.total_counter.keys())
-        if not_in_rx or not_in_tx:
-            self.logger.info("Synchronising counters: {} not in rx and {} not in tx".format(not_in_rx, not_in_tx))
+        learned_nodes = self.sent_counter.keys() + self.received_counter.keys()
+        learned_and_implied_nodes = set(self.total_counter.keys()) | set(learned_nodes)
+        not_in_rx = filter(lambda n: n not in self.received_counter.keys(), learned_and_implied_nodes)
+        not_in_tx = filter(lambda n: n not in self.sent_counter.keys(), learned_and_implied_nodes)
+        not_in_tot = filter(lambda n: n not in self.total_counter.keys(), learned_and_implied_nodes)
+        if not_in_rx or not_in_tx or not_in_tot:
+            self.logger.info("Synchronising counters: {} not in rx and {} not in tx, {} not in total".format(not_in_rx, not_in_tx, not_in_tot))
         for n in not_in_rx:
-            self.recieved_counter[n]=0
+            self.received_counter[n] = 0
         for n in not_in_tx:
-            self.sent_counter[n]=0
+            self.sent_counter[n] = 0
+        for n in not_in_tot:
+            self.total_counter[n] = 0
 
     def dump_stats(self):
         initial = Application.dump_stats(self)
         initial.update({
-            'sent_counts':self.sent_counter,
-            'recieved_counts':self.recieved_counter,
-            'total_counts':self.total_counter
+            'sent_counts': self.sent_counter,
+            'received_counts': self.received_counter,
+            'total_counts': self.total_counter
         })
         return initial
 
+
 CommsTrust = AccessibilityTest
 # class CommsTrust(Application):
-#     Trust = collections.namedtuple('Trust', ['plr','rssi','delay','throughput'])
+# Trust = collections.namedtuple('Trust', ['plr','rssi','delay','throughput'])
 #     my_trust = Trust()
 #     network_trust = []
 #     def tick(self):

@@ -22,12 +22,12 @@
 #
 ###########################################################################
 nodes_geo = {} # Contains all nodes' position - Only the sinks' position is needed
-debug = False
 import math
 from priodict import priorityDictionary
 
 from aietes.Tools import distance, broadcast_address, debug, logging
 
+debug = True
 def SetupRouting(node, config):
     if config["Algorithm"] == "FBR":
         return FBR(node, config)
@@ -43,7 +43,7 @@ class SimpleRoutingTable(dict):
         dict.__init__(self)
         self.layercake = layercake
         self.logger = layercake.logger.getChild("{}".format(self.__class__.__name__))
-        self.logger.setLevel(logging.WARNING)
+        if not debug: self.logger.setLevel(logging.WARNING) # You always forget about this
         self.has_routing_table = False
         self.packets = set([])
 
@@ -53,8 +53,6 @@ class SimpleRoutingTable(dict):
         try:
             packet["through"] = self[packet["dest"][0]]
         except KeyError:
-            #print "WARNING: route to destination %s not specified for node %s" % (packet["finaldest"], self.layercake.hostname)
-            #print "Is this a valid sink?"
             packet["through"] = packet["dest"]
 
 
@@ -68,6 +66,7 @@ class SimpleRoutingTable(dict):
         except KeyError:
             packet["dest_position"] = None
 
+        if debug: self.logger.info("NET initiating TX of {}".format(packet['ID']))
         self.layercake.mac.InitiateTransmission(packet)
 
     def OnPacketReception(self, packet):
@@ -87,6 +86,7 @@ class SimpleRoutingTable(dict):
             else:
                 self.logger.info("Relaying packet from {src} to {dest}".format(src=packet["source"], dest=packet['dest']))
                 self.SendPacket(packet)
+
     
     def NeedExplicitACK(self, current_level, destination):
         return True

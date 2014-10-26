@@ -29,7 +29,7 @@ import math
 from copy import deepcopy
 from aietes.Tools import distance, debug
 
-debug=False
+debug=True
 
 class PhysicalLayer():
 
@@ -87,6 +87,20 @@ class PhysicalLayer():
         self.medium_speed = self.config['medium_speed']
         self.range = self.config['range']
 
+    def dump_stats(self):
+        """
+        Throw up some useful information
+        :return:
+        """
+        data = {
+            "energy_tx": self.tx_energy,
+            "energy_rx": self.rx_energy,
+            "energy_tot": self.tx_energy+self.rx_energy,
+            "collisions": len(self.transducer.collisions),
+
+        }
+
+        return data
 
     # Before transmissting, we should check if the system is idle or not
     def IsIdle(self):
