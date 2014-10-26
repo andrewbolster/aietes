@@ -196,7 +196,7 @@ class Transducer(Sim.Resource):
                 and packet.power >= self.phy.threshold['receive']:
                 # Properly received: enough power, not enough interference
                 self.collision = False
-                if debug: self.logger.debug("PHY Packet Recieved: %s" % packet.data)
+                if debug: self.logger.debug("PHY Packet received: %s" % packet.data)
                 self.layercake.mac.recv(packet.decap())
 
             elif packet.power >= self.phy.threshold['receive']:
@@ -217,7 +217,7 @@ class Transducer(Sim.Resource):
                     else:
                         pass
             else:
-                self.phy.logger.debug("Packet Not Recieved")
+                self.phy.logger.debug("Packet Not received")
 
         else:
             # This should never appear, and in fact, it doesn't, but just to detect bugs (we cannot have a negative SIR in lineal scale).

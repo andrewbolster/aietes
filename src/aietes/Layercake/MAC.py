@@ -137,7 +137,7 @@ class MAC():
 
 
     def onTX_success(self):
-        """When an ACK has been recieved, we can assume it all went well
+        """When an ACK has been received, we can assume it all went well
         """
         Sim.Process().interrupt(self.timer)
         self.logger.debug("Got Ack from {incoming.source}({out.next_hop}: {incoming.data})".format(
@@ -181,7 +181,7 @@ class MAC():
         pass
 
     def onRX(self):
-        """Recieved a packet
+        """received a packet
         Should ack, but can drop ack if routing layer says its ok
         Sends packet up to higher level
         """
@@ -292,7 +292,7 @@ class ALOHA(MAC):
         if self.incoming_packet.type == "DATA" and self.sm.current_state == "WAIT_ACK":
             last_hop = self.incoming_packet.route[-1]['name']
             if self.outgoing_queue[0].next_hop == last_hop and self.outgoing_queue[0].id == self.incoming_packet.id:
-                self.logger.info("Recieved an implicit ACK from routing node {lh}: Data={packet.data}".format(
+                self.logger.debug("received an implicit ACK from routing node {lh}: Data={packet.data}".format(
                     lh=last_hop,
                     packet=self.incoming_packet
                 ))

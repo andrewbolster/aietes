@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 import uuid
 import sys
 
-from Layercake import Layercake
+from Layercake.AUV import Layercake
 import Behaviour
 import Applications
 from aietes.Tools import *
@@ -59,7 +59,13 @@ class Node(Sim.Process):
         # Store any achievements
         self.achievements_log = [[] for _ in range(self.simulation.config.Simulation.sim_duration)]
 
-        #
+        # Fleet Partitioning
+        self.fleet = None
+
+        # Optional Features
+        self.ecea = False # Kalman filtering of INS position
+        self.drifting = False # Drift simulation using DVR / GYR noise        #
+
         # Physical Configuration
         #
         # Extract (X,Y,Z) vector from 6-vector as position
@@ -139,14 +145,6 @@ class Node(Sim.Process):
         self.internalEvent = Sim.SimEvent(self.name)
 
 
-        #
-        # Fleet Partitioning
-        self.fleet = None
-
-
-        # Optional Features
-        self.ecea = False # Kalman filtering of INS position
-        self.drifting = False # Drift simulation using DVR / GYR noise
 
         #
         # Kalman Filter Characteristics from Contribs

@@ -31,6 +31,8 @@ from bounos.DataPackage import DataPackage
 from Tools import *
 from Tools.humanize_time import secondsToStr
 
+import pandas as pd
+
 
 np.set_printoptions(precision=3)
 
@@ -71,6 +73,7 @@ class Simulation():
         self.logger = kwargs.get("logger",None)
         if self.logger is None:
             self.logger = logging.getLogger(self.title)
+            self.logger.addHandler(log_hdl)
             self.logger.setLevel(logtoconsole)
 
         if logtofile is not None:
@@ -276,6 +279,13 @@ class Simulation():
             state.update({'ecea_positions': self.fleets[0].nodePosLogs(shared=True)})
 
             state.update({'additional':[node.ecea.dump() for node in self.nodes if node.ecea]})
+
+
+        ###
+        # Grab Comms Stuff Just Raw, but also output it because I'm lazy
+        ###
+        comms_stats= {node.name:node.app.dump_stats() for node in self.nodes if node.app}
+        print pd.DataFrame.from_dict(comms_stats)
 
         return state
 
@@ -556,10 +566,9 @@ def go(options, args=None):
     else:
         logtoconsole=logging.INFO
 
-    logging.basicConfig(level=logtoconsole)
     sim = Simulation(config_file=options.config,
                      title=options.title,
-                     logger=logging.getLogger(),
+                     logger=None,
                      logtoconsole=logtoconsole,
                      progress_display=not options.quiet
     )

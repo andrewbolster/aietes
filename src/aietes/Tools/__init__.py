@@ -30,6 +30,7 @@ from time import time
 import pickle
 
 import numpy as np
+from numpy.random import poisson
 from configobj import ConfigObj
 import validate
 from SimPy import SimulationStep as Sim
@@ -42,10 +43,11 @@ from humanize_time import secondsToStr
 from joblib import Memory
 from tempfile import mkdtemp
 
+from colorlog import ColoredFormatter
+
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
 
-logging.basicConfig(level=logging.ERROR)
 np.seterr(all='raise', under='warn')
 
 debug = False
@@ -56,6 +58,32 @@ _ROOT = os.path.abspath(os.path.dirname(__file__) + '/../')
 _config_spec = '%s/configs/default.conf' % _ROOT
 _results_dir = '%s/../../results/' % _ROOT
 
+
+
+
+class SimTimeFilter(logging.Filter):
+    """
+    Brings Sim.now() into usefulness
+    """
+    def filter(self, record):
+        record.simtime=Sim.now()
+        return True
+
+log_fmt = ColoredFormatter(
+        "%(log_color)s%(simtime)-5d %(levelname)-6s %(name)s:%(message)s (%(lineno)d)",
+        datefmt=None,
+        reset=True,
+        log_colors={
+                'DEBUG':    'cyan',
+                'INFO':     'green',
+                'WARNING':  'yellow',
+                'ERROR':    'red',
+                'CRITICAL': 'red',
+        }
+)
+log_hdl = logging.StreamHandler()
+log_hdl.setFormatter(log_fmt)
+log_hdl.addFilter(SimTimeFilter())
 
 class ConfigError(Exception):
     """

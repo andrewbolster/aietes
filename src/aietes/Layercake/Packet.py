@@ -144,7 +144,7 @@ class RoutePacket(Packet):
 #####################################################################
 class ACK(Packet):
     """
-    Simple Acknowledgement packet + generation in response to a recieved packet
+    Simple Acknowledgement packet + generation in response to a received packet
 
     Overrides init and payload relevant
     """
