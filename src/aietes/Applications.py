@@ -22,10 +22,10 @@ from numpy.random import poisson
 from collections import Counter, OrderedDict
 import networkx as nx
 
-from aietes.Tools import Sim, debug, randomstr, broadcast_address
+from aietes.Tools import Sim, debug, randomstr, broadcast_address, ConfigError
 
 
-debug = True
+debug = False
 
 
 class Application(Sim.Process):
@@ -60,9 +60,10 @@ class Application(Sim.Process):
             self.packet_rate = packet_count / float(self.sim_duration)
             if debug: self.logger.debug("Taking Packet_Count from config: %s" % self.packet_rate)
         else:
-            self.packet_rate = 1
-            self.logger.warn("This sure is a weird configuration of Packets! Sending at 1pps anyway")
-            # raise Exception("Packet Rate/Count doesn't make sense!")
+            raise ConfigError("Packet Rate/Count doesn't make sense! {}/{}".format(
+                packet_rate,
+                packet_count
+            ))
 
         self.period = 1 / float(self.packet_rate)
 
@@ -82,7 +83,7 @@ class Application(Sim.Process):
             destination = self.default_destination
 
         if self.random_delay:
-            yield Sim.hold, self, random.random() * self.random_delay
+            yield Sim.hold, self, poisson(self.random_delay)
 
         while True:
             (packet, period) = self.packetGen(period=self.period,
@@ -158,7 +159,7 @@ class Application(Sim.Process):
                     self.stats['packets_received']
                 ))
 
-        print self.stats
+        left_in_q= len(self.layercake.mac.outgoing_packet_queue)
 
         app_stats = {
             "rx_counts": self.stats['packets_received'],
@@ -166,9 +167,10 @@ class Application(Sim.Process):
             "delays": self.stats['packets_time'],
             "hops": self.stats['packets_hops'],
             "dhops": self.stats['packets_dhops'],
-            "average_legth": avg_length,
+            "average_length": avg_length,
             "throughput": throughput,
             "offeredload": offeredload,
+            "enqueued": left_in_q
         }
         app_stats.update(self.layercake.phy.dump_stats())
         return app_stats
@@ -212,6 +214,7 @@ class RoutingTest(Application):
         self.total_counter = Counter()
         self.graph = nx.Graph()
 
+
     def packetGen(self, period, destination=None, data=None, *args, **kwargs):
         """
         Lowest-count node gets a message
@@ -222,17 +225,22 @@ class RoutingTest(Application):
         # Update packet_counters with information from the routing layer
         indirect_nodes = filter(lambda n: n not in self.total_counter.keys(), self.layercake.net.keys())
         if len(indirect_nodes):
-            self.logger.warning("Inferred new nodes: {}".format(indirect_nodes))
+            self.logger.debug("Inferred new nodes: {}".format(indirect_nodes))
             for node in indirect_nodes:
                 self.total_counter[node] = 0
 
         self.mergeCounters()
 
-        if len(self.total_counter):
-            most_common = self.total_counter.most_common()
-            destination, count = most_common[-1]
+        if len(self.received_counter)>1:
+            most_common = self.received_counter.most_common()
+            least_count = most_common[-1][1]
+            destination = random.choice([n for n,c in most_common if c == least_count])
             self.sent_counter[destination] += 1
-            self.logger.info("Sending to {} with count {}({})".format(destination, count, most_common))
+            self.logger.info("Sending to {} with count {}({})".format(destination, least_count, most_common))
+        elif len(self.total_counter) == 1:
+            destination = self.total_counter.keys()[0]
+            self.sent_counter[destination] += 1
+            self.logger.info("Sending to {} as it's the only one we know".format(destination))
         else:
             self.logger.warn("No Packet Count List set up yet; fudging it with an broadcast first")
             destination = broadcast_address
@@ -259,34 +267,99 @@ class RoutingTest(Application):
         not_in_rx = filter(lambda n: n not in self.received_counter.keys(), learned_and_implied_nodes)
         not_in_tx = filter(lambda n: n not in self.sent_counter.keys(), learned_and_implied_nodes)
         not_in_tot = filter(lambda n: n not in self.total_counter.keys(), learned_and_implied_nodes)
-        if not_in_rx or not_in_tx or not_in_tot:
-            self.logger.info("Synchronising counters: {} not in rx and {} not in tx, {} not in total".format(not_in_rx, not_in_tx, not_in_tot))
         for n in not_in_rx:
             self.received_counter[n] = 0
         for n in not_in_tx:
             self.sent_counter[n] = 0
-        for n in not_in_tot:
-            self.total_counter[n] = 0
+        for n in learned_and_implied_nodes:
+            self.total_counter[n] = self.sent_counter[n]+self.received_counter[n]
+        if not_in_rx or not_in_tx or not_in_tot:
+            self.logger.info("Synchronising counters: {} not in rx and {} not in tx, {} not in total".format(not_in_rx, not_in_tx, not_in_tot))
 
     def dump_stats(self):
         initial = Application.dump_stats(self)
         initial.update({
-            'sent_counts': self.sent_counter,
-            'received_counts': self.received_counter,
-            'total_counts': self.total_counter
+            'sent_counts': frozenset(self.sent_counter.items()),
+            'received_counts': frozenset(self.received_counter.items()),
+            'total_counts': frozenset(self.total_counter.items())
         })
         return initial
 
+class CommsTrust(RoutingTest):
+    """
+    Vaguely Emulated Bellas Traffic Scenario
+    """
+    current_target=None
+    test_stream_length=10
+    stream_period_ratio = 0.1
 
-CommsTrust = AccessibilityTest
-# class CommsTrust(Application):
-# Trust = collections.namedtuple('Trust', ['plr','rssi','delay','throughput'])
-#     my_trust = Trust()
-#     network_trust = []
-#     def tick(self):
-#         pass
-#     def packetGen(self, period, destination, *args, **kwargs):
-#         data =
+    def activate(self):
+        self.forced_nodes = self.layercake.host.fleet.nodeNames()
+        if self.forced_nodes:
+            for node in self.forced_nodes:
+                if node != self.layercake.hostname:
+                    self.total_counter[node]=0
+        self.test_packet_counter = Counter(self.total_counter)
+        self.result_packet_dl = { name: [] for name in self.total_counter.keys() }
+        super(CommsTrust,self).activate()
+
+    def tick(self):
+        pass
+
+    def packetGen(self, period, destination=None, data=None, *args, **kwargs):
+        """
+        Lowest-count node gets a message
+        """
+        if destination is not None:
+            raise RuntimeWarning("This isn't the kind of application you use with a destination bub")
+
+        # Update packet_counters with information from the routing layer
+        indirect_nodes = filter(lambda n: n not in self.total_counter.keys(), self.layercake.net.keys())
+        if len(indirect_nodes):
+            self.logger.debug("Inferred new nodes: {}".format(indirect_nodes))
+            for node in indirect_nodes:
+                self.total_counter[node] = 0
+
+        # DOES NOT MERGE TARGET COUNTER
+        self.mergeCounters()
+
+        most_common = self.total_counter.most_common()
+        if not self.current_target or self.test_packet_counter[self.current_target] < self.test_stream_length:
+            most_common = self.test_packet_counter.most_common()
+            least_count = most_common[-1][1]
+            destination = self.current_target = random.choice([n for n,c in most_common if c == least_count])
+            self.test_packet_counter[self.current_target] += 1
+            self.sent_counter[destination] += 1
+            self.logger.info("Sending test packet {} to {} with count ({})".format(self.test_packet_counter[destination],destination, most_common))
+        else:
+            destination = self.current_target
+            self.test_packet_counter+=1
+            self.sent_counter[destination] += 1
+            self.logger.info("Sending test packet {} to {} with count ({})".format(self.test_packet_counter,destination, most_common))
+            if self.test_packet_counter[self.current_target] >= self.test_stream_length:
+                self.current_target=None
+                period = poisson(float(period))
+                self.logger.warn("LAST PACKET FOR {}".destination)
+            else:
+                period = poisson(float(period*self.stream_period_ratio))
+
+        packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
+        packet = {"ID": packet_ID,
+                  "dest": destination,
+                  "source": self.layercake.hostname,
+                  "route": [], "type": "DATA",
+                  "initial_time": Sim.now(),
+                  "length": self.config["packet_length"],
+                  "data": self.test_packet_counter[destination]}
+        period = poisson(float(period))
+        return packet, period
+
+    def packetRecv(self, packet):
+        self.mergeCounters()
+        self.received_counter[packet['source']] += 1
+        self.result_packet_dl[packet['source']].append(packet['data'])
+        del packet
+
 
 class Null(Application):
     HAS_LAYERCAKE = False

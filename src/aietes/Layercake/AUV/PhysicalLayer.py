@@ -29,7 +29,7 @@ import math
 from copy import deepcopy
 from aietes.Tools import distance, debug
 
-debug=True
+debug=False
 
 class PhysicalLayer():
 
@@ -56,8 +56,8 @@ class PhysicalLayer():
         self.level2distance = dict(self.config["var_power"])          #Levels defined in terms of distance (m)
         
         # Detection Specifications
-        self.SIR_threshold = self.config["threshold"]["SNR"]            #Minimum signal to interference ratio to properly receive a packet
-        self.SNR_threshold = self.config["threshold"]["SIR"]             #Minimum signal to noise ratio to properly receove a packet
+        self.SIR_threshold = self.config["threshold"]["SIR"]            #Minimum signal to interference ratio to properly receive a packet
+        self.SNR_threshold = self.config["threshold"]["SNR"]             #Minimum signal to noise ratio to properly receove a packet
         self.LIS_threshold = self.config["threshold"]["LIS"]             #Minimum signal to noise ratio to properly detect a packet
 
         self.receiving_threshold = DB2Linear(ReceivingThreshold(self.freq, self.bandwidth, self.SNR_threshold))
@@ -105,7 +105,7 @@ class PhysicalLayer():
     # Before transmissting, we should check if the system is idle or not
     def IsIdle(self):
         if len(self.transducer.activeQ)>0:
-            self.logger.info("The channel is not idle. Currently receiving: "+str(len(self.transducer.activeQ))+" packet(s).")
+            if debug: self.logger.debug("The channel is not idle. Currently receiving: "+str(len(self.transducer.activeQ))+" packet(s).")
             return False
 
         return True
@@ -115,12 +115,12 @@ class PhysicalLayer():
     def TransmitPacket(self, packet):
 
         if self.IsIdle()==False:
-            self.logger.info("I should not do this... the channel is not idle!") # The MAC protocol is the one that should check this before transmitting
+            self.logger.warn("I should not do this... the channel is not idle!") # The MAC protocol is the one that should check this before transmitting
 
         self.collision = False
 
         if self.variable_power:
-            distance = self.level2distance[packet["level"]]
+            distance = self.level2distance[str(packet["level"])]
             power = distance2Intensity(self.bandwidth, self.freq, distance, self.SNR_threshold)
         else:
             power = self.transmit_power
@@ -144,11 +144,6 @@ class PhysicalLayer():
     def OnSuccessfulReceipt(self, packet):
         self.layercake.mac.OnNewPacket(packet)
         
-
-    # Shows information on screen
-    def PrintMessage(self, msg):
-        raise NotImplementedError("You missed a logging message: {}".format(msg))
-        #print "PHY (%s): %s" % (self.layercake.hostname, msg)
 
     def level2delay(self, level):
         try:
@@ -251,11 +246,13 @@ class Transducer(Sim.Resource):
                                                                  +" was discarded due to interference.")               
             else:
                 # Not enough power to be properly received: just heard.
-                self.logger.info("This packet was not addressed to me.")
+                if debug: self.logger.info("Below Recieving Threshold")
 
         else:
             # This should never appear, and in fact, it doesn't, but just to detect bugs (we cannot have a negative SIR in lineal scale).
-            print new_packet["type"], new_packet["source"], new_packet["dest"], new_packet["through"], self.physical_layer.layercake.hostname
+            raise RuntimeError("This really shouldn't happen: Negative minSIR from type {} from {} to {} through {} detected by {}".format(
+                new_packet["type"], new_packet["source"], new_packet["dest"], new_packet["through"], self.physical_layer.layercake.hostname)
+            )
 
 
     def OnTransmitBegin(self):
@@ -274,7 +271,7 @@ class IncomingPacket(Sim.Process):
         maximum interference that occurs over its lifetime (worst case scenario).
         Powers are linear, not dB.
     """
-    
+
     def __init__(self, power, packet, physical_layer):
         Sim.Process.__init__(self, name="ReceiveMessage: "+str(packet))
         self.power = power
@@ -282,6 +279,10 @@ class IncomingPacket(Sim.Process):
         self.physical_layer = physical_layer
         self.doomed = False
         self.MaxInterference = 1
+        if debug: self.physical_layer.logger.debug("Packet {id} from {src} to {dest} recieved with power {pwr}".format(
+                                        id=packet['ID'],src=packet['source'],dest=packet['dest'],pwr=power
+                                        )
+        )
 
 
     def UpdateInterference(self, interference, packet):
@@ -334,6 +335,12 @@ class OutgoingPacket(Sim.Process):
         # Real bit-rate
         bitrate = bandwidth*1e3*self.physical_layer.band2bit
         duration = packet["length"]/bitrate
+
+        if debug: self.logger.debug("Packet {id} to {dest} will take {s} to be transmitted".format(
+            id=packet['ID'],
+            s=duration,
+            dest=packet['dest']
+        ))
            
         self.physical_layer.transducer.channel_event.signal({"pos": self.physical_layer.layercake.get_real_current_position,
                                                              "power": power, "duration": duration, "frequency": self.physical_layer.freq,
@@ -383,10 +390,15 @@ class ArrivalScheduler(Sim.Process):
     
     def schedule_arrival(self, transducer, params, pos):
         distance_to = distance(pos, params["pos"]())
-        
+
         if distance_to > 0.01:  # I should not receive my own transmissions
             receive_power = params["power"] - Attenuation(params["frequency"], distance_to)
             travel_time = distance_to/transducer.physical_layer.medium_speed  # Speed of sound in water = 1482.0 m/s
+
+            packet = params['packet']
+            if debug: transducer.logger.debug("Packet from %s to %s will take %s to get to me %.2fm away" % (
+                packet['source'], packet['dest'], travel_time, distance_to)
+            )
 
             yield Sim.hold, self, travel_time
 

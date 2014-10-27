@@ -2,7 +2,7 @@
 ###########################################################################
 #
 # Copyright (C) 2007 by Justin Eskesen and Josep Miquel Jornet Montana
-#    <jge@mit.edu> <jmjornet@mit.edu>                                      
+# <jge@mit.edu> <jmjornet@mit.edu>
 #
 # Copyright: See COPYING file that comes with this distribution
 #
@@ -355,7 +355,7 @@ class ALOHA4FBR(ALOHA):
         self.valid_candidates = {}
 
         self.level = self.outgoing_packet_queue[0]["level"]
-        self.T = self.layercake.phy.level2distance[self.level] / 1482.0
+        self.T = self.layercake.phy.level2delay(self.level)
 
         if self.layercake.phy.IsIdle():
             self.transmission_attempts = self.transmission_attempts + 1
@@ -377,7 +377,7 @@ class ALOHA4FBR(ALOHA):
             self.layercake.phy.TransmitPacket(RTSPacket)
 
             self.level = self.outgoing_packet_queue[0]["level"]
-            self.T = self.layercake.phy.level2distance[self.level] / 1482.0
+            self.T = self.layercake.phy.level2delay(self.level)
             timeout = 2 * self.T
 
             self.TimerRequest.signal((timeout, "timeout"))
@@ -506,7 +506,7 @@ class ALOHA4FBR(ALOHA):
             return True
 
         # Is this a multicast packet?
-        if packet["through"][0:3] == "ANY":
+        if packet["through"] == broadcast_address:
             return True
 
         return False
@@ -518,7 +518,7 @@ class ALOHA4FBR(ALOHA):
         self.incoming_packet = IncomingPacket
 
         if self.CanIHelp(self.incoming_packet):
-            if self.incoming_packet["through"][0:3] == "ANY":
+            if self.incoming_packet["through"] == broadcast_address:
                 self.fsm.process("got_RTS")
             else:
                 self.fsm.process(self.packet_signal[self.incoming_packet["type"]])
@@ -551,7 +551,7 @@ class DACAP:
         self.ack_packet_length = config["ack_packet_length"]
         self.rts_packet_length = config["rts_packet_length"]
         self.cts_packet_length = config["cts_packet_length"]
-        self.WAR_packet_length = config["WAR_packet_length"]
+        self.war_packet_length = config["war_packet_length"]
 
         self.max_transmission_attempts = config["attempts"]
 
@@ -564,14 +564,13 @@ class DACAP:
         # DACAP specific parameters
         self.T = 0  # It will be adapted according to the transmission range
 
-        self.t_min = config["tmin/T"]
-        self.Tw_min = config["twmin/T"]
+        self.t_min = config["tminper"]
+        self.Tw_min = config["twminper"]
 
-        self.t_data = self.node.config["packet_length"] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         self.t_control = self.rts_packet_length / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
         self.deltaTData = config["deltatdata"]
-        self.deltaD = config["deltad/T"]
+        self.deltaD = config["deltadt"]
 
     def activate(self):
         Sim.activate(self.timer, self.timer.Lifecycle(self.TimerRequest))
@@ -727,8 +726,10 @@ class DACAP:
                 else:
                     return False
 
-        T = self.layercake.phy.level2delay(self.level)
         self.last_packet = self.incoming_packet
+
+        self.t_data = self.incoming_packet['length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        T = self.layercake.phy.level2delay(self.incoming_packet['level'])
 
         # If I am here, that means that I already was in the backoff state. I have just to schedule the backoff timer
         if self.incoming_packet["type"] == "WAR":
@@ -744,7 +745,7 @@ class DACAP:
         p = Sim.Process()
         p.interrupt(self.timer)
 
-        self.logger.info("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
+        if debug: self.logger.debug("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
                          + " coming from " + self.incoming_packet["source"]
                          + " to " + self.incoming_packet["dest"]
                          + " through " + self.incoming_packet["through"])
@@ -797,13 +798,13 @@ class DACAP:
         ''' Request To Send.
         '''
         self.level = self.outgoing_packet_queue[0]["level"]
-        self.T = self.layercake.phy.level2distance[self.level] / 1482.0
+        self.T = self.layercake.phy.level2delay(self.level)
 
         if self.layercake.phy.IsIdle():
             self.transmission_attempts = self.transmission_attempts + 1
             self.channel_access_retries = 0
 
-            if self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
+            if self.outgoing_packet_queue[0]["through"] == broadcast_address:
                 self.multicast = True
             else:
                 self.multicast = False
@@ -817,7 +818,7 @@ class DACAP:
             if debug: self.logger.info("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
 
             self.level = self.outgoing_packet_queue[0]["level"]
-            self.T = self.layercake.phy.level2distance[self.level] / 1482.0
+            self.T = self.layercake.phy.level2delay(self.level)
 
             self.layercake.phy.TransmitPacket(RTSPacket)
 
@@ -932,7 +933,7 @@ class DACAP:
                      "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
                      "dest": self.last_cts["dest"], "dest_position": self.last_cts["dest_position"],
                      "through": self.last_cts["dest"], "through_position": self.last_cts["dest_position"],
-                     "length": self.WAR_packet_length, "level": self.last_cts["level"]}
+                     "length": self.war_packet_length, "level": self.last_cts["level"]}
 
         self.logger.info("Transmitting Warning Packet to " + self.last_cts["dest"])
 
@@ -984,7 +985,7 @@ class DACAP:
         self.layercake.phy.TransmitPacket(CTSPacket)
 
         self.level = self.incoming_packet["level"]
-        self.T = self.layercake.phy.level2distance[self.level] / 1482.0
+        self.T = self.layercake.phy.level2delay(self.level)
 
         timeout = self.TimeOut("DATA", self.T)
         self.TimerRequest.signal((timeout, "timeout"))
@@ -1314,7 +1315,7 @@ class DACAP4FBR(DACAP):
             # We have consumed all the attemps
             self.fsm.process("abort")
 
-        elif self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
+        elif self.outgoing_packet_queue[0]["through"] == broadcast_address:
             # We should retransmit increasing the power
             self.outgoing_packet_queue[0]["level"] = int(self.outgoing_packet_queue[0]["through"][3])
             self.fsm.process("retransmit")
@@ -1400,7 +1401,7 @@ class DACAP4FBR(DACAP):
             return True
 
         # Is this a multicast packet?
-        if packet["through"][0:3] == "ANY":
+        if packet["through"] == broadcast_address:
             return True
 
         return False
@@ -1412,7 +1413,7 @@ class DACAP4FBR(DACAP):
         self.incoming_packet = IncomingPacket
 
         if self.CanIHelp(self.incoming_packet):
-            if self.incoming_packet["through"][0:3] == "ANY":
+            if self.incoming_packet["through"] == broadcast_address:
                 self.fsm.process("got_MC_RTS")
             else:
                 self.fsm.process(self.packet_signal[self.incoming_packet["type"]])
@@ -1484,6 +1485,7 @@ class CSMA:
         self.next_timeout = 0
         self.pending_data_packet_from = None
         self.pending_ack_packet_from = None
+        self.multicast = False
 
         # Timing parameters
         self.T = 0  # It will be adapted according to the transmission range
@@ -1564,7 +1566,7 @@ class CSMA:
         self.fsm.add_transition("send_DATA", "BACKOFF", self.QueueData, "BACKOFF")
         self.fsm.add_transition("got_RTS", "BACKOFF", self.ProcessRTS, "BACKOFF")
         ##self.fsm.add_transition("got_CTS", "BACKOFF", self.IgnoreCTS, "BACKOFF")  ### This line is more important that what it seems: if we Ignore it, we tend to defer all transmissions.
-        self.fsm.add_transition("got_CTS", "BACKOFF", self.Transmit, "WAIT_ACK")    ### This line is more important that what it seems: if we Accept it, we tend to make all transmissions.
+        self.fsm.add_transition("got_CTS", "BACKOFF", self.Transmit, "WAIT_ACK")  ### This line is more important that what it seems: if we Accept it, we tend to make all transmissions.
         self.fsm.add_transition("got_DATA", "BACKOFF", self.CheckPendingData, "BACKOFF")
         self.fsm.add_transition("got_ACK", "BACKOFF", self.CheckPendingACK, "READY_WAIT")  ### Be careful with this
 
@@ -1599,7 +1601,7 @@ class CSMA:
 
         self.last_packet = self.incoming_packet
 
-        T = self.layercake.phy.level2delay(self.level)
+        T = self.layercake.phy.level2delay(self.incoming_packet['level'])
 
         backoff = self.BackOff(self.incoming_packet["type"], T)
 
@@ -1655,13 +1657,14 @@ class CSMA:
 
     def CheckPendingACK(self):
         if self.pending_ack_packet_from is not None:
-            if self.incoming_packet["source"] == self.pending_ack_packet_from or self.pending_ack_packet_from[0:3] == "ANY":
+            if self.incoming_packet["source"] == self.pending_ack_packet_from or self.pending_ack_packet_from == broadcast_address:
                 self.logger.warn("Despite everything, the DATA was properly transmitted to: " + self.incoming_packet["source"])
                 self.OnTransmitSuccess()
                 self.pending_ack_packet_from = None
         else:
-            self.logger.info("I think I have pending ACK from {src} but I don't".format(
-                src=self.incoming_packet["source"])
+            self.logger.info("I think I have pending ACK from {src}:{id} but I don't".format(
+                src=self.pending_ack_packet_from,
+                id=self.last_data_id)
             )
             self.OnError()
 
@@ -1669,6 +1672,7 @@ class CSMA:
     def SendRTS(self):
         ''' Request To Send.
         '''
+        self.last_outgoing_id = self.outgoing_packet_queue[0]['ID']
         self.level = self.outgoing_packet_queue[0]["level"]
         self.T = self.layercake.phy.level2delay(self.level)
 
@@ -1676,7 +1680,7 @@ class CSMA:
             self.transmission_attempts = self.transmission_attempts + 1
             self.channel_access_retries = 0
 
-            if self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
+            if self.outgoing_packet_queue[0]["through"] == broadcast_address:
                 self.multicast = True
             else:
                 self.multicast = False
@@ -1692,10 +1696,14 @@ class CSMA:
             self.T = self.layercake.phy.level2delay(self.level)
 
             self.layercake.phy.TransmitPacket(RTSPacket)
-            self.t_data = RTSPacket['length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+            self.t_data = self.outgoing_packet_queue[0]["length"] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
             timeout = self.TimeOut("CTS", self.T)
-            if debug: self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]) + " waiting " + str(timeout))
+            if debug: self.logger.debug("Transmitting RTS to {dest} for {id} and waiting {timeout}".format(
+                dest=self.outgoing_packet_queue[0]["dest"],
+                id=self.outgoing_packet_queue[0]["ID"],
+                timeout=timeout
+            ))
             self.TimerRequest.signal((timeout, "timeout"))
             self.fsm.current_state = "WAIT_CTS"
 
@@ -1737,7 +1745,10 @@ class CSMA:
         elif packet_type == "ACK":
             backoff = 0  #I'm all set
 
-        backoff = np.random.random() * (backoff)
+        if debug: self.logger.debug("Backoff: {t} based on {T} {pkt}".format(
+            t=backoff, T=T, pkt=packet_type
+
+        ))
         return backoff
 
 
@@ -1752,7 +1763,10 @@ class CSMA:
         elif packet_type == "ACK":
             t = 2 * T + self.t_data + self.t_control
 
-        return np.random.random() * (t)
+        if debug: self.logger.debug("Timeout: {t} based on {T} {pkt}".format(
+            t=t, T=T, pkt=packet_type
+        ))
+        return t
 
 
     def ProcessCTS(self):
@@ -1785,6 +1799,11 @@ class CSMA:
         p = Sim.Process()
         p.interrupt(self.timer)
 
+        if self.incoming_packet["through"] == broadcast_address:
+            self.multicast = True
+        else:
+            self.multicast = False
+
         CTSPacket = {"type": "CTS", "ID": self.incoming_packet["ID"],
                      "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
                      "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
@@ -1792,12 +1811,17 @@ class CSMA:
                      "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
-        if debug: self.logger.debug("Transmitting CTS to " + self.incoming_packet["source"])
+        if debug: self.logger.debug("Transmitting CTS to {src} in response to {id}".format(
+            src=self.incoming_packet["source"],
+            id=self.incoming_packet["ID"],
+        )
+        )
         self.last_cts_to = self.incoming_packet["source"]
         self.last_cts_from = self.incoming_packet["dest"]
 
         self.layercake.phy.TransmitPacket(CTSPacket)
-        self.t_data = CTSPacket['length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        # This will response with a timeout related to the RTS packet length
+        self.t_data = self.incoming_packet['length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
         self.level = self.incoming_packet["level"]
         self.T = self.layercake.phy.level2delay(self.level)
@@ -1815,6 +1839,12 @@ class CSMA:
         ''' Sometimes we can not use implicit ACKs.
         '''
         if debug: self.logger.debug("ACK to " + packet_origin)
+
+        # This may be incorrect
+        if self.incoming_packet["through"] == broadcast_address:
+            self.multicast = True
+        else:
+            self.multicast = False
 
         AckPacket = {"type": "ACK",
                      "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
@@ -1907,12 +1937,13 @@ class CSMA:
         ''' This function is called when the FSM has an unexpected input_symbol in a determined state.
         '''
         try:
-            self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {src} {dest} {id}".format(
+            self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {src} {thru} {dest} {id}".format(
                 sm=self.fsm,
                 src=self.incoming_packet['source'],
+                thru=self.incoming_packet['through'],
                 dest=self.incoming_packet['dest'],
                 id=self.incoming_packet['ID']
-                )
+            )
             )
         except:
             raise RuntimeError("REALLY Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(
@@ -1943,7 +1974,13 @@ class CSMA:
     def PostSuccessOrFail(self):
         ''' Successfully or not, we have finished the current transmission.
         '''
-        self.outgoing_packet_queue.pop(0)["dest"]
+        try:
+            self.outgoing_packet_queue.pop(0)["dest"]
+        except IndexError as e:
+            self.logger.fatal("Over Popped: {sm.current_state}".format(
+                sm=self.fsm
+            ))
+            raise e
         self.transmission_attempts = 0
 
         # Is there anything else to do?
@@ -1986,7 +2023,7 @@ class CSMA:
             self.logger.info("It seems that there has been a collision.")
 
         if self.transmission_attempts > self.max_transmission_attempts:
-            self.logger.info("CTS timeout limit waiting on {} after {}".format(
+            self.logger.warn("CTS timeout limit waiting on {} after {}".format(
                 self.outgoing_packet_queue[0]['ID'],
                 self.transmission_attempts)
             )
@@ -1996,7 +2033,7 @@ class CSMA:
 
 
     def OnTimeout(self):
-        if debug: self.logger.debug("Exiting from back off")
+        self.logger.warn("Backoff Timed Out!")
 
         if (len(self.outgoing_packet_queue) > 0):
             random_delay = random.random() * self.max_wait_to_retransmit
@@ -2014,12 +2051,18 @@ class CSMA:
     def TransmitNoTimer(self):
         self.layercake.phy.TransmitPacket(self.outgoing_packet_queue[0])
         self.last_data_to = self.outgoing_packet_queue[0]["through"]
+        self.last_data_id = self.outgoing_packet_queue[0]["ID"]
         timeout = self.TimeOut("ACK", self.T)
         self.TimerRequest.signal((timeout, "timeout"))
 
 
     def QueueData(self):
-        self.logger.info("Queuing Data")
+        if debug: self.logger.debug("Queuing Data to {}:{} as we are currently {}".format(
+            self.outgoing_packet_queue[0]['dest'],
+            self.outgoing_packet_queue[0]['ID'],
+            self.fsm.current_state
+
+        ))
 
 
 class CSMA4FBR(CSMA):
@@ -2152,7 +2195,7 @@ class CSMA4FBR(CSMA):
             # We have consumed all the attemps
             self.fsm.process("abort")
 
-        elif self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
+        elif self.outgoing_packet_queue[0]["through"] == broadcast_address:
             # We should retransmit increasing the power
             self.outgoing_packet_queue[0]["level"] = int(self.outgoing_packet_queue[0]["through"][3])
             self.fsm.process("retransmit")
@@ -2238,7 +2281,7 @@ class CSMA4FBR(CSMA):
             return True
 
         # Is this a multicast packet?
-        if packet["through"][0:3] == "ANY":
+        if packet["through"] == broadcast_address:
             return True
 
         return False
@@ -2250,7 +2293,7 @@ class CSMA4FBR(CSMA):
         self.incoming_packet = IncomingPacket
 
         if self.CanIHelp(self.incoming_packet):
-            if self.incoming_packet["through"][0:3] == "ANY":
+            if self.incoming_packet["through"] == broadcast_address:
                 self.fsm.process("got_MC_RTS")
             else:
                 self.fsm.process(self.packet_signal[self.incoming_packet["type"]])
@@ -2264,7 +2307,3 @@ class CSMA4FBR(CSMA):
         self.valid_candidates = {}
         CSMA.SendRTS(self)
 
-
-    def PrintMessage(self, msg):
-        pass
-        #print "CSMA4FBR (%s): %s at t=" % (self.layercake.hostname, msg), Sim.now(), self.fsm.input_symbol, self.fsm.current_state

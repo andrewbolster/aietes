@@ -146,6 +146,13 @@ class Fleet(Sim.Process):
         """
         return len(self.nodes)
 
+    def nodeNames(self):
+        """
+        Return the node names in this fleet
+        :return:
+        """
+        return [node.name for node in self.nodes]
+
     def nodePositions(self, shared=True):
         """
         Return the fleet-list array of latest reported positions

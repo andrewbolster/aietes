@@ -27,7 +27,7 @@ from priodict import priorityDictionary
 
 from aietes.Tools import distance, broadcast_address, debug, logging
 
-debug = True
+debug = False
 def SetupRouting(node, config):
     if config["Algorithm"] == "FBR":
         return FBR(node, config)

@@ -37,6 +37,11 @@ class Node(Sim.Process):
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
         self.logger = kwargs.get("logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
+        fh=logging.FileHandler("Node[{}].log".format(name))
+        fh.setFormatter(log_fmt)
+        fh.addFilter(SimTimeFilter())
+        fh.setLevel(logging.DEBUG)
+        self.logger.addHandler(fh)
 
         self.simulation = simulation
         self.config = node_config
