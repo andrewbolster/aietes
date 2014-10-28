@@ -54,6 +54,10 @@ class SimpleRoutingTable(dict):
             packet["through"] = self[packet["dest"][0]]
         except KeyError:
             packet["through"] = packet["dest"]
+        except TypeError as e:
+            raise RuntimeError("Possibly malformed/incomplete packet {}: raised {}".format(
+                packet,e
+            ))
 
 
         packet["source_position"] = self.layercake.get_current_position() #Current hop position

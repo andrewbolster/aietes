@@ -22,7 +22,7 @@ import optparse
 import cProfile
 import collections
 
-from Layercake import Layercake
+from Layercake.AUV import MAC
 from Environment import Environment
 import Fleet
 from Node import Node
@@ -288,6 +288,7 @@ class Simulation():
         comms_dataframe=pd.DataFrame.from_dict(comms_stats, orient='index')
         mkpickle("comms_dataframe",comms_dataframe)
         print comms_dataframe.sum()
+        print comms_dataframe
         print comms_dataframe.describe()
 
 
@@ -402,6 +403,28 @@ class Simulation():
             behaviours = [str(bev) for i in range(int(nodes_count - preconfigured_nodes_count))]
             self.logger.info("Using Behaviour:%s" % behaviours)
             #
+
+        # Fix MAC Duplication
+        # Cross-check Default Mismatches (i.e. app undefined but Application.Protocol defined)
+        # phy/PHY is unnecessary (almost completly actually... #TODO)
+        # mac /MAC.protocol
+        try:
+            macp = node_default_config_dict.MAC.protocol
+            mac = node_default_config_dict.mac
+
+            if mac != macp:
+                if mac == MAC.default:
+                    node_default_config_dict.mac = macp
+                else:
+                    raise ConfigError("Conflicting app and Application.Protcols ({},{})".format(
+                        app,
+                        appp
+                    ))
+        except AttributeError as e:
+            self.logger.error("Error:%s" % e)
+            self.logger.info("%s" % pformat(node_default_config_dict))
+            raise ConfigError("Something is badly wrong")
+
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
             count=nodes_count - preconfigured_nodes_count,
@@ -424,11 +447,6 @@ class Simulation():
             for node_name, node_config in config_dict.Node.Nodes.items():
                 # Import the magic!
                 update(nodes_config[node_name],node_config.copy())
-                # Cross-check Default Mismatches (i.e. app undefined but Application.Protocol defined)
-                # phy/PHY is unnecessary (almost completly actually... #TODO)
-                # mac /MAC.protocol
-                if hasattr(node_config,'MAC'):
-                    pass
 
 
         except AttributeError as e:

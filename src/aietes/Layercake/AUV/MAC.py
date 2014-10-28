@@ -30,7 +30,9 @@ import random
 
 from aietes.Tools import broadcast_address, np, debug
 
-debug = True
+#debug = True
+
+default = "ALOHA"
 
 
 def SetupMAC(node, config):
@@ -2036,7 +2038,7 @@ class CSMA:
 
 
     def OnTimeout(self):
-        self.logger.warn("Backoff Timed Out!")
+        if debug: self.logger.warn("Backoff Timed Out!")
 
         if (len(self.outgoing_packet_queue) > 0):
             random_delay = random.random() * self.max_wait_to_retransmit
@@ -2067,6 +2069,49 @@ class CSMA:
 
         ))
 
+
+class FAMA(CSMA):
+    """
+    Floor Acquisition Multiple Access
+
+    Should be slotted but is not currently
+    """
+    def BackOff(self, packet_type, T):
+        ''' Returns the backoff for a specific state.
+        T : Maximum Propogation Delay
+        '''
+        if packet_type == "RTS":
+            backoff = 4 * T
+        elif packet_type == "CTS" or packet_type == "SIL":
+            backoff = 3 * T
+        elif packet_type == "DATA":
+            backoff = 2 * T
+        elif packet_type == "ACK":
+            backoff = 0  #I'm all set
+
+        if debug: self.logger.debug("Backoff: {t} based on {T} {pkt}".format(
+            t=backoff, T=T, pkt=packet_type
+
+        ))
+        return backoff
+
+
+    def TimeOut(self, packet_type, T):
+        ''' Returns the timeout for a specific state.
+        T : Maximum Propogation Delay
+        '''
+
+        if packet_type == "CTS":
+            t = 2 * T + 2 * self.t_control
+        elif packet_type == "DATA":
+            t = 2 * T + self.t_data + self.t_control
+        elif packet_type == "ACK":
+            t = 2 * T + self.t_data + self.t_control
+
+        if debug: self.logger.debug("Timeout: {t} based on {T} {pkt}".format(
+            t=t, T=T, pkt=packet_type
+        ))
+        return t
 
 class CSMA4FBR(CSMA):
     '''CSMA for FBR: adaptation of CSMA with power control to couple it with FBR

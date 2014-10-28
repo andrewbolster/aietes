@@ -150,9 +150,11 @@ class Application(Sim.Process):
         offeredload = total_bits_out/Sim.now()*self.stats['packets_hops']
         try:
             avg_length = total_bits_in / self.stats['packets_received']
+            average_rx_delay= self.stats['packets_time']/self.stats['packets_received']
         except ZeroDivisionError:
             if self.stats['packets_received'] == 0:
                 avg_length = 0
+                average_rx_delay=inf
             else:
                 raise RuntimeError("Got a zero in a weird place: {}/{}".format(
                     total_bits_in,
@@ -164,7 +166,8 @@ class Application(Sim.Process):
         app_stats = {
             "rx_counts": self.stats['packets_received'],
             "tx_counts": self.stats['packets_sent'],
-            "delays": self.stats['packets_time'],
+            "average_rx_delay": average_rx_delay,
+            "delay": self.stats['packets_time'],
             "hops": self.stats['packets_hops'],
             "dhops": self.stats['packets_dhops'],
             "average_length": avg_length,
@@ -290,7 +293,7 @@ class CommsTrust(RoutingTest):
     Vaguely Emulated Bellas Traffic Scenario
     """
     current_target=None
-    test_stream_length=10
+    test_stream_length=6
     stream_period_ratio = 0.1
 
     def activate(self):
@@ -308,7 +311,10 @@ class CommsTrust(RoutingTest):
 
     def packetGen(self, period, destination=None, data=None, *args, **kwargs):
         """
-        Lowest-count node gets a message
+        Lowest-count node gets a message indicating what number packet it is that
+        is addressed to it with a particular stream length.
+        The counter counts the 'actual' number of packets while the packet.data
+        carries the zero-indexed 'packet id'
         """
         if destination is not None:
             raise RuntimeWarning("This isn't the kind of application you use with a destination bub")
@@ -324,25 +330,15 @@ class CommsTrust(RoutingTest):
         self.mergeCounters()
 
         most_common = self.total_counter.most_common()
-        if not self.current_target or self.test_packet_counter[self.current_target] < self.test_stream_length:
-            most_common = self.test_packet_counter.most_common()
-            least_count = most_common[-1][1]
-            destination = self.current_target = random.choice([n for n,c in most_common if c == least_count])
-            self.test_packet_counter[self.current_target] += 1
-            self.sent_counter[destination] += 1
-            self.logger.info("Sending test packet {} to {} with count ({})".format(self.test_packet_counter[destination],destination, most_common))
-        else:
-            destination = self.current_target
-            self.test_packet_counter+=1
-            self.sent_counter[destination] += 1
-            self.logger.info("Sending test packet {} to {} with count ({})".format(self.test_packet_counter,destination, most_common))
-            if self.test_packet_counter[self.current_target] >= self.test_stream_length:
-                self.current_target=None
-                period = poisson(float(period))
-                self.logger.warn("LAST PACKET FOR {}".destination)
-            else:
-                period = poisson(float(period*self.stream_period_ratio))
+        if not self.current_target:
+            self.current_target = random.choice(
+                [n
+                 for n,c in most_common
+                 if c == most_common[-1][1]
+                ]
+            )
 
+        destination = self.current_target
         packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
         packet = {"ID": packet_ID,
                   "dest": destination,
@@ -351,13 +347,34 @@ class CommsTrust(RoutingTest):
                   "initial_time": Sim.now(),
                   "length": self.config["packet_length"],
                   "data": self.test_packet_counter[destination]}
-        period = poisson(float(period))
+        self.sent_counter[destination] += 1
+        self.test_packet_counter[destination] += 1
+
+        if self.test_packet_counter[destination] % self.test_stream_length:
+            # In Stream
+            period = poisson(float(self.period*self.stream_period_ratio))
+        else:
+            # Finished Stream
+            period = poisson(float(self.period))
+            self.logger.info("Finished Stream {} for {}, sleeping for {}".format(
+                self.test_packet_counter[destination]/self.test_stream_length,
+                destination,
+                period
+            ))
+            self.current_target = None
         return packet, period
 
     def packetRecv(self, packet):
         self.mergeCounters()
         self.received_counter[packet['source']] += 1
         self.result_packet_dl[packet['source']].append(packet['data'])
+
+        if not (packet['data']+1)%self.test_stream_length:
+            self.logger.warn("Got Stream {count} from {src} after {delay}".format(
+                count = (packet['data']+1)/self.test_stream_length,
+                src = packet['source'],
+                delay=Sim.now()-packet['initial_time']
+            ))
         del packet
 
 
