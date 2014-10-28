@@ -286,9 +286,9 @@ class Simulation():
         ###
         comms_stats= {node.name:node.app.dump_stats() for node in self.nodes if node.app}
         comms_dataframe=pd.DataFrame.from_dict(comms_stats, orient='index')
+        mkpickle("comms_dataframe",comms_dataframe)
         print comms_dataframe.sum()
         print comms_dataframe.describe()
-        mkpickle("comms_dataframe",comms_dataframe)
 
 
         return state

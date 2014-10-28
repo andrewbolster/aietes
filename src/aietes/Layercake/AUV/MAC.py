@@ -1458,6 +1458,8 @@ class DACAP4FBR(DACAP):
 
 class CSMA:
     """CSMA: Carrier Sensing Multiple Access - Something between ALOHA and DACAP
+
+    This implementation is extremely close to MACA (Karn 1990)
     """
 
     def __init__(self, layercake, config):
@@ -1577,6 +1579,7 @@ class CSMA:
 
     def XOverheard(self):
         ''' By overhearing the channel, we can obtain valuable information.
+        If I'm in any state
         '''
         if self.fsm.current_state == "READY_WAIT":
             if debug: self.logger.info("I'm in READY_WAIT and have received a " + self.incoming_packet["type"])
@@ -1901,10 +1904,10 @@ class CSMA:
     def OverHearing(self):
         ''' Valuable information can be obtained from overhearing the channel.
         '''
-        if self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
-            if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet["dest"] == self.outgoing_packet_queue[0]["dest"]:
-                # This is an implicit ACK
-                self.fsm.process("got_ACK")
+        if self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK"\
+            and self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet["dest"] == self.outgoing_packet_queue[0]["dest"]:
+            # This is an implicit ACK
+            self.fsm.process("got_ACK")
         else:
             self.fsm.process("got_X")
 
