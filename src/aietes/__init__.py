@@ -216,8 +216,6 @@ class Simulation():
     def currentState(self):
         positions = []
         vectors = []
-        plr = []
-        data_rate = []
 
         names = []
         contributions = []
@@ -282,14 +280,15 @@ class Simulation():
 
 
         ###
-        # Grab Comms Stuff Just Raw, but also output it because I'm lazy
+        # Grab Comms Stuff Just Raw
         ###
         comms_stats= {node.name:node.app.dump_stats() for node in self.nodes if node.app}
-        comms_dataframe=pd.DataFrame.from_dict(comms_stats, orient='index')
-        mkpickle("comms_dataframe",comms_dataframe)
-        print comms_dataframe.sum()
-        print comms_dataframe
-        print comms_dataframe.describe()
+        comms_logs= {node.name:node.app.dump_logs() for node in self.nodes if node.app}
+        comms = {
+            'stats': pd.DataFrame.from_dict(comms_stats, orient='index'),
+            'logs': comms_logs
+        }
+        state.update({'comms':comms})
 
 
         return state
@@ -416,9 +415,9 @@ class Simulation():
                 if mac == MAC.default:
                     node_default_config_dict.mac = macp
                 else:
-                    raise ConfigError("Conflicting app and Application.Protcols ({},{})".format(
-                        app,
-                        appp
+                    raise ConfigError("Conflicting mac and MAC.Protcols ({},{})".format(
+                        mac,
+                        macp
                     ))
         except AttributeError as e:
             self.logger.error("Error:%s" % e)

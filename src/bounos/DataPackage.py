@@ -56,7 +56,8 @@ class DataPackage(object):
                    'drift_positions': 'drift_positions',
                    'intent_positions': 'ecea_positions',
                    'ecea_positions': 'ecea_positions',
-                   'additional': 'additional'
+                   'additional': 'additional',
+                   'comms':'comms'
     }
 
     version = 1.0

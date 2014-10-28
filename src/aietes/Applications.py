@@ -124,7 +124,7 @@ class Application(Sim.Process):
             self.received_log[source].append(packet)
         else:
             self.received_log[source] = [packet]
-        delay = Sim.now() - packet['initial_time']
+        delay = Sim.now() - packet['time_stamp']
         # Ignore first hop (source)
         hops = len(packet['route'])
 
@@ -178,6 +178,16 @@ class Application(Sim.Process):
         app_stats.update(self.layercake.phy.dump_stats())
         return app_stats
 
+    def dump_logs(self):
+        """
+        Return the packet tx/rx logs
+        """
+        return {
+            'tx':self.sent_log,
+            'rx':self.received_log,
+            'tx_queue':self.layercake.mac.outgoing_packet_queue
+        }
+
     def packetGen(self, period, destination, *args, **kwargs):
         """
         Packet Generator with periodicity
@@ -195,12 +205,12 @@ class AccessibilityTest(Application):
         exhibiting poisson departure behaviour
         """
         packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
-        packet = {"ID": packet_ID, "dest": destination, "source": self.layercake.hostname, "route": [], "type": "DATA", "initial_time": Sim.now(), "length": self.node.config["DataPacketLength"]}
+        packet = {"ID": packet_ID, "dest": destination, "source": self.layercake.hostname, "route": [], "type": "DATA", "time_stamp": Sim.now(), "length": self.node.config["DataPacketLength"]}
         period = poisson(float(period))
         return packet, period
 
     def packetRecv(self, packet):
-        delay = Sim.now() - packet["initial_time"]
+        delay = Sim.now() - packet["time_stamp"]
         hops = len(packet["route"])
 
         self.logger.warn("Packet " + packet["ID"] + " received over " + str(hops) + " hops with a delay of " + str(delay) + "s (delay/hop=" + str(delay / hops) + ").")
@@ -253,7 +263,7 @@ class RoutingTest(Application):
                   "dest": destination,
                   "source": self.layercake.hostname,
                   "route": [], "type": "DATA",
-                  "initial_time": Sim.now(),
+                  "time_stamp": Sim.now(),
                   "length": self.config["packet_length"],
                   "data": None}
         period = poisson(float(period))
@@ -344,7 +354,7 @@ class CommsTrust(RoutingTest):
                   "dest": destination,
                   "source": self.layercake.hostname,
                   "route": [], "type": "DATA",
-                  "initial_time": Sim.now(),
+                  "time_stamp": Sim.now(),
                   "length": self.config["packet_length"],
                   "data": self.test_packet_counter[destination]}
         self.sent_counter[destination] += 1
@@ -373,7 +383,7 @@ class CommsTrust(RoutingTest):
             self.logger.warn("Got Stream {count} from {src} after {delay}".format(
                 count = (packet['data']+1)/self.test_stream_length,
                 src = packet['source'],
-                delay=Sim.now()-packet['initial_time']
+                delay=Sim.now()-packet['time_stamp']
             ))
         del packet
 

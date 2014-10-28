@@ -78,11 +78,9 @@ class Layercake():
         ##############################
         # Routing
         ##############################
-        try:
-            net_mod = getattr(Net, str(config['net']))
-            self.net = net_mod(self, config['Network'])
-        except KeyError:
-            logging.warn("No NET Configured")
+        #try:
+        net_mod = getattr(Net, str(config['net']))
+        self.net = net_mod(self, config['Network'])
         #except AttributeError as e:
         #    raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
 
