@@ -31,10 +31,9 @@ from aietes.Tools.ProgressBar import ProgressBar
 from aietes.Tools.Memoize import lru_cache
 from aietes.Environment import Environment
 
-##### FIXME
+# FIXME
 from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex
 #####
-
 
 
 # Local Debug
@@ -42,12 +41,14 @@ debug = False
 
 
 class Fleet(Sim.Process):
+
     """
     Fleets act initially as traffic managers for Nodes
     """
 
     def __init__(self, nodes, simulation, *args, **kwargs):
-        self.logger = kwargs.get("logger", simulation.logger.getChild(__name__))
+        self.logger = kwargs.get(
+            "logger", simulation.logger.getChild(__name__))
         self.logger.info("creating Fleet instance with %d nodes" % len(nodes))
         Sim.Process.__init__(self, name="Fleet")
         self.nodes = nodes
@@ -81,10 +82,12 @@ class Fleet(Sim.Process):
                 from random import choice
 
                 colors = ["BLUE", "GREEN", "CYAN", "RED", "MAGENTA", "YELLOW"]
-                progress_bar = ProgressBar(choice(colors), width=20, block='▣', empty='□')
+                progress_bar = ProgressBar(
+                    choice(colors), width=20, block='▣', empty='□')
             except TypeError as exp:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.logger.critical("Tried to start progress bar but failed with %s" % traceback.format_exc())
+                self.logger.critical(
+                    "Tried to start progress bar but failed with %s" % traceback.format_exc())
                 progress_bar = None
             except:
                 raise
@@ -96,36 +99,44 @@ class Fleet(Sim.Process):
 
         while True:
             self.simulation.waiting = True
-            if debug: self.logger.debug("Yield for allPassive: Environment Processing")
+            if debug:
+                self.logger.debug(
+                    "Yield for allPassive: Environment Processing")
             yield Sim.waituntil, self, allPassive
 
-            if debug: self.logger.debug("Yield for allPassive: Node Processing")
+            if debug:
+                self.logger.debug("Yield for allPassive: Node Processing")
             yield Sim.waituntil, self, allPassive
 
             # If all nodes have completed their missions, notify the user
             if self.isMissionComplete():
                 if USS_Abraham_Lincoln:
-                    self.logger.critical("Mission accomplished at {}".format(secondsToStr(Sim.now())))
+                    self.logger.critical(
+                        "Mission accomplished at {}".format(secondsToStr(Sim.now())))
                     USS_Abraham_Lincoln = False
                     Sim.stopSimulation()
 
             # Pretty Printing
             if self.simulation.progress_display:
-                percent_now = ((100 * Sim.now()) / self.simulation.duration_intervals)
+                percent_now = (
+                    (100 * Sim.now()) / self.simulation.duration_intervals)
                 if debug and percent_now % 5 == 0:
-                    self.logger.info("Fleet  %d%%: %s" % (percent_now, self.currentStats()))
+                    self.logger.info("Fleet  %d%%: %s" %
+                                     (percent_now, self.currentStats()))
                 if not debug and percent_now % 1 == 0 and progress_bar is not None:
                     progress_bar.render(int(percent_now),
                                         'step %s Processing %s...' % (percent_now, self.simulation.title))
 
             # Yield for anything the simulation should wait on (i.e. GUI)
-            if debug: self.logger.debug("Yield for not_waiting")
+            if debug:
+                self.logger.debug("Yield for not_waiting")
             yield Sim.waituntil, self, not_waiting
 
             # Perform any out of loop preprocessing required
             for node in self.nodes:
                 Sim.reactivate(node)
-            if debug: self.logger.debug("Yield for allPassive: Fleet Updates")
+            if debug:
+                self.logger.debug("Yield for allPassive: Fleet Updates")
             yield Sim.waituntil, self, allPassive
 
     def nodenum(self, node):
@@ -139,7 +150,6 @@ class Fleet(Sim.Process):
         Return the index of the requested node id
         """
         return map(attrgetter('id'), self.nodes).index(id)
-
 
     def nodeCount(self):
         """
@@ -169,12 +179,14 @@ class Fleet(Sim.Process):
             index = self.nodenum_from_id(id)
             positions[index] = log.position
             times[index] = log.time
-            if debug: self.logger.debug("Node last seen at {} at {} @ {}".format(
-                log.name, log.position, log.time
-            ))
+            if debug:
+                self.logger.debug("Node last seen at {} at {} @ {}".format(
+                    log.name, log.position, log.time
+                ))
 
         if len(set(times)) > 1:
-            raise ValueError("Latest shared logs not coalesced:{}".format(times))
+            raise ValueError(
+                "Latest shared logs not coalesced:{}".format(times))
 
         return np.asarray(positions)
 
@@ -190,7 +202,6 @@ class Fleet(Sim.Process):
         for id, log in kb.items():
             positions[self.nodenum_from_id(id)] = log.position
         return np.asarray(positions)
-
 
     def nodePosLogs(self, shared=True):
         """
@@ -249,9 +260,9 @@ class Fleet(Sim.Process):
             current_positions = original_positions.copy()
 
         delta = ((current_positions - original_positions) * error) + error
-        delta *= [1, 1, 0]  # THIS IS A TERRIBLE HACK TO AVOID NANS IN THE WEIGHTING
+        # THIS IS A TERRIBLE HACK TO AVOID NANS IN THE WEIGHTING
+        delta *= [1, 1, 0]
         return np.abs(delta)
-
 
     def timeOfFlightMatrix(self, shared=False, speed_of_sound=1490.0, guess_index=0):
         """
@@ -261,7 +272,8 @@ class Fleet(Sim.Process):
         """
         latest_positions = self.nodeCheatPositions()
         if guess_index > 0:
-            tof = timeOfFlightMatrix_Complex(latest_positions, self.environment.shape[2], guess_index)
+            tof = timeOfFlightMatrix_Complex(
+                latest_positions, self.environment.shape[2], guess_index)
         else:
             tof = squareform(pdist(latest_positions))
             tof /= speed_of_sound
@@ -290,15 +302,15 @@ class Fleet(Sim.Process):
         maxDistance = np.float(0.0)
         maxDeviation = np.float(0.0)
         for node in self.nodes:
-            maxDistance = max(maxDistance, distance(node.position, fleetCenter))
+            maxDistance = max(
+                maxDistance, distance(node.position, fleetCenter))
             v = node.velocity
             try:
                 c = np.dot(avgHeading, v) / mag(avgHeading) / mag(v)
                 maxDeviation = max(maxDeviation, np.arccos(c))
             except FloatingPointError:
-                # In the event of v=0 (i.e. first time), fire back a - maxD array.
+                # In the event of v=0 (i.e. first time), fire back a - maxD
+                # array.
                 maxDeviation = avgHeading
 
         return "V:%s,C:%s,D:%s,A:%s" % (avgHeading, fleetCenter, maxDistance, maxDeviation)
-
-

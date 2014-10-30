@@ -44,7 +44,7 @@ def humanize_time(amount, units=None):
         a = amount // INTERVALS[i]
         if a > 0:
             if amount - a < 1:
-                result.append((amount, NAMES[i][1] ))
+                result.append((amount, NAMES[i][1]))
             else:
                 result.append((int(a), NAMES[i][1 % int(a)]))
             amount -= (a) * INTERVALS[i]
@@ -61,4 +61,3 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod()
-

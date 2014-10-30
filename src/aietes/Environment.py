@@ -29,6 +29,7 @@ Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
 
 
 class Environment():
+
     """
     Environment Class representing the physical environment inc any objects
     / activities within that environment that are not controlled by the
@@ -52,7 +53,8 @@ class Environment():
             try:
                 shape = np.asarray(shape)
                 if shape is None or not isinstance(shape, np.ndarray) or len(shape) != 3:
-                    raise ConfigError("Shape doesn't make sense: {}{}".format(shape, type(shape)))
+                    raise ConfigError(
+                        "Shape doesn't make sense: {}{}".format(shape, type(shape)))
             except:
                 raise
         self.shape = shape
@@ -62,9 +64,9 @@ class Environment():
     # TODO 'Tidal motion' factor
 
     def _start_log(self, parent, name):
-        self.logger = parent.logger.getChild("{}{}".format(name, self.__class__.__name__))
+        self.logger = parent.logger.getChild(
+            "{}{}".format(name, self.__class__.__name__))
         self.logger.debug('creating instance')
-
 
     def random_position(self, want_empty=True, on_a_plane=False, buff=30):
         """
@@ -77,8 +79,10 @@ class Environment():
         while not is_empty:
             ran_x = np.random.uniform(buff, self.shape[0] - buff)
             ran_y = np.random.uniform(buff, self.shape[1] - buff)
-            ran_z = np.random.uniform(buff, self.shape[2] - buff) if not on_a_plane else z_plane
-            candidate_pos = self.position_around(np.asarray((ran_x, ran_y, ran_z)), on_a_plane=on_a_plane)
+            ran_z = np.random.uniform(
+                buff, self.shape[2] - buff) if not on_a_plane else z_plane
+            candidate_pos = self.position_around(
+                np.asarray((ran_x, ran_y, ran_z)), on_a_plane=on_a_plane)
             is_empty = self.is_empty(candidate_pos)
 
         return candidate_pos
@@ -101,18 +105,21 @@ class Environment():
         candidate_pos = None
 
         if self.is_outside(position):
-            raise ValueError("Position is not within volume: {}".format(position))
+            raise ValueError(
+                "Position is not within volume: {}".format(position))
         else:
             valid = False
             while not valid:
-                candidate_pos = np.random.normal(np.asarray(position), [stddev, stddev, stddev / 3])
+                candidate_pos = np.random.normal(
+                    np.asarray(position), [stddev, stddev, stddev / 3])
                 candidate_pos = np.asarray(candidate_pos, dtype=int)
                 # if generating a position on a plane, retain the zaxis
                 if on_a_plane:
                     candidate_pos[2] = position[2]
                 valid = self.is_safe(candidate_pos, 50)
                 if debug:
-                    self.logger.debug("Candidate position: %s:%s" % (candidate_pos, valid))
+                    self.logger.debug(
+                        "Candidate position: %s:%s" % (candidate_pos, valid))
         return tuple(candidate_pos)
 
     def is_outside(self, position, tolerance=10):
@@ -127,7 +134,8 @@ class Environment():
         """
         Return if a given position is 'empty' for a given proximity tolerance
         """
-        distances = [distance(position, entry.position) > tolerance for entry in self.map]
+        distances = [
+            distance(position, entry.position) > tolerance for entry in self.map]
         return all(distances)
 
     def update(self, object_id, position, velocity):
@@ -141,30 +149,37 @@ class Environment():
             raise RuntimeError("Invalid Position Update from {name}@{time}:{pos}".format(name=object_name,
                                                                                          time=t,
                                                                                          pos=position)
-            )
+                               )
 
         # debug=True
         if t < self.simulation.duration_intervals:
             try:
-                assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
-                update_distance = distance(self.map[object_id].position, position)
+                assert self.map[
+                    object_id].position is not position, "Attempted direct obj=obj comparison"
+                update_distance = distance(
+                    self.map[object_id].position, position)
                 if debug:
                     self.logger.debug("Moving %s %f from %s to %s @ %d" % (object_name,
                                                                            update_distance,
-                                                                           self.map[object_id].position,
+                                                                           self.map[
+                                                                               object_id].position,
                                                                            position, t))
-                self.map[object_id] = map_entry(object_id, position, velocity, object_name)
+                self.map[object_id] = map_entry(
+                    object_id, position, velocity, object_name)
             except KeyError:
                 if debug:
-                    self.logger.debug("Creating map entry for %s at %s @ %d" % (object_name, position, Sim.now()))
-                self.map[object_id] = map_entry(object_id, position, velocity, object_name)
+                    self.logger.debug(
+                        "Creating map entry for %s at %s @ %d" % (object_name, position, Sim.now()))
+                self.map[object_id] = map_entry(
+                    object_id, position, velocity, object_name)
             self.pos_log.append(Log(name=object_name,
                                     position=position,
                                     object_id=object_id,
                                     time=t
-            ))
+                                    ))
         else:
-            self.logger.debug("Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t, t, t + 1))
+            self.logger.debug(
+                "Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t, t, t + 1))
 
     def node_pos_log(self, uid):
         """
@@ -189,19 +204,19 @@ class Environment():
         for log in reversed(self.pos_log):
             if last_log[log.object_id] is None:
                 last_log[log.object_id] = log
-                if debug: self.logger.debug("Object {} last seen at {} @ {}".format(log.name, log.position, log.time))
+                if debug:
+                    self.logger.debug(
+                        "Object {} last seen at {} @ {}".format(log.name, log.position, log.time))
             if None not in last_log.values():
                 break
 
         return last_log
-
 
     def object_ids(self):
         """
         Returns the number of unique objects in the fleet's shared map
         """
         return set(map(attrgetter('object_id'), self.pos_log))
-
 
     def pointPlane(self, index=-1):
         """

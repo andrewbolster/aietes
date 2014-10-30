@@ -22,6 +22,7 @@ from matplotlib import animation as MPLanimation
 
 
 class AIETESAnimation(MPLanimation.FuncAnimation):
+
     def save(self, filename, fps=5, codec='libx264', clear_temp=True,
              frame_prefix='_tmp', blit=False, *args, **kwargs):
         """
@@ -54,7 +55,8 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
         # frame information to be saved later.
         # TODO: Right now, after closing the figure, saving a movie won't
         # work since GUI widgets are gone. Either need to remove extra code
-        # to allow for this non-existant use case or find a way to make it work.
+        # to allow for this non-existant use case or find a way to make it
+        # work.
         for idx, data in enumerate(self.new_saved_frame_seq()):
             # TODO: Need to see if turning off blit is really necessary
             self._draw_next_frame(data, blit=blit)
@@ -62,7 +64,8 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
             fnames.append(fname)
             self._fig.savefig(fname)
 
-        self._make_movie(filename, fps, codec, frame_prefix, cmd_gen=self.mencoder_cmd)
+        self._make_movie(
+            filename, fps, codec, frame_prefix, cmd_gen=self.mencoder_cmd)
 
         # Delete temporary files
         if clear_temp:
@@ -110,6 +113,6 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
                          stdout=PIPE, stderr=PIPE)
             proc.wait()
         except OSError:
-            logging.critical("Mencoder probably not found in path, try installing it")
+            logging.critical(
+                "Mencoder probably not found in path, try installing it")
             raise
-

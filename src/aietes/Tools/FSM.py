@@ -64,6 +64,7 @@ Noah Spurrier 20020822
 
 
 class ExceptionFSM(Exception):
+
     """This is the FSM Exception class."""
 
     def __init__(self, value):
@@ -74,6 +75,7 @@ class ExceptionFSM(Exception):
 
 
 class FSM:
+
     """This is a Finite State Machine (FSM).
     """
 
@@ -180,7 +182,8 @@ class FSM:
         symbols (or a string) by calling process_list().
         """
         self.input_symbol = input_symbol
-        (action, next_state) = self.get_transition(self.input_symbol, self.current_state)
+        (action, next_state) = self.get_transition(
+            self.input_symbol, self.current_state)
         # print "%s(%s) -> %s" % (self.current_state, input_symbol, next_state)
         self.current_state = next_state
 

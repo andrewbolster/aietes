@@ -26,6 +26,7 @@ debug = False
 
 
 class NetLayer(object):
+
     """Routing table generic class
     """
     has_routing_table = False
@@ -33,7 +34,8 @@ class NetLayer(object):
     def __init__(self, layercake, config=None):
         # Generic Spec
         self.logger = layercake.logger.getChild("%s" % self.__class__.__name__)
-        if debug: self.logger.debug('creating instance:%s' % config)
+        if debug:
+            self.logger.debug('creating instance:%s' % config)
 
         self.layercake = layercake
         self.host = layercake.host
@@ -49,9 +51,10 @@ class NetLayer(object):
             packet.set_next_hop(packet.destination)
         else:
             packet.set_next_hop(self.table[packet.destination])
-        if debug: self.logger.debug("Net Packet, %s, sent to %s" % (packet.data, packet.next_hop))
+        if debug:
+            self.logger.debug("Net Packet, %s, sent to %s" %
+                              (packet.data, packet.next_hop))
         self.layercake.mac.send(packet)
-
 
     def recv(self, FromBelow):
         packet = FromBelow.decap()
@@ -65,11 +68,12 @@ class NetLayer(object):
                 else:
                     raise RuntimeError("WTFMATE?")
             else:
-                self.logger.error("Don't know what to do with packet " + packet.data + " from " + \
+                self.logger.error("Don't know what to do with packet " + packet.data + " from " +
                                   packet.source + " going to " + packet.destination + " with hop " + packet.next_hop)
                 raise NotImplemented
         else:
-            self.logger.debug("Already Have Pkt {}:{}".format(packet.data, packet.id))
+            self.logger.debug(
+                "Already Have Pkt {}:{}".format(packet.data, packet.id))
 
     def push_up(self, packet):
         """
@@ -101,6 +105,7 @@ class NetLayer(object):
 
 
 class DSDV(NetLayer, Sim.Process):
+
     """
     Destination Sequenced Discance Vector protocol uses the Bellnman Ford Algo. to calculate paths based on hop-lengths
 
@@ -108,8 +113,10 @@ class DSDV(NetLayer, Sim.Process):
 
     """
     has_routing_table = True  # NA
-    periodic_update_interval = 15  # Time between full-table exchanges among nodes
-    wst_enabled = True  # Enables Weighted Settling Time for updates before Advertisment
+    # Time between full-table exchanges among nodes
+    periodic_update_interval = 15
+    # Enables Weighted Settling Time for updates before Advertisment
+    wst_enabled = True
     settling_time = 6  # Minimum storage time before tx
     wst_factor = 0.875  # Fairly Obvious....
     buffer_enabled = True  # Buffer if no rout available
@@ -124,12 +131,14 @@ class DSDV(NetLayer, Sim.Process):
                                           ["next", "hops", "seq"])
 
     class DSDV_Packet(AppPacket):
+
         """
         Packet Mask to simulate header encapsulation
         """
 
         def __init__(self, source, table):
-            AppPacket.__init__(self, source, dest=broadcast_address, pkt_type="DATA", data=table, route=None, logger=None)
+            AppPacket.__init__(self, source, dest=broadcast_address,
+                               pkt_type="DATA", data=table, route=None, logger=None)
             if table is None:
                 self.logger.error("Shouldn't you be sending a table?")
 
@@ -138,7 +147,8 @@ class DSDV(NetLayer, Sim.Process):
     def __init__(self, layercake, config=None):
         NetLayer.__init__(self, layercake, config)
         Sim.Process.__init__(self, name=self.__class__.__name__)
-        self.seq_no = reduce(operator.xor, map(ord, self.host.name)) * 100  # Sneaky trick to make 'recognisable' sequence numbers'
+        # Sneaky trick to make 'recognisable' sequence numbers'
+        self.seq_no = reduce(operator.xor, map(ord, self.host.name)) * 100
         self.table = {}
 
     def push_up(self, packet):
@@ -160,11 +170,13 @@ class DSDV(NetLayer, Sim.Process):
         for dest, hop, seq_no in packet.payload.data:
             if not hasattr(self.table, dest):
                 new_entry = DSDV.RoutingEntry(packet.source, hop, seq_no)
-                self.logger.info("Creating entry for {}:{}".format(dest, new_entry))
+                self.logger.info(
+                    "Creating entry for {}:{}".format(dest, new_entry))
                 self.table[dest] = new_entry
             elif seq_no > self.table[dest].seq:
                 new_entry = DSDV.RoutingEntry(packet.source, hop, seq_no)
-                self.logger.info("Updating entry for {}:{}".format(dest, new_entry))
+                self.logger.info(
+                    "Updating entry for {}:{}".format(dest, new_entry))
                 self.table[dest] = new_entry
 
     def broadcast_table(self):
@@ -182,12 +194,7 @@ class DSDV(NetLayer, Sim.Process):
             )
         )
 
-
     def lifecycle(self):
         while True:
             self.broadcast_table()
             yield Sim.hold, self, self.periodic_update_interval
-
-
-
-

@@ -17,8 +17,8 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import matplotlib
-matplotlib.warn=False
-#matplotlib.use('module://mplh5canvas.backend_h5canvas')
+matplotlib.warn = False
+# matplotlib.use('module://mplh5canvas.backend_h5canvas')
 import matplotlib.backends.backend_wxagg
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -46,11 +46,11 @@ def interactive_plot(data):
     for n, line in enumerate(lines):
         line.set_label(data.names[n])
 
-    #Configure the Time Slider
+    # Configure the Time Slider
     timeax = plt.axes([0.2, 0.0, 0.65, 0.03])
     timeslider = Slider(timeax, 'Time', 0, data.tmax, valinit=0)
 
-    #Configure the buttons
+    # Configure the buttons
     playax = plt.axes([0.8, 0.025, 0.1, 0.04])
     play = Button(playax, 'Play', hovercolor='0.975')
 
@@ -62,9 +62,10 @@ def interactive_plot(data):
 
     global rectX, rectY, rectZ
     rectX = axH.barh(ind, tuple([vec[0] for vec in vectors]), width, color='r')
-    rectY = axH.barh(ind + width, tuple([vec[1] for vec in vectors]), width, color='g')
-    rectZ = axH.barh(ind + 2 * width, tuple([vec[2] for vec in vectors]), width, color='b')
-
+    rectY = axH.barh(
+        ind + width, tuple([vec[1] for vec in vectors]), width, color='g')
+    rectZ = axH.barh(
+        ind + 2 * width, tuple([vec[2] for vec in vectors]), width, color='b')
 
     def press(event):
         if event.key is 'left':
@@ -73,7 +74,6 @@ def interactive_plot(data):
             timeslider.set_val(timeslider.val + 1)
         else:
             print('press', event.key)
-
 
     fig.canvas.mpl_connect('key_press_event', press)
 
@@ -93,9 +93,12 @@ def interactive_plot(data):
         """
         vectors = data.heading_slice(timeslider.val)
         axH.cla()
-        rectX = axH.barh(ind, tuple([vec[0] for vec in vectors]), width, color='r')
-        rectY = axH.barh(ind + width, tuple([vec[1] for vec in vectors]), width, color='g')
-        rectZ = axH.barh(ind + 2 * width, tuple([vec[2] for vec in vectors]), width, color='b')
+        rectX = axH.barh(
+            ind, tuple([vec[0] for vec in vectors]), width, color='r')
+        rectY = axH.barh(
+            ind + width, tuple([vec[1] for vec in vectors]), width, color='g')
+        rectZ = axH.barh(
+            ind + 2 * width, tuple([vec[2] for vec in vectors]), width, color='b')
 
         axH.set_ylabel("Vector")
         axH.set_yticks(ind + width)
@@ -151,7 +154,7 @@ def KF_metric_plot(metric):
     except TypeError as e:
         obs_dim = 1
 
-    observations = np.ma.array(records) # to put it as(tmax,3)
+    observations = np.ma.array(records)  # to put it as(tmax,3)
     masked = 0
     for i in x:
         try:
@@ -164,25 +167,28 @@ def KF_metric_plot(metric):
 
     print("%f%% Masked" % ((masked * 100.0) / data.tmax))
 
-    print("Records: Shape: %s, ndim: %s, type: %s" % (records.shape, records.ndim, type(records)))
+    print("Records: Shape: %s, ndim: %s, type: %s" %
+          (records.shape, records.ndim, type(records)))
 
     # create a Kalman Filter by hinting at the size of the state and observation
     # space.  If you already have good guesses for the initial parameters, put them
-    # in here.  The Kalman Filter will try to learn the values of all variables.
+    # in here.  The Kalman Filter will try to learn the values of all
+    # variables.
     kf = KalmanFilter(n_dim_obs=obs_dim, n_dim_state=obs_dim)
 
     # You can use the Kalman Filter immediately without fitting, but its estimates
     # may not be as good as if you fit first.
 
     #states_pred = kf.em(observations, n_iter=data.tmax).smooth(observations)
-    #print 'fitted model: %s' % (kf,)
+    # print 'fitted model: %s' % (kf,)
 
     # Plot lines for the observations without noise, the estimated position of the
     # target before fitting, and the estimated position after fitting.
     fig = plt.figure(figsize=(16, 6))
     ax1 = fig.add_subplot(111)
     filtered_state_means = np.zeros((n_timesteps, kf.n_dim_state))
-    filtered_state_covariances = np.zeros((n_timesteps, kf.n_dim_state, kf.n_dim_state))
+    filtered_state_covariances = np.zeros(
+        (n_timesteps, kf.n_dim_state, kf.n_dim_state))
 
     for t in x:
         if t == 0:
@@ -196,7 +202,8 @@ def KF_metric_plot(metric):
             ax1.axvline(x=t, linestyle='-', color='r', alpha=0.1)
         try:
             filtered_state_means[t], filtered_state_covariances[t] = \
-                kf.filter_update(filtered_state_means[t - 1], filtered_state_covariances[t - 1], observations[t])
+                kf.filter_update(
+                    filtered_state_means[t - 1], filtered_state_covariances[t - 1], observations[t])
         except IndexError as e:
             print(t)
             raise e
@@ -209,7 +216,8 @@ def KF_metric_plot(metric):
                            label='observations-x', alpha=0.8)
     ax1.set_ylabel(metric.label)
     ax2 = ax1.twinx()
-    error_plt = ax2.plot(x, errors, linestyle=':', color='g', label="Error Distance")
+    error_plt = ax2.plot(
+        x, errors, linestyle=':', color='g', label="Error Distance")
     ax2.set_yscale('log')
     ax2.set_ylabel("Error")
     lns = pred_err + obs_scatter + error_plt

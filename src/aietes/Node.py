@@ -26,6 +26,7 @@ from aietes.Tools import *
 
 
 class Node(Sim.Process):
+
     """
     Generic Representation of a network node
     """
@@ -36,7 +37,8 @@ class Node(Sim.Process):
 
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
-        self.logger = kwargs.get("logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
+        self.logger = kwargs.get(
+            "logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
         fh = logging.FileHandler("Node[{}].log".format(name))
         fh.setFormatter(log_fmt)
         fh.addFilter(SimTimeFilter())
@@ -49,27 +51,34 @@ class Node(Sim.Process):
 
         self.settling_time = 0
 
-        # Positions Initialised to None to highlight mistakes; as Any position could be a bad position
-        self.pos_log = np.empty((3, self.simulation.config.Simulation.sim_duration))
+        # Positions Initialised to None to highlight mistakes; as Any position
+        # could be a bad position
+        self.pos_log = np.empty(
+            (3, self.simulation.config.Simulation.sim_duration))
         self.pos_log.fill(None)
 
-        # Vectors initialised to Zero as at least a Zero vector doesn't break things.
-        self.vec_log = np.zeros((3, self.simulation.config.Simulation.sim_duration))
-        # However, it does make it easier to debug the behave/move interplay....
+        # Vectors initialised to Zero as at least a Zero vector doesn't break
+        # things.
+        self.vec_log = np.zeros(
+            (3, self.simulation.config.Simulation.sim_duration))
+        # However, it does make it easier to debug the behave/move
+        # interplay....
         self.vec_log.fill(None)
 
         # Store contributions
         self.contributions_log = []
 
         # Store any achievements
-        self.achievements_log = [[] for _ in range(self.simulation.config.Simulation.sim_duration)]
+        self.achievements_log = [
+            [] for _ in range(self.simulation.config.Simulation.sim_duration)]
 
         # Fleet Partitioning
         self.fleet = None
 
         # Optional Features
         self.ecea = False  # Kalman filtering of INS position
-        self.drifting = False  # Drift simulation using DVR / GYR noise        #
+        # Drift simulation using DVR / GYR noise        #
+        self.drifting = False
 
         # Physical Configuration
         #
@@ -90,13 +99,15 @@ class Node(Sim.Process):
         try:
             app_mod = getattr(Applications, str(node_config['app']))
         except AttributeError:
-            raise ConfigError("Can't find Application: %s" % node_config['app'])
+            raise ConfigError("Can't find Application: %s" %
+                              node_config['app'])
         if app_mod.HAS_LAYERCAKE:
             self.layercake = Layercake(self, node_config)
         else:
             self.logger.info("No Layercake in this application")
             self.layercake = None
-        self.app = app_mod(self, node_config['Application'], layercake=self.layercake)
+        self.app = app_mod(
+            self, node_config['Application'], layercake=self.layercake)
 
         #
         # Propulsion Capabilities
@@ -104,10 +115,12 @@ class Node(Sim.Process):
         if len(self.config['cruising_speed']) == 1:
             # cruising speed is independent of direction
             self.cruising_speed = np.asarray(
-                [self.config['cruising_speed'][0], self.config['cruising_speed'][0], self.config['cruising_speed'][0]],
+                [self.config['cruising_speed'][0], self.config[
+                    'cruising_speed'][0], self.config['cruising_speed'][0]],
                 dtype=np.float64)
         else:
-            self.cruising_speed = np.asarray(self.config['cruising_speed'], dtype=np.float64)
+            self.cruising_speed = np.asarray(
+                self.config['cruising_speed'], dtype=np.float64)
         assert len(self.cruising_speed) == 3
 
         if len(self.config['max_speed']) == 1:
@@ -120,7 +133,8 @@ class Node(Sim.Process):
 
         if len(self.config['max_speed']) == 1:
             # Max Turn Rate is independent of orientation
-            self.max_turn = [self.config['max_turn'], self.config['max_turn'], self.config['max_turn']]
+            self.max_turn = [
+                self.config['max_turn'], self.config['max_turn'], self.config['max_turn']]
         else:
             self.max_turn = self.config['max_turn']
         assert len(self.max_turn) == 3
@@ -140,7 +154,7 @@ class Node(Sim.Process):
 
         self.behaviour = behave_mod(node=self,
                                     bev_config=self.config['Behaviour'],
-                                    map=self.simulation.environment.map)  ##TODO FIX SLAM MAP
+                                    map=self.simulation.environment.map)  # TODO FIX SLAM MAP
         if hasattr(self.behaviour, "wallCheckDisabled"):
             self.wallCheckDisabled = self.behaviour.wallCheckDisabled
         else:
@@ -149,15 +163,14 @@ class Node(Sim.Process):
         # Simulation Configuration
         self.internalEvent = Sim.SimEvent(self.name)
 
-
-
         #
         # Kalman Filter Characteristics from Contribs
         if self.config['ecea'] == "KF":
             from contrib.Ghia.ecea.EceaFilter import ECEAFilter, ECEAParams
 
             confobj = ConfigObj(self.simulation.config)
-            self.ecea = ECEAFilter(self, ECEAParams.from_aietes_conf(confobj))  #
+            self.ecea = ECEAFilter(
+                self, ECEAParams.from_aietes_conf(confobj))  #
         elif self.config['ecea'].startswith("Simple"):
             from contrib.Ghia.ecea.LSEFilter import SimpleFilter
 
@@ -178,14 +191,16 @@ class Node(Sim.Process):
             drift_scales = getattr(self.config, 'drift_scales', {})
             drift_noises = getattr(self.config, 'drift_noises', {})
 
-            self.drift = getattr(Driftmodels, self.config['drift'])(self, scales=drift_scales, noises=drift_noises)
-            self.logger.debug("Drift activated from config: {} with {}, {}".format(self.config['drift'], drift_scales, drift_noises))
+            self.drift = getattr(Driftmodels, self.config['drift'])(
+                self, scales=drift_scales, noises=drift_noises)
+            self.logger.debug("Drift activated from config: {} with {}, {}".format(
+                self.config['drift'], drift_scales, drift_noises))
             self.drifting = True
         elif kwargs.has_key('drift'):
             self.drift = kwargs.get('drift')(self)
-            self.logger.debug("Drift activated from kwarg: {}".format(self.drift.__name__))
+            self.logger.debug(
+                "Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
-
 
     def assignFleet(self, fleet):
         """
@@ -212,7 +227,6 @@ class Node(Sim.Process):
             self.behaviour.activate(**launch_args)
 
         self.update_environment()
-
 
     def missionAccomplished(self):
         """
@@ -260,7 +274,8 @@ class Node(Sim.Process):
         elif maxv < mag(velocity):
             new_V = unit(velocity) * max(self.max_speed)
         else:
-            self.logger.error("shouldn't really be here: {},{}".format(velocity, mag(velocity)))
+            self.logger.error(
+                "shouldn't really be here: {},{}".format(velocity, mag(velocity)))
         if debug:
             self.logger.error("Cruise: From %f against %f and vel of %f" % (
                 mag(velocity), cruisev, mag(new_V)))
@@ -288,11 +303,13 @@ class Node(Sim.Process):
             # FIXME This should be -0.2*self.velocity or something
             new_velocity = np.zeros(3)
         else:
-            new_velocity = self.velocity + ((self.acceleration_force * dT) / self.mass)
+            new_velocity = self.velocity + \
+                ((self.acceleration_force * dT) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruiseControl(new_velocity, self.velocity)
             if debug:
-                self.logger.debug("Normalized Velocity: %s, clipped: %s" % (new_velocity, self.velocity))
+                self.logger.debug(
+                    "Normalized Velocity: %s, clipped: %s" % (new_velocity, self.velocity))
         else:
             if debug:
                 self.logger.debug("Velocity: %s" % new_velocity)
@@ -314,7 +331,8 @@ class Node(Sim.Process):
                                                                              dT)
             except FloatingPointError:
                 type, value, traceback = sys.exc_info()
-                raise ValueError, ("Dt,t:{},{}".format(dT, Sim.now()), type, value), traceback
+                raise ValueError, ("Dt,t:{},{}".format(
+                    dT, Sim.now()), type, value), traceback
         else:
             self.position += self.velocity
 
@@ -327,11 +345,13 @@ class Node(Sim.Process):
         if not self.wallCheck():
             self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
-            raise RuntimeError("{} Crashed out of the environment at {}".format(self.name, Sim.now()))
+            raise RuntimeError(
+                "{} Crashed out of the environment at {}".format(self.name, Sim.now()))
 
         assert not np.isnan(sum(self.pos_log[:, self._lastupdate]))
 
-        self.highest_attained_speed = max(self.highest_attained_speed, mag(self.velocity))
+        self.highest_attained_speed = max(
+            self.highest_attained_speed, mag(self.velocity))
 
     def update_environment(self):
         self.simulation.environment.update(self.id,
@@ -375,19 +395,24 @@ class Node(Sim.Process):
                     # Need to cycle the filter with the 0th update
                 else:
                     # This must be the real environmental data to simulate TOF
-                    # Drift is based on each nodes REPORTED position from the previous REPORTED position
+                    # Drift is based on each nodes REPORTED position from the
+                    # previous REPORTED position
                     true_positions = self.fleet.nodeCheatPositions()
                     drifted_positions = self.fleet.nodeCheatDriftPositions()
                     last_index = max(0, Sim.now() - self.ecea.params.Delta)
                     # this_index = Sim.now()
-                    last_drifted_positions = self.fleet.nodeCheatDriftPositionsAt(last_index)  # INS Delta since last
+                    last_drifted_positions = self.fleet.nodeCheatDriftPositionsAt(
+                        last_index)  # INS Delta since last
                     drifted_deltas = drifted_positions - last_drifted_positions
-                    last_true_positions = self.fleet.nodeCheatPositionsAt(last_index)  # True Delta since last
+                    last_true_positions = self.fleet.nodeCheatPositionsAt(
+                        last_index)  # True Delta since last
                     #true_deltas = true_positions-last_true_positions
 
                 if self.ecea.type == SIMPLE:
-                    error_estimates = self.fleet.nodePositionErrors() * self.ecea.params.Delta
-                    tof = self.fleet.timeOfFlightMatrix(guess_index=self.tof_type)
+                    error_estimates = self.fleet.nodePositionErrors(
+                    ) * self.ecea.params.Delta
+                    tof = self.fleet.timeOfFlightMatrix(
+                        guess_index=self.tof_type)
                     # True positions only used for statistics
                     improved_positions = self.ecea.update(time_of_flight_matrix=tof,
                                                           drifted_positions=drifted_positions,
@@ -396,22 +421,25 @@ class Node(Sim.Process):
                                                           est_deltas=drifted_deltas)  # Swap these lines commenting to enable feedback
                     # last_estimate=drifted_positions) #Or disable feedback
                     if __debug__:
-                        drift_d = np.linalg.norm(true_positions[self.nodenum] - drifted_positions[self.nodenum])
-                        improved_d = np.linalg.norm(true_positions[self.nodenum] - improved_positions[self.nodenum])
+                        drift_d = np.linalg.norm(
+                            true_positions[self.nodenum] - drifted_positions[self.nodenum])
+                        improved_d = np.linalg.norm(
+                            true_positions[self.nodenum] - improved_positions[self.nodenum])
                         with np.errstate(divide='ignore', invalid='ignore'):
                             self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
                                 self.name, true_positions[self.nodenum],
                                 drifted_positions[self.nodenum], drift_d,
-                                improved_positions[self.nodenum], improved_d, (1.0 - (improved_d / drift_d)) * 100.0
+                                improved_positions[
+                                    self.nodenum], improved_d, (1.0 - (improved_d / drift_d)) * 100.0
                             ))
                 else:
-                    raise RuntimeError("There's no way you should be in here...:{}".format(self.ecea))
+                    raise RuntimeError(
+                        "There's no way you should be in here...:{}".format(self.ecea))
 
             else:
                 # Pass for processing in between deltas
                 pass
             pass
-
 
     def setPos(self, placeVector):
         assert isinstance(placeVector, np.array)
@@ -432,7 +460,6 @@ class Node(Sim.Process):
             position = self.position.copy()
         return position
 
-
     def getVec(self, true=False):
         """
         Returns the current velocity of the node ACCORDING TO THE NODE
@@ -442,7 +469,7 @@ class Node(Sim.Process):
         """
         if self.drifting and true:
             velocity = self.drift.getVec()
-            ## FIXME For the time being assume that the control output is a fixed track and don't use the KF for  updated info
+            # FIXME For the time being assume that the control output is a fixed track and don't use the KF for  updated info
             # elif self.drifting and self.ecea:
             # If using the kalman filter, get the corrected position
         # velocity = self.ecea.getVec()
@@ -463,7 +490,8 @@ class Node(Sim.Process):
         if isinstance(achievement, tuple):
             self.achievements_log[self._lastupdate].append(achievement)
         else:
-            raise RuntimeError("Non standard Achievement passed:%s" % achievement)
+            raise RuntimeError(
+                "Non standard Achievement passed:%s" % achievement)
 
     def timeSinceLastAchievement(self):
         try:
@@ -473,11 +501,11 @@ class Node(Sim.Process):
 
     def meanAchievementTime(self):
         try:
-            wins = [i for i, l in enumerate(self.achievements_log) if len(l[0])]
+            wins = [
+                i for i, l in enumerate(self.achievements_log) if len(l[0])]
             return sum(wins) / len(wins)
         except IndexError:
             return self._lastupdate
-
 
     def lifecycle(self):
         """
@@ -487,7 +515,6 @@ class Node(Sim.Process):
 
         # Nasty ECEA initialisation because it needs to be started AFTER the nodes
         # have exposed their positions to the fleet and BEFORE t>0
-
 
         debug = False
         while Sim.now() < self.simulation.duration_intervals:
@@ -510,13 +537,13 @@ class Node(Sim.Process):
             # Move Fleet
             #
             if debug:
-                self.logger.info('updating position, then waiting %s' % self.behaviour.update_rate)
+                self.logger.info(
+                    'updating position, then waiting %s' % self.behaviour.update_rate)
             try:
                 self.move()
             except Exception:
                 self.logger.error("Exception in Move")
                 raise
-
 
             #
             # Update Fleet State

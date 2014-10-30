@@ -36,9 +36,9 @@ from ephyra.Views import MetricView, Arrow3D
 from aietes.Tools import timeit, mag
 
 
-
 # noinspection PyStringFormat
 class VisualNavigator(wx.Panel):
+
     @timeit()
     def __init__(self, parent, frame, *args, **kw):
         wx.Panel.__init__(self, parent, *args, **kw)
@@ -49,7 +49,7 @@ class VisualNavigator(wx.Panel):
         # Timing and playback defaults
         self.paused = None
         self.t = 0
-        self.tmax = None # Not always the same as the data tmax eg simulating
+        self.tmax = None  # Not always the same as the data tmax eg simulating
         self.d_t = 1
 
         # Configure Plot Display
@@ -61,7 +61,7 @@ class VisualNavigator(wx.Panel):
         self.sphere_line_collection = None
         self.sphere_opacity = 0.9
 
-        #Configure Vector Plotting on Plot_pnl
+        # Configure Vector Plotting on Plot_pnl
         self.node_vector_enabled = True
         self.fleet_vector_enabled = True
         self.node_vector_collections = []
@@ -69,7 +69,7 @@ class VisualNavigator(wx.Panel):
         self._fleet_zoom = False
         self.vector_opacity = 0.9
 
-        #Configure contrib Plotting on Plot_pnl
+        # Configure contrib Plotting on Plot_pnl
         self.node_contrib_enabled = False
         self.fleet_contrib_enabled = False
         self.node_contrib_collections = []
@@ -82,20 +82,22 @@ class VisualNavigator(wx.Panel):
         self.fig = Figure()
         self.canvas = FigureCanvas(self.plot_pnl, -1, self.fig)
         self.axes = self.fig.add_axes([0, 0, 1, 1], )
-        self.gs = GridSpec(HEIGHT, WIDTH) # (height,width)
+        self.gs = GridSpec(HEIGHT, WIDTH)  # (height,width)
 
         ####
         # Main Plot
         ####
         plot_area = self.gs[:-1, SIDEBAR_WIDTH:]
-        self.plot_axes = self.fig.add_subplot(plot_area, projection='3d', aspect=1)
+        self.plot_axes = self.fig.add_subplot(
+            plot_area, projection='3d', aspect=1)
         self.lines = []
 
         ####
         # Metrics
         ####
         metric_areas = [self.gs[x, :SIDEBAR_WIDTH] for x in range(HEIGHT)]
-        self.metric_axes = [self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
+        self.metric_axes = [
+            self.fig.add_subplot(metric_areas[i]) for i in range(HEIGHT)]
         for ax in self.metric_axes:
             ax.autoscale_view(scalex=False, tight=True)
         self.metric_xlines = [None for i in range(HEIGHT)]
@@ -105,7 +107,8 @@ class VisualNavigator(wx.Panel):
 
         # Configure Control Panel
         self.control_pnl = wx.Panel(self)
-        self.time_slider = wx.Slider(self.control_pnl, value=0, minValue=0, maxValue=1)
+        self.time_slider = wx.Slider(
+            self.control_pnl, value=0, minValue=0, maxValue=1)
         self.pause_btn = wx.Button(self.control_pnl, label="Pause")
         self.play_btn = wx.Button(self.control_pnl, label="Play")
         self.faster_btn = wx.Button(self.control_pnl, label="Rate++")
@@ -129,17 +132,20 @@ class VisualNavigator(wx.Panel):
         control_btn_sizer.Add(self.play_btn, flag=wx.RIGHT, border=5)
         control_btn_sizer.Add(self.faster_btn, flag=wx.LEFT, border=5)
         control_btn_sizer.Add(self.slower_btn)
-        control_btn_sizer.Add(self.trail_slider, flag=wx.TOP | wx.LEFT, border=5)
+        control_btn_sizer.Add(
+            self.trail_slider, flag=wx.TOP | wx.LEFT, border=5)
 
-        #Metric Buttons
+        # Metric Buttons
         self.sphere_chk = wx.CheckBox(self.control_pnl, label="Sphere")
         self.sphere_chk.SetValue(self.sphere_enabled)
         self.Bind(wx.EVT_CHECKBOX, self.on_sphere_chk, self.sphere_chk)
         control_btn_sizer.Add(self.sphere_chk)
 
-        self.metric_zoom_chk = wx.CheckBox(self.control_pnl, label="Metric Zoom")
+        self.metric_zoom_chk = wx.CheckBox(
+            self.control_pnl, label="Metric Zoom")
         self.metric_zoom_chk.SetValue(self._zoom_metrics)
-        self.Bind(wx.EVT_CHECKBOX, self.on_metric_zoom_chk, self.metric_zoom_chk)
+        self.Bind(
+            wx.EVT_CHECKBOX, self.on_metric_zoom_chk, self.metric_zoom_chk)
         control_btn_sizer.Add(self.metric_zoom_chk)
 
         self.zoom_fleet_chk = wx.CheckBox(self.control_pnl, label="Fleet Zoom")
@@ -162,7 +168,8 @@ class VisualNavigator(wx.Panel):
         self.control_pnl.SetSizer(control_sizer)
 
         self.panel_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.panel_sizer.Add(self.plot_pnl, proportion=1, flag=wx.EXPAND | wx.ALL)
+        self.panel_sizer.Add(
+            self.plot_pnl, proportion=1, flag=wx.EXPAND | wx.ALL)
         self.panel_sizer.Add(self.control_pnl, flag=wx.EXPAND | wx.BOTTOM)
 
         self.SetSizer(self.panel_sizer)
@@ -195,7 +202,8 @@ class VisualNavigator(wx.Panel):
         # Initialse Positional Plot
         shape = self.ctl.get_extent()
         self.log.info(shape)
-        self.plot_axes.set_title("Tracking overview of %s" % self.ctl.get_model_title())
+        self.plot_axes.set_title(
+            "Tracking overview of %s" % self.ctl.get_model_title())
         self.plot_axes.set_xlim3d((0, shape[0]))
         self.plot_axes.set_ylim3d((0, shape[1]))
         self.plot_axes.set_zlim3d((0, shape[2]))
@@ -221,34 +229,36 @@ class VisualNavigator(wx.Panel):
         # Initialise Metric Views
         metrics = self.ctl.get_metrics()
         if len(metrics) != len(self.metric_axes):
-            self.log.info("Not enough height for selected metrics (%s) "%len(metrics))
+            self.log.info(
+                "Not enough height for selected metrics (%s) " % len(metrics))
         for i, (axes, metric) in enumerate(zip(self.metric_axes, metrics)):
             self.metric_views[i] = MetricView(axes, metric)
 
         # Initialise Waypoints if present
         waypoints = self.ctl.get_waypoints()
         if waypoints is not None and waypoints.size > 0:
-            self.log.debug("Found [%s] waypoints" % str(getattr(waypoints, "shape", "No Shape")))
+            self.log.debug("Found [%s] waypoints" %
+                           str(getattr(waypoints, "shape", "No Shape")))
             # Case where there is a single common waypoint set, set up spheres
             if waypoints.ndim == 2:
                 for (x, y, z), r in waypoints:
                     xs, ys, zs = self.sphere(x, y, z, r)
                     self.plot_axes.plot_wireframe(xs, ys, zs, alpha=0.1)
             else:
-                # If there are multiple, sphere, colour, AND lines matching each index
+                # If there are multiple, sphere, colour, AND lines matching
+                # each index
                 for i, inner_waypoints in enumerate(waypoints):
-                    xs,ys,zs = [],[],[]
+                    xs, ys, zs = [], [], []
                     for (x, y, z), r in inner_waypoints:
                         xs.append(x)
                         ys.append(y)
                         zs.append(z)
-                    self.plot_axes.plot(xs,ys,zs, alpha=0.1, color=self.lines[i].get_color())
+                    self.plot_axes.plot(
+                        xs, ys, zs, alpha=0.1, color=self.lines[i].get_color())
         else:
             self.log.debug("No Waypoints Defined")
 
-
-
-        #Initialise Data-Based timings.
+        # Initialise Data-Based timings.
         self.tmax = max(self.ctl.get_final_tmax() - 1, 1)
         self.time_slider.SetMax(self.tmax)
         self.time_slider.SetValue(0)
@@ -269,7 +279,8 @@ class VisualNavigator(wx.Panel):
         # MAIN PLOT AREA
         ###
         for n, (line, label) in enumerate(zip(self.lines, self.labels)):
-            (xs, ys, zs) = self.ctl.get_3D_trail(node=n, time_start=self.t, length=self.trail_length)
+            (xs, ys, zs) = self.ctl.get_3D_trail(
+                node=n, time_start=self.t, length=self.trail_length)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
             line.set_label(self.names[n])
@@ -304,14 +315,16 @@ class VisualNavigator(wx.Panel):
         # UPDATE WINDOW PARAMETERS
         ###
         if self.zoom_fleet_chk.IsChecked():
-            # On first time, zoom to fleet sphere, otherwise use whatever the width of the window is.
+            # On first time, zoom to fleet sphere, otherwise use whatever the
+            # width of the window is.
             if not self._fleet_zoom:
                 self._fleet_zoom = True
                 (lx, rx) = self.plot_axes.get_xlim3d()
                 (ly, ry) = self.plot_axes.get_ylim3d()
                 (lz, rz) = self.plot_axes.get_zlim3d()
             else:
-                (lx, rx), (ly, ry), (lz, rz) = self.ctl.get_position_min_max(self.t)
+                (lx, rx), (ly, ry), (lz, rz) = self.ctl.get_position_min_max(
+                    self.t)
             x_width = abs(lx - rx)
             y_width = abs(ly - ry)
             z_width = abs(lz - rz)
@@ -319,9 +332,12 @@ class VisualNavigator(wx.Panel):
 
             positions = self.ctl.get_fleet_positions(self.t)
             avg = np.average(positions, axis=0)
-            self.plot_axes.set_xlim3d((avg[0] - (width / 2), avg[0] + (width / 2)))
-            self.plot_axes.set_ylim3d((avg[1] - (width / 2), avg[1] + (width / 2)))
-            self.plot_axes.set_zlim3d((avg[2] - (width / 2), avg[2] + (width / 2)))
+            self.plot_axes.set_xlim3d(
+                (avg[0] - (width / 2), avg[0] + (width / 2)))
+            self.plot_axes.set_ylim3d(
+                (avg[1] - (width / 2), avg[1] + (width / 2)))
+            self.plot_axes.set_zlim3d(
+                (avg[2] - (width / 2), avg[2] + (width / 2)))
 
         if self._legend not in self.plot_axes.get_children():
             self.plot_axes.add_artist(self._legend)
@@ -365,8 +381,6 @@ class VisualNavigator(wx.Panel):
         if self.ctl.model_is_ready():
             self.redraw_page(t=t)
 
-
-
     def sphere(self, x, y, z, r=1.0):
         """
         Returns a sphere definition tuple (xs,ys,zs) for use with plot_wireframe
@@ -381,20 +395,23 @@ class VisualNavigator(wx.Panel):
     def redraw_fleet_sphere(self):
         fleet = self.ctl.get_fleet_configuration(self.t)
         (x, y, z) = fleet['positions']['avg']
-        (r, s) = (max(fleet['positions']['delta_avg']), fleet['positions']['stddev'])
+        (r, s) = (max(fleet['positions']['delta_avg']),
+                  fleet['positions']['stddev'])
 
         xs, ys, zs = self.sphere(x, y, z, r)
         colorval = self.plot_pos_stddev_norm(s)
-        if self.frame.args.verbose: self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s" % (
-            str((x, y, z)), str(self.plot_sphere_cm(colorval)), str(colorval), str(s)))
+        if self.frame.args.verbose:
+            self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s" % (
+                str((x, y, z)), str(self.plot_sphere_cm(colorval)), str(colorval), str(s)))
 
         self._remove_sphere()
 
-        #TODO Update to UPDATE DATA instead of re plotting
+        # TODO Update to UPDATE DATA instead of re plotting
         self.sphere_line_collection = self.plot_axes.plot_wireframe(xs, ys, zs,
                                                                     alpha=self.sphere_opacity,
-                                                                    color=self.plot_sphere_cm(colorval)
-        )
+                                                                    color=self.plot_sphere_cm(
+                                                                        colorval)
+                                                                    )
 
     def redraw_fleet_heading_vectors(self):
         self._remove_vectors(self.node_vector_collections)
@@ -404,16 +421,18 @@ class VisualNavigator(wx.Panel):
         for node in range(self.ctl.get_n_vectors()):
             magnitude = mag(np.asarray(headings[node]))
             colorval = self.plot_head_mag_norm(magnitude)
-            if self.frame.args.verbose: self.log.debug(
-                "Average heading: %s, Color: [%s], Speed: %s" % (str(headings[node]), str(colorval), str(magnitude)))
+            if self.frame.args.verbose:
+                self.log.debug(
+                    "Average heading: %s, Color: [%s], Speed: %s" % (str(headings[node]), str(colorval), str(magnitude)))
 
-            xs, ys, zs = zip(positions[node], np.add(positions[node], (np.asarray(headings[node]) * 50)))
+            xs, ys, zs = zip(
+                positions[node], np.add(positions[node], (np.asarray(headings[node]) * 50)))
             self.node_vector_collections.append(Arrow3D(
                 xs, ys, zs,
                 mutation_scale=2, lw=1,
                 arrowstyle="-|>", color=self.plot_sphere_cm(colorval), alpha=self.vector_opacity
             ))
-            #TODO Update to UPDATE DATA instead of re plotting
+            # TODO Update to UPDATE DATA instead of re plotting
             self.plot_axes.add_artist(
                 self.node_vector_collections[-1],
             )
@@ -426,7 +445,8 @@ class VisualNavigator(wx.Panel):
             try:
                 contributions = self.ctl.get_node_contribs(node, self.t)
             except Exception as e:
-                self.log.error("something went bad, quitting Contrib display: {}".format(e))
+                self.log.error(
+                    "something went bad, quitting Contrib display: {}".format(e))
                 self.node_contrib_enabled = False
                 break
 
@@ -435,7 +455,8 @@ class VisualNavigator(wx.Panel):
                 magnitude = mag(np.asarray(contribution))
                 # Getting FPE's due to suspected zero vectors in mpl.draw
                 if magnitude > 0.001:
-                    xs, ys, zs = zip(positions[node], np.add(positions[node], (np.asarray(contribution) * 50)))
+                    xs, ys, zs = zip(
+                        positions[node], np.add(positions[node], (np.asarray(contribution) * 50)))
                     vector = Arrow3D(
                         xs, ys, zs,
                         mutation_scale=2, lw=1,
@@ -445,32 +466,33 @@ class VisualNavigator(wx.Panel):
                     self.node_contrib_collections.append(vector)
                     if contributor not in self._contrib_labels:
                         self._contrib_labels.append(contributor)
-                    #TODO Update to UPDATE DATA instead of re plotting
+                    # TODO Update to UPDATE DATA instead of re plotting
                     self.plot_axes.add_artist(
                         self.node_contrib_collections[-1],
                     )
-        self.plot_axes.legend(self.node_contrib_collections, self._contrib_labels,loc="lower left")
+        self.plot_axes.legend(
+            self.node_contrib_collections, self._contrib_labels, loc="lower left")
         self.plot_axes.autoscale()
-
 
     def get_contrib_colour(self, contrib_key):
         try:
             return self._contrib_colour_dict[contrib_key]
         except (AttributeError, KeyError):
-            self.contrib_colourmap = [cm.spectral(i) for i in np.linspace(0, 0.9, self.ctl.get_max_node_contribs())]
+            self.contrib_colourmap = [
+                cm.spectral(i) for i in np.linspace(0, 0.9, self.ctl.get_max_node_contribs())]
             self._contrib_colour_dict = {}
             for i, contrib_key in enumerate(self.ctl.get_contrib_keys()):
-                self._contrib_colour_dict[contrib_key] = self.contrib_colourmap[i]
+                self._contrib_colour_dict[
+                    contrib_key] = self.contrib_colourmap[i]
             try:
                 return self._contrib_colour_dict[contrib_key]
             except KeyError as ke:
                 logging.error("CDict:%s" % self._contrib_colour_dict)
                 raise ke("CDict:%s" % self._contrib_colour_dict)
 
-
     def _remove_sphere(self):
         if isinstance(self.sphere_line_collection, Line3DCollection) \
-            and self.sphere_line_collection in self.plot_axes.collections:
+                and self.sphere_line_collection in self.plot_axes.collections:
             self.plot_axes.collections.remove(self.sphere_line_collection)
 
     def _remove_vectors(self, collection):
@@ -496,18 +518,21 @@ class VisualNavigator(wx.Panel):
             del self.metric_views[ind]
 
         for i, plot in enumerate(self.metric_views):
-            self.metric_axes[i] = plot.update(wanted=np.asarray(self.displayed_nodes))
+            self.metric_axes[i] = plot.update(
+                wanted=np.asarray(self.displayed_nodes))
             if self.metric_xlines[i] is not None:
                 self.metric_xlines[i].set_xdata([self.t, self.t])
             else:
-                self.metric_xlines[i] = self.metric_axes[i].axvline(x=self.t, color='r', linestyle=':')
+                self.metric_xlines[i] = self.metric_axes[
+                    i].axvline(x=self.t, color='r', linestyle=':')
             if self.ctl.get_achievements() is None:
                 pass
             elif self.achievement_xlines[i] is not None:
                 self.achievement_xlines[i].set_xdata([self.t, self.t])
             else:
                 for achievement in self.ctl.get_achievements():
-                    self.achievement_xlines[i] = self.metric_axes[i].axvline(x=achievement, color='b', alpha=0.1)
+                    self.achievement_xlines[i] = self.metric_axes[
+                        i].axvline(x=achievement, color='b', alpha=0.1)
             if self._zoom_metrics:
                 xlim = (max(0, self.t - 100), max(100, self.t + 100))
                 self.metric_axes[i].set_xlim(xlim)
@@ -526,7 +551,7 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page, t=0)
 
     def on_faster_btn(self, event):
-        self.d_t = int(min(max(2,self.d_t * 1.1), self.tmax / 20))
+        self.d_t = int(min(max(2, self.d_t * 1.1), self.tmax / 20))
         self.log.debug("Setting time step to: %s" % self.d_t)
 
     def on_slower_btn(self, event):
@@ -580,7 +605,8 @@ class VisualNavigator(wx.Panel):
     def on_trail_slider(self, event):
         event.Skip()
         norm_trail = self.trail_slider.GetValue()
-        self.trail_length = int(norm_trail * (self.ctl.get_final_tmax() / 100.0))
+        self.trail_length = int(
+            norm_trail * (self.ctl.get_final_tmax() / 100.0))
         self.log.debug("Slider: Setting trail to %d" % self.trail_length)
         wx.CallAfter(self.redraw_page)
 
@@ -601,7 +627,8 @@ class VisualNavigator(wx.Panel):
     def on_zoom_fleet_chk(self, event):
         # When unchecking, return to default viewpoint
         if not self.zoom_fleet_chk.IsChecked() and self._fleet_zoom:
-            self.plot_axes.autoscale_view(scalex=True, scaley=True, scalez=True, tight=False)
+            self.plot_axes.autoscale_view(
+                scalex=True, scaley=True, scalez=True, tight=False)
             environment = self.ctl.get_extent()
             self.plot_axes.set_xlim3d(0, environment[0])
             self.plot_axes.set_ylim3d(0, environment[1])
@@ -623,7 +650,8 @@ class VisualNavigator(wx.Panel):
                                    "Select nodes",
                                    "wx.MultiChoiceDialog", lst)
 
-        selections = [i for i in range(self.ctl.get_n_vectors()) if self.displayed_nodes[i]]
+        selections = [
+            i for i in range(self.ctl.get_n_vectors()) if self.displayed_nodes[i]]
         print selections
         dlg.SetSelections(selections)
 
@@ -657,25 +685,29 @@ class VisualNavigator(wx.Panel):
 
         self.plot_pnl.SetSize(plot_size)
         self.canvas.SetSize(plot_size)
-        canvas_inches = (float(plot_size[0]) / self.fig.get_dpi(), float(plot_size[1]) / self.fig.get_dpi())
+        canvas_inches = (float(
+            plot_size[0]) / self.fig.get_dpi(), float(plot_size[1]) / self.fig.get_dpi())
         self.log.debug("canvas_inch:%s" % str(canvas_inches))
         self.fig.set_size_inches(canvas_inches)
         wx.CallAfter(self.redraw_page)
 
+
 class DriftingNavigator(VisualNavigator):
+
     def initialise_3d_plot(self):
         VisualNavigator.initialise_3d_plot(self)
         # Get Drift Plot info
-        (xs,ys,zs) = self.ctl.get_3D_drift()
+        (xs, ys, zs) = self.ctl.get_3D_drift()
         self.drift_lines = [
             self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
         ]
 
     def redraw_page(self, t=None):
-        VisualNavigator.redraw_page(self,t=t)
+        VisualNavigator.redraw_page(self, t=t)
         for n, (line, label) in enumerate(zip(self.drift_lines, self.labels)):
-            (xs, ys, zs) = self.ctl.get_3D_drift(node=n, time_start=self.t, length=self.trail_length)
+            (xs, ys, zs) = self.ctl.get_3D_drift(
+                node=n, time_start=self.t, length=self.trail_length)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
             line.set_label("({})".format(self.names[n]))
@@ -690,21 +722,24 @@ class DriftingNavigator(VisualNavigator):
                 # of any architectural changes.
                 pass
 
+
 class ECEANavigator(DriftingNavigator):
     source = "intent"
+
     def initialise_3d_plot(self):
         DriftingNavigator.initialise_3d_plot(self)
         # Get Drift Plot info
-        (xs,ys,zs) = self.ctl.get_3D_drift(source=self.source)
+        (xs, ys, zs) = self.ctl.get_3D_drift(source=self.source)
         self.intent_lines = [
             self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
         ]
 
     def redraw_page(self, t=None):
-        DriftingNavigator.redraw_page(self,t=t)
+        DriftingNavigator.redraw_page(self, t=t)
         for n, (line, label) in enumerate(zip(self.intent_lines, self.labels)):
-            (xs, ys, zs) = self.ctl.get_3D_drift(node=n, time_start=self.t, length=self.trail_length, source=self.source)
+            (xs, ys, zs) = self.ctl.get_3D_drift(
+                node=n, time_start=self.t, length=self.trail_length, source=self.source)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
             line.set_label("({})".format(self.names[n]))

@@ -20,7 +20,8 @@ __email__ = "me@andrewbolster.info"
 BOUNOS - Heir to the Kingdom of AIETES
 """
 
-import sys, os
+import sys
+import os
 import argparse
 from argparse import RawTextHelpFormatter
 from math import ceil
@@ -45,7 +46,7 @@ font = {'family': 'normal',
         'size': 10}
 from matplotlib.ticker import FuncFormatter
 
-plot_alpha=0.9
+plot_alpha = 0.9
 
 _metrics = [Metrics.Deviation_Of_Heading,
             Metrics.PerNode_Speed,
@@ -53,6 +54,7 @@ _metrics = [Metrics.Deviation_Of_Heading,
 
 
 class BounosModel(DataPackage):
+
     """
     BounosModel acts as an interactive superclass of DataPackage, designed for interactive
         simulation/analysis
@@ -92,7 +94,8 @@ def load_sources(sources):
     :return data:
     """
     data = collections.OrderedDict()
-    datasets = Parallel(n_jobs=-1)(delayed(DataPackage)(source) for source in sources)
+    datasets = Parallel(n_jobs=-1)(delayed(DataPackage)(source)
+                                   for source in sources)
     for d in datasets:
         data[d.title.tostring()] = d
     return data
@@ -104,7 +107,8 @@ def npz_in_dir(path):
     :param path:
     :return sources:
     """
-    sources = map(lambda f: os.path.join(os.path.abspath(path),f),filter(lambda s: s.endswith('.npz'), os.listdir(path)))
+    sources = map(lambda f: os.path.join(os.path.abspath(path), f), filter(
+        lambda s: s.endswith('.npz'), os.listdir(path)))
     return sources
 
 
@@ -125,14 +129,17 @@ def custom_metric_run(args, data, title):
     subgraphargs.noplot = False
     run_metric_comparison(data=data, args=subgraphargs)
 
+
 def multirun(args, basedir=os.curdir):
     """
     :param args:
     :return:
     """
-    # If doing a multi-run with no given sources, assume we are 1 step away from NPZ's
+    # If doing a multi-run with no given sources, assume we are 1 step away
+    # from NPZ's
     if args.source is None:
-        sources = filter(os.path.isdir, map(os.path.abspath, os.listdir(basedir)))
+        sources = filter(
+            os.path.isdir, map(os.path.abspath, os.listdir(basedir)))
     args.noplot = True
     get_confidence = lambda x: x['suspect_confidence']
     get_distrust = lambda x: x['suspect_distrust']
@@ -149,14 +156,16 @@ def multirun(args, basedir=os.curdir):
         # TODO This is amazingly wasteful
         _, _, _, identification_list = zip(*result_generator)
 
-        # Write a standard fusion run back to the source dir. This might be removed later for speed.
+        # Write a standard fusion run back to the source dir. This might be
+        # removed later for speed.
         custom_fusion_run(args, data, sourcedir)
 
         keys = ['suspect_name', 'suspect_confidence', 'suspect_distrust']
         frame = {}
         for key in keys:
             frame[key] = pd.Series(
-                [identification_dict[key] for identification_dict in identification_list]
+                [identification_dict[key]
+                    for identification_dict in identification_list]
             )
         frame = pd.DataFrame(frame)
         anonframe = frame.drop('suspect_name', 1)
@@ -173,13 +182,17 @@ def multirun(args, basedir=os.curdir):
     panel = pd.Panel.from_dict(panel)
     mkpickle("panel.pkl", panel)
     mkpickle("bestruns.pkl", best_runs)
-    # ### Best Worse results plots
+    # Best Worse results plots
     args.strip_title = True
-    args.annotate_achievements=1 # annotate achievements in metric, not fusion
-    plot_runner = custom_metric_run(data=best_runs, args=args, title="metric_run")
+    # annotate achievements in metric, not fusion
+    args.annotate_achievements = 1
+    plot_runner = custom_metric_run(
+        data=best_runs, args=args, title="metric_run")
 
-    args.annotate_achievements=0 # annotate achievements in metric, not fusion
-    plot_runner = custom_fusion_run(data=best_runs, args=args, title="fusion_run")
+    # annotate achievements in metric, not fusion
+    args.annotate_achievements = 0
+    plot_runner = custom_fusion_run(
+        data=best_runs, args=args, title="fusion_run")
 
 
 def custom_parser():
@@ -284,15 +297,16 @@ def main():
         else:
             sources = [args.source]
 
-
         data = load_sources(sources)
 
         if args.compare:
             if args.analysis is None:
-                #Assuming NxA comparison of sources and analysis (run comparison)
+                # Assuming NxA comparison of sources and analysis (run
+                # comparison)
                 run_metric_comparison(data, args)
             else:
-                raise ValueError("You're trying to do something stupid: %s" % args)
+                raise ValueError(
+                    "You're trying to do something stupid: %s" % args)
         elif args.fusion:
             run_detection_fusion(data, args)
         else:
@@ -337,7 +351,8 @@ def plot_detections(ax, metric, orig_data,
             if str(good_behaviour) != str(bev):  # Bloody String Comparison...
                 print("Adding %s to nodelist because \"%s\" is not \"%s\""
                       % (nodelist, bev, good_behaviour))
-                [real_culprits.append(orig_data.names.index(node)) for node in nodelist]
+                [real_culprits.append(orig_data.names.index(node))
+                 for node in nodelist]
 
     print real_culprits
 
@@ -346,13 +361,14 @@ def plot_detections(ax, metric, orig_data,
             if max - min > 20:
                 _x = range(min, max)
                 if metric.signed is not False:
-                    #Negative Detection: Scan from the top
+                    # Negative Detection: Scan from the top
                     _y1 = np.asarray([np.max(metric.data)] * len(_x))
                 else:
                     # Positive or Unsigned: Scan from Bottom
                     _y1 = np.asarray([0] * len(_x))
                 _y2 = metric.data[min:max, culprit]
-                print("%s:%s:%s" % (orig_data.names[culprit], str((min, max)), str(max - min)))
+                print("%s:%s:%s" %
+                      (orig_data.names[culprit], str((min, max)), str(max - min)))
                 if real_culprits is not []:
                     ax.fill_between(_x, _y1, _y2, alpha=0.1,
                                     facecolor='red' if culprit not in real_culprits else 'green')
@@ -397,33 +413,35 @@ def run_detection_fusion(data, args=None):
     gs = GridSpec(len(_metrics) + 1, len(data))
     axes = [[None for _ in range(len(_metrics) + 1)] for _ in range(len(data))]
 
-    #Detect multiple runs by name introspection
+    # Detect multiple runs by name introspection
     namelist = []
-    [namelist.append(name) for (run, d) in data.iteritems() for name in d.names]
+    [namelist.append(name) for (run, d) in data.iteritems()
+     for name in d.names]
     nameset = set(namelist)
     per_run_names = len(namelist) / len(data) != len(nameset)
 
-    toptitle=None
-    topsuspect=None
-    topconfidence=None
-
+    toptitle = None
+    topsuspect = None
+    topconfidence = None
 
     for i, (run, d) in enumerate(sorted(data.items())):
-        trust_values, per_metric_deviations, deviation_windowed, identification_dict = detect_and_identify(d)
-        if args.strip_title and  '-' in d.title:
+        trust_values, per_metric_deviations, deviation_windowed, identification_dict = detect_and_identify(
+            d)
+        if args.strip_title and '-' in d.title:
             # Stripping from the last '-' from the title
             d.title = '-'.join(d.title.split('-')[:-1])
 
         if topconfidence and topconfidence > identification_dict['suspect_confidence']:
-            #Not top
+            # Not top
             pass
         else:
-            toptitle=d.title
-            topconfidence=identification_dict['suspect_confidence']
-            topsuspect=identification_dict['suspect_name']
+            toptitle = d.title
+            topconfidence = identification_dict['suspect_confidence']
+            topsuspect = identification_dict['suspect_name']
 
         print("{i}:{title} - {suspect}:{confidence:.2f} - Top={toptitle} - {topsuspect}:{topconfidence:.2f}".format(
-            i=i, title=d.title, suspect=identification_dict['suspect_name'], confidence=identification_dict['suspect_confidence'],
+            i=i, title=d.title, suspect=identification_dict[
+                'suspect_name'], confidence=identification_dict['suspect_confidence'],
             toptitle=toptitle, topsuspect=topsuspect, topconfidence=topconfidence)
         )
 
@@ -436,7 +454,6 @@ def run_detection_fusion(data, args=None):
                                  sharey=axes[i - 1][j] if i > 0 else None)
             ax.plot(per_metric_deviations[j], alpha=plot_alpha)
 
-
             if args.achievements:
                 add_achievements(ax, d)
 
@@ -447,10 +464,11 @@ def run_detection_fusion(data, args=None):
             if j == 0:
                 ax.set_title("{title}\n$\sigma${confidence:.3f}/M-{distrust:.3f}".format(
                              title=str(d.title).replace("_", " "),
-                             confidence=identification_dict['suspect_confidence'],
+                             confidence=identification_dict[
+                                 'suspect_confidence'],
                              distrust=identification_dict['suspect_distrust'],
                              )
-                )
+                             )
                 # Last Metric Behaviour (Legend)
             if j == len(_metrics) - 1:
                 if per_run_names:
@@ -462,7 +480,7 @@ def run_detection_fusion(data, args=None):
                     ax.legend(sorted(d.names), "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
                               ncol=int(ceil(float(len(d.names) + 1) / (n_leg))))
-                #First Legend
+                # First Legend
                 elif i == 0:
                     ax.legend(sorted(d.names), "lower center",
                               bbox_to_anchor=(0, 0, 1, 1),
@@ -481,9 +499,10 @@ def run_detection_fusion(data, args=None):
                              sharex=axes[0][0] if i > 0 or j > 0 else None,
                              sharey=axes[i - 1][j] if i > 0 else None)
         ax.grid(True, alpha=0.2)
-        mkpickle("trust",trust_values)
+        mkpickle("trust", trust_values)
         # TODO TRY WITHOUT EWMA
-        ax.plot(np.asarray([pd.stats.moments.ewma(t, span=600) for t in trust_values.T]).T, alpha=plot_alpha)
+        ax.plot(np.asarray([pd.stats.moments.ewma(t, span=600)
+                            for t in trust_values.T]).T, alpha=plot_alpha)
         ax.get_xaxis().set_visible(True)
         ax.set_xlabel("Time ($s$)")
         ax.set_ylabel("Fuzed Trust")
@@ -509,14 +528,13 @@ def run_detection_fusion(data, args=None):
             m_xmax = max(xmax, m_xmax)
             m_xmin = min(xmin, m_xmin)
 
-        #Do it again to apply the row_max
+        # Do it again to apply the row_max
         for i in range(len(axes)):
             axes[i][j].set_ylim((m_ymin, m_ymax * 1.1))
             axes[i][j].set_xlim((0, m_xmax))
 
     if args is not None and args.dims is not None:
         fig.set_size_inches((int(d) for d in args.dims))
-
 
     global_adjust(fig, axes)
 
@@ -526,18 +544,18 @@ def run_detection_fusion(data, args=None):
         show()
 
 
-def add_achievements(ax, d, annotate_achievements = False):
+def add_achievements(ax, d, annotate_achievements=False):
     if hasattr(d, "achievements"):
 
         for achievement in d.achievements.nonzero()[1]:
             if annotate_achievements:
                 ax.annotate("Vertical lines show\n checkpoint passing points",
-                            xy=(achievement,0.75),
-                            xytext=(0.1,0.8),
+                            xy=(achievement, 0.75),
+                            xytext=(0.1, 0.8),
                             xycoords='data',
                             textcoords='axes fraction',
                             arrowprops=dict(arrowstyle="->"))
-                annotate_achievements=False
+                annotate_achievements = False
             ax.axvline(x=achievement, color='b', alpha=0.1)
 
 
@@ -559,9 +577,10 @@ def run_metric_comparison(data, args=None):
     base_ax = fig.add_axes([0, 0, 1, 1], )
     gs = GridSpec(len(_metrics), len(data))
 
-    #Detect multiple runs by name introspection
+    # Detect multiple runs by name introspection
     namelist = []
-    [namelist.append(name) for (run, d) in data.iteritems() for name in d.names]
+    [namelist.append(name) for (run, d) in data.iteritems()
+     for name in d.names]
     nameset = set(namelist)
     per_run_names = len(namelist) / len(data) != len(nameset)
 
@@ -573,30 +592,32 @@ def run_metric_comparison(data, args=None):
         for j, _metric in enumerate(_metrics):
             metric = _metric(data=d)
             metric.update()
-            #Sharing axis is awkward; each metric should be matched to it's partners,
+            # Sharing axis is awkward; each metric should be matched to it's partners,
             # and x axis should always be shared
             if i > 0 or j > 0:
-                #This is the axis that will be shared for time
+                # This is the axis that will be shared for time
                 sharedx = axes[0][0]
             else:
                 sharedx = None
             if i > 0:
-                #Each 'row' shares a y axis
+                # Each 'row' shares a y axis
                 sharedy = axes[i - 1][j]
             else:
                 sharedy = None
             ax = fig.add_subplot(gs[j, i], sharex=sharedx, sharey=sharedy)
             ax.plot(metric.data, alpha=plot_alpha)
             if metric.highlight_data is not None:
-                ax.plot(metric.highlight_data, color='k', linestyle='--', alpha=plot_alpha)
+                ax.plot(
+                    metric.highlight_data, color='k', linestyle='--', alpha=plot_alpha)
 
             if args.achievements:
-                if args.annotate_achievements>=1:
-                    add_achievements(ax, d, annotate_achievements=args.annotate_achievements)
+                if args.annotate_achievements >= 1:
+                    add_achievements(
+                        ax, d, annotate_achievements=args.annotate_achievements)
                     args.annotate_achievements -= 1
                 else:
-                    add_achievements(ax, d, annotate_achievements=args.annotate_achievements)
-
+                    add_achievements(
+                        ax, d, annotate_achievements=args.annotate_achievements)
 
             if args is not None and args.attempt_detection:
                 plot_detections(ax, metric, d, shade_region=args.shade_region)
@@ -619,7 +640,7 @@ def run_metric_comparison(data, args=None):
                               bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
                               ncol=int(ceil(float(len(d.names) + 1) / (n_leg))))
-                #First Legend
+                # First Legend
                 elif i == 0:
                     ax.legend(d.names, "lower center",
                               bbox_to_anchor=(0, 0, 1, 1),
@@ -641,7 +662,7 @@ def run_metric_comparison(data, args=None):
             m_xmax = max(xmax, m_xmax)
             m_xmin = min(xmin, m_xmin)
 
-        #Do it again to apply the row_max
+        # Do it again to apply the row_max
         for i in range(len(axes)):
             axes[i][j].set_ylim((m_ymin, m_ymax * 1.1))
             axes[i][j].set_xlim((0, m_xmax))
@@ -658,7 +679,7 @@ def run_metric_comparison(data, args=None):
 
 
 def run_overlay(data, args=None):
-    #TODO Documentation
+    # TODO Documentation
     """
     Args:
         data(list of DataPackage): datasets to plot horizontally
@@ -696,7 +717,8 @@ def run_overlay(data, args=None):
         else:
             pass
 
-        ax.plot(metrics, label=str(data[source].title).replace("_", " "), alpha=plot_alpha)
+        ax.plot(metrics, label=str(data[source].title).replace(
+            "_", " "), alpha=plot_alpha)
         try:
             if args.attempt_detection:
                 ax.fill_between(range(len(metrics)),
@@ -704,7 +726,8 @@ def run_overlay(data, args=None):
                                 where=[d is not None for d in detections], alpha=0.3)
             else:
                 ax.fill_between(range(len(metrics)),
-                                metrics - data[source].data, metrics + data[source].data,
+                                metrics -
+                                data[source].data, metrics + data[source].data,
                                 alpha=0.2, facecolor='red')
         except ValueError as exp:
             print("Metrics:%s" % str(metrics.shape))
@@ -746,13 +769,15 @@ def global_adjust(figure, axes, scale=2):
             ax.yaxis.set_major_formatter(FuncFormatter(math_formatter))
 
     figure.set_size_inches(figure.get_size_inches() * scale)
-    figure.subplots_adjust(left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
-
+    figure.subplots_adjust(
+        left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
 
 
 def printAnalysis(d):
-    deviation, trust = Analyses.Combined_Detection_Rank(d, _metrics, stddev_frac=2)
-    result_dict = Analyses.behaviour_identification(deviation, trust, _metrics, names=d.names)
+    deviation, trust = Analyses.Combined_Detection_Rank(
+        d, _metrics, stddev_frac=2)
+    result_dict = Analyses.behaviour_identification(
+        deviation, trust, _metrics, names=d.names)
     return result_dict
 
 if __name__ == '__main__':

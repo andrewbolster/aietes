@@ -24,7 +24,10 @@ from ephyra import wx
 __author__ = 'andrewbolster'
 from threading import *
 # Thread class that executes processing
+
+
 class WorkerThread(Thread):
+
     """Worker Thread Class."""
 
     def __init__(self, notify_window):

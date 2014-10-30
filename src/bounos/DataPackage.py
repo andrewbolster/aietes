@@ -34,6 +34,7 @@ from configobj import ConfigObj
 
 
 class DataPackage(object):
+
     """
     Data Store for simulation results
     Replicates a Numpy Array as is directly accessible as an n-vector
@@ -57,8 +58,8 @@ class DataPackage(object):
                    'intent_positions': 'ecea_positions',
                    'ecea_positions': 'ecea_positions',
                    'additional': 'additional',
-                   'comms':'comms'
-    }
+                   'comms': 'comms'
+                   }
 
     version = 1.0
 
@@ -67,13 +68,14 @@ class DataPackage(object):
         Attempts to extract DataPackage data from a source dict
         """
         logging.debug("Caught exception on sink:%s source:%s (%s) attempting to recover"
-                      %(sink,source,exp))
-        #Per Attrib Fixes in the case of failure
+                      % (sink, source, exp))
+        # Per Attrib Fixes in the case of failure
         if sink is "title":
             # If simulation title not explicitly given, use the filename -npz
             self.title = ""
         elif sink is "achievements":
-            # If using pre-achievements datapackage, turn achievement stats off by setting achievements to none
+            # If using pre-achievements datapackage, turn achievement stats off
+            # by setting achievements to none
             logging.debug("Pre-Achievements Datapackage")
             self.achievements = None
         elif sink is "waypoints":
@@ -81,9 +83,10 @@ class DataPackage(object):
             logging.debug("Pre-Waypoints Datapackage")
             self.waypoints = None
         elif sink is "config":
-            # If config file is not listed, look for one in the same dir with the same name
-            potential_config_file = unext(source_filename)+".conf"
-            logging.error("Potential Config %s"%potential_config_file)
+            # If config file is not listed, look for one in the same dir with
+            # the same name
+            potential_config_file = unext(source_filename) + ".conf"
+            logging.error("Potential Config %s" % potential_config_file)
             self.config = validateConfig(potential_config_file)
         elif sink is "drift_positions":
             logging.debug("Non-drifting Datapackage")
@@ -92,20 +95,21 @@ class DataPackage(object):
             """ ECEA_Positions used to be called Intent
             """
             logging.debug("Non-ECEA Datapackage")
-            if not hasattr(self,'ecea'):
+            if not hasattr(self, 'ecea'):
                 self.ecea = False
         elif sink is "ecea_positions":
             logging.debug("Non-ECEA Datapackage")
-            if not hasattr(self,'ecea'):
+            if not hasattr(self, 'ecea'):
                 self.ecea = False
         elif sink is "additional":
             self.additional = None
-        # This method may fail miserable is sink and source are named differently
+        # This method may fail miserable is sink and source are named
+        # differently
         elif sink in ['data_rate', 'plr', 'delay', 'rssi']:
-            setattr(self,sink,None)
+            setattr(self, sink, None)
 
         else:
-            raise ValueError("Can't find %s(%s) in source" % (source,sink))
+            raise ValueError("Can't find %s(%s) in source" % (source, sink))
 
     def __init__(self, source=None, *args, **kwargs):
         """
@@ -120,33 +124,37 @@ class DataPackage(object):
                 try:
                     self.__dict__[sink_attrib] = kwargs[sink_attrib]
                 except (AttributeError, KeyError) as exp:
-                    self._handle_mapping_exceptions_(sink_attrib, source_attrib, "kwargs", exp)
+                    self._handle_mapping_exceptions_(
+                        sink_attrib, source_attrib, "kwargs", exp)
         except (AttributeError, KeyError) as exp:
             raise ValueError("Inappropriate / incomplete source of type {} : {} missing" .format(
-                            type(source),
-                            str([attr for attr in self._attrib_map.keys() if not kwargs.has_key(attr)])
-                            )
+                type(source),
+                str([attr for attr in self._attrib_map.keys()
+                     if not kwargs.has_key(attr)])
+            )
             ),  None, traceback.print_tb(sys.exc_info()[2])
 
         self.tmax = int(kwargs.get("tmax", len(self.p[0][0])))
         self.n = len(self.p)
 
         if self.tmax > self.p.shape[2]:
-            logging.warn("Missized datapackage({} vs {}): hopefully a mission success: resetting tmax".format(self.tmax, self.p.shape))
+            logging.warn("Missized datapackage({} vs {}): hopefully a mission success: resetting tmax".format(
+                self.tmax, self.p.shape))
             self.tmax = self.p.shape[2]
 
-        #Fixes for Datatypes
+        # Fixes for Datatypes
         self.config = literal_eval(str(self.config))
         if isinstance(self.names, np.ndarray):
             self.names = self.names.tolist()
 
-        # Convoluted logic to by DEFAULT assume drifting, unless it's set by the failing case in _handle
-        if not hasattr(self,'drifting'):
+        # Convoluted logic to by DEFAULT assume drifting, unless it's set by
+        # the failing case in _handle
+        if not hasattr(self, 'drifting'):
             self.drifting = True
-        if not hasattr(self,'ecea'):
+        if not hasattr(self, 'ecea'):
             self.ecea = True
 
-    def pad_time(self,tmax,val=0.0):
+    def pad_time(self, tmax, val=0.0):
         """
         In some cases it's necessary to mis datapackage data, which can be difficult with different length
         simulations.
@@ -157,14 +165,15 @@ class DataPackage(object):
         NOT TESTED
         """
         if tmax > self.tmax:
-            for datum in ['p','v','drift_positions']:
+            for datum in ['p', 'v', 'drift_positions']:
                 pad_val = np.array(3)
                 pad_val.fill(val)
                 orig_shape = self.__dict__[datum].shape
                 self.__dict__[datum] = np.asarray([
-                    np.pad(self.__dict__[datum],(pad_val,tmax-self.tmax), mode="constant")
+                    np.pad(
+                        self.__dict__[datum], (pad_val, tmax - self.tmax), mode="constant")
                 ])
-        elif tmax<self.tmax:
+        elif tmax < self.tmax:
             raise ValueError("You can't trim my package!")
         else:
             # Same tmax, no problem
@@ -184,22 +193,24 @@ class DataPackage(object):
         self.n = len(self.p)
 
     def write(self, filename=None, track_mat=False):
-        logging.info("Writing datafile to {}.npz".format(results_file(filename)))
+        logging.info(
+            "Writing datafile to {}.npz".format(results_file(filename)))
 
-        data = {i:self.__dict__[i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
+        data = {i: self.__dict__[
+            i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
         data['filename'] = "{}.npz".format(filename)
 
         np.savez(filename,
                  **(data)
-        )
+                 )
         co = ConfigObj(self.config, list_values=False)
         co.filename = "%s.conf" % filename
         co.write()
         if track_mat:
             self.export_track_mat(filename)
-        return ("%s.npz"%filename, co.filename)
+        return ("%s.npz" % filename, co.filename)
 
-    #Data has the format:
+    # Data has the format:
     # [n][x,y,z][t]
 
     def getBehaviourDict(self):
@@ -226,7 +237,7 @@ class DataPackage(object):
         """
         Return the 3D Limits of the experiment
         """
-        return zip(np.min(np.min(self.p,axis=0),axis=1),np.max(np.max(self.p,axis=0),axis=1))
+        return zip(np.min(np.min(self.p, axis=0), axis=1), np.max(np.max(self.p, axis=0), axis=1))
 
     def achievement_statistics(self):
         """
@@ -272,7 +283,8 @@ class DataPackage(object):
         ach_stat['min_ach'] = min_ach
         ach_stat['ach_pos'] = ach_pos
         ach_stat['avg_completion'] = float(tot_achs) / len(ach_stat['pernode'])
-        ach_stat['percent_completion'] = float(len(top_guns)) / len(ach_stat['pernode'])
+        ach_stat['percent_completion'] = float(
+            len(top_guns)) / len(ach_stat['pernode'])
 
         return ach_stat
 
@@ -291,15 +303,18 @@ class DataPackage(object):
             stats['achievements'] = self.achievement_statistics()
 
         """Volume Statistics"""
-        #TODO The maths for this is insane....
+        # TODO The maths for this is insane....
 
         """Motion Statistics"""
         mot_stat = {}
-        #Standard Variation of the Internode Distance Average would represent the variability of the fleet
-        mot_stat["std_of_INDA"] = np.std([self.inter_distance_average(t) for t in xrange(self.tmax)])
+        # Standard Variation of the Internode Distance Average would represent
+        # the variability of the fleet
+        mot_stat["std_of_INDA"] = np.std(
+            [self.inter_distance_average(t) for t in xrange(self.tmax)])
         mot_stat["std_of_INDD"] = np.std(
             [self.position_matrix(t) / self.inter_distance_average(t) for t in xrange(self.tmax)])
-        #Fleet speed (i.e. total distance covered) would represent comparative efficiency
+        # Fleet speed (i.e. total distance covered) would represent comparative
+        # efficiency
         mot_f_distance = np.sum(map(mag, self.v))
         mot_stat["fleet_distance"] = mot_f_distance
         mot_stat["fleet_efficiency"] = (mot_f_distance / self.tmax) / self.n
@@ -308,7 +323,6 @@ class DataPackage(object):
 
         return stats
 
-
     def position_of(self, node, time):
         """
         Query the data set for the x,y,z position of a node at a given time
@@ -316,7 +330,6 @@ class DataPackage(object):
         return self.p[node, :, time]
 
     def heading_of(self, node, time):
-
         """
         Query the data set for the x,y,z vector of a node at a given time
         """
@@ -341,7 +354,8 @@ class DataPackage(object):
         try:
             return self.p[node, :, :]
         except IndexError as e:
-            logging.debug("Position Query for n:%d @ all for position shape %s" % (node, self.p[node].shape))
+            logging.debug("Position Query for n:%d @ all for position shape %s" % (
+                node, self.p[node].shape))
             raise e
 
     def heading_slice_of(self, node):
@@ -351,9 +365,9 @@ class DataPackage(object):
         try:
             return self.v[node, :, :]
         except IndexError as e:
-            logging.debug("Heading Query for n:%d @ all for heading shape %s" % (node, self.v[node].shape))
+            logging.debug("Heading Query for n:%d @ all for heading shape %s" % (
+                node, self.v[node].shape))
             raise e
-
 
     def heading_mag_range(self):
         """
@@ -363,7 +377,7 @@ class DataPackage(object):
         """
         magnitudes = [sum(map(mag, self.heading_slice(time))) / self.n
                       for time in range(self.tmax)
-        ]
+                      ]
         return magnitudes
 
     def average_heading_mag_range(self):
@@ -374,7 +388,7 @@ class DataPackage(object):
         """
         magnitudes = [mag(self.average_heading(time))
                       for time in range(self.tmax)
-        ]
+                      ]
         return magnitudes
 
     def heading_stddev_range(self):
@@ -385,7 +399,7 @@ class DataPackage(object):
         deviations = [np.std(
             self.deviation_from_at(self.average_heading(time), time)
         )
-                      for time in range(self.tmax)
+            for time in range(self.tmax)
         ]
         return deviations
 
@@ -400,7 +414,8 @@ class DataPackage(object):
         :raises ValueError
         """
         if not (0 <= time <= self.tmax):
-            raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
+            raise ValueError(
+                "Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
         return np.average(self.position_slice(time), axis=0)
 
@@ -413,7 +428,8 @@ class DataPackage(object):
         :raises ValueError
         """
         if not (0 <= time <= self.tmax):
-            raise ValueError("Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
+            raise ValueError(
+                "Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
 
         return np.average(self.heading_slice(time), axis=0)
 
@@ -472,7 +488,6 @@ class DataPackage(object):
         """
         return self.distances_from_at(self.average_position(time), time)
 
-
     def distance_from_average_stddev_range(self):
         """
         Returns an array of overall stddevs across the dataset
@@ -501,7 +516,8 @@ class DataPackage(object):
                     "Contribution Query for n:%d @ all for position shape %s" % (node, self.contributions[node].shape))
                 raise e
             except AttributeError as e:
-                logging.error("Ok, the debug message failed, this looks like a corrupted file so I'll just shut off the contrib ")
+                logging.error(
+                    "Ok, the debug message failed, this looks like a corrupted file so I'll just shut off the contrib ")
 
     def inter_distance_average(self, time):
         """
@@ -509,16 +525,16 @@ class DataPackage(object):
         """
         return np.average(self.position_matrix(time))
 
-    def drift_error(self, source = "drift"):
+    def drift_error(self, source="drift"):
         """
         Returns the drift errors for each node
         in real meters
         """
         if self.drifting:
             if source == "drift":
-                return np.linalg.norm(self.drift_positions-self.p, axis=1)
+                return np.linalg.norm(self.drift_positions - self.p, axis=1)
             elif source == "intent":
-                return np.linalg.norm(self.ecea_positions-self.p, axis=1)
+                return np.linalg.norm(self.ecea_positions - self.p, axis=1)
             else:
                 raise ValueError("Invalid Drift Source: {}".format(source))
         else:
@@ -528,32 +544,32 @@ class DataPackage(object):
         """
         Returns the RMS of drift across all nodes over time
         """
-        return np.sqrt(np.sum(self.drift_error(source), axis=0)/self.n)
+        return np.sqrt(np.sum(self.drift_error(source), axis=0) / self.n)
 
     def ecea_error(self, periodic=True):
         """
         Nasty hacky dirty stuff to get the RMS statistics out of the 'additional' section across executions
         :return:
         """
-        period = np.asarray(map(lambda x: x['params']['Delta'], self.additional))
+        period = np.asarray(
+            map(lambda x: x['params']['Delta'], self.additional))
         if np.all(period == period[0]):
             period = period[0]
         if periodic:
             truth = np.asarray(map(lambda x: x['true'], self.additional))
             drift = np.asarray(map(lambda x: x['drift'], self.additional))
-            estimate = np.asarray(map(lambda x: x['estimate'], self.additional))
+            estimate = np.asarray(
+                map(lambda x: x['estimate'], self.additional))
         else:
             truth = self.p
             drift = self.drift_positions
             estimate = self.ecea_positions
-            period=-period
-
+            period = -period
 
         drift_err = np.linalg.norm(drift - truth, axis=1)
         estimate_err = np.linalg.norm(estimate - truth, axis=1)
 
         return (drift_err, estimate_err, self.n, period)
-
 
     def export_track_mat(self, filename=None):
         """
@@ -569,13 +585,14 @@ class DataPackage(object):
         if filename is None:
             filename = self.title
         path = "{}.track".format(filename)
-        data={
-            'true_positions':self.p,
+        data = {
+            'true_positions': self.p,
         }
-        if hasattr(self,"drift_positions"): data.update({'drift_positions': self.drift_positions})
-        if hasattr(self,"ecea_positions"): data.update({'ecea_positions':self.ecea_positions})
+        if hasattr(self, "drift_positions"):
+            data.update({'drift_positions': self.drift_positions})
+        if hasattr(self, "ecea_positions"):
+            data.update({'ecea_positions': self.ecea_positions})
         savemat(path, data)
-
 
     def generate_animation(self, filename=None, fps=24, gif=False, movieFile=True, xRes=1024, yRes=768, extent=True, displayFrames=None):
         """
@@ -627,7 +644,8 @@ class DataPackage(object):
         ax.legend()
 
         if extent is True:
-            extent = tuple(zip(np.min(np.min(self.p, axis=0), axis=1), np.max(np.max(self.p, axis=0), axis=1)))
+            extent = tuple(zip(
+                np.min(np.min(self.p, axis=0), axis=1), np.max(np.max(self.p, axis=0), axis=1)))
             (lx, rx), (ly, ry), (lz, rz) = extent
             x_width = abs(lx - rx)
             y_width = abs(ly - ry)
@@ -673,4 +691,3 @@ class DataPackage(object):
 
         :return:
         """
-

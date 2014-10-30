@@ -1,4 +1,4 @@
-## -*- coding: cp1252 -*-
+# -*- coding: cp1252 -*-
 ###########################################################################
 #
 # Copyright (C) 2007 by Justin Eskesen and Josep Miquel Jornet Montana
@@ -54,6 +54,7 @@ def SetupMAC(node, config):
 
 
 class ALOHA:
+
     """ALOHA:  A very simple MAC Algorithm
     """
 
@@ -66,7 +67,8 @@ class ALOHA:
 
         self.InitialiseStateEngine()
 
-        self.channel_access_retries = 0  # Number of times that the channel was sensed and found not idle
+        # Number of times that the channel was sensed and found not idle
+        self.channel_access_retries = 0
         self.transmission_attempts = 0  # Number of retransmissions
         self.max_transmission_attempts = config["attempts"]
         self.max_wait_to_retransmit = config["max2resend"]
@@ -78,6 +80,8 @@ class ALOHA:
         self.outgoing_packet_queue = []
         self.incoming_packet = None
 
+        self.data_packet_length = config["data_packet_length"]
+
         self.stats = {"data_packets_sent": 0, "data_packets_received": {}}
 
         self.timer = self.InternalTimer(self.fsm)
@@ -86,8 +90,8 @@ class ALOHA:
     def activate(self):
         Sim.activate(self.timer, self.timer.Lifecycle(self.TimerRequest))
 
-
     class InternalTimer(Sim.Process):
+
         def __init__(self, fsm):
             Sim.Process.__init__(self, name="MAC_Timer")
             random.seed()
@@ -102,7 +106,6 @@ class ALOHA:
                 else:
                     self.fsm.process(Request.signalparam[1])
 
-
     def InitialiseStateEngine(self):
         """InitialiseStateEngine:  set up Finite State Machine for ALOHA
         """
@@ -112,21 +115,30 @@ class ALOHA:
         self.fsm.set_default_transition(self.OnError, "READY_WAIT")
 
         # Transitions from READY_WAIT
-        self.fsm.add_transition("got_DATA", "READY_WAIT", self.OnDataReception, "READY_WAIT")
-        self.fsm.add_transition("send_DATA", "READY_WAIT", self.Transmit, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_DATA", "READY_WAIT", self.OnDataReception, "READY_WAIT")
+        self.fsm.add_transition(
+            "send_DATA", "READY_WAIT", self.Transmit, "READY_WAIT")
 
         # Transitions from WAIT_ACK
-        self.fsm.add_transition("got_DATA", "WAIT_ACK", self.OnDataReception, "WAIT_ACK")
-        self.fsm.add_transition("send_DATA", "WAIT_ACK", self.QueueData, "WAIT_ACK")
-        self.fsm.add_transition("got_ACK", "WAIT_ACK", self.OnTransmitSuccess, "READY_WAIT")
-        self.fsm.add_transition("timeout", "WAIT_ACK", self.OnTimeout, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "got_DATA", "WAIT_ACK", self.OnDataReception, "WAIT_ACK")
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_ACK", self.QueueData, "WAIT_ACK")
+        self.fsm.add_transition(
+            "got_ACK", "WAIT_ACK", self.OnTransmitSuccess, "READY_WAIT")
+        self.fsm.add_transition(
+            "timeout", "WAIT_ACK", self.OnTimeout, "WAIT_2_RESEND")
 
-        #Transitions from WAIT_2_RESEND
-        self.fsm.add_transition("resend", "WAIT_2_RESEND", self.Transmit, "WAIT_2_RESEND")
-        self.fsm.add_transition("got_DATA", "WAIT_2_RESEND", self.OnDataReception, "WAIT_2_RESEND")
-        self.fsm.add_transition("send_DATA", "WAIT_2_RESEND", self.QueueData, "WAIT_2_RESEND")
-        self.fsm.add_transition("fail", "WAIT_2_RESEND", self.OnTransmitFail, "READY_WAIT")
-
+        # Transitions from WAIT_2_RESEND
+        self.fsm.add_transition(
+            "resend", "WAIT_2_RESEND", self.Transmit, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "got_DATA", "WAIT_2_RESEND", self.OnDataReception, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_2_RESEND", self.QueueData, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "fail", "WAIT_2_RESEND", self.OnTransmitFail, "READY_WAIT")
 
     def InitiateTransmission(self, OutgoingPacket):
         """ Function called from the upper layers to transmit a packet.
@@ -134,25 +146,26 @@ class ALOHA:
         self.outgoing_packet_queue.append(OutgoingPacket)
         self.fsm.process("send_DATA")
 
-
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
         """
         self.incoming_packet = IncomingPacket
         if self.IsForMe():
-            if debug: self.logger.debug("received Packet from {src}".format(src=IncomingPacket['source']))
+            if debug:
+                self.logger.debug(
+                    "received Packet from {src}".format(src=IncomingPacket['source']))
             self.fsm.process(self.packet_signal[IncomingPacket["type"]])
         else:
-            if debug: self.logger.debug("Overheard Packet from {src} to {dest}".format(src=IncomingPacket['source'], dest=IncomingPacket['dest']))
+            if debug:
+                self.logger.debug("Overheard Packet from {src} to {dest}".format(
+                    src=IncomingPacket['source'], dest=IncomingPacket['dest']))
             self.OverHearing()
-
 
     def IsForMe(self):
         if self.layercake.hostname == self.incoming_packet["through"]:
             return True
         else:
             return broadcast_address == self.incoming_packet["through"]
-
 
     def OverHearing(self):
         """ Valuable information can be obtained from overhearing the channel.
@@ -165,12 +178,12 @@ class ALOHA:
                     self.logger.debug("An implicit ACK has arrived.")
                     self.fsm.process("got_ACK")
 
-
     def OnDataReception(self):
         """ A data packet is received. We should acknowledge the previous node or we can try to use implicit
             acknowledges if that does not mean a waste of power.
         """
-        packet_origin = self.incoming_packet["route"][-1][0]  # These ACKs just gone to the previous hop, this is maintenance at MAC layer
+        packet_origin = self.incoming_packet[
+            "route"][-1][0]  # These ACKs just gone to the previous hop, this is maintenance at MAC layer
 
         if self.layercake.net.NeedExplicitACK(self.incoming_packet["level"], self.incoming_packet["dest"]) \
                 or len(self.outgoing_packet_queue) != 0 \
@@ -179,9 +192,9 @@ class ALOHA:
 
         self.layercake.net.OnPacketReception(self.incoming_packet)
 
-
     def SendAck(self, packet_origin):
-        if debug: self.logger.debug("ACK to " + packet_origin)
+        if debug:
+            self.logger.debug("ACK to " + packet_origin)
         AckPacket = {"type": "ACK",
                      "source": self.layercake.hostname,
                      "source_position": self.layercake.get_current_position(),
@@ -195,24 +208,24 @@ class ALOHA:
 
         self.layercake.phy.TransmitPacket(AckPacket)
 
-
     def OnError(self):
         """ This function is called when the FSM has an unexpected input_symbol in a determined state.
         """
-        self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(sm=self.fsm, pkt=self.incoming_packet))
-
+        self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(
+            sm=self.fsm, pkt=self.incoming_packet))
 
     def OnTransmitSuccess(self):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
         """
-        if debug: self.logger.debug("Successfully Transmitted to " + self.incoming_packet["source"])
+        if debug:
+            self.logger.debug(
+                "Successfully Transmitted to " + self.incoming_packet["source"])
 
         # We got an ACK, stop the timer...
         p = Sim.Process()
         p.interrupt(self.timer)
 
         self.PostSuccessOrFail()
-
 
     def OnTransmitFail(self):
         """ All the transmission attemps have been completed. It's impossible to reach the node.
@@ -223,7 +236,6 @@ class ALOHA:
         )
         self.PostSuccessOrFail()
 
-
     def PostSuccessOrFail(self):
         """ Successfully or not, we have finished the current transmission.
         """
@@ -233,10 +245,10 @@ class ALOHA:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
 
-
     def OnTimeout(self):
         self.transmission_attempts += 1
-        if debug: self.logger.debug("Timed Out, No Ack Received")
+        if debug:
+            self.logger.debug("Timed Out, No Ack Received")
 
         if self.transmission_attempts > self.max_transmission_attempts:
             self.fsm.process("fail")
@@ -244,40 +256,43 @@ class ALOHA:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "resend"))
 
-
     def Transmit(self):
         """ Real Transmission of the Packet.
         """
         self.level = self.outgoing_packet_queue[0]["level"]
         self.T = self.layercake.phy.level2delay(self.level)
-        self.t_data = self.outgoing_packet_queue[0]["length"] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        self.t_data = self.outgoing_packet_queue[0][
+            "length"] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         self.timeout = 2 * self.T + 2 * self.t_data
 
-        # Before transmitting, we check if the channel is idle        
+        # Before transmitting, we check if the channel is idle
         if self.layercake.phy.IsIdle():
             self.transmission_attempts = self.transmission_attempts + 1
             self.channel_access_retries = 0
-            if debug: self.logger.debug("Transmit to " + self.outgoing_packet_queue[0]["through"])
+            if debug:
+                self.logger.debug(
+                    "Transmit to " + self.outgoing_packet_queue[0]["through"])
             self.layercake.phy.TransmitPacket(self.outgoing_packet_queue[0])
             self.fsm.current_state = "WAIT_ACK"
             self.TimerRequest.signal((self.timeout, "timeout"))
-            if debug: self.logger.debug("The timeout is " + str(self.timeout))
+            if debug:
+                self.logger.debug("The timeout is " + str(self.timeout))
         else:
             self.channel_access_retries = self.channel_access_retries + 1
             timeout = random.random() * (2 * self.T)
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
 
-
     def QueueData(self):
         self.logger.debug("Queuing Data")
 
-
     def PrintMessage(self, msg):
         pass
-        # print "ALOHA (%s): %s at t=" % (self.layercake.hostname, msg), Sim.now(), self.fsm.input_symbol, self.fsm.current_state
+        # print "ALOHA (%s): %s at t=" % (self.layercake.hostname, msg),
+        # Sim.now(), self.fsm.input_symbol, self.fsm.current_state
 
 
 class ALOHA4FBR(ALOHA):
+
     """ CS-ALOHA adapted for the FBR protocol.
     """
 
@@ -295,62 +310,88 @@ class ALOHA4FBR(ALOHA):
         self.valid_candidates = {}
         self.original_through = None
 
-        # New Transitions from READY_WAIT - RTS packets are used to retrieve a route
-        self.fsm.add_transition("send_DATA", "READY_WAIT", self.RouteCheck, "READY_WAIT")
-        self.fsm.add_transition("send_RTS", "READY_WAIT", self.SendRTS, "READY_WAIT")
-        self.fsm.add_transition("transmit", "READY_WAIT", self.Transmit, "READY_WAIT")
+        # New Transitions from READY_WAIT - RTS packets are used to retrieve a
+        # route
+        self.fsm.add_transition(
+            "send_DATA", "READY_WAIT", self.RouteCheck, "READY_WAIT")
+        self.fsm.add_transition(
+            "send_RTS", "READY_WAIT", self.SendRTS, "READY_WAIT")
+        self.fsm.add_transition(
+            "transmit", "READY_WAIT", self.Transmit, "READY_WAIT")
 
-        self.fsm.add_transition("got_RTS", "READY_WAIT", self.ProcessRTS, "READY_WAIT")
-        self.fsm.add_transition("send_CTS", "READY_WAIT", self.SendCTS, "READY_WAIT")
-        self.fsm.add_transition("ignore_RTS", "READY_WAIT", self.IgnoreRTS, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_RTS", "READY_WAIT", self.ProcessRTS, "READY_WAIT")
+        self.fsm.add_transition(
+            "send_CTS", "READY_WAIT", self.SendCTS, "READY_WAIT")
+        self.fsm.add_transition(
+            "ignore_RTS", "READY_WAIT", self.IgnoreRTS, "READY_WAIT")
 
-        self.fsm.add_transition("got_ACK", "READY_WAIT", self.IgnoreACK, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_ACK", "READY_WAIT", self.IgnoreACK, "READY_WAIT")
 
         # New State in which we wait for the routes
-        self.fsm.add_transition("got_DATA", "WAIT_CTS", self.OnDataReception, "WAIT_CTS")
-        self.fsm.add_transition("send_DATA", "WAIT_CTS", self.QueueData, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_DATA", "WAIT_CTS", self.OnDataReception, "WAIT_CTS")
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_CTS", self.QueueData, "WAIT_CTS")
 
-        self.fsm.add_transition("got_RTS", "WAIT_CTS", self.IgnoreRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_CTS", self.IgnoreRTS, "WAIT_CTS")
 
-        self.fsm.add_transition("got_CTS", "WAIT_CTS", self.AppendCTS, "WAIT_CTS")
-        self.fsm.add_transition("timeout", "WAIT_CTS", self.SelectCTS, "WAIT_CTS")
-        self.fsm.add_transition("transmit", "WAIT_CTS", self.Transmit, "WAIT_CTS")
-        self.fsm.add_transition("retransmit", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
-        self.fsm.add_transition("send_RTS", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_CTS", self.AppendCTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "timeout", "WAIT_CTS", self.SelectCTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "transmit", "WAIT_CTS", self.Transmit, "WAIT_CTS")
+        self.fsm.add_transition(
+            "retransmit", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "send_RTS", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
 
-        self.fsm.add_transition("abort", "WAIT_CTS", self.OnTransmitFail, "READY_WAIT")
-        self.fsm.add_transition("got_ACK", "WAIT_CTS", self.OnTransmitSuccess, "WAIT_CTS")
+        self.fsm.add_transition(
+            "abort", "WAIT_CTS", self.OnTransmitFail, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_ACK", "WAIT_CTS", self.OnTransmitSuccess, "WAIT_CTS")
 
         # New Transitions from WAIT_ACK
-        self.fsm.add_transition("got_RTS", "WAIT_ACK", self.IgnoreRTS, "WAIT_ACK")
-        self.fsm.add_transition("got_CTS", "WAIT_ACK", self.IgnoreCTS, "WAIT_ACK")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_ACK", self.IgnoreRTS, "WAIT_ACK")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_ACK", self.IgnoreCTS, "WAIT_ACK")
 
         # New Transitions from WAIT_2_RESEND
-        self.fsm.add_transition("resend", "WAIT_2_RESEND", self.RouteCheck, "WAIT_2_RESEND")
-        self.fsm.add_transition("send_RTS", "WAIT_2_RESEND", self.SendRTS, "WAIT_2_RESEND")
-        self.fsm.add_transition("transmit", "WAIT_2_RESEND", self.Transmit, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "resend", "WAIT_2_RESEND", self.RouteCheck, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "send_RTS", "WAIT_2_RESEND", self.SendRTS, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "transmit", "WAIT_2_RESEND", self.Transmit, "WAIT_2_RESEND")
 
-        self.fsm.add_transition("got_RTS", "WAIT_2_RESEND", self.ProcessRTS, "WAIT_2_RESEND")
-        self.fsm.add_transition("send_CTS", "WAIT_2_RESEND", self.SendCTS, "WAIT_2_RESEND")
-        self.fsm.add_transition("ignore_RTS", "WAIT_2_RESEND", self.IgnoreRTS, "WAIT_2_RESEND")
-        self.fsm.add_transition("got_ACK", "WAIT_2_RESEND", self.OnTransmitSuccess, "WAIT_2_RESEND")
-
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_2_RESEND", self.ProcessRTS, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "send_CTS", "WAIT_2_RESEND", self.SendCTS, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "ignore_RTS", "WAIT_2_RESEND", self.IgnoreRTS, "WAIT_2_RESEND")
+        self.fsm.add_transition(
+            "got_ACK", "WAIT_2_RESEND", self.OnTransmitSuccess, "WAIT_2_RESEND")
 
     def IgnoreRTS(self):
-        self.logger.debug("Ignoring RTS received from " + self.incoming_packet["source"])
+        self.logger.debug(
+            "Ignoring RTS received from " + self.incoming_packet["source"])
         self.incoming_packet = None
-
 
     def IgnoreCTS(self):
-        self.logger.debug("Ignoring CTS coming from " + self.incoming_packet["through"])
+        self.logger.debug(
+            "Ignoring CTS coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
-
 
     def IgnoreACK(self):
-        self.logger.debug("Ignoring ACK coming from " + self.incoming_packet["through"])
+        self.logger.debug(
+            "Ignoring ACK coming from " + self.incoming_packet["through"])
         print self.layercake.hostname, "Have we had a collision?"
         self.incoming_packet = None
-
 
     def SendRTS(self):
         """ The RTS sent is the normal one, but we should initialize the list of replies.
@@ -375,7 +416,9 @@ class ALOHA4FBR(ALOHA):
                          "through": self.outgoing_packet_queue[0]["through"], "through_position": self.outgoing_packet_queue[0]["through_position"],
                          "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"], "time_stamp": Sim.now()}
 
-            if debug: self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
+            if debug:
+                self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[
+                                  0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
 
             self.layercake.phy.TransmitPacket(RTSPacket)
 
@@ -386,12 +429,12 @@ class ALOHA4FBR(ALOHA):
             self.TimerRequest.signal((timeout, "timeout"))
             self.fsm.current_state = "WAIT_CTS"
 
-        else:  # I'm currently not limiting the number of channel access retries
+        # I'm currently not limiting the number of channel access retries
+        else:
             self.logger.debug("The channel was not idle.")
             self.channel_access_retries = self.channel_access_retries + 1
             timeout = random.random() * (2 * self.T + self.t_data)
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
-
 
     def ProcessRTS(self):
         """ Someone is looking for help, may I help? Now the active nodes are the ones that transmit, maybe we should do it the opposite way
@@ -405,16 +448,15 @@ class ALOHA4FBR(ALOHA):
                     self.multicast = True
                     self.fsm.process("send_CTS")
             else:
-                self.logger.debug("I can't attend the RTS received from " + self.incoming_packet["source"] + ".")
+                self.logger.debug(
+                    "I can't attend the RTS received from " + self.incoming_packet["source"] + ".")
                 self.fsm.process("ignore_RTS")
-
 
     def RouteCheck(self):
         if self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
             self.fsm.process("send_RTS")
         else:
             self.fsm.process("transmit")
-
 
     def SendCTS(self):
         """ Clear To Send: I'm proposing myself as a good candidate for the next transmission or I just let transmit if I have been
@@ -432,19 +474,23 @@ class ALOHA4FBR(ALOHA):
                          "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
                          "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
-            if debug: self.logger.debug("Transmitting CTS to " + self.incoming_packet["source"])
+            if debug:
+                self.logger.debug(
+                    "Transmitting CTS to " + self.incoming_packet["source"])
             self.layercake.phy.TransmitPacket(CTSPacket)
 
         self.incoming_packet = None
-
 
     def AppendCTS(self):
         """ More than one CTS is received when looking for the next best hop. We should consider all of them.
         The routing layer decides.
         """
-        self.valid_candidates[self.incoming_packet["through"]] = (Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
-        self.logger.debug("Appending CTS to " + self.incoming_packet["source"] + " coming from " + self.incoming_packet["through"])
-        self.layercake.net.AddNode(self.incoming_packet["through"], self.incoming_packet["through_position"])
+        self.valid_candidates[self.incoming_packet["through"]] = (
+            Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+        self.logger.debug("Appending CTS to " + self.incoming_packet[
+                          "source"] + " coming from " + self.incoming_packet["through"])
+        self.layercake.net.AddNode(
+            self.incoming_packet["through"], self.incoming_packet["through_position"])
 
         self.incoming_packet = None
 
@@ -454,13 +500,13 @@ class ALOHA4FBR(ALOHA):
             p.interrupt(self.timer)
             self.fsm.process("timeout")
 
-
     def SelectCTS(self):
         """ Once we have wait enough, that is, 2 times the distance at which the best next hop should be, we should select it.
         """
 
         current_through = self.outgoing_packet_queue[0]["through"]
-        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.SelectRoute(self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
+        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.SelectRoute(
+            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
 
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
             # We have consumed all the attemps
@@ -468,7 +514,8 @@ class ALOHA4FBR(ALOHA):
 
         elif self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
             # We should retransmit increasing the power
-            self.outgoing_packet_queue[0]["level"] = int(self.outgoing_packet_queue[0]["through"][3])
+            self.outgoing_packet_queue[0]["level"] = int(
+                self.outgoing_packet_queue[0]["through"][3])
             self.fsm.process("retransmit")
 
         elif self.outgoing_packet_queue[0]["through"] == "2CHANCE":
@@ -477,26 +524,29 @@ class ALOHA4FBR(ALOHA):
             self.fsm.process("retransmit")
 
         elif self.outgoing_packet_queue[0]["through"] == "NEIGH":
-            # With current transmission power level, the destination has become a neighbor
-            self.outgoing_packet_queue[0]["through"] = self.outgoing_packet_queue[0]["dest"]
-            self.outgoing_packet_queue[0]["through_position"] = self.outgoing_packet_queue[0]["dest_position"]
+            # With current transmission power level, the destination has become
+            # a neighbor
+            self.outgoing_packet_queue[0][
+                "through"] = self.outgoing_packet_queue[0]["dest"]
+            self.outgoing_packet_queue[0][
+                "through_position"] = self.outgoing_packet_queue[0]["dest_position"]
             self.fsm.process("retransmit")
 
         else:
             self.fsm.process("transmit")
 
-
     def Transmit(self):
         """ Real Transmission of the Packet.
         """
-        self.layercake.net.Update(self.outgoing_packet_queue[0]["dest"], self.outgoing_packet_queue[0]["dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
+        self.layercake.net.Update(self.outgoing_packet_queue[0]["dest"], self.outgoing_packet_queue[0][
+                                  "dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
         ALOHA.Transmit(self)
-
 
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
         """
-        # Is this a packet already "directed" to me? I'm not checking if only dest its me to avoid current protocol errors. Should be revised.
+        # Is this a packet already "directed" to me? I'm not checking if only
+        # dest its me to avoid current protocol errors. Should be revised.
         if packet["through"] == self.layercake.hostname and packet["dest"] == self.layercake.hostname:
             return True
         if packet["through"] == self.layercake.hostname:
@@ -514,7 +564,6 @@ class ALOHA4FBR(ALOHA):
 
         return False
 
-
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
         """
@@ -524,17 +573,19 @@ class ALOHA4FBR(ALOHA):
             if self.incoming_packet["through"][0:3] == "ANY":
                 self.fsm.process("got_RTS")
             else:
-                self.fsm.process(self.packet_signal[self.incoming_packet["type"]])
+                self.fsm.process(
+                    self.packet_signal[self.incoming_packet["type"]])
         else:
             ALOHA.OverHearing(self)
 
-
     def PrintMessage(self, msg):
         pass
-        # print "ALOHA4FBR (%s): %s at t=" % (self.layercake.hostname, msg), Sim.now(), self.fsm.input_symbol, self.fsm.current_state
+        # print "ALOHA4FBR (%s): %s at t=" % (self.layercake.hostname, msg),
+        # Sim.now(), self.fsm.input_symbol, self.fsm.current_state
 
 
 class DACAP:
+
     """DACAP : Distance Aware Collision Avoidance Protocol coupled with power control
     """
 
@@ -550,11 +601,13 @@ class DACAP:
         self.incoming_packet = None
         self.last_packet = None
 
-        self.packet_signal = {"ACK": "got_ACK", "RTS": "got_RTS", "CTS": "got_CTS", "DATA": "got_DATA", "WAR": "got_WAR"}
+        self.packet_signal = {"ACK": "got_ACK", "RTS": "got_RTS",
+                              "CTS": "got_CTS", "DATA": "got_DATA", "WAR": "got_WAR"}
         self.ack_packet_length = config["ack_packet_length"]
         self.rts_packet_length = config["rts_packet_length"]
         self.cts_packet_length = config["cts_packet_length"]
         self.war_packet_length = config["war_packet_length"]
+        self.data_packet_length = config["data_packet_length"]
 
         self.max_transmission_attempts = config["attempts"]
 
@@ -570,7 +623,8 @@ class DACAP:
         self.t_min = config["tminper"]
         self.Tw_min = config["twminper"]
 
-        self.t_control = self.rts_packet_length / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        self.t_control = self.rts_packet_length / \
+            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
         self.deltaTData = config["deltatdata"]
         self.deltaD = config["deltadt"]
@@ -578,8 +632,8 @@ class DACAP:
     def activate(self):
         Sim.activate(self.timer, self.timer.Lifecycle(self.TimerRequest))
 
-
     class InternalTimer(Sim.Process):
+
         def __init__(self, fsm):
             Sim.Process.__init__(self, name="MAC_Timer")
             random.seed()
@@ -595,7 +649,6 @@ class DACAP:
                     if not Request.occurred:
                         self.fsm.process(Request.signalparam[1])
 
-
     def InitialiseStateEngine(self):
         """InitialiseStateEngine:  set up Finite State Machine for RTSCTS
         """
@@ -606,75 +659,122 @@ class DACAP:
 
         # Transitions from READY_WAIT
         # Normal transitions
-        self.fsm.add_transition("send_DATA", "READY_WAIT", self.SendRTS, "READY_WAIT")
-        self.fsm.add_transition("got_RTS", "READY_WAIT", self.CheckRTS, "READY_WAIT")
-        self.fsm.add_transition("got_X", "READY_WAIT", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "send_DATA", "READY_WAIT", self.SendRTS, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_RTS", "READY_WAIT", self.CheckRTS, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_X", "READY_WAIT", self.XOverheard, "BACKOFF")
         # Strange but possible transitions
-        self.fsm.add_transition("got_DATA", "READY_WAIT", self.CheckPendingData, "READY_WAIT")
-        self.fsm.add_transition("got_ACK", "READY_WAIT", self.CheckPendingACK, "READY_WAIT")
-        self.fsm.add_transition("got_WAR", "READY_WAIT", self.IgnoreWAR, "READY_WAIT")
-        self.fsm.add_transition("got_CTS", "READY_WAIT", self.IgnoreCTS, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_DATA", "READY_WAIT", self.CheckPendingData, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_ACK", "READY_WAIT", self.CheckPendingACK, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_WAR", "READY_WAIT", self.IgnoreWAR, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_CTS", "READY_WAIT", self.IgnoreCTS, "READY_WAIT")
 
         # Transitions from WAIT_CTS
         # Normal transitions
-        self.fsm.add_transition("send_DATA", "WAIT_CTS", self.QueueData, "WAIT_CTS")
-        self.fsm.add_transition("got_CTS", "WAIT_CTS", self.ProcessCTS, "WAIT_TIME")
-        self.fsm.add_transition("got_RTS", "WAIT_CTS", self.IgnoreRTS, "WAIT_CTS")
-        self.fsm.add_transition("got_X", "WAIT_CTS", self.XOverheard, "WAIT_CTS")
-        self.fsm.add_transition("timeout", "WAIT_CTS", self.OnCTSTimeout, "READY_WAIT")
-        self.fsm.add_transition("backoff", "WAIT_CTS", self.XOverheard, "BACKOFF")
-        self.fsm.add_transition("got_ACK", "WAIT_CTS", self.OnTransmitSuccess, "READY_WAIT")  # It was a duplicated packet.
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_CTS", self.QueueData, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_CTS", self.ProcessCTS, "WAIT_TIME")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_CTS", self.IgnoreRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_X", "WAIT_CTS", self.XOverheard, "WAIT_CTS")
+        self.fsm.add_transition(
+            "timeout", "WAIT_CTS", self.OnCTSTimeout, "READY_WAIT")
+        self.fsm.add_transition(
+            "backoff", "WAIT_CTS", self.XOverheard, "BACKOFF")
+        # It was a duplicated packet.
+        self.fsm.add_transition(
+            "got_ACK", "WAIT_CTS", self.OnTransmitSuccess, "READY_WAIT")
         # Strange but possible transitions:
-        self.fsm.add_transition("got_WAR", "WAIT_CTS", self.XOverheard, "BACKOFF")  # The CTS had collided, that's why I'm still here.
+        # The CTS had collided, that's why I'm still here.
+        self.fsm.add_transition(
+            "got_WAR", "WAIT_CTS", self.XOverheard, "BACKOFF")
 
-        #Transitions from WAIT_TIME
-        self.fsm.add_transition("send_DATA", "WAIT_TIME", self.QueueData, "WAIT_TIME")
-        self.fsm.add_transition("got_RTS", "WAIT_TIME", self.IgnoreRTS, "WAIT_TIME")
-        self.fsm.add_transition("got_WAR", "WAIT_TIME", self.ProcessWAR, "WAIT_TIME")
-        self.fsm.add_transition("got_ACK", "WAIT_TIME", self.IgnoreACK, "WAIT_TIME")
+        # Transitions from WAIT_TIME
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_TIME", self.QueueData, "WAIT_TIME")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_TIME", self.IgnoreRTS, "WAIT_TIME")
+        self.fsm.add_transition(
+            "got_WAR", "WAIT_TIME", self.ProcessWAR, "WAIT_TIME")
+        self.fsm.add_transition(
+            "got_ACK", "WAIT_TIME", self.IgnoreACK, "WAIT_TIME")
 
-        self.fsm.add_transition("got_X", "WAIT_TIME", self.XOverheard, "WAIT_TIME")
-        self.fsm.add_transition("timeout", "WAIT_TIME", self.Transmit, "WAIT_ACK")
-        self.fsm.add_transition("backoff", "WAIT_TIME", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_X", "WAIT_TIME", self.XOverheard, "WAIT_TIME")
+        self.fsm.add_transition(
+            "timeout", "WAIT_TIME", self.Transmit, "WAIT_ACK")
+        self.fsm.add_transition(
+            "backoff", "WAIT_TIME", self.XOverheard, "BACKOFF")
 
-        #Transitions from WAIT_DATA: I can receive RTS from other nodes, the DATA packet that I expect or overhear other communications
-        self.fsm.add_transition("send_DATA", "WAIT_DATA", self.QueueData, "WAIT_DATA")
-        self.fsm.add_transition("got_RTS", "WAIT_DATA", self.XOverheard, "WAIT_DATA")
-        self.fsm.add_transition("got_DATA", "WAIT_DATA", self.OnDataReception, "READY_WAIT")
+        # Transitions from WAIT_DATA: I can receive RTS from other nodes, the
+        # DATA packet that I expect or overhear other communications
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_DATA", self.QueueData, "WAIT_DATA")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_DATA", self.XOverheard, "WAIT_DATA")
+        self.fsm.add_transition(
+            "got_DATA", "WAIT_DATA", self.OnDataReception, "READY_WAIT")
 
-        self.fsm.add_transition("got_X", "WAIT_DATA", self.XOverheard, "WAIT_DATA")
-        self.fsm.add_transition("timeout", "WAIT_DATA", self.OnDATATimeout, "READY_WAIT")
-        self.fsm.add_transition("backoff", "WAIT_DATA", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_X", "WAIT_DATA", self.XOverheard, "WAIT_DATA")
+        self.fsm.add_transition(
+            "timeout", "WAIT_DATA", self.OnDATATimeout, "READY_WAIT")
+        self.fsm.add_transition(
+            "backoff", "WAIT_DATA", self.XOverheard, "BACKOFF")
 
-        #Transitions from WAIT_ACK: I can receive RTS from other nodes, the ACK packet that I expect or overhear other communications
-        self.fsm.add_transition("send_DATA", "WAIT_ACK", self.QueueData, "WAIT_ACK")
-        self.fsm.add_transition("got_RTS", "WAIT_ACK", self.IgnoreRTS, "WAIT_ACK")
-        self.fsm.add_transition("got_ACK", "WAIT_ACK", self.OnTransmitSuccess, "READY_WAIT")
-        self.fsm.add_transition("got_WAR", "WAIT_ACK", self.ProcessWAR, "WAIT_ACK")  # This should not happen
+        # Transitions from WAIT_ACK: I can receive RTS from other nodes, the
+        # ACK packet that I expect or overhear other communications
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_ACK", self.QueueData, "WAIT_ACK")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_ACK", self.IgnoreRTS, "WAIT_ACK")
+        self.fsm.add_transition(
+            "got_ACK", "WAIT_ACK", self.OnTransmitSuccess, "READY_WAIT")
+        # This should not happen
+        self.fsm.add_transition(
+            "got_WAR", "WAIT_ACK", self.ProcessWAR, "WAIT_ACK")
 
-        self.fsm.add_transition("got_X", "WAIT_ACK", self.XOverheard, "BACKOFF")
-        self.fsm.add_transition("timeout", "WAIT_ACK", self.OnACKTimeout, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_X", "WAIT_ACK", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "timeout", "WAIT_ACK", self.OnACKTimeout, "READY_WAIT")
 
-        #Transitions from BACKOFF
-        self.fsm.add_transition("send_DATA", "BACKOFF", self.QueueData, "BACKOFF")
-        self.fsm.add_transition("got_RTS", "BACKOFF", self.ProcessRTS, "BACKOFF")
-        self.fsm.add_transition("got_CTS", "BACKOFF", self.IgnoreCTS, "BACKOFF")
-        self.fsm.add_transition("got_DATA", "BACKOFF", self.OnDataReception, "BACKOFF")
-        self.fsm.add_transition("got_ACK", "BACKOFF", self.OnTransmitSuccess, "READY_WAIT")
-        self.fsm.add_transition("got_WAR", "BACKOFF", self.ProcessWAR, "BACKOFF")
+        # Transitions from BACKOFF
+        self.fsm.add_transition(
+            "send_DATA", "BACKOFF", self.QueueData, "BACKOFF")
+        self.fsm.add_transition(
+            "got_RTS", "BACKOFF", self.ProcessRTS, "BACKOFF")
+        self.fsm.add_transition(
+            "got_CTS", "BACKOFF", self.IgnoreCTS, "BACKOFF")
+        self.fsm.add_transition(
+            "got_DATA", "BACKOFF", self.OnDataReception, "BACKOFF")
+        self.fsm.add_transition(
+            "got_ACK", "BACKOFF", self.OnTransmitSuccess, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_WAR", "BACKOFF", self.ProcessWAR, "BACKOFF")
 
         self.fsm.add_transition("got_X", "BACKOFF", self.XOverheard, "BACKOFF")
-        self.fsm.add_transition("timeout", "BACKOFF", self.OnTimeout, "READY_WAIT")
+        self.fsm.add_transition(
+            "timeout", "BACKOFF", self.OnTimeout, "READY_WAIT")
         self.fsm.add_transition("accept", "BACKOFF", self.SendCTS, "WAIT_DATA")
-        self.fsm.add_transition("backoff", "BACKOFF", self.XOverheard, "BACKOFF")
-
+        self.fsm.add_transition(
+            "backoff", "BACKOFF", self.XOverheard, "BACKOFF")
 
     def XOverheard(self):
         """ By overhearing the channel, we can obtain valuable information.
         """
         if self.fsm.current_state == "READY_WAIT":
             if self.incoming_packet["type"] != "RTS" and self.incoming_packet["type"] != "CTS":
-                self.logger.debug("I'm in READY_WAIT and have received " + self.incoming_packet["type"])
+                self.logger.debug(
+                    "I'm in READY_WAIT and have received " + self.incoming_packet["type"])
 
         elif self.fsm.current_state == "WAIT_CTS":
             if self.incoming_packet["type"] == "CTS":
@@ -682,8 +782,10 @@ class DACAP:
             elif self.incoming_packet["type"] == "RTS":
                 k = self.T
             else:
-                # Let's think: Can I overhear something else? I think I shouldn't
-                self.logger.debug("I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
+                # Let's think: Can I overhear something else? I think I
+                # shouldn't
+                self.logger.debug(
+                    "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
                 return False
 
             if (Sim.now() - self.time) < k:
@@ -698,8 +800,10 @@ class DACAP:
             elif self.incoming_packet["type"] == "RTS":
                 k = self.T
             else:
-                # Let's think: Can I overhear something else? I think I shouldn't
-                self.logger.debug("I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
+                # Let's think: Can I overhear something else? I think I
+                # shouldn't
+                self.logger.debug(
+                    "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
                 return True
 
             if (Sim.now() - self.time) < k:
@@ -710,7 +814,8 @@ class DACAP:
 
         elif self.fsm.current_state == "WAIT_DATA":
             if self.incoming_packet["type"] == "RTS" and self.incoming_packet["ID"] == self.pending_packet_ID:
-                # It is the same RTS or the same with a higher power value - It doesn't make sense but may happen
+                # It is the same RTS or the same with a higher power value - It
+                # doesn't make sense but may happen
                 return True
             else:
                 if self.incoming_packet["type"] == "RTS":
@@ -718,8 +823,10 @@ class DACAP:
                 elif self.incoming_packet["type"] == "CTS":
                     k = 2 * self.T - self.T * self.Tw_min
                 else:
-                    # Let's think: Can I overhear something else? I think I shouldn't
-                    self.logger.debug("I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
+                    # Let's think: Can I overhear something else? I think I
+                    # shouldn't
+                    self.logger.debug(
+                        "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
                     return True
 
                 if (Sim.now() - self.time) < k:
@@ -731,12 +838,15 @@ class DACAP:
 
         self.last_packet = self.incoming_packet
 
-        self.t_data = self.incoming_packet['length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        self.t_data = self.incoming_packet[
+            'length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         T = self.layercake.phy.level2delay(self.incoming_packet['level'])
 
-        # If I am here, that means that I already was in the backoff state. I have just to schedule the backoff timer
+        # If I am here, that means that I already was in the backoff state. I
+        # have just to schedule the backoff timer
         if self.incoming_packet["type"] == "WAR":
-            backoff = self.BackOff(self.incoming_packet["type"], T)  # This is new!
+            backoff = self.BackOff(
+                self.incoming_packet["type"], T)  # This is new!
         elif self.incoming_packet["type"] == "CTS" or self.incoming_packet["type"] == "SIL":
             backoff = self.BackOff(self.incoming_packet["type"], T)
         elif self.incoming_packet["type"] == "RTS" or self.incoming_packet["type"] == "DATA":
@@ -748,54 +858,55 @@ class DACAP:
         p = Sim.Process()
         p.interrupt(self.timer)
 
-        if debug: self.logger.debug("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
-                                    + " coming from " + self.incoming_packet["source"]
-                                    + " to " + self.incoming_packet["dest"]
-                                    + " through " + self.incoming_packet["through"])
+        if debug:
+            self.logger.debug("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
+                              + " coming from " +
+                              self.incoming_packet["source"]
+                              + " to " + self.incoming_packet["dest"]
+                              + " through " + self.incoming_packet["through"])
 
         self.TimerRequest.signal((backoff, "timeout"))
         self.next_timeout = Sim.now() + backoff
 
         self.incoming_packet = None
 
-
     def IgnoreRTS(self):
-        self.logger.debug("I can't attend the RTS received from " + self.incoming_packet["source"])
+        self.logger.debug(
+            "I can't attend the RTS received from " + self.incoming_packet["source"])
         self.incoming_packet = None
-
 
     def IgnoreCTS(self):
-        self.logger.debug("Ignoring CTS coming from " + self.incoming_packet["through"])
+        self.logger.debug(
+            "Ignoring CTS coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
-
 
     def IgnoreACK(self):
-        self.logger.debug("Ignoring ACK coming from " + self.incoming_packet["through"])
+        self.logger.debug(
+            "Ignoring ACK coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
-
 
     def IgnoreWAR(self):
-        self.logger.debug("Ignoring WAR coming from " + self.incoming_packet["through"])
+        self.logger.debug(
+            "Ignoring WAR coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
-
 
     def CheckPendingData(self):
         if self.pending_packet_ID != None:
             if self.incoming_packet["ID"] == self.pending_packet_ID:
-                self.logger.warn("Despite everything, I properly received the DATA packet from: " + self.incoming_packet["source"])
+                self.logger.warn(
+                    "Despite everything, I properly received the DATA packet from: " + self.incoming_packet["source"])
                 self.OnDataReception()
         else:
             self.OnError()
 
-
     def CheckPendingACK(self):
         if self.pending_packet_ID != None:
             if self.incoming_packet["ID"] == self.pending_packet_ID:
-                self.logger.warn("Despite everything, I we properly transmitted to: " + self.incoming_packet["source"])
+                self.logger.warn(
+                    "Despite everything, I we properly transmitted to: " + self.incoming_packet["source"])
                 self.OnTransmitSuccess()
         else:
             self.OnError()
-
 
     def SendRTS(self):
         """ Request To Send.
@@ -818,7 +929,9 @@ class DACAP:
                          "through": self.outgoing_packet_queue[0]["through"], "through_position": self.outgoing_packet_queue[0]["through_position"],
                          "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"], "time_stamp": Sim.now()}
 
-            if debug: self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
+            if debug:
+                self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[
+                                  0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
 
             self.level = self.outgoing_packet_queue[0]["level"]
             self.T = self.layercake.phy.level2delay(self.level)
@@ -835,45 +948,49 @@ class DACAP:
             timeout = random.random() * (2 * self.T + self.t_data)
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
 
-
     def ProcessRTS(self):
         """ Maybe I can do it now.
         """
         if self.last_packet["type"] == "CTS" and self.last_packet["through"] == self.incoming_packet["source"]:
-            # I was sleeping because one of my neighbors was receiving a packet and now it wants to forward it.
+            # I was sleeping because one of my neighbors was receiving a packet
+            # and now it wants to forward it.
             p = Sim.Process()
             p.interrupt(self.timer)
             self.fsm.process("accept")
         elif self.last_packet["type"] == "DATA" and self.last_packet["through"] == self.incoming_packet["source"] and self.last_packet["dest"] == self.incoming_packet["dest"]:
-            # I was sleeping because one of my neighbors was receiving a packet which I also overheard.
+            # I was sleeping because one of my neighbors was receiving a packet
+            # which I also overheard.
             p = Sim.Process()
             p.interrupt(self.timer)
             self.fsm.process("accept")
 
-
     def TimeWait(self, T, U):
         """ Returns the time to wait before transmitting
         """
-        t1 = (self.t_min * T - min(self.deltaD * T, self.t_data, 2 * T - self.t_min * T)) / 2.0
+        t1 = (self.t_min * T -
+              min(self.deltaD * T, self.t_data, 2 * T - self.t_min * T)) / 2.0
         t2 = (self.t_min * T - self.deltaTData) / 2.0
         t3 = (self.t_min * T + self.Tw_min * T - 2 * self.deltaD * T) / 4.0
 
         if U >= t1 and U <= t2:
             timewait = 2 * (U + self.deltaD * T) - self.t_min * T
-            self.logger.debug("First case, U=" + str(U) + ", I'll wait for " + str(timewait))
+            self.logger.debug(
+                "First case, U=" + str(U) + ", I'll wait for " + str(timewait))
         elif U > max(t2, min(t1, t3)):
             timewait = 2 * (U + self.deltaD * T) - self.Tw_min * T
-            self.logger.debug("Second case, U=" + str(U) + ", I'll wait for " + str(timewait))
+            self.logger.debug(
+                "Second case, U=" + str(U) + ", I'll wait for " + str(timewait))
         else:
             timewait = self.t_min * T - 2 * U
-            self.logger.debug("Third case, U=" + str(U) + ", I'll wait for " + str(timewait))
+            self.logger.debug(
+                "Third case, U=" + str(U) + ", I'll wait for " + str(timewait))
 
         if timewait <= max(2 * self.deltaD * T, self.Tw_min * T):
-            self.logger.debug("Fourth case, U=" + str(U) + ", I'll wait for " + str(max(2 * self.deltaD * T, self.Tw_min * T)))
+            self.logger.debug(
+                "Fourth case, U=" + str(U) + ", I'll wait for " + str(max(2 * self.deltaD * T, self.Tw_min * T)))
             return max(2 * self.deltaD * T, self.Tw_min * T)
         else:
             return timewait
-
 
     def BackOff(self, packet_type, T):
         """ Returns the backoff for a specific state.
@@ -893,7 +1010,6 @@ class DACAP:
             TD=self.t_data))
         return backoff
 
-
     def TimeOut(self, packet_type, T):
         """ Returns the timeout for a specific state.
         """
@@ -904,11 +1020,11 @@ class DACAP:
         elif packet_type == "ACK":
             return 2 * T + self.t_data + self.t_control
 
-
     def ProcessCTS(self):
         """ The CTS has been received.
         """
-        self.logger.debug("CTS from " + self.incoming_packet["source"] + " coming from " + self.incoming_packet["through"] + " properly received.")
+        self.logger.debug("CTS from " + self.incoming_packet[
+                          "source"] + " coming from " + self.incoming_packet["through"] + " properly received.")
 
         # Update the timer: 1.-Stop, 2.-Restart
         p = Sim.Process()
@@ -925,7 +1041,6 @@ class DACAP:
 
         self.incoming_packet = None
 
-
     def SendWarning(self):
         """ If the next best hop has been already selected but a CTS has been received, we should indicate to the sender that
             it is not necessary anymore. Otherwise, implicit WAR can be used.
@@ -936,33 +1051,34 @@ class DACAP:
                      "through": self.last_cts["dest"], "through_position": self.last_cts["dest_position"],
                      "length": self.war_packet_length, "level": self.last_cts["level"]}
 
-        self.logger.debug("Transmitting Warning Packet to " + self.last_cts["dest"])
+        self.logger.debug(
+            "Transmitting Warning Packet to " + self.last_cts["dest"])
 
         self.layercake.phy.TransmitPacket(WARPacket)
-
 
     def ProcessWAR(self):
         """ I should defer the packets for the same receiver.
         """
         if self.fsm.current_state == "WAIT_ACK":
-            self.logger.debug("Well, in any case, I wait for the ACK as I have just transmitted.")
+            self.logger.debug(
+                "Well, in any case, I wait for the ACK as I have just transmitted.")
             self.incoming_packet = None
             return True
         elif self.fsm.current_state != "READY_WAIT" and self.fsm.current_state is not "WAIT_ACK":
-            self.logger.debug("Ok, then maybe later on we will talk about this " + self.incoming_packet["source"])
+            self.logger.debug(
+                "Ok, then maybe later on we will talk about this " + self.incoming_packet["source"])
             self.fsm.process("backoff")
-
 
     def CheckRTS(self):
         """ Before proceeding with the data transmission, just check if it's a duplicated packet (maybe the ACK collided).
         """
         if self.layercake.net.IsDuplicated(self.incoming_packet):
-            packet_origin = [self.incoming_packet["source"], self.incoming_packet["source_position"]]
+            packet_origin = [
+                self.incoming_packet["source"], self.incoming_packet["source_position"]]
             self.SendACK(packet_origin)
         else:
             self.SendCTS()
             self.fsm.current_state = "WAIT_DATA"
-
 
     def SendCTS(self):
         """ Clear To Send: I'm proposing myself as a good candidate for the next transmission or I just let transmit if I have been
@@ -980,9 +1096,12 @@ class DACAP:
                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"],
                      "ID": self.incoming_packet["ID"]}
 
-        if debug: self.logger.debug("Transmitting CTS to " + self.incoming_packet["source"])
+        if debug:
+            self.logger.debug(
+                "Transmitting CTS to " + self.incoming_packet["source"])
         self.pending_packet_ID = self.incoming_packet["ID"]
-        self.last_cts = CTSPacket  # I may need this if I have to send a warning packet
+        # I may need this if I have to send a warning packet
+        self.last_cts = CTSPacket
         self.layercake.phy.TransmitPacket(CTSPacket)
 
         self.level = self.incoming_packet["level"]
@@ -994,11 +1113,11 @@ class DACAP:
 
         self.incoming_packet = None
 
-
     def SendACK(self, packet_origin):
         """ Sometimes we can not use implicit ACKs.
         """
-        if debug: self.logger.debug("ACK to {}".format(packet_origin[0]))
+        if debug:
+            self.logger.debug("ACK to {}".format(packet_origin[0]))
 
         AckPacket = {"type": "ACK",
                      "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
@@ -1009,13 +1128,11 @@ class DACAP:
 
         self.layercake.phy.TransmitPacket(AckPacket)
 
-
     def InitiateTransmission(self, OutgoingPacket):
         """ Function called from the upper layers to transmit a packet.
         """
         self.outgoing_packet_queue.append(OutgoingPacket)
         self.fsm.process("send_DATA")
-
 
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
@@ -1026,11 +1143,11 @@ class DACAP:
         else:
             self.OverHearing()
 
-
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
         """
-        # Is this a packet already "directed" to me? I'm not checking if only dest its me to avoid current protocol errors. Should be revised.
+        # Is this a packet already "directed" to me? I'm not checking if only
+        # dest its me to avoid current protocol errors. Should be revised.
         if packet["through"] == self.layercake.hostname and packet["dest"] == self.layercake.hostname:
             return True
         if packet["through"] == self.layercake.hostname:
@@ -1042,7 +1159,6 @@ class DACAP:
 
         return False
 
-
     def OverHearing(self):
         """ Valuable information can be obtained from overhearing the channel.
         """
@@ -1052,7 +1168,6 @@ class DACAP:
                 self.fsm.process("got_ACK")
         else:
             self.fsm.process("got_X")
-
 
     def OnDataReception(self):
         """ After the RTS/CTS exchange, a data packet is received. We should acknowledge the previous node or we can try to use implicit
@@ -1064,7 +1179,8 @@ class DACAP:
         if self.fsm.current_state != "BACKOFF":
             self.last_packet = None
 
-        # We should acknowledge the previous node, this is not an END to END ACK
+        # We should acknowledge the previous node, this is not an END to END
+        # ACK
         packet_origin = self.incoming_packet["route"][-1]
 
         if self.layercake.net.NeedExplicitACK(self.incoming_packet["level"], self.incoming_packet["dest"]) or len(self.outgoing_packet_queue) != 0:
@@ -1075,18 +1191,18 @@ class DACAP:
         self.pending_packet_ID = None
         self.incoming_packet = None
 
-
     def OnError(self):
         """ An unexpected transition has been followed. This should not happen.
         """
         self.logger.debug("ERROR!")
         print self.layercake.hostname, self.incoming_packet, self.fsm.input_symbol, self.fsm.current_state
 
-
     def OnTransmitSuccess(self):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
         """
-        if debug: self.logger.debug("Successfully Transmitted to " + self.incoming_packet["source"])
+        if debug:
+            self.logger.debug(
+                "Successfully Transmitted to " + self.incoming_packet["source"])
         self.pending_packet_ID = None
 
         # We got an ACK, we should stop the timer.
@@ -1095,13 +1211,12 @@ class DACAP:
 
         self.PostSuccessOrFail()
 
-
     def OnTransmitFail(self):
         """ All the transmission attemps have been completed. It's impossible to reach the node.
         """
-        self.logger.debug("Failed to transmit to " + self.outgoing_packet_queue[0]["dest"])
+        self.logger.debug(
+            "Failed to transmit to " + self.outgoing_packet_queue[0]["dest"])
         self.PostSuccessOrFail()
-
 
     def PostSuccessOrFail(self):
         """ Successfully or not, we have finished the current transmission.
@@ -1115,7 +1230,6 @@ class DACAP:
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
 
-
     def OnACKTimeout(self):
         """ The timeout has experied and NO ACK has been received.
         """
@@ -1126,7 +1240,6 @@ class DACAP:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
 
-
     def OnDATATimeout(self):
         """ The timeout has experied and NO DATA has been received.
         """
@@ -1136,7 +1249,6 @@ class DACAP:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
-
 
     def OnCTSTimeout(self):
         self.transmission_attempts += 1
@@ -1150,7 +1262,6 @@ class DACAP:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
 
-
     def OnTimeout(self):
         self.logger.debug("Exiting from back off")
 
@@ -1159,20 +1270,20 @@ class DACAP:
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
 
-
     def Transmit(self):
-        self.logger.debug("Transmit to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[0]["through"])
+        self.logger.debug("Transmit to " + self.outgoing_packet_queue[0][
+                          "dest"] + " through " + self.outgoing_packet_queue[0]["through"])
         self.layercake.phy.TransmitPacket(self.outgoing_packet_queue[0])
 
         timeout = self.TimeOut("ACK", self.T)
         self.TimerRequest.signal((timeout, "timeout"))
-
 
     def QueueData(self):
         self.logger.debug("Queuing Data")
 
 
 class DACAP4FBR(DACAP):
+
     """DACAP for FBR: adaptation of DACAP with power control to couple it with FBR
     """
 
@@ -1187,57 +1298,92 @@ class DACAP4FBR(DACAP):
         self.valid_candidates = {}
         self.original_through = None
 
-        # By MC_RTS we refer to MultiCast RTS packets. We should consider to process them.
-        self.fsm.add_transition("got_MC_RTS", "READY_WAIT", self.ProcessMCRTS, "AWARE")
-        self.fsm.add_transition("got_SIL", "READY_WAIT", self.IgnoreSIL, "READY_WAIT")
-        self.fsm.add_transition("defer", "READY_WAIT", self.IgnoreWAR, "READY_WAIT")
+        # By MC_RTS we refer to MultiCast RTS packets. We should consider to
+        # process them.
+        self.fsm.add_transition(
+            "got_MC_RTS", "READY_WAIT", self.ProcessMCRTS, "AWARE")
+        self.fsm.add_transition(
+            "got_SIL", "READY_WAIT", self.IgnoreSIL, "READY_WAIT")
+        self.fsm.add_transition(
+            "defer", "READY_WAIT", self.IgnoreWAR, "READY_WAIT")
 
         # Definition of a new state, AWARE, and its transitions
         self.fsm.add_transition("send_CTS", "AWARE", self.SendCTS, "WAIT_DATA")
-        self.fsm.add_transition("ignore_RTS", "AWARE", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "ignore_RTS", "AWARE", self.XOverheard, "BACKOFF")
 
         # Now I am receiving several CTS, then, I should just append them
-        self.fsm.add_transition("got_MC_RTS", "WAIT_CTS", self.ProcessMCRTS, "WAIT_CTS")  # Maybe I should tell him to be silent
-        self.fsm.add_transition("got_CTS", "WAIT_CTS", self.AppendCTS, "WAIT_CTS")
-        self.fsm.add_transition("got_WAR", "WAIT_CTS", self.ProcessWAR, "WAIT_CTS")
-        self.fsm.add_transition("got_SIL", "WAIT_CTS", self.ProcessSIL, "BACKOFF")
+        # Maybe I should tell him to be silent
+        self.fsm.add_transition(
+            "got_MC_RTS", "WAIT_CTS", self.ProcessMCRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_CTS", self.AppendCTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_WAR", "WAIT_CTS", self.ProcessWAR, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_SIL", "WAIT_CTS", self.ProcessSIL, "BACKOFF")
 
-        self.fsm.add_transition("timeout", "WAIT_CTS", self.SelectCTS, "WAIT_CTS")
-        self.fsm.add_transition("transmit", "WAIT_CTS", self.ProcessCTS, "WAIT_TIME")
-        self.fsm.add_transition("retransmit", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
-        self.fsm.add_transition("abort", "WAIT_CTS", self.OnTransmitFail, "READY_WAIT")
-        self.fsm.add_transition("defer", "WAIT_CTS", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "timeout", "WAIT_CTS", self.SelectCTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "transmit", "WAIT_CTS", self.ProcessCTS, "WAIT_TIME")
+        self.fsm.add_transition(
+            "retransmit", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "abort", "WAIT_CTS", self.OnTransmitFail, "READY_WAIT")
+        self.fsm.add_transition(
+            "defer", "WAIT_CTS", self.XOverheard, "BACKOFF")
 
         # It may be the case that I still receive CTS when being in WAIT_TIME
-        self.fsm.add_transition("got_WAR", "WAIT_TIME", self.ProcessWAR, "WAIT_TIME")
-        self.fsm.add_transition("got_SIL", "WAIT_TIME", self.ProcessSIL, "BACKOFF")
-        self.fsm.add_transition("got_MC_RTS", "WAIT_TIME", self.ProcessMCRTS, "WAIT_TIME")
-        self.fsm.add_transition("got_CTS", "WAIT_TIME", self.IgnoreCTS, "WAIT_TIME")
-        self.fsm.add_transition("timeout", "WAIT_TIME", self.SelectCTS, "WAIT_TIME")
-        self.fsm.add_transition("transmit", "WAIT_TIME", self.Transmit, "WAIT_ACK")
-        self.fsm.add_transition("retransmit", "WAIT_TIME", self.SendRTS, "WAIT_CTS")
-        self.fsm.add_transition("abort", "WAIT_TIME", self.OnTransmitFail, "READY_WAIT")
-        self.fsm.add_transition("defer", "WAIT_TIME", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_WAR", "WAIT_TIME", self.ProcessWAR, "WAIT_TIME")
+        self.fsm.add_transition(
+            "got_SIL", "WAIT_TIME", self.ProcessSIL, "BACKOFF")
+        self.fsm.add_transition(
+            "got_MC_RTS", "WAIT_TIME", self.ProcessMCRTS, "WAIT_TIME")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_TIME", self.IgnoreCTS, "WAIT_TIME")
+        self.fsm.add_transition(
+            "timeout", "WAIT_TIME", self.SelectCTS, "WAIT_TIME")
+        self.fsm.add_transition(
+            "transmit", "WAIT_TIME", self.Transmit, "WAIT_ACK")
+        self.fsm.add_transition(
+            "retransmit", "WAIT_TIME", self.SendRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "abort", "WAIT_TIME", self.OnTransmitFail, "READY_WAIT")
+        self.fsm.add_transition(
+            "defer", "WAIT_TIME", self.XOverheard, "BACKOFF")
 
-        # New transition from WAIT_DATA: I have been not selected as the next hop
-        self.fsm.add_transition("got_MC_RTS", "WAIT_DATA", self.ProcessMCRTS, "WAIT_DATA")
-        self.fsm.add_transition("ignored", "WAIT_DATA", self.XOverheard, "BACKOFF")
-        self.fsm.add_transition("got_CTS", "WAIT_DATA", self.IgnoreCTS, "WAIT_DATA")
-        self.fsm.add_transition("got_WAR", "WAIT_DATA", self.IgnoreWAR, "WAIT_DATA")  # From maybe previous transmissions - check it
-        self.fsm.add_transition("got_SIL", "WAIT_DATA", self.IgnoreSIL, "WAIT_DATA")
+        # New transition from WAIT_DATA: I have been not selected as the next
+        # hop
+        self.fsm.add_transition(
+            "got_MC_RTS", "WAIT_DATA", self.ProcessMCRTS, "WAIT_DATA")
+        self.fsm.add_transition(
+            "ignored", "WAIT_DATA", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_DATA", self.IgnoreCTS, "WAIT_DATA")
+        # From maybe previous transmissions - check it
+        self.fsm.add_transition(
+            "got_WAR", "WAIT_DATA", self.IgnoreWAR, "WAIT_DATA")
+        self.fsm.add_transition(
+            "got_SIL", "WAIT_DATA", self.IgnoreSIL, "WAIT_DATA")
 
-        self.fsm.add_transition("got_WAR", "BACKOFF", self.IgnoreWAR, "BACKOFF")  # From maybe previous transmissions - check it
-        self.fsm.add_transition("got_MC_RTS", "BACKOFF", self.ProcessMCRTS, "BACKOFF")
-        self.fsm.add_transition("got_SIL", "BACKOFF", self.IgnoreSIL, "BACKOFF")
+        # From maybe previous transmissions - check it
+        self.fsm.add_transition(
+            "got_WAR", "BACKOFF", self.IgnoreWAR, "BACKOFF")
+        self.fsm.add_transition(
+            "got_MC_RTS", "BACKOFF", self.ProcessMCRTS, "BACKOFF")
+        self.fsm.add_transition(
+            "got_SIL", "BACKOFF", self.IgnoreSIL, "BACKOFF")
         self.fsm.add_transition("defer", "BACKOFF", self.XOverheard, "BACKOFF")
 
-        self.fsm.add_transition("got_MC_RTS", "WAIT_ACK", self.ProcessMCRTS, "WAIT_ACK")
-
+        self.fsm.add_transition(
+            "got_MC_RTS", "WAIT_ACK", self.ProcessMCRTS, "WAIT_ACK")
 
     def IgnoreSIL(self):
-        self.logger.debug("Ignoring SIL coming from " + self.incoming_packet["through"])
+        self.logger.debug(
+            "Ignoring SIL coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
-
 
     def ProcessMCRTS(self):
         """ Someone is looking for help, may I help? Now the active nodes are the ones that transmit, maybe we should do it the opposite way
@@ -1245,24 +1391,25 @@ class DACAP4FBR(DACAP):
         if self.fsm.current_state == "AWARE":
             if self.layercake.net.ImAValidCandidate(self.incoming_packet):
                 if self.layercake.net.IsDuplicated(self.incoming_packet):
-                    packet_origin = [self.incoming_packet["source"], self.incoming_packet["source_position"]]
+                    packet_origin = [
+                        self.incoming_packet["source"], self.incoming_packet["source_position"]]
                     self.SendACK(packet_origin)
                     self.fsm.current_state = "READY_WAIT"
                 else:
                     self.fsm.process("send_CTS")
             else:
-                self.logger.debug("I can't attend the MultiCast RTS received from " + self.incoming_packet["source"] + " but I will be silent.")
+                self.logger.debug("I can't attend the MultiCast RTS received from " +
+                                  self.incoming_packet["source"] + " but I will be silent.")
                 self.fsm.process("ignore_RTS")
                 # The SIlence part is being revised.
-                ##        elif self.fsm.current_state == "WAIT_DATA":
-                ##            if self.last_cts["dest"] == self.incoming_packet["source"]:
-                ##                self.IgnoreRTS()
-                ##            else:
-                ##                self.SendSilence()
-                ##        elif self.fsm.current_state == "WAIT_CTS" or self.fsm.current_state == "WAIT_TIME":
-                ##            self.SendSilence()
-                ##        elif self.fsm.current_state == "BACKOFF":
-
+                # elif self.fsm.current_state == "WAIT_DATA":
+                # if self.last_cts["dest"] == self.incoming_packet["source"]:
+                # self.IgnoreRTS()
+                # else:
+                # self.SendSilence()
+                # elif self.fsm.current_state == "WAIT_CTS" or self.fsm.current_state == "WAIT_TIME":
+                # self.SendSilence()
+                # elif self.fsm.current_state == "BACKOFF":
 
     def SendSilence(self):
         """ Please be quiet!
@@ -1274,12 +1421,12 @@ class DACAP4FBR(DACAP):
                      "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
-        self.logger.debug("Transmitting SIL to " + self.incoming_packet["source"])
+        self.logger.debug(
+            "Transmitting SIL to " + self.incoming_packet["source"])
 
         self.layercake.phy.TransmitPacket(SILPacket)
 
         self.incoming_packet = None
-
 
     def ProcessSIL(self):
         """ The next time that I try to find a route I should do it starting again from ANY0.
@@ -1288,14 +1435,16 @@ class DACAP4FBR(DACAP):
         self.outgoing_packet_queue[0]["level"] = 0
         self.XOverheard()
 
-
     def AppendCTS(self):
         """ More than one CTS is received when looking for the next best hop. We should consider all of them.
         The routing layer decides.
         """
-        self.valid_candidates[self.incoming_packet["through"]] = (Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
-        self.logger.debug("Appending CTS to " + self.incoming_packet["source"] + " coming from " + self.incoming_packet["through"])
-        self.layercake.net.AddNode(self.incoming_packet["through"], self.incoming_packet["through_position"])
+        self.valid_candidates[self.incoming_packet["through"]] = (
+            Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+        self.logger.debug("Appending CTS to " + self.incoming_packet[
+                          "source"] + " coming from " + self.incoming_packet["through"])
+        self.layercake.net.AddNode(
+            self.incoming_packet["through"], self.incoming_packet["through_position"])
 
         self.incoming_packet = None
 
@@ -1305,12 +1454,12 @@ class DACAP4FBR(DACAP):
             p.interrupt(self.timer)
             self.fsm.process("timeout")
 
-
     def SelectCTS(self):
         """ Once we have wait enough, that is, 2 times the distance at which the best next hop should be, we should select it.
         """
         current_through = self.outgoing_packet_queue[0]["through"]
-        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.SelectRoute(self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
+        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.SelectRoute(
+            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
 
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
             # We have consumed all the attemps
@@ -1318,7 +1467,8 @@ class DACAP4FBR(DACAP):
 
         elif self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
             # We should retransmit increasing the power
-            self.outgoing_packet_queue[0]["level"] = int(self.outgoing_packet_queue[0]["through"][3])
+            self.outgoing_packet_queue[0]["level"] = int(
+                self.outgoing_packet_queue[0]["through"][3])
             self.fsm.process("retransmit")
 
         elif self.outgoing_packet_queue[0]["through"] == "2CHANCE":
@@ -1327,15 +1477,18 @@ class DACAP4FBR(DACAP):
             self.fsm.process("retransmit")
 
         elif self.outgoing_packet_queue[0]["through"][0:5] == "NEIGH":
-            # With current transmission power level, the destination has become a neighbor
-            self.outgoing_packet_queue[0]["level"] = int(self.outgoing_packet_queue[0]["through"][5])
-            self.outgoing_packet_queue[0]["through"] = self.outgoing_packet_queue[0]["dest"]
-            self.outgoing_packet_queue[0]["through_position"] = self.outgoing_packet_queue[0]["dest_position"]
+            # With current transmission power level, the destination has become
+            # a neighbor
+            self.outgoing_packet_queue[0]["level"] = int(
+                self.outgoing_packet_queue[0]["through"][5])
+            self.outgoing_packet_queue[0][
+                "through"] = self.outgoing_packet_queue[0]["dest"]
+            self.outgoing_packet_queue[0][
+                "through_position"] = self.outgoing_packet_queue[0]["dest_position"]
             self.fsm.process("retransmit")
 
         else:
             self.fsm.process("transmit")
-
 
     def ProcessCTS(self):
         """ Once a candidate has been selected, we should wait before transmitting according to DACAP.
@@ -1343,27 +1496,29 @@ class DACAP4FBR(DACAP):
         U = self.valid_candidates[self.outgoing_packet_queue[0]["through"]][0]
 
         if self.multicast:
-            timewait = self.TimeWait(self.T, U) - (2 * self.T - U)  # Or zero...
+            # Or zero...
+            timewait = self.TimeWait(self.T, U) - (2 * self.T - U)
         else:
             timewait = self.TimeWait(self.T, U)
 
-        self.logger.debug("Waiting for " + str(timewait) + " before Transmitting through " + self.outgoing_packet_queue[0]["through"])
+        self.logger.debug("Waiting for " + str(timewait) +
+                          " before Transmitting through " + self.outgoing_packet_queue[0]["through"])
         self.TimerRequest.signal((timewait, "timeout"))
-
 
     def Transmit(self):
         """ Real Transmission of the Packet.
         """
-        self.layercake.net.Update(self.outgoing_packet_queue[0]["dest"], self.outgoing_packet_queue[0]["dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
+        self.layercake.net.Update(self.outgoing_packet_queue[0]["dest"], self.outgoing_packet_queue[0][
+                                  "dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
         DACAP.Transmit(self)
-
 
     def OverHearing(self):
         """ Valuable information can be obtained from overhearing the channel.
         """
         if self.incoming_packet["type"] == "DATA" and self.fsm.current_state == "WAIT_DATA":
             if self.pending_packet_ID == self.incoming_packet["ID"]:
-                # I have not been selected as the next hop. I read it from the data.
+                # I have not been selected as the next hop. I read it from the
+                # data.
                 self.fsm.process("ignored")
 
         elif self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
@@ -1381,17 +1536,18 @@ class DACAP4FBR(DACAP):
         else:
             self.fsm.process("got_X")
 
-
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
         """
-        # Is this a packet already "directed" to me? I'm not checking if only dest its me to avoid current protocol errors. Should be revised.
+        # Is this a packet already "directed" to me? I'm not checking if only
+        # dest its me to avoid current protocol errors. Should be revised.
         if packet["through"] == self.layercake.hostname and packet["dest"] == self.layercake.hostname:
             return True
         if packet["through"] == self.layercake.hostname:
             return True
 
-        # CTS, ACK, WAR and SIL are the only types of packet that are directly addressed
+        # CTS, ACK, WAR and SIL are the only types of packet that are directly
+        # addressed
         if packet["type"] == "CTS" and packet["dest"] == self.layercake.hostname:
             return True
         if packet["type"] == "ACK" and packet["dest"] == self.layercake.hostname:
@@ -1407,7 +1563,6 @@ class DACAP4FBR(DACAP):
 
         return False
 
-
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
         """
@@ -1417,28 +1572,30 @@ class DACAP4FBR(DACAP):
             if self.incoming_packet["through"][0:3] == "ANY":
                 self.fsm.process("got_MC_RTS")
             else:
-                self.fsm.process(self.packet_signal[self.incoming_packet["type"]])
+                self.fsm.process(
+                    self.packet_signal[self.incoming_packet["type"]])
         else:
             self.OverHearing()
-
 
     def IgnoreWAR(self):
         """ If I'm already in back off due to a SIL packet, I just ignore the WAR packets that I receive.
         """
-        self.logger.debug("Ok, Ok, I already knew that " + self.incoming_packet["source"])
+        self.logger.debug(
+            "Ok, Ok, I already knew that " + self.incoming_packet["source"])
         self.incoming_packet = None
-
 
     def ProcessWAR(self):
         """ Taking into account that more than one reply can be received, it may be the case
         just some of them send a warning packet but not all, so, only those are discarded.
         """
-        self.logger.debug("Ok, I won't consider you " + self.incoming_packet["source"])
+        self.logger.debug(
+            "Ok, I won't consider you " + self.incoming_packet["source"])
 
         try:
             del self.valid_candidates[self.incoming_packet["source"]]
         except KeyError:
-            self.logger.debug("You were not in my list " + self.incoming_packet["source"] + ". Your packet may have collided.")
+            self.logger.debug(
+                "You were not in my list " + self.incoming_packet["source"] + ". Your packet may have collided.")
 
         if len(self.valid_candidates) == 0:
             if self.multicast == True and self.fsm.current_state == "WAIT_TIME":
@@ -1449,7 +1606,6 @@ class DACAP4FBR(DACAP):
 
         self.incoming_packet = None
 
-
     def SendRTS(self):
         """ The RTS sent is the normal one, but we should initialize the list of replies.
         """
@@ -1458,6 +1614,7 @@ class DACAP4FBR(DACAP):
 
 
 class CSMA:
+
     """CSMA: Carrier Sensing Multiple Access - Something between ALOHA and DACAP
 
     This implementation is extremely close to MACA (Karn 1990)
@@ -1475,7 +1632,8 @@ class CSMA:
         self.incoming_packet = None
         self.last_packet = None
 
-        self.packet_signal = {"ACK": "got_ACK", "RTS": "got_RTS", "CTS": "got_CTS", "DATA": "got_DATA"}
+        self.packet_signal = {
+            "ACK": "got_ACK", "RTS": "got_RTS", "CTS": "got_CTS", "DATA": "got_DATA"}
         self.ack_packet_length = config["ack_packet_length"]
         self.rts_packet_length = config["rts_packet_length"]
         self.cts_packet_length = config["cts_packet_length"]
@@ -1494,14 +1652,16 @@ class CSMA:
 
         # Timing parameters
         self.T = 0  # It will be adapted according to the transmission range
-        self.t_data = self.data_packet_length / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
-        self.t_control = self.rts_packet_length / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        self.t_data = self.data_packet_length / \
+            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        self.t_control = self.rts_packet_length / \
+            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
     def activate(self):
         Sim.activate(self.timer, self.timer.Lifecycle(self.TimerRequest))
 
-
     class InternalTimer(Sim.Process):
+
         def __init__(self, fsm):
             Sim.Process.__init__(self, name="MAC_Timer")
             random.seed()
@@ -1517,7 +1677,6 @@ class CSMA:
                     if not Request.occurred:
                         self.fsm.process(Request.signalparam[1])
 
-
     def InitialiseStateEngine(self):
         """InitialiseStateEngine: set up Finite State Machine for RTSCTS
         """
@@ -1528,79 +1687,126 @@ class CSMA:
 
         # Transitions from READY_WAIT
         # Normal transitions
-        self.fsm.add_transition("send_DATA", "READY_WAIT", self.SendRTS, "READY_WAIT")  # Only if the channel is idle will I transmit
-        self.fsm.add_transition("got_RTS", "READY_WAIT", self.CheckRTS, "READY_WAIT")  # Check if it is duplicated
+        # Only if the channel is idle will I transmit
+        self.fsm.add_transition(
+            "send_DATA", "READY_WAIT", self.SendRTS, "READY_WAIT")
+        # Check if it is duplicated
+        self.fsm.add_transition(
+            "got_RTS", "READY_WAIT", self.CheckRTS, "READY_WAIT")
 
-        self.fsm.add_transition("got_X", "READY_WAIT", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_X", "READY_WAIT", self.XOverheard, "BACKOFF")
         # Strange but possible transitions
-        self.fsm.add_transition("got_DATA", "READY_WAIT", self.CheckPendingData, "READY_WAIT")
-        self.fsm.add_transition("got_ACK", "READY_WAIT", self.CheckPendingACK, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_DATA", "READY_WAIT", self.CheckPendingData, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_ACK", "READY_WAIT", self.CheckPendingACK, "READY_WAIT")
 
         # Transitions from WAIT_CTS
         # Normal transitions
-        self.fsm.add_transition("send_DATA", "WAIT_CTS", self.QueueData, "WAIT_CTS")
-        self.fsm.add_transition("got_CTS", "WAIT_CTS", self.Transmit, "WAIT_ACK")  #This is the main difference with DACAP
-        self.fsm.add_transition("got_RTS", "WAIT_CTS", self.IgnoreRTS, "WAIT_CTS")
-        self.fsm.add_transition("timeout", "WAIT_CTS", self.OnCTSTimeout, "READY_WAIT")
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_CTS", self.QueueData, "WAIT_CTS")
+        # This is the main difference with DACAP
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_CTS", self.Transmit, "WAIT_ACK")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_CTS", self.IgnoreRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "timeout", "WAIT_CTS", self.OnCTSTimeout, "READY_WAIT")
 
-        self.fsm.add_transition("got_X", "WAIT_CTS", self.XOverheard, "WAIT_CTS")
-        self.fsm.add_transition("backoff", "WAIT_CTS", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_X", "WAIT_CTS", self.XOverheard, "WAIT_CTS")
+        self.fsm.add_transition(
+            "backoff", "WAIT_CTS", self.XOverheard, "BACKOFF")
         # Strange but possible transitions
-        self.fsm.add_transition("got_ACK", "WAIT_CTS", self.OnTransmitSuccess, "READY_WAIT")  #I was transmitting a duplicated packet
+        # I was transmitting a duplicated packet
+        self.fsm.add_transition(
+            "got_ACK", "WAIT_CTS", self.OnTransmitSuccess, "READY_WAIT")
 
-        #Transitions from WAIT_DATA
-        self.fsm.add_transition("send_DATA", "WAIT_DATA", self.QueueData, "WAIT_DATA")
-        self.fsm.add_transition("got_RTS", "WAIT_DATA", self.IgnoreRTS, "WAIT_DATA")
-        self.fsm.add_transition("got_CTS", "WAIT_DATA", self.IgnoreCTS, "WAIT_DATA")
-        self.fsm.add_transition("got_DATA", "WAIT_DATA", self.OnDataReception, "WAIT_DATA")
-        self.fsm.add_transition("timeout", "WAIT_DATA", self.OnDATATimeout, "READY_WAIT")
+        # Transitions from WAIT_DATA
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_DATA", self.QueueData, "WAIT_DATA")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_DATA", self.IgnoreRTS, "WAIT_DATA")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_DATA", self.IgnoreCTS, "WAIT_DATA")
+        self.fsm.add_transition(
+            "got_DATA", "WAIT_DATA", self.OnDataReception, "WAIT_DATA")
+        self.fsm.add_transition(
+            "timeout", "WAIT_DATA", self.OnDATATimeout, "READY_WAIT")
 
-        self.fsm.add_transition("got_X", "WAIT_DATA", self.XOverheard, "WAIT_DATA")
-        self.fsm.add_transition("backoff", "WAIT_DATA", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_X", "WAIT_DATA", self.XOverheard, "WAIT_DATA")
+        self.fsm.add_transition(
+            "backoff", "WAIT_DATA", self.XOverheard, "BACKOFF")
 
-        #Transitions from WAIT_ACK
-        self.fsm.add_transition("send_DATA", "WAIT_ACK", self.QueueData, "WAIT_ACK")
-        self.fsm.add_transition("got_ACK", "WAIT_ACK", self.OnTransmitSuccess, "READY_WAIT")
-        self.fsm.add_transition("got_RTS", "WAIT_ACK", self.IgnoreRTS, "WAIT_ACK")
-        self.fsm.add_transition("timeout", "WAIT_ACK", self.OnACKTimeout, "READY_WAIT")
+        # Transitions from WAIT_ACK
+        self.fsm.add_transition(
+            "send_DATA", "WAIT_ACK", self.QueueData, "WAIT_ACK")
+        self.fsm.add_transition(
+            "got_ACK", "WAIT_ACK", self.OnTransmitSuccess, "READY_WAIT")
+        self.fsm.add_transition(
+            "got_RTS", "WAIT_ACK", self.IgnoreRTS, "WAIT_ACK")
+        self.fsm.add_transition(
+            "timeout", "WAIT_ACK", self.OnACKTimeout, "READY_WAIT")
 
-        self.fsm.add_transition("got_X", "WAIT_ACK", self.XOverheard, "WAIT_ACK")
-        self.fsm.add_transition("backoff", "WAIT_ACK", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_X", "WAIT_ACK", self.XOverheard, "WAIT_ACK")
+        self.fsm.add_transition(
+            "backoff", "WAIT_ACK", self.XOverheard, "BACKOFF")
 
-        #Transitions from BACKOFF
-        self.fsm.add_transition("send_DATA", "BACKOFF", self.QueueData, "BACKOFF")
-        self.fsm.add_transition("got_RTS", "BACKOFF", self.ProcessRTS, "BACKOFF")
-        ##self.fsm.add_transition("got_CTS", "BACKOFF", self.IgnoreCTS, "BACKOFF")  ### This line is more important that what it seems: if we Ignore it, we tend to defer all transmissions.
-        self.fsm.add_transition("got_CTS", "BACKOFF", self.Transmit, "WAIT_ACK")  ### This line is more important that what it seems: if we Accept it, we tend to make all transmissions.
-        self.fsm.add_transition("got_DATA", "BACKOFF", self.CheckPendingData, "BACKOFF")
-        self.fsm.add_transition("got_ACK", "BACKOFF", self.CheckPendingACK, "READY_WAIT")  ### Be careful with this
+        # Transitions from BACKOFF
+        self.fsm.add_transition(
+            "send_DATA", "BACKOFF", self.QueueData, "BACKOFF")
+        self.fsm.add_transition(
+            "got_RTS", "BACKOFF", self.ProcessRTS, "BACKOFF")
+        # self.fsm.add_transition("got_CTS", "BACKOFF", self.IgnoreCTS,
+        # "BACKOFF")  ### This line is more important that what it seems: if we
+        # Ignore it, we tend to defer all transmissions.
+        # This line is more important that what it seems: if we Accept it, we
+        # tend to make all transmissions.
+        self.fsm.add_transition(
+            "got_CTS", "BACKOFF", self.Transmit, "WAIT_ACK")
+        self.fsm.add_transition(
+            "got_DATA", "BACKOFF", self.CheckPendingData, "BACKOFF")
+        # Be careful with this
+        self.fsm.add_transition(
+            "got_ACK", "BACKOFF", self.CheckPendingACK, "READY_WAIT")
 
         self.fsm.add_transition("got_X", "BACKOFF", self.XOverheard, "BACKOFF")
-        self.fsm.add_transition("timeout", "BACKOFF", self.OnTimeout, "READY_WAIT")
+        self.fsm.add_transition(
+            "timeout", "BACKOFF", self.OnTimeout, "READY_WAIT")
         self.fsm.add_transition("accept", "BACKOFF", self.SendCTS, "WAIT_DATA")
-
 
     def XOverheard(self):
         """ By overhearing the channel, we can obtain valuable information.
         If I'm in any state
         """
         if self.fsm.current_state == "READY_WAIT":
-            if debug: self.logger.debug("I'm in READY_WAIT and have received a " + self.incoming_packet["type"])
+            if debug:
+                self.logger.debug(
+                    "I'm in READY_WAIT and have received a " + self.incoming_packet["type"])
 
         elif self.fsm.current_state == "WAIT_CTS":
-            if debug: self.logger.debug("I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
+            if debug:
+                self.logger.debug(
+                    "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
             self.pending_ack_packet_from = self.last_data_to
             self.fsm.process("backoff")
             return False
 
         if self.fsm.current_state == "WAIT_DATA":
-            if debug: self.logger.debug("I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
+            if debug:
+                self.logger.debug(
+                    "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
             self.pending_data_packet_from = self.last_cts_to
             self.fsm.process("backoff")
             return False
 
         elif self.fsm.current_state == "WAIT_ACK":
-            if debug: self.logger.debug("I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
+            if debug:
+                self.logger.debug(
+                    "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
             self.pending_ack_packet_from = self.last_data_to
             self.fsm.process("backoff")
             return False
@@ -1623,16 +1829,17 @@ class CSMA:
             # I will wait for the longest time
             backoff = self.next_timeout - Sim.now()
 
-        if debug: self.logger.debug("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
-                                    + " coming from " + self.incoming_packet["source"]
-                                    + " to " + self.incoming_packet["dest"]
-                                    + " through " + self.incoming_packet["through"])
+        if debug:
+            self.logger.debug("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
+                              + " coming from " +
+                              self.incoming_packet["source"]
+                              + " to " + self.incoming_packet["dest"]
+                              + " through " + self.incoming_packet["through"])
 
         self.TimerRequest.signal((backoff, "timeout"))
         self.next_timeout = Sim.now() + backoff
 
         self.incoming_packet = None
-
 
     def IgnoreRTS(self):
         self.logger.debug("Ignoring RTS received from {src} as I'm currently in {state}".format(
@@ -1640,21 +1847,21 @@ class CSMA:
             state=self.fsm.current_state))
         self.incoming_packet = None
 
-
     def IgnoreCTS(self):
-        self.logger.debug("Ignoring CTS received from {src} as I'm waiting on an ACK".format(src=self.incoming_packet["source"]))
+        self.logger.debug("Ignoring CTS received from {src} as I'm waiting on an ACK".format(
+            src=self.incoming_packet["source"]))
         self.incoming_packet = None
-
 
     def IgnoreACK(self):
-        self.logger.debug("Ignoring ACK coming from " + self.incoming_packet["through"])
+        self.logger.debug(
+            "Ignoring ACK coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
-
 
     def CheckPendingData(self):
         if self.pending_data_packet_from != None:
             if self.incoming_packet["route"][-1][0] == self.pending_data_packet_from:
-                self.logger.debug("Despite everything, I properly received the DATA packet from: " + self.incoming_packet["source"])
+                self.logger.debug(
+                    "Despite everything, I properly received the DATA packet from: " + self.incoming_packet["source"])
                 self.OnDataReception()
                 self.pending_data_packet_from = None
         else:
@@ -1665,11 +1872,11 @@ class CSMA:
 
             self.OnError()
 
-
     def CheckPendingACK(self):
         if self.pending_ack_packet_from is not None:
             if self.incoming_packet["source"] == self.pending_ack_packet_from or self.pending_ack_packet_from[0:3] == "ANY":
-                self.logger.info("Even after an ACK timeout, the DATA was properly transmitted to: " + self.incoming_packet["source"])
+                self.logger.info(
+                    "Even after an ACK timeout, the DATA was properly transmitted to: " + self.incoming_packet["source"])
                 self.OnTransmitSuccess()
                 self.pending_ack_packet_from = None
                 self.ack_failures -= 1
@@ -1679,7 +1886,6 @@ class CSMA:
                 id=self.last_data_id)
             )
             self.OnError()
-
 
     def SendRTS(self):
         """ Request To Send.
@@ -1721,7 +1927,8 @@ class CSMA:
             self.time = Sim.now()
             self.next_timeout = self.time + timeout
 
-        else:  # I'm currently not limiting the number of channel access retries
+        # I'm currently not limiting the number of channel access retries
+        else:
             self.channel_access_retries = self.channel_access_retries + 1
             timeout = random.random() * (2 * self.T + self.t_data)
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
@@ -1736,7 +1943,6 @@ class CSMA:
             self.time = Sim.now()
             self.next_timeout = self.time + timeout
 
-
     def ProcessRTS(self):
         """ Maybe I can do it now.
         """
@@ -1748,7 +1954,6 @@ class CSMA:
             p = Sim.Process()
             p.interrupt(self.timer)
             self.fsm.process("accept")
-
 
     def BackOff(self, packet_type, T):
         """ Returns the backoff for a specific state.
@@ -1762,12 +1967,12 @@ class CSMA:
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
 
-        if debug > 1: self.logger.debug("Backoff: {t} based on {T} {pkt}".format(
-            t=backoff, T=T, pkt=packet_type
+        if debug > 1:
+            self.logger.debug("Backoff: {t} based on {T} {pkt}".format(
+                t=backoff, T=T, pkt=packet_type
 
-        ))
+            ))
         return backoff
-
 
     def TimeOut(self, packet_type, T):
         """ Returns the timeout for a specific state.
@@ -1780,23 +1985,23 @@ class CSMA:
         elif packet_type == "ACK":
             t = 2 * T + self.t_data + self.t_control
 
-        if debug > 1: self.logger.debug("Timeout: {t} based on {T} {pkt}".format(
-            t=t, T=T, pkt=packet_type
-        ))
+        if debug > 1:
+            self.logger.debug("Timeout: {t} based on {T} {pkt}".format(
+                t=t, T=T, pkt=packet_type
+            ))
         return t
-
 
     def ProcessCTS(self):
         """ The CTS has been received.
         """
-        self.logger.debug("CTS from " + self.incoming_packet["source"] + " coming from " + self.incoming_packet["through"] + " properly received.")
+        self.logger.debug("CTS from " + self.incoming_packet[
+                          "source"] + " coming from " + self.incoming_packet["through"] + " properly received.")
 
         # Update the timer: 1.-Stop, 2.-Restart
         p = Sim.Process()
         p.interrupt(self.timer)
 
         self.incoming_packet = None
-
 
     def CheckRTS(self):
         """ Before proceeding with the data transmission, just check if it's a duplicated packet (maybe the ACK collided).
@@ -1806,7 +2011,6 @@ class CSMA:
         else:
             self.SendCTS()
             self.fsm.current_state = "WAIT_DATA"
-
 
     def SendCTS(self):
         """ Clear To Send: I'm proposing myself as a good candidate for the next transmission or I just let transmit if I have been
@@ -1828,11 +2032,12 @@ class CSMA:
                      "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
-        if debug: self.logger.debug("Transmitting CTS to {src} in response to {id}".format(
-            src=self.incoming_packet["source"],
-            id=self.incoming_packet["ID"],
-        )
-        )
+        if debug:
+            self.logger.debug("Transmitting CTS to {src} in response to {id}".format(
+                src=self.incoming_packet["source"],
+                id=self.incoming_packet["ID"],
+            )
+            )
         self.last_cts_to = self.incoming_packet["source"]
         self.last_cts_from = self.incoming_packet["dest"]
 
@@ -1849,11 +2054,11 @@ class CSMA:
 
         self.incoming_packet = None
 
-
     def SendACK(self, packet_origin):
         """ Sometimes we can not use implicit ACKs.
         """
-        if debug: self.logger.debug("ACK to " + packet_origin)
+        if debug:
+            self.logger.debug("ACK to " + packet_origin)
 
         # This may be incorrect
         if self.incoming_packet["through"].startswith("ANY"):
@@ -1870,18 +2075,17 @@ class CSMA:
 
         self.layercake.phy.TransmitPacket(AckPacket)
 
-
     def InitiateTransmission(self, OutgoingPacket):
         """ Function called from the upper layers to transmit a packet.
         """
-        if debug: self.logger.debug("Prepping {id} for launch to {dest}".format(
-            id=OutgoingPacket["ID"],
-            dest=OutgoingPacket["dest"]
-        )
-        )
+        if debug:
+            self.logger.debug("Prepping {id} for launch to {dest}".format(
+                id=OutgoingPacket["ID"],
+                dest=OutgoingPacket["dest"]
+            )
+            )
         self.outgoing_packet_queue.append(OutgoingPacket)
         self.fsm.process("send_DATA")
-
 
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
@@ -1891,7 +2095,6 @@ class CSMA:
             self.fsm.process(self.packet_signal[self.incoming_packet["type"]])
         else:
             self.OverHearing()
-
 
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
@@ -1910,7 +2113,6 @@ class CSMA:
 
         return False
 
-
     def OverHearing(self):
         """ Valuable information can be obtained from overhearing the channel.
         """
@@ -1920,7 +2122,6 @@ class CSMA:
             self.fsm.process("got_ACK")
         else:
             self.fsm.process("got_X")
-
 
     def OnDataReception(self):
         """ After the RTS/CTS exchange, a data packet is received. We should acknowledge the previous node or we can try to use implicit
@@ -1935,33 +2136,35 @@ class CSMA:
         if self.fsm.current_state != "BACKOFF":
             self.last_packet = None
 
-        # We should acknowledge the previous node, this is not an end-to-end ACK
+        # We should acknowledge the previous node, this is not an end-to-end
+        # ACK
         packet_origin = self.incoming_packet["route"][-1][0]
 
         try:
             if self.layercake.net.NeedExplicitACK(self.incoming_packet["level"], self.incoming_packet["dest"]) or len(self.outgoing_packet_queue) != 0:
                 self.SendACK(packet_origin)
         except KeyError:
-            self.logger.error("Fucked up on {}, net had {}".format(self.incoming_packet, self.layercake.net.items()))
+            self.logger.error("Fucked up on {}, net had {}".format(
+                self.incoming_packet, self.layercake.net.items()))
             raise
 
         self.layercake.net.OnPacketReception(self.incoming_packet)
 
         self.incoming_packet = None
 
-
     def OnError(self):
         """ This function is called when the FSM has an unexpected input_symbol in a determined state.
         """
         try:
-            if debug: self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {src} {thru} {dest} {id}".format(
-                sm=self.fsm,
-                src=self.incoming_packet['source'],
-                thru=self.incoming_packet['through'],
-                dest=self.incoming_packet['dest'],
-                id=self.incoming_packet['ID']
-            )
-            )
+            if debug:
+                self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {src} {thru} {dest} {id}".format(
+                    sm=self.fsm,
+                    src=self.incoming_packet['source'],
+                    thru=self.incoming_packet['through'],
+                    dest=self.incoming_packet['dest'],
+                    id=self.incoming_packet['ID']
+                )
+                )
         except:
             raise RuntimeError("REALLY Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(
                 sm=self.fsm,
@@ -1972,7 +2175,9 @@ class CSMA:
     def OnTransmitSuccess(self):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
         """
-        if debug: self.logger.debug("Successfully Transmitted to " + self.incoming_packet["source"])
+        if debug:
+            self.logger.debug(
+                "Successfully Transmitted to " + self.incoming_packet["source"])
 
         # We got an ACK, we should stop the timer.
         p = Sim.Process()
@@ -1980,13 +2185,12 @@ class CSMA:
 
         self.PostSuccessOrFail()
 
-
     def OnTransmitFail(self):
         """ All the transmission attemps have been completed. It's impossible to reach the node.
         """
-        self.logger.debug("Failed to transmit to " + self.outgoing_packet_queue[0]["dest"])
+        self.logger.debug(
+            "Failed to transmit to " + self.outgoing_packet_queue[0]["dest"])
         self.PostSuccessOrFail()
-
 
     def PostSuccessOrFail(self):
         """ Successfully or not, we have finished the current transmission.
@@ -2006,7 +2210,6 @@ class CSMA:
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
 
-
     def OnACKTimeout(self):
         """ The timeout has experied and NO ACK has been received.
         """
@@ -2017,19 +2220,19 @@ class CSMA:
             self.TimerRequest.signal((random_delay, "send_DATA"))
         else:
             self.ack_failures += 1
-            self.logger.warn("Timed Out after {}: No Ack: Have lost {} acks".format(self.transmission_attempts, self.ack_failures))
-
+            self.logger.warn("Timed Out after {}: No Ack: Have lost {} acks".format(
+                self.transmission_attempts, self.ack_failures))
 
     def OnDATATimeout(self):
         """ The timeout has experied and NO DATA has been received.
         """
-        self.logger.debug("Timed Out!, No Data Received for {}".format(self.last_cts_to))
+        self.logger.debug(
+            "Timed Out!, No Data Received for {}".format(self.last_cts_to))
 
         if (len(self.outgoing_packet_queue) > 0):
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
-
 
     def OnCTSTimeout(self):
         self.transmission_attempts += 1
@@ -2049,22 +2252,20 @@ class CSMA:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
 
-
     def OnTimeout(self):
-        if debug: self.logger.warn("Backoff Timed Out!")
+        if debug:
+            self.logger.warn("Backoff Timed Out!")
 
         if (len(self.outgoing_packet_queue) > 0):
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
 
-
     def Transmit(self):
         p = Sim.Process()
         p.interrupt(self.timer)
 
-        self.TransmitNoTimer();
-
+        self.TransmitNoTimer()
 
     def TransmitNoTimer(self):
         self.layercake.phy.TransmitPacket(self.outgoing_packet_queue[0])
@@ -2073,17 +2274,18 @@ class CSMA:
         timeout = self.TimeOut("ACK", self.T)
         self.TimerRequest.signal((timeout, "timeout"))
 
-
     def QueueData(self):
-        if debug: self.logger.debug("Queuing Data to {}:{} as we are currently {}".format(
-            self.outgoing_packet_queue[0]['dest'],
-            self.outgoing_packet_queue[0]['ID'],
-            self.fsm.current_state
+        if debug:
+            self.logger.debug("Queuing Data to {}:{} as we are currently {}".format(
+                self.outgoing_packet_queue[0]['dest'],
+                self.outgoing_packet_queue[0]['ID'],
+                self.fsm.current_state
 
-        ))
+            ))
 
 
 class FAMA(CSMA):
+
     """
     Floor Acquisition Multiple Access
 
@@ -2103,12 +2305,12 @@ class FAMA(CSMA):
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
 
-        if debug: self.logger.debug("Backoff: {t} based on {T} {pkt}".format(
-            t=backoff, T=T, pkt=packet_type
+        if debug:
+            self.logger.debug("Backoff: {t} based on {T} {pkt}".format(
+                t=backoff, T=T, pkt=packet_type
 
-        ))
+            ))
         return backoff
-
 
     def TimeOut(self, packet_type, T):
         """ Returns the timeout for a specific state.
@@ -2122,13 +2324,15 @@ class FAMA(CSMA):
         elif packet_type == "ACK":
             t = 2 * T + self.t_data + self.t_control
 
-        if debug: self.logger.debug("Timeout: {t} based on {T} {pkt}".format(
-            t=t, T=T, pkt=packet_type
-        ))
+        if debug:
+            self.logger.debug("Timeout: {t} based on {T} {pkt}".format(
+                t=t, T=T, pkt=packet_type
+            ))
         return t
 
 
 class CSMA4FBR(CSMA):
+
     """CSMA for FBR: adaptation of CSMA with power control to couple it with FBR
     """
 
@@ -2143,42 +2347,62 @@ class CSMA4FBR(CSMA):
         self.valid_candidates = {}
         self.original_through = None
 
-        # By MC_RTS we refer to MultiCast RTS packets. We should consider to process them.
-        self.fsm.add_transition("got_MC_RTS", "READY_WAIT", self.ProcessMCRTS, "AWARE")
-        self.fsm.add_transition("got_SIL", "READY_WAIT", self.IgnoreSIL, "READY_WAIT")
+        # By MC_RTS we refer to MultiCast RTS packets. We should consider to
+        # process them.
+        self.fsm.add_transition(
+            "got_MC_RTS", "READY_WAIT", self.ProcessMCRTS, "AWARE")
+        self.fsm.add_transition(
+            "got_SIL", "READY_WAIT", self.IgnoreSIL, "READY_WAIT")
 
         # Definition of a new state, AWARE, and its transitions
         self.fsm.add_transition("send_CTS", "AWARE", self.SendCTS, "WAIT_DATA")
-        self.fsm.add_transition("ignore_RTS", "AWARE", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "ignore_RTS", "AWARE", self.XOverheard, "BACKOFF")
 
         # Now I am receiving several CTS, then, I should just append them
-        self.fsm.add_transition("got_MC_RTS", "WAIT_CTS", self.ProcessMCRTS, "WAIT_CTS")  # Maybe I should tell him to be silent
-        self.fsm.add_transition("got_CTS", "WAIT_CTS", self.AppendCTS, "WAIT_CTS")
-        self.fsm.add_transition("got_SIL", "WAIT_CTS", self.ProcessSIL, "BACKOFF")
+        # Maybe I should tell him to be silent
+        self.fsm.add_transition(
+            "got_MC_RTS", "WAIT_CTS", self.ProcessMCRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_CTS", self.AppendCTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "got_SIL", "WAIT_CTS", self.ProcessSIL, "BACKOFF")
 
-        self.fsm.add_transition("timeout", "WAIT_CTS", self.SelectCTS, "WAIT_CTS")
-        self.fsm.add_transition("transmit", "WAIT_CTS", self.Transmit, "WAIT_ACK")
-        self.fsm.add_transition("retransmit", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
-        self.fsm.add_transition("abort", "WAIT_CTS", self.OnTransmitFail, "READY_WAIT")
-        self.fsm.add_transition("defer", "WAIT_CTS", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "timeout", "WAIT_CTS", self.SelectCTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "transmit", "WAIT_CTS", self.Transmit, "WAIT_ACK")
+        self.fsm.add_transition(
+            "retransmit", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
+        self.fsm.add_transition(
+            "abort", "WAIT_CTS", self.OnTransmitFail, "READY_WAIT")
+        self.fsm.add_transition(
+            "defer", "WAIT_CTS", self.XOverheard, "BACKOFF")
 
-        # New transition from WAIT_DATA: I have been not selected as the next hop
-        self.fsm.add_transition("got_MC_RTS", "WAIT_DATA", self.ProcessMCRTS, "WAIT_DATA")
-        self.fsm.add_transition("ignored", "WAIT_DATA", self.XOverheard, "BACKOFF")
-        self.fsm.add_transition("got_CTS", "WAIT_DATA", self.IgnoreCTS, "WAIT_DATA")
-        self.fsm.add_transition("got_SIL", "WAIT_DATA", self.IgnoreSIL, "WAIT_DATA")
+        # New transition from WAIT_DATA: I have been not selected as the next
+        # hop
+        self.fsm.add_transition(
+            "got_MC_RTS", "WAIT_DATA", self.ProcessMCRTS, "WAIT_DATA")
+        self.fsm.add_transition(
+            "ignored", "WAIT_DATA", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition(
+            "got_CTS", "WAIT_DATA", self.IgnoreCTS, "WAIT_DATA")
+        self.fsm.add_transition(
+            "got_SIL", "WAIT_DATA", self.IgnoreSIL, "WAIT_DATA")
 
-        self.fsm.add_transition("got_MC_RTS", "BACKOFF", self.ProcessMCRTS, "BACKOFF")
-        self.fsm.add_transition("got_SIL", "BACKOFF", self.IgnoreSIL, "BACKOFF")
+        self.fsm.add_transition(
+            "got_MC_RTS", "BACKOFF", self.ProcessMCRTS, "BACKOFF")
+        self.fsm.add_transition(
+            "got_SIL", "BACKOFF", self.IgnoreSIL, "BACKOFF")
         self.fsm.add_transition("defer", "BACKOFF", self.XOverheard, "BACKOFF")
 
-        self.fsm.add_transition("got_MC_RTS", "WAIT_ACK", self.ProcessMCRTS, "WAIT_ACK")
-
+        self.fsm.add_transition(
+            "got_MC_RTS", "WAIT_ACK", self.ProcessMCRTS, "WAIT_ACK")
 
     def IgnoreSIL(self):
-        self.logger.debug("Ignoring SIL coming from " + self.incoming_packet["through"])
+        self.logger.debug(
+            "Ignoring SIL coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
-
 
     def ProcessMCRTS(self):
         """ Someone is looking for help, may I help? Now the active nodes are the ones that transmit, maybe we should do it the opposite way
@@ -2198,13 +2422,12 @@ class CSMA4FBR(CSMA):
             if self.last_cts_to == self.incoming_packet["source"]:
                 self.IgnoreRTS()  # Think of this
                 # The silence part is being revised.
-                ##            else:
-                ##                self.SendSilence()
-                ##        elif self.fsm.current_state == "WAIT_CTS" or self.fsm.current_state == "WAIT_TIME":
-                ##            self.SendSilence()
-                ##        elif self.fsm.current_state == "BACKOFF":
-                ##            self.SendSilence()
-
+                # else:
+                # self.SendSilence()
+                # elif self.fsm.current_state == "WAIT_CTS" or self.fsm.current_state == "WAIT_TIME":
+                # self.SendSilence()
+                # elif self.fsm.current_state == "BACKOFF":
+                # self.SendSilence()
 
     def SendSilence(self):
         """ Please be quiet!
@@ -2216,12 +2439,12 @@ class CSMA4FBR(CSMA):
                      "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
-        self.logger.debug("Transmitting SIL to " + self.incoming_packet["source"])
+        self.logger.debug(
+            "Transmitting SIL to " + self.incoming_packet["source"])
 
         self.layercake.phy.TransmitPacket(SILPacket)
 
         self.incoming_packet = None
-
 
     def ProcessSIL(self):
         """ The next time that I try to find a route I should do it starting again from ANY0.
@@ -2230,18 +2453,20 @@ class CSMA4FBR(CSMA):
         self.outgoing_packet_queue[0]["level"] = 0
         self.XOverheard()
 
-
     def AppendCTS(self):
         """ More than one CTS is received when looking for the next best hop. We should consider all of them.
         The routing layer decides.
         """
-        self.valid_candidates[self.incoming_packet["through"]] = (Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
-        if debug > 1: self.logger.debug("Appending CTS to {src} coming from {thru}@{pos}".format(
-            src=self.incoming_packet["source"],
-            thru=self.incoming_packet["through"],
-            pos=self.incoming_packet['through_position'])
-        )
-        self.layercake.net.AddNode(self.incoming_packet["through"], self.incoming_packet["through_position"])
+        self.valid_candidates[self.incoming_packet["through"]] = (
+            Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+        if debug > 1:
+            self.logger.debug("Appending CTS to {src} coming from {thru}@{pos}".format(
+                src=self.incoming_packet["source"],
+                thru=self.incoming_packet["through"],
+                pos=self.incoming_packet['through_position'])
+            )
+        self.layercake.net.AddNode(
+            self.incoming_packet["through"], self.incoming_packet["through_position"])
 
         self.incoming_packet = None
 
@@ -2251,60 +2476,68 @@ class CSMA4FBR(CSMA):
             p.interrupt(self.timer)
             self.fsm.process("timeout")
 
-
     def SelectCTS(self):
         """ Once we have wait enough, that is, 2 times the distance at which the best next hop should be, we should select it.
         """
         current_through = self.outgoing_packet_queue[0]["through"]
-        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.SelectRoute(self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
+        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.SelectRoute(
+            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
 
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
             # We have consumed all the attemps
-            if debug: self.logger.debug("Aborting {type}-{id} to {dest}".format(
-                type=self.outgoing_packet_queue[0]['type'],
-                id=self.outgoing_packet_queue[0]['ID'],
-                dest=self.outgoing_packet_queue[0]['dest'],
-            ))
+            if debug:
+                self.logger.debug("Aborting {type}-{id} to {dest}".format(
+                    type=self.outgoing_packet_queue[0]['type'],
+                    id=self.outgoing_packet_queue[0]['ID'],
+                    dest=self.outgoing_packet_queue[0]['dest'],
+                ))
             self.fsm.process("abort")
 
         elif self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
             # We should retransmit increasing the power
-            self.outgoing_packet_queue[0]["level"] = int(self.outgoing_packet_queue[0]["through"][3])
-            if debug: self.logger.debug("Raising {type}-{id} to {dest} to tx level {level}".format(
-                type=self.outgoing_packet_queue[0]['type'],
-                id=self.outgoing_packet_queue[0]['ID'],
-                dest=self.outgoing_packet_queue[0]['dest'],
-                level=self.outgoing_packet_queue[0]['level']
-            ))
+            self.outgoing_packet_queue[0]["level"] = int(
+                self.outgoing_packet_queue[0]["through"][3])
+            if debug:
+                self.logger.debug("Raising {type}-{id} to {dest} to tx level {level}".format(
+                    type=self.outgoing_packet_queue[0]['type'],
+                    id=self.outgoing_packet_queue[0]['ID'],
+                    dest=self.outgoing_packet_queue[0]['dest'],
+                    level=self.outgoing_packet_queue[0]['level']
+                ))
             self.fsm.process("retransmit")
 
         elif self.outgoing_packet_queue[0]["through"] == "2CHANCE":
             # We should give a second chance to current node
             self.outgoing_packet_queue[0]["through"] = current_through
-            if debug: self.logger.debug("Second Chance to {type}-{id} to {dest} via {through}".format(
-                type=self.outgoing_packet_queue[0]['type'],
-                id=self.outgoing_packet_queue[0]['ID'],
-                dest=self.outgoing_packet_queue[0]['dest'],
-                through=self.outgoing_packet_queue[0]['through'],
-            ))
+            if debug:
+                self.logger.debug("Second Chance to {type}-{id} to {dest} via {through}".format(
+                    type=self.outgoing_packet_queue[0]['type'],
+                    id=self.outgoing_packet_queue[0]['ID'],
+                    dest=self.outgoing_packet_queue[0]['dest'],
+                    through=self.outgoing_packet_queue[0]['through'],
+                ))
             self.fsm.process("retransmit")
 
         elif self.outgoing_packet_queue[0]["through"] == "NEIGH":
-            # With current transmission power level, the destination has become a neighbor
-            self.outgoing_packet_queue[0]["through"] = self.outgoing_packet_queue[0]["dest"]
-            self.outgoing_packet_queue[0]["through_position"] = self.outgoing_packet_queue[0]["dest_position"]
+            # With current transmission power level, the destination has become
+            # a neighbor
+            self.outgoing_packet_queue[0][
+                "through"] = self.outgoing_packet_queue[0]["dest"]
+            self.outgoing_packet_queue[0][
+                "through_position"] = self.outgoing_packet_queue[0]["dest_position"]
 
-            if debug: self.logger.debug("Destination of {type}-{id} to {dest} is neighbour {dist} away".format(
-                type=self.outgoing_packet_queue[0]['type'],
-                id=self.outgoing_packet_queue[0]['ID'],
-                dest=self.outgoing_packet_queue[0]['dest'],
-                dist=distance(self.outgoing_packet_queue[0]['dest_position'], self.layercake.get_current_position()),
-            ))
+            if debug:
+                self.logger.debug("Destination of {type}-{id} to {dest} is neighbour {dist} away".format(
+                    type=self.outgoing_packet_queue[0]['type'],
+                    id=self.outgoing_packet_queue[0]['ID'],
+                    dest=self.outgoing_packet_queue[0]['dest'],
+                    dist=distance(self.outgoing_packet_queue[0][
+                        'dest_position'], self.layercake.get_current_position()),
+                ))
             self.fsm.process("retransmit")
 
         else:
             self.fsm.process("transmit")
-
 
     def Transmit(self):
         """ Real Transmission of the Packet.
@@ -2317,10 +2550,10 @@ class CSMA4FBR(CSMA):
                 self.outgoing_packet_queue[0]["through_position"]
             )
         except IndexError:
-            self.logger.error("Problem with the queue: {}".format(self.outgoing_packet_queue))
+            self.logger.error(
+                "Problem with the queue: {}".format(self.outgoing_packet_queue))
             raise
         CSMA.TransmitNoTimer(self)
-
 
     def TimeOut(self, packet_type, T):
         """ Returns the timeout for a specific state.
@@ -2343,7 +2576,8 @@ class CSMA4FBR(CSMA):
         """
         if self.incoming_packet["type"] == "DATA" and self.fsm.current_state == "WAIT_DATA":
             if self.incoming_packet["route"][-1][0] == self.last_cts_to and self.incoming_packet["through"] == self.last_cts_from:
-                # I have not been selected as the next hop. I read it from the data.
+                # I have not been selected as the next hop. I read it from the
+                # data.
                 self.fsm.process("ignored")
 
         elif self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
@@ -2361,17 +2595,18 @@ class CSMA4FBR(CSMA):
         else:
             self.fsm.process("got_X")
 
-
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
         """
-        # Is this a packet already "directed" to me? I'm not checking if only dest its me to avoid current protocol errors. Should be revised.
+        # Is this a packet already "directed" to me? I'm not checking if only
+        # dest its me to avoid current protocol errors. Should be revised.
         if packet["through"] == self.layercake.hostname and packet["dest"] == self.layercake.hostname:
             return True
         if packet["through"] == self.layercake.hostname:
             return True
 
-        # CTS, ACK, WAR and SIL are the only types of packet that are directly addressed
+        # CTS, ACK, WAR and SIL are the only types of packet that are directly
+        # addressed
         if packet["type"] == "CTS" and packet["dest"] == self.layercake.hostname:
             return True
         if packet["type"] == "ACK" and packet["dest"] == self.layercake.hostname:
@@ -2385,7 +2620,6 @@ class CSMA4FBR(CSMA):
 
         return False
 
-
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
         """
@@ -2395,14 +2629,13 @@ class CSMA4FBR(CSMA):
             if self.incoming_packet["through"][0:3] == "ANY":
                 self.fsm.process("got_MC_RTS")
             else:
-                self.fsm.process(self.packet_signal[self.incoming_packet["type"]])
+                self.fsm.process(
+                    self.packet_signal[self.incoming_packet["type"]])
         else:
             self.OverHearing()
-
 
     def SendRTS(self):
         """ The RTS sent is the normal one, but we should initialize the list of replies.
         """
         self.valid_candidates = {}
         CSMA.SendRTS(self)
-

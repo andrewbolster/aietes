@@ -25,6 +25,7 @@ import RoutingLayer as Net
 
 
 class Layercake():
+
     """
     Defines the Four relevant network layers for a given node
     PHY,MAC,Network,Application
@@ -73,8 +74,6 @@ class Layercake():
         except:
             raise
 
-
-
         ##############################
         # Routing
         ##############################
@@ -83,7 +82,6 @@ class Layercake():
         self.net = net_mod(self, config['Network'])
         # except AttributeError as e:
         #    raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
-
 
     def activate(self, rx_handler=None):
         """
@@ -122,4 +120,3 @@ class Layercake():
         :return:
         """
         return self.host.getPos(True)
-

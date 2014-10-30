@@ -17,4 +17,3 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
-

@@ -24,6 +24,7 @@ from aietes.Tools import mag
 
 
 class Metric(object):
+
     """
     This superclass provides abstracted methods for generating, updating and presenting
         simulation data
@@ -52,16 +53,18 @@ class Metric(object):
                 directional (lower is ok but higher is bad)
         """
         if not hasattr(self, 'label'):
-            self.label = kw.get('label', self.__class__.__name__.replace("_", " "))
+            self.label = kw.get(
+                'label', self.__class__.__name__.replace("_", " "))
         self.highlight_data = kw.get('highlight_data', None)
         self.data = kw.get('data', None)
-        self.signed = kw.get('signed', self.signed) # True is positive, False is Negative, None isn't
+        # True is positive, False is Negative, None isn't
+        self.signed = kw.get('signed', self.signed)
         self.ndim = 0
         self.scale = None
         self.n = None
 
     def __call__(self, *args, **kwargs):
-        self.update(*args,**kwargs)
+        self.update(*args, **kwargs)
         return self
 
     def generator(self, data):
@@ -91,33 +94,40 @@ class Metric(object):
 
 
 class StdDev_of_Distance(Metric):
+
     """
     Measures the level of variation (stddev) of the distance between each node and the centre of
         the fleet
     """
     scale = 'm'
+
     def generator(self, data):
         return data.distance_from_average_stddev_range()
 
 
 class StdDev_of_Heading(Metric):
+
     """
     Measures the level of variation (stddev) of the mag of the heading distance from fleet
         average heading
     """
+
     def generator(self, data):
         return data.heading_stddev_range()
 
 
 class Avg_Mag_of_Heading(Metric):
+
     """
     Measures the average node speed in the fleet across time
     """
+
     def generator(self, data):
         return data.heading_mag_range()
 
 
 class Deviation_Of_Heading(Metric):
+
     """
     Measured the per node deviation from the fleet path, therefore the 'average' is zero
     However, since INHD is unsigned, this isn're really the case, so take the avg of the vals
@@ -126,7 +136,8 @@ class Deviation_Of_Heading(Metric):
     signed = True
 
     def generator(self, data):
-        vals = np.asarray([data.deviation_from_at(data.average_heading(time), time) for time in range(int(data.tmax))])
+        vals = np.asarray([data.deviation_from_at(
+            data.average_heading(time), time) for time in range(int(data.tmax))])
         self.highlight_data = np.average(vals, axis=1)
         return vals
 
@@ -136,7 +147,8 @@ class PerNode_Speed(Metric):
     signed = False
 
     def generator(self, data):
-        self.highlight_data = [mag(data.average_heading(time)) for time in range(int(data.tmax))]
+        self.highlight_data = [
+            mag(data.average_heading(time)) for time in range(int(data.tmax))]
         return [map(mag, data.heading_slice(time)) for time in range(int(data.tmax))]
 
 
@@ -145,8 +157,10 @@ class PerNode_Internode_Distance_Avg(Metric):
     signed = True
 
     def generator(self, data):
-        self.highlight_data = [data.inter_distance_average(time) for time in range(int(data.tmax))]
+        self.highlight_data = [
+            data.inter_distance_average(time) for time in range(int(data.tmax))]
         return [data.distances_from_average_at(time) for time in range(int(data.tmax))]
+
 
 class Drift_Error(Metric):
     label = "Drift($m$)"
@@ -155,7 +169,8 @@ class Drift_Error(Metric):
 
     def generator(self, data):
         self.highlight_data = data.drift_RMS()
-        return data.drift_error().swapaxes(0,1)
+        return data.drift_error().swapaxes(0, 1)
+
 
 class ECEA_Error(Metric):
     label = "Corrected Drift ($m$)"
@@ -164,7 +179,7 @@ class ECEA_Error(Metric):
 
     def generator(self, data):
         self.highlight_data = data.drift_RMS(source="intent")
-        return data.drift_error(source="intent").swapaxes(0,1)
+        return data.drift_error(source="intent").swapaxes(0, 1)
 #
 # class Packet_Loss_Rate(Metric):
 #     label = "Packet Loss Rate (%p\%%)"

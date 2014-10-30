@@ -34,6 +34,7 @@ from aietes.Tools import *
 
 
 class Packet(object):
+
     """Base Packet Class
     """
 
@@ -55,9 +56,11 @@ class Packet(object):
 
         # Import everything from the upper packet
         for k, v in packet.__dict__.items():
-            if debug: self.logger.debug("Got KV: %s %s" % (k, v))
+            if debug:
+                self.logger.debug("Got KV: %s %s" % (k, v))
             setattr(self, k, v)
-        self.payload = packet  #Overwrite the 'upper' packet payload with the packet
+        # Overwrite the 'upper' packet payload with the packet
+        self.payload = packet
 
     def _start_log(self, logger=None):
         if logger is None:
@@ -88,6 +91,7 @@ class Packet(object):
 # Application Packet
 #####################################################################
 class AppPacket(Packet):
+
     """Base Packet Class (AKA AppPacket)
     """
     source = None
@@ -119,6 +123,7 @@ class AppPacket(Packet):
 # Network Packet
 #####################################################################
 class RoutePacket(Packet):
+
     """Routing Level Packet
     """
 
@@ -131,8 +136,9 @@ class RoutePacket(Packet):
 
         self.route.append({'name': route_layer.host.name,
                            'position': route_layer.host.getPos()
-        })
-        if debug: self.logger.info("Net Packet Route:%s" % self.route)
+                           })
+        if debug:
+            self.logger.info("Net Packet Route:%s" % self.route)
         self.source_position = route_layer.host.getPos()
 
     def set_level(self, tx_level):
@@ -146,6 +152,7 @@ class RoutePacket(Packet):
 # Acknowledgement Packet
 #####################################################################
 class ACK(Packet):
+
     """
     Simple Acknowledgement packet + generation in response to a received packet
 
@@ -160,7 +167,8 @@ class ACK(Packet):
             self._start_log()
 
         if not isinstance(packet, MACPacket):
-            raise ValueError("Expecting MACPacket, got {}".format(packet.__class__.__name__))
+            raise ValueError(
+                "Expecting MACPacket, got {}".format(packet.__class__.__name__))
 
         self.type = "ACK"
         self.source = node.name
@@ -179,6 +187,7 @@ class ACK(Packet):
 # Media Access Control Packet
 #####################################################################
 class MACPacket(Packet):
+
     """MAC level packet
     """
 
@@ -194,6 +203,7 @@ class MACPacket(Packet):
 # Physical Packet
 #####################################################################
 class PHYPacket(Sim.Process, Packet, KeepRefs):
+
     """Generic Physical Layer Packet Class
     Executed as a process and actually performs the send and recieve functions
     for the physical layer.
@@ -221,22 +231,23 @@ class PHYPacket(Sim.Process, Packet, KeepRefs):
         # For Incoming Packet (RX), is Linear
         self.power = power
 
-
     def send(self, phy):
         assert phy is not None, "Really Buggered your testing, haven't you!"
 
-        self.logger.debug("Sending Packet :%s with power %s" % (self.data, self.power))
+        self.logger.debug("Sending Packet :%s with power %s" %
+                          (self.data, self.power))
         # Lock Modem
         yield Sim.request, self, phy.modem
 
-        #Generate Bandwidth info
+        # Generate Bandwidth info
         if phy.variable_bandwidth:
-            distance = phy.var_power['levelToDistance'][self.packet.tx_level]  #TODO Packet description
+            distance = phy.var_power['levelToDistance'][
+                self.packet.tx_level]  # TODO Packet description
             bandwidth = distance2Bandwidth(self.power,
                                            phy.frequency,
                                            distance,
                                            phy.threshold['SNR']
-            )
+                                           )
         else:
             bandwidth = phy.bandwidth
 
@@ -249,24 +260,24 @@ class PHYPacket(Sim.Process, Packet, KeepRefs):
                                              "frequency": phy.frequency,
                                              "speed": phy.medium_speed,
                                              "packet": self
-        })
+                                             })
 
-        #Lock the transducer for duration of TX
+        # Lock the transducer for duration of TX
         phy.transducer.onTX()
         yield Sim.hold, self, duration
         phy.transducer.postTX()
 
-        #Release modem
+        # Release modem
         yield Sim.release, self, phy.modem
 
-        #Update power stats
+        # Update power stats
         power_w = DB2Linear(AcousticPower(self.power))
         phy.tx_energy += (power_w * duration)
 
-
     def recv(self, transducer, duration):
         if self.power >= transducer.threshold['listen']:
-            # Otherwise I will not even notice that there are packets in the network
+            # Otherwise I will not even notice that there are packets in the
+            # network
             yield Sim.request, self, transducer
             yield Sim.hold, self, duration
             yield Sim.release, self, transducer
@@ -285,16 +296,8 @@ class PHYPacket(Sim.Process, Packet, KeepRefs):
         self.max_interference = max(self.max_interference, interference)
 
     def getMinSIR(self):
-        return self.power / (self.max_interference - self.power + 1)  # TODO BODMAS?
+        # TODO BODMAS?
+        return self.power / (self.max_interference - self.power + 1)
 
     def Doom(self):
         self.doomed = True
-
-
-
-
-
-
-
-
-

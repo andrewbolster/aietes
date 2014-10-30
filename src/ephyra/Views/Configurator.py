@@ -28,6 +28,7 @@ from aietes.Behaviour import Behaviour
 
 
 class Configurator(wx.Panel):
+
     """
     The Configurator panel allows the user to generate aietes-compatible configurations
 
@@ -71,7 +72,7 @@ class Configurator(wx.Panel):
                    "Cruising Speed": 1.4,
                    "Max Turn Rate": 4.5,
                    "Initial Position": {"X": 0.0, "Y": 1.0, "Z": 2.0}
-        }
+                   }
     }
     behaviour_default = {
         "Config": {"Protocol": [cls.__name__ for cls in itersubclasses(Behaviour)],
@@ -84,7 +85,7 @@ class Configurator(wx.Panel):
                    "Repulsive Factor": 0.01,
                    "Waypoint Factor*": 0.01,
                    "Update Rate": 0.3
-        }
+                   }
     }
 
     def __init__(self, parent, frame, *args, **kw):
@@ -141,10 +142,10 @@ class Configurator(wx.Panel):
 
     def build_tree(self, config, tree_node):
         for config_node in config:
-            new_node = self.tree.AppendItem(tree_node, config_node.GetLabel(), data=config_node.GetData())
+            new_node = self.tree.AppendItem(
+                tree_node, config_node.GetLabel(), data=config_node.GetData())
             if not config_node.IsLeaf():
                 self.build_tree(config_node, new_node)
-
 
     def update_tree(self, item, recurse=None):
         node = None
@@ -160,7 +161,7 @@ class Configurator(wx.Panel):
                 child, boza = self.tree.GetNextChild(item, boza)
                 self.tree.SetItemText(ni, s.GetLabel())
                 self.tree.SetPyData(ni, s)
-                #for wx 2.2.1
+                # for wx 2.2.1
                 #self.tree.SetItemData( ni, wxTreeItemData( s ) )
                 self.tree.SetItemHasChildren(ni, len(s))
                 if len(s) and recurse:
@@ -170,7 +171,7 @@ class Configurator(wx.Panel):
                 self.tree.SetPyData(ni, s)
                 self.tree.SetItemHasChildren(ni, len(s))
         if child is not None and child.IsOk():
-        # prev list was longer
+            # prev list was longer
             extra = []
             while child.IsOk():
                 extra.append(child)
@@ -182,7 +183,6 @@ class Configurator(wx.Panel):
     def on_resize(self, event):
         self.Layout()
 
-
     def on_idle(self, event):
         pass
 
@@ -193,7 +193,8 @@ class Configurator(wx.Panel):
 
         fleetid = self.fleets.append(ListNode("%s" % kw.get("name", "Fleet %d" % index), [
             ListNode("Nodes"),
-            ListNode("Behaviours", data=kw.get("behaviours", self.defaults[2].GetData()))
+            ListNode("Behaviours", data=kw.get(
+                "behaviours", self.defaults[2].GetData()))
         ])
         )
         for i in range(kw.get("nodes", 1)):
@@ -201,9 +202,11 @@ class Configurator(wx.Panel):
 
     def add_node(self, fleetid, *args, **kw):
         node_names = [n.GetLabel() for n in self.fleets[fleetid][0]]
-        myname = kw.get("name", str(nameGeneration(1, existing_names=node_names)[0]))
+        myname = kw.get(
+            "name", str(nameGeneration(1, existing_names=node_names)[0]))
         logging.info("Added %s to fleet %d" % (myname, fleetid))
-        self.fleets[fleetid][0].append(ListNode("%s" % myname, data=self.defaults[1].GetData()))
+        self.fleets[fleetid][0].append(
+            ListNode("%s" % myname, data=self.defaults[1].GetData()))
 
     def set_config_panel(self, item):
         """
@@ -261,13 +264,15 @@ class Configurator(wx.Panel):
                                         name=key)
                 # STRING VALUES
                 elif isinstance(value, (basestring, unicode)):
-                    input = wx.TextCtrl(self.config_panel, value=value, name=key)
+                    input = wx.TextCtrl(
+                        self.config_panel, value=value, name=key)
                 # INTEGER VALUES
                 elif isinstance(value, int):
                     input = IntCtrl(self.config_panel, value=value, name=key)
                 # FLOAT VALUES
                 elif isinstance(value, float):
-                    input = FloatSpin(self.config_panel, increment=0.01, value=value, name=key)
+                    input = FloatSpin(
+                        self.config_panel, increment=0.01, value=value, name=key)
                     input.SetFormat("%f")
                     input.SetDigits(2)
                 # DICT VALUES - Assume position or vector
@@ -277,16 +282,19 @@ class Configurator(wx.Panel):
                         i_lbl = wx.StaticText(self.config_panel, label=k)
                         i_lbl.SetFont(font)
 
-                        widget = FloatSpin(self.config_panel, increment=0.01, value=v, name=k)
+                        widget = FloatSpin(
+                            self.config_panel, increment=0.01, value=v, name=k)
                         widget.SetFormat("%f")
                         widget.SetDigits(2)
-                        input.AddMany([(thing, 0, wx.ALL | wx.EXPAND | wx.ALIGN_RIGHT, 5) for thing in (i_lbl, widget)])
+                        input.AddMany(
+                            [(thing, 0, wx.ALL | wx.EXPAND | wx.ALIGN_RIGHT, 5) for thing in (i_lbl, widget)])
                 else:
                     raise NotImplementedError, "Value (%s, %s) has not been coped with by set_config_panel" % (
                         str(value),
                         type(value)
                     )
-                gridSizer.AddMany([(thing, 0, wx.ALL | wx.ALIGN_RIGHT, 5) for thing in (lbl, input)])
+                gridSizer.AddMany(
+                    [(thing, 0, wx.ALL | wx.ALIGN_RIGHT, 5) for thing in (lbl, input)])
 
             colSizer.Add(gridSizer, 1, wx.EXPAND)
 
@@ -310,7 +318,6 @@ class Configurator(wx.Panel):
             logging.info("Item has no data")
 
         self.Layout()
-
 
     def on_save(self, evt):
         print(evt)
@@ -339,10 +346,12 @@ class Configurator(wx.Panel):
                 raise E
 
 ##########################
-## Configurator Helpers
+# Configurator Helpers
 ##########################
 
+
 class TreeNode:
+
     def __len__(self):
         return 0
 
@@ -357,6 +366,7 @@ class TreeNode:
 
 
 class ListNode:
+
     def __init__(self, title, children=None, data=None):
         self._nl = []
         if children is not None:

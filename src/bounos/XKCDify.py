@@ -50,7 +50,7 @@ def xkcd_line(x, y, xlim=None, ylim=None,
     f1, f2, f3 : int, float, int
         filtering parameters.  f1 gives the size of the window, f2 gives
         the high-frequency cutoff, f3 gives the size of the filter
-    
+
     Returns
     -------
     x, y : ndarrays
@@ -122,7 +122,7 @@ def XKCDify(ax, mag=1.0,
 
     This adjusts all lines, text, legends, and axes in the figure to look
     like xkcd plots.  Other plot elements are not modified.
-    
+
     Parameters
     ----------
     ax : Axes instance

@@ -51,13 +51,14 @@ def sim_mask(args):
             prep_stats = sim.prepare(sim_time=sim_time)
             sim_time = sim.simulate()
             return_dict = sim.postProcess(**pp_defaults)
-            if retain_data is True:  #Implicitly implies boolean datatype
+            if retain_data is True:  # Implicitly implies boolean datatype
                 return_val = sim.generateDataPackage()
             elif retain_data == "additional_only":
                 dp = sim.generateDataPackage()
                 return_val = dp.additional.copy()
             elif retain_data == "file":
-                return_val = sim.generateDataPackage().write(kwargs.get("title"))
+                return_val = sim.generateDataPackage().write(
+                    kwargs.get("title"))
             else:
                 return_val = return_dict
             del sim
@@ -67,7 +68,8 @@ def sim_mask(args):
             if lives <= 0:
                 raise
             else:
-                logging.critical("{} died, restarting: {} lives remain".format(current_process(), lives))
+                logging.critical(
+                    "{} died, restarting: {} lives remain".format(current_process(), lives))
                 del sim
         gc.collect()
 
@@ -81,7 +83,8 @@ def consumer(w_queue, r_queue):
         try:
             uuid, simargs, postargs = w_queue.get()
             protected_run = try_x_times(5, RuntimeError,
-                                        RuntimeError("Attempted two runs, both failed"),
+                                        RuntimeError(
+                                            "Attempted two runs, both failed"),
                                         sim_mask)
             sim_results = protected_run((simargs, postargs))
         except Exception as e:
@@ -100,9 +103,11 @@ def futures_version(arglist):
 
     results = []
     try:
-        results = Parallel(n_jobs=-1, verbose=10)(delayed(sim_mask)(args) for args in arglist)
+        results = Parallel(
+            n_jobs=-1, verbose=10)(delayed(sim_mask)(args) for args in arglist)
     except Exception as e:
-        logging.critical("Caught Exception: results is {}".format(len(results)))
+        logging.critical(
+            "Caught Exception: results is {}".format(len(results)))
         raise
 
     return results
@@ -117,7 +122,8 @@ workers = []
 
 def boot():
     global running, workers
-    workers = [Process(target=consumer, args=(work_queue, result_queue)) for i in range(cores)]
+    workers = [Process(target=consumer, args=(work_queue, result_queue))
+               for i in range(cores)]
     for worker in workers:
         worker.start()
     print "started"
@@ -135,4 +141,3 @@ def kill():
     workers = []
     print "killed"
     running = False
-

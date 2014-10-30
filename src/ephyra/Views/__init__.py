@@ -34,7 +34,9 @@ matplotlib.rcParams.update({'font.size': 8})
 
 import numpy as np
 
-class CallSuper(Exception): pass
+
+class CallSuper(Exception):
+    pass
 
 
 def callsuper(method):
@@ -47,15 +49,16 @@ def callsuper(method):
     permeate. If one is found, it too is wrapped with the ``callsuper``
     decorator and called with the arguments passed to ``CallSuper.__init__()``.
     """
+
     def callsuper_wrapper(self, *args, **kwargs):
         try:
-            print("{}:{}".format(args,kwargs))
+            print("{}:{}".format(args, kwargs))
             return method(self, *args, **kwargs)
         except CallSuper, exc:
             supermethod, name = None, method.__name__
             for base in self.__class__.mro()[1:]:
                 if (hasattr(base, name) and
-                    hasattr(getattr(base, name), '__call__')):
+                        hasattr(getattr(base, name), '__call__')):
                     supermethod = callsuper(getattr(base, name))
                     break
             if not supermethod:
@@ -65,7 +68,9 @@ def callsuper(method):
     callsuper_wrapper.__doc__ = method.__doc__
     return callsuper_wrapper
 
+
 class MetricView():
+
     """
     This Class is a plotable view of the Metric class availiable from Bounos.
     It is instantiated with the representative Bounos.Metric base metric
@@ -78,7 +83,8 @@ class MetricView():
         self.highlight_data = base_metric.highlight_data
         self.ndim = 0
         self.last_wanted = np.asarray([])
-        if __debug__: logging.debug("%s" % self)
+        if __debug__:
+            logging.debug("%s" % self)
 
     def plot(self, wanted=None, time=None):
         """
@@ -92,7 +98,8 @@ class MetricView():
             self.ax.plot(self.data, alpha=0.3)
         else:
             logging.info("Printing %s with Wanted:%s" % (self, wanted))
-            self.ax.plot(np.ndarray(buffer=self.data, shape=self.data.shape)[:, wanted], alpha=0.3)
+            self.ax.plot(
+                np.ndarray(buffer=self.data, shape=self.data.shape)[:, wanted], alpha=0.3)
 
         if self.highlight_data is not None:
             self.ax.plot(self.highlight_data, color='k', linestyle='--')
@@ -102,19 +109,21 @@ class MetricView():
         return self.ax
 
     def update(self, wanted=None, time=None):
-        if wanted is None: wanted = []
+        if wanted is None:
+            wanted = []
         if np.array_equiv(wanted, self.last_wanted):
-            #Assume that the ylim will sort scoping out later...
+            # Assume that the ylim will sort scoping out later...
             return self.ax
         else:
-            #Something has changed so recalculate
+            # Something has changed so recalculate
             self.last_wanted = wanted
             return self.plot(wanted, time)
 
     def ylim(self, xlim, margin=None):
         (xmin, xmax) = xlim
         if self.highlight_data is not None:
-            data = np.append(self.data, self.highlight_data).reshape((self.data.shape[0], -1))
+            data = np.append(self.data, self.highlight_data).reshape(
+                (self.data.shape[0], -1))
         else:
             data = self.data
 
@@ -138,6 +147,7 @@ class MetricView():
 
 
 class Arrow3D(FancyArrowPatch):
+
     def __init__(self, xs, ys, zs, *args, **kwargs):
         FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
@@ -150,8 +160,10 @@ class Arrow3D(FancyArrowPatch):
 
 
 class GenericFrame(wx.Frame):
+
     def __init__(self, controller, *args, **kw):
-        wx.Frame.__init__(self, None, title=EphyraNotebook.description, *args, **kw)
+        wx.Frame.__init__(
+            self, None, title=EphyraNotebook.description, *args, **kw)
         self.log = logging.getLogger(self.__module__)
         self.ctl = controller
         p = VisualNavigator(self, self, wx.ID_ANY)
@@ -169,6 +181,7 @@ from ephyra.Views.Simulator import Simulator
 
 
 class EphyraNotebook(wx.Frame):
+
     def __init__(self, controller, *args, **kw):
         wx.Frame.__init__(self, None, title="Ephyra")
         self.log = logging.getLogger(self.__module__)
@@ -194,7 +207,6 @@ class EphyraNotebook(wx.Frame):
                 pages.append(DriftingNavigator)
             pages.remove(VisualNavigator)
 
-
         for page in pages:
             self.log.debug("Adding Page: %s" % page.__name__)
             self.nb.AddPage(page(self.nb, self), page.__name__)
@@ -211,7 +223,6 @@ class EphyraNotebook(wx.Frame):
         self.Show()
         self.nb.SetSelection(0)
 
-
     def CreateMenuBar(self):
         menubar = wx.MenuBar()
         filem = wx.Menu()
@@ -221,7 +232,8 @@ class EphyraNotebook(wx.Frame):
         favorites = wx.Menu()
         help = wx.Menu()
 
-        newm = filem.Append(wx.NewId(), '&New \t Ctrl+n', 'Generate a new Simulation')
+        newm = filem.Append(
+            wx.NewId(), '&New \t Ctrl+n', 'Generate a new Simulation')
         openm = filem.Append(wx.NewId(), '&Open \t Ctrl+o', 'Open a datafile')
         exitm = filem.Append(wx.NewId(), '&Quit', 'Quit application')
         self.Bind(wx.EVT_MENU, self.on_new, newm)
@@ -245,7 +257,6 @@ class EphyraNotebook(wx.Frame):
         self.SetAcceleratorTable(self.accel_tbl)
 
         self.SetMenuBar(menubar)
-
 
     ####
     # Window Events
@@ -274,7 +285,6 @@ class EphyraNotebook(wx.Frame):
                 self.log.debug("Et tu, Brute?")
                 self.exit()
 
-
     def on_resize(self, event):
         plot_size = self.GetClientSize()
         self.log.debug("plotsize:%s" % str(plot_size))
@@ -296,7 +306,7 @@ class EphyraNotebook(wx.Frame):
         dlg = wx.MessageDialog(self,
                                message="This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
                                style=wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
-        )
+                               )
         result = dlg.ShowModal()
         dlg.Destroy()
         if result == wx.ID_OK:
@@ -313,7 +323,8 @@ class EphyraNotebook(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             data_path = dlg.GetPaths()
             if len(data_path) > 1:
-                self.log.warn("Too many paths given, only taking the first anyway")
+                self.log.warn(
+                    "Too many paths given, only taking the first anyway")
             data_path = data_path[0]
             self.ctl.load_data_file(data_path)
 
@@ -326,4 +337,5 @@ class EphyraNotebook(wx.Frame):
             self.log.info(msg)
 
     def update_timing(self, t, tmax):
-        self.status_bar.SetStatusText("%s:%d/%d" % ("SIM" if self.ctl.is_simulation() else "REC", t, tmax), number=2)
+        self.status_bar.SetStatusText(
+            "%s:%d/%d" % ("SIM" if self.ctl.is_simulation() else "REC", t, tmax), number=2)

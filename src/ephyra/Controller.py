@@ -23,14 +23,13 @@ import os
 
 from joblib import Parallel, delayed
 
-parallel = False # Doesn't make a damned difference.
+parallel = False  # Doesn't make a damned difference.
 if parallel:
     os.system("taskset -p 0xff %d" % os.getpid())
 
 from bounos import BounosModel
 from bounos.Metrics import *
 from aietes.Tools import itersubclasses, timeit
-
 
 
 def log_and_call():
@@ -59,12 +58,13 @@ def check_model():
 
 
 class EphyraController():
+
     def __init__(self, *args, **kw):
         self.model = BounosModel()
         self.view = None
         self._metrics_availiable = list(itersubclasses(Metric))
-        self._metrics_enabled = [ metric for metric in self._metrics_availiable
-                                  if not getattr(metric, 'drift_enabled',False) and not getattr(metric, 'ecea_enabled', False)]
+        self._metrics_enabled = [metric for metric in self._metrics_availiable
+                                 if not getattr(metric, 'drift_enabled', False) and not getattr(metric, 'ecea_enabled', False)]
         self.metrics = []
         self.args = kw.get("exec_args", None)
 
@@ -91,7 +91,7 @@ class EphyraController():
 
     @check_model()
     def update_model(self, *args, **kw):
-        #Update Base Data
+        # Update Base Data
         self.model.update_data_from_sim(*args, **kw)
         self.update_metrics()
 
@@ -101,29 +101,33 @@ class EphyraController():
         # Update secondary metrics
         if self.drifting():
             for drift_metric in [m for m in self._metrics_availiable
-                                 if getattr(m, 'drift_enabled',False) and m not in self._metrics_enabled]:
-                logging.info("Adding {} to metrics as data is Drift-Enabled".format(drift_metric))
+                                 if getattr(m, 'drift_enabled', False) and m not in self._metrics_enabled]:
+                logging.info(
+                    "Adding {} to metrics as data is Drift-Enabled".format(drift_metric))
                 self._metrics_enabled.append(drift_metric)
         if self.ecea():
             for ecea_metric in [m for m in self._metrics_availiable
-                                 if getattr(m, 'ecea_enabled',False) and m not in self._metrics_enabled]:
-                logging.info("Adding {} to metrics as data is ECEA-Enabled".format(ecea_metric))
+                                if getattr(m, 'ecea_enabled', False) and m not in self._metrics_enabled]:
+                logging.info(
+                    "Adding {} to metrics as data is ECEA-Enabled".format(ecea_metric))
                 self._metrics_enabled.append(ecea_metric)
         if not len(getattr(self, "metrics", [])) == len(self._metrics_enabled):
             self.rebuild_metrics()
 
         if parallel:
-            n_jobs=-1
+            n_jobs = -1
         else:
-            n_jobs=1
-        self.metrics = Parallel(n_jobs=n_jobs, verbose=30, max_nbytes='1M')(delayed(metric)(self.model) for metric in self.metrics)
+            n_jobs = 1
+        self.metrics = Parallel(n_jobs=n_jobs, verbose=30, max_nbytes='1M')(
+            delayed(metric)(self.model) for metric in self.metrics)
 
     @check_model()
     @timeit()
     def rebuild_metrics(self):
-        # in the case of metrics_enabled being changed, this requires a complete rebuild
+        # in the case of metrics_enabled being changed, this requires a
+        # complete rebuild
         logging.info("Rebuilding Metrics:{}".format(self._metrics_enabled))
-        self.metrics=map(lambda m:m(), self._metrics_enabled)
+        self.metrics = map(lambda m: m(), self._metrics_enabled)
         return self.metrics
 
     @check_model()
@@ -133,13 +137,14 @@ class EphyraController():
         elif isinstance(i, int):
             return self.metrics[i]
         else:
-            raise NotImplementedError("Metrics Views must be addressed by int's or nothing! (%s)" % str(i))
+            raise NotImplementedError(
+                "Metrics Views must be addressed by int's or nothing! (%s)" % str(i))
 
     def set_view(self, view):
         self.view = view
 
     def run_simulation(self, config):
-        #TODO will raise ConfigError on, well, config errors
+        # TODO will raise ConfigError on, well, config errors
         pass
 
     @check_model()
@@ -215,7 +220,6 @@ class EphyraController():
         else:
             return None
 
-
     def get_fleet_average_pos(self, time):
         return np.average(self.model.position_slice(time), axis=0)
 
@@ -239,20 +243,20 @@ class EphyraController():
         stddev_head = np.std(_distances_from_avg_head)
 
         return dict({'positions':
-                         {
-                             'pernode': positions,
-                             'avg': avg_pos,
-                             'stddev': stddev_pos,
-                             'delta_avg': _distances_from_avg_pos
-                         },
+                     {
+                         'pernode': positions,
+                         'avg': avg_pos,
+                         'stddev': stddev_pos,
+                         'delta_avg': _distances_from_avg_pos
+                     },
                      'headings':
                          {
                              'pernode': headings,
                              'avg': avg_head,
                              'stddev': stddev_head,
                              'delta_avg': _distances_from_avg_head
-                         }
-        })
+                     }
+                     })
 
     def get_heading_mag_max_min(self):
         mags = self.model.heading_mag_range()
@@ -265,7 +269,7 @@ class EphyraController():
         pos = self.get_fleet_positions(time)
         mins = pos.min(axis=0)
         maxes = pos.max(axis=0)
-        return tuple(zip(mins,maxes))
+        return tuple(zip(mins, maxes))
 
     def get_position_stddev_max_min(self):
         stddevs = self.model.distance_from_average_stddev_range()
@@ -274,7 +278,7 @@ class EphyraController():
     @check_model()
     def get_waypoints(self):
         wp = getattr(self.model, 'waypoints', None)
-        if isinstance(wp,np.ndarray) and wp.ndim == 0:
+        if isinstance(wp, np.ndarray) and wp.ndim == 0:
             return None
         else:
             return wp
@@ -308,4 +312,3 @@ class EphyraController():
             return source[:, :, time_start:time_end:-1].swapaxes(0, 1)
         else:
             return source[node, :, time_start:time_end:-1]
-

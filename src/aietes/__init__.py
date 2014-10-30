@@ -38,6 +38,7 @@ np.set_printoptions(precision=3)
 
 
 class Simulation():
+
     """
     Defines a single simulation
     Keyword Arguments:
@@ -62,7 +63,8 @@ class Simulation():
         logtoconsole = kwargs.get("logtoconsole", logging.INFO)
 
         if kwargs.get("logger", None) is None and __name__ in logging.Logger.manager.loggerDict:
-            # Assume we need to make our own logger with NO preexisting handlers
+            # Assume we need to make our own logger with NO preexisting
+            # handlers
             try:
                 _tmplogdict = logging.Logger.manager.loggerDict[__name__]
                 while len(_tmplogdict.handlers) > 0:
@@ -78,7 +80,8 @@ class Simulation():
 
         if logtofile is not None:
             hdlr = logging.FileHandler(logtofile)
-            hdlr.setFormatter(logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
+            hdlr.setFormatter(
+                logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
             hdlr.setLevel(logging.DEBUG)
             self.logger.addHandler(hdlr)
             self.logger.info("Launched File Logger (%s)" % logtofile)
@@ -100,15 +103,18 @@ class Simulation():
         # Otherwise the config is (hopefully) in a given file
         else:
             if os.path.isfile(self.config_file):
-                self.logger.info("creating instance from %s" % self.config_file)
+                self.logger.info("creating instance from %s" %
+                                 self.config_file)
                 self.config = validateConfig(self.config_file)
                 self.config = self.generateConfig(self.config)
             else:
-                raise ConfigError("Cannot open given config file:%s" % self.config_file)
+                raise ConfigError(
+                    "Cannot open given config file:%s" % self.config_file)
         if "__default__" in self.config.Node.Nodes.keys():
             raise RuntimeError("Dun fucked up: __default__ node detected")
 
-        # Once Validated we've got no reason to hold on to the configobj structure
+        # Once Validated we've got no reason to hold on to the configobj
+        # structure
 
         self.nodes = []
         self.fleets = []
@@ -126,20 +132,25 @@ class Simulation():
         """
         # Attempt Validation and construct the simulation from that config.
         try:
-            self.logger.setLevel(LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
+            self.logger.setLevel(
+                LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
         except ConfigError as err:
-            self.logger.error("Error in configuration, cannot continue: %s" % err)
+            self.logger.error(
+                "Error in configuration, cannot continue: %s" % err)
             raise SystemExit(1)
 
-        # Initialise simulation environment and configure a global channel event
+        # Initialise simulation environment and configure a global channel
+        # event
         self.waits = waits
         Sim.initialize()
-        self.channel_event = Sim.SimEvent(self.config.Simulation.channel_event_name)
+        self.channel_event = Sim.SimEvent(
+            self.config.Simulation.channel_event_name)
         sim_time = kwargs.get('sim_time', None)
         if sim_time is not None:
             self.config.Simulation.sim_duration = int(sim_time)
 
-        self.duration_intervals = np.ceil(self.config.Simulation.sim_duration / self.config.Simulation.sim_interval)
+        self.duration_intervals = np.ceil(
+            self.config.Simulation.sim_duration / self.config.Simulation.sim_interval)
 
         self.environment = self.configureEnvironment(self.config.Environment)
         self.nodes = self.configureNodes()
@@ -168,7 +179,8 @@ class Simulation():
         Returns:
             Simulation Duration in ticks (generally seconds)
         """
-        self.logger.info("Initialising Simulation %s, to run for %s steps" % (self.title, self.duration_intervals))
+        self.logger.info("Initialising Simulation %s, to run for %s steps" % (
+            self.title, self.duration_intervals))
         starttime = time()
         for fleet in self.fleets:
             fleet.activate()
@@ -180,7 +192,8 @@ class Simulation():
             self.logger.info("Finished Simulation at %s(%s) after %s" % (
                 Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
         except RuntimeError as err:
-            self.logger.critical("Expected Exception, Quitting gracefully: {}".format(err))
+            self.logger.critical(
+                "Expected Exception, Quitting gracefully: {}".format(err))
             raise
         return Sim.now()
 
@@ -188,18 +201,22 @@ class Simulation():
         """
         When all nodes have a move flag and none are processing
         """
-        joined = self.move_flag.n == 0 and self.process_flag.n == len(self.nodes)
+        joined = self.move_flag.n == 0 and self.process_flag.n == len(
+            self.nodes)
         if joined and debug:
-            self.logger.debug("Joined: %s,%s" % (self.move_flag.n, self.process_flag.n))
+            self.logger.debug("Joined: %s,%s" %
+                              (self.move_flag.n, self.process_flag.n))
         return joined
 
     def outer_join(self):
         """
         When all nodes have a processing flag and none are moving
         """
-        joined = self.move_flag.n == len(self.nodes) and self.process_flag.n == 0
+        joined = self.move_flag.n == len(
+            self.nodes) and self.process_flag.n == 0
         if joined and debug:
-            self.logger.debug("Joined: %s,%s" % (self.move_flag.n, self.process_flag.n))
+            self.logger.debug("Joined: %s,%s" %
+                              (self.move_flag.n, self.process_flag.n))
         return joined
 
     def reverse_node_lookup(self, uuid):
@@ -231,7 +248,8 @@ class Simulation():
             achievements.append(node.achievements_log)
 
         for fleet in self.fleets:
-            positions.extend(fleet.nodePosLogs(shared=False))  # Environmental State Log; 'guaranteed perfect'
+            # Environmental State Log; 'guaranteed perfect'
+            positions.extend(fleet.nodePosLogs(shared=False))
 
         state = {'p': np.asarray(positions),
                  'v': np.asarray(vectors),
@@ -242,17 +260,18 @@ class Simulation():
                  'config': self.config,
                  'title': self.title,
                  'tmax': self.duration_intervals
-        }
+                 }
 
         # 'Quirky' Optional State Info
 
         # If any node is using waypoint bev, grab it.
 
         if any([isinstance(node.behaviour, Behaviour.WaypointMixin) for node in self.nodes]):
-            waypointss = [getattr(node.behaviour, "waypoints", None) for node in self.nodes]
+            waypointss = [
+                getattr(node.behaviour, "waypoints", None) for node in self.nodes]
             if all(w is None for w in waypointss):
                 state.update({'waypoints': None})
-            #If All the valid waypoints are the same, only report one.
+            # If All the valid waypoints are the same, only report one.
             elif are_equal_waypoints(waypointss):
                 state.update({'waypoints': waypointss[0]})
             else:
@@ -273,17 +292,21 @@ class Simulation():
 
         if any([node.ecea for node in self.nodes]):
             # ECEA does not operate at every time step, (delta),
-            # therefore use the shared map data that tracks the error information (hopefully)
-            state.update({'ecea_positions': self.fleets[0].nodePosLogs(shared=True)})
+            # therefore use the shared map data that tracks the error
+            # information (hopefully)
+            state.update(
+                {'ecea_positions': self.fleets[0].nodePosLogs(shared=True)})
 
-            state.update({'additional': [node.ecea.dump() for node in self.nodes if node.ecea]})
-
+            state.update(
+                {'additional': [node.ecea.dump() for node in self.nodes if node.ecea]})
 
         ###
         # Grab Comms Stuff Just Raw
         ###
-        comms_stats = {node.name: node.app.dump_stats() for node in self.nodes if node.app}
-        comms_logs = {node.name: node.app.dump_logs() for node in self.nodes if node.app}
+        comms_stats = {node.name: node.app.dump_stats()
+                       for node in self.nodes if node.app}
+        comms_logs = {node.name: node.app.dump_logs()
+                      for node in self.nodes if node.app}
         comms = {
             'stats': pd.DataFrame.from_dict(comms_stats, orient='index'),
             'logs': comms_logs
@@ -308,10 +331,12 @@ class Simulation():
         preconfigured_nodes_count = 0
         pre_node_names = []
         nodes_config = {}
-        node_default_config_dict = dotdict(config['Node']['Nodes'].pop('__default__').dict())
+        node_default_config_dict = dotdict(
+            config['Node']['Nodes'].pop('__default__').dict())
         config_dict = dotdict(config.dict())
         # Add the stuff we know whould be there...
-        self.logger.debug("Initial Node Config from %s: %s" % (self.config_file, pformat(node_default_config_dict)))
+        self.logger.debug("Initial Node Config from %s: %s" %
+                          (self.config_file, pformat(node_default_config_dict)))
         node_default_config_dict.update(
             # TODO import PHY,Behaviour, etc into the node config?
         )
@@ -360,14 +385,15 @@ class Simulation():
                 applications = [str(a)
                                 for a, n in zip(app, dist)
                                 for i in range(int(n))
-                ]
+                                ]
                 self.logger.debug("Distributed Applications:%s" % applications)
             else:
                 raise ConfigError(
                     "Application / Distribution mismatch"
                 )
         else:
-            applications = [str(app) for i in range(int(nodes_count - preconfigured_nodes_count))]
+            applications = [
+                str(app) for i in range(int(nodes_count - preconfigured_nodes_count))]
             self.logger.info("Using Application:%s" % applications)
 
         #
@@ -391,14 +417,15 @@ class Simulation():
                 behaviours = [str(a)
                               for a, n in zip(bev, dist)
                               for i in range(int(n))
-                ]
+                              ]
                 self.logger.debug("Distributed behaviours:%s" % behaviours)
             else:
                 raise ConfigError(
                     "Application / Distribution mismatch"
                 )
         else:
-            behaviours = [str(bev) for i in range(int(nodes_count - preconfigured_nodes_count))]
+            behaviours = [
+                str(bev) for i in range(int(nodes_count - preconfigured_nodes_count))]
             self.logger.info("Using Behaviour:%s" % behaviours)
             #
 
@@ -434,7 +461,8 @@ class Simulation():
             for node_name in node_names:
                 # Bare Dict/update instead of copy()
                 nodes_config[node_name] = {}
-                update(nodes_config[node_name], node_default_config_dict.copy())
+                update(
+                    nodes_config[node_name], node_default_config_dict.copy())
 
             # Give auto-config default
             for node_name, node_app in zip(auto_node_names, applications):
@@ -446,10 +474,9 @@ class Simulation():
                 # Import the magic!
                 update(nodes_config[node_name], node_config.copy())
 
-
         except AttributeError as e:
-            raise ConfigError("Probably a value conflict in a config file"), None, traceback.print_tb(sys.exc_info()[2])
-
+            raise ConfigError("Probably a value conflict in a config file"), None, traceback.print_tb(
+                sys.exc_info()[2])
 
         #
         # Confirm
@@ -491,7 +518,8 @@ class Simulation():
         if len(node_list) > 0:
             return node_list
         else:
-            raise ConfigError("Node Generation failed: Zero nodes with config %s" % str(self.config))
+            raise ConfigError(
+                "Node Generation failed: Zero nodes with config %s" % str(self.config))
 
     def vectorGen(self, node_name, node_config):
         """
@@ -500,24 +528,30 @@ class Simulation():
         """
         try:  # If there is an entry, use it
             vector = node_config['initial_position']
-            self.logger.info("Gave node %s a configured initial position: %s" % (node_name, str(vector)))
+            self.logger.info(
+                "Gave node %s a configured initial position: %s" % (node_name, str(vector)))
         except KeyError:
             gen_style = node_config['position_generation']
             if gen_style == "random":
                 vector = self.environment.random_position()
-                self.logger.debug("Gave node %s a random vector: %s" % (node_name, vector))
+                self.logger.debug(
+                    "Gave node %s a random vector: %s" % (node_name, vector))
 
             elif gen_style == "randomPlane":
                 vector = self.environment.random_position(on_a_plane=True)
-                self.logger.debug("Gave node %s a random vector on a plane: %s" % (node_name, vector))
+                self.logger.debug(
+                    "Gave node %s a random vector on a plane: %s" % (node_name, vector))
             elif gen_style == "center":
                 vector = self.environment.position_around()
-                self.logger.debug("Gave node %s a center vector: %s" % (node_name, vector))
+                self.logger.debug(
+                    "Gave node %s a center vector: %s" % (node_name, vector))
             elif gen_style == "surface":
                 vector = self.environment.position_around(position="surface")
-                self.logger.debug("Gave node %s a surface vector: %s" % (node_name, vector))
+                self.logger.debug(
+                    "Gave node %s a surface vector: %s" % (node_name, vector))
             else:
-                raise ConfigError("Invalid Position option: {}".format(gen_style))
+                raise ConfigError(
+                    "Invalid Position option: {}".format(gen_style))
         assert len(vector) == 3, "Incorrectly sized vector"
 
         return vector
@@ -530,7 +564,6 @@ class Simulation():
 
         dp = DataPackage(**(self.currentState()))
         return dp
-
 
     def postProcess(self, log=None, outputFile=None, outputPath=None, displayFrames=None, dataFile=False, movieFile=False, gif=False,
                     inputFile=None, plot=False, xRes=1024, yRes=768, fps=24, extent=True):
@@ -547,7 +580,8 @@ class Simulation():
         return_dict = {}
 
         if movieFile or plot or gif:
-            plt, ani_dict = dp.generate_animation(filename, fps, gif, movieFile, xRes, yRes, extent, displayFrames)
+            plt, ani_dict = dp.generate_animation(
+                filename, fps, gif, movieFile, xRes, yRes, extent, displayFrames)
             return_dict.update(ani_dict)
 
         if outputFile is not None:
@@ -590,7 +624,7 @@ def go(options, args=None):
                      logger=None,
                      logtoconsole=logtoconsole,
                      progress_display=not options.quiet
-    )
+                     )
 
     if options.input is None:
         sim.prepare(sim_time=options.sim_time)
@@ -607,7 +641,8 @@ def go(options, args=None):
                         movieFile=options.movie, gif=options.gif, fps=options.fps)
 
     if options.plot:
-        sim.postProcess(inputFile=options.input, displayFrames=720, plot=True, fps=options.fps)
+        sim.postProcess(
+            inputFile=options.input, displayFrames=720, plot=True, fps=options.fps)
 
 
 def option_parser():
@@ -668,7 +703,8 @@ def main():
         else:
             if options.profile:
                 print "PROFILING"
-                exit_code = cProfile.runctx("""go(options,args)""", globals(), locals(), filename="Aietes.profile")
+                exit_code = cProfile.runctx(
+                    """go(options,args)""", globals(), locals(), filename="Aietes.profile")
             else:
                 exit_code = go(options, args)
         sys.exit(exit_code)

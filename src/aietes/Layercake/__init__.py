@@ -25,6 +25,7 @@ import Net
 
 
 class Layercake():
+
     """
     Defines the Four relevant network layers for a given node
     PHY,MAC,Network,Application
@@ -60,7 +61,6 @@ class Layercake():
         except AttributeError:
             raise ConfigError("Can't find PHY: %s" % config['phy'])
 
-
         ##############################
         # MAC
         ##############################
@@ -72,7 +72,6 @@ class Layercake():
         except AttributeError:
             raise ConfigError("Can't find MAC: %s" % config['mac'])
 
-
         ##############################
         # Routing
         ##############################
@@ -83,7 +82,6 @@ class Layercake():
             logging.warn("No NET Configured")
             # except AttributeError as e:
             #    raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
-
 
     def activate(self, rx_handler=None):
         """
@@ -106,4 +104,3 @@ class Layercake():
             self.app_rx_handler(payload)
         else:
             raise NotImplementedError("No App RX Handler configured")
-

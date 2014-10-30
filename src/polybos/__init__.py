@@ -34,7 +34,8 @@ from configobj import ConfigObj
 import validate
 import numpy as np
 
-from aietes import Simulation  # Must use the aietes path to get the config files
+# Must use the aietes path to get the config files
+from aietes import Simulation
 import aietes.Threaded as ParSim
 from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr
 from bounos import DataPackage, printAnalysis
@@ -44,7 +45,8 @@ _config_spec = '%s/configs/default.conf' % _ROOT
 _results_dir = '%s/../../results/' % _ROOT
 
 # Mask in-sim progress display and let joblib do it's... job...
-progress_display=False
+progress_display = False
+
 
 def getConfig(source_config_file=None, config_spec=_config_spec):
     """
@@ -65,6 +67,7 @@ def getConfig(source_config_file=None, config_spec=_config_spec):
 
 
 class Scenario(object):
+
     """ Scenario Object
 
     The Scenario Object deals with config management and passthrough, as well as some optional
@@ -84,8 +87,8 @@ class Scenario(object):
         'positioning': ['position_generation'],
         'fudging': ['Behaviour', 'positional_accuracy'],
         'beacon_rate': ['beacon_rate'],
-        'drift_dvl_scale': ['drift_scales','dvl'],
-        'drift_gyro_scale': ['drift_scales','gyro'],
+        'drift_dvl_scale': ['drift_scales', 'dvl'],
+        'drift_gyro_scale': ['drift_scales', 'gyro'],
         'tof_type': ['tof_type'],
         'drift_noises': ['drift_noises']
     }
@@ -110,12 +113,16 @@ class Scenario(object):
                 % (type(self._default_config), self._default_config))
 
         self._default_config_dict = self._default_config.dict()
-        self._default_node_config = self._default_config_dict['Node']['Nodes'].pop("__default__")
+        self._default_node_config = self._default_config_dict[
+            'Node']['Nodes'].pop("__default__")
         self._default_custom_nodes = self._default_config_dict['Node']['Nodes']
-        self.simulation = self._default_sim_config = self._default_config_dict['Simulation']
-        self.environment = self._default_env_config = self._default_config_dict['Environment']
+        self.simulation = self._default_sim_config = self._default_config_dict[
+            'Simulation']
+        self.environment = self._default_env_config = self._default_config_dict[
+            'Environment']
         self._default_run_count = kwargs.get("runcount", 1)
-        self.node_count = self._default_node_count = self._default_config_dict['Node']['count']
+        self.node_count = self._default_node_count = self._default_config_dict[
+            'Node']['count']
         self.nodes = {}
         self._default_behaviour_dict = self.getBehaviourDict()
 
@@ -124,7 +131,6 @@ class Scenario(object):
         self.committed = False
 
         self.tweaks = {}
-
 
     def run(self, runcount=None, runtime=None, *args, **kwargs):
         """
@@ -137,10 +143,12 @@ class Scenario(object):
         if runcount is None:
             runcount = self._default_run_count
 
-        self.mypath = os.path.join(kwargs.get("basepath",tempfile.mkdtemp()),self.title)
+        self.mypath = os.path.join(
+            kwargs.get("basepath", tempfile.mkdtemp()), self.title)
         os.makedirs(self.mypath)
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True), 'outputPath':self.mypath}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get(
+            "dataFile", True), 'outputPath': self.mypath}
         self.datarun = [None for _ in range(runcount)]
         for run in range(runcount):
             if runcount > 1:
@@ -151,17 +159,19 @@ class Scenario(object):
                 title = self.title + "-%s" % run
                 sim = Simulation(config=self.config,
                                  title=title,
-                                 logtofile=os.path.join(self.mypath,"%s.log"%title),
+                                 logtofile=os.path.join(
+                                     self.mypath, "%s.log" % title),
                                  logtoconsole=logging.ERROR,
                                  progress_display=progress_display
-            )
+                                 )
                 prep_stats = sim.prepare(sim_time=runtime)
                 protected_run = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
-                                             sim.simulate)
+                                            sim.simulate)
                 sim_time = protected_run()
                 return_dict = sim.postProcess(**pp_defaults)
                 data_retention_policy = kwargs.get("retain_data", False)
-                if data_retention_policy is True: #Implicitly implies boolean datatype
+                # Implicitly implies boolean datatype
+                if data_retention_policy is True:
                     self.datarun[run] = sim.generateDataPackage()
                 elif data_retention_policy == "additional_only":
                     dp = sim.generateDataPackage()
@@ -190,17 +200,20 @@ class Scenario(object):
         if runcount is None:
             runcount = self._default_run_count
 
-        self.mypath = os.path.join(kwargs.get("basepath",tempfile.mkdtemp()),self.title)
+        self.mypath = os.path.join(
+            kwargs.get("basepath", tempfile.mkdtemp()), self.title)
         os.mkdir(self.mypath)
         if not ParSim.running:
             raise RuntimeError("Attempted parrallel without booting, breaking")
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True), 'outputPath':self.mypath}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get(
+            "dataFile", True), 'outputPath': self.mypath}
         self.datarun = [None for _ in range(runcount)]
         uuids = [get_uuid() for _ in range(runcount)]
         for run in range(runcount):
             if runcount > 1:
-                pp_defaults.update({'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
+                pp_defaults.update(
+                    {'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
             sys.stdout.write("%s," % pp_defaults['outputFile'])
             sys.stdout.flush()
             try:
@@ -210,7 +223,8 @@ class Scenario(object):
                         uuids[run],
                         kwarger(config=self.config,
                                 title=title,
-                                logtofile=os.path.join(self.mypath,"%s.log"%title),
+                                logtofile=os.path.join(
+                                    self.mypath, "%s.log" % title),
                                 logtoconsole=logging.ERROR,
                                 progress_display=progress_display,
                                 sim_time=runtime),
@@ -235,11 +249,11 @@ class Scenario(object):
                 except ValueError:
                     print("Tripped over old hash?:%s" % uuid)
                     pass
-        assert all(r is not None for r in self.datarun), "All dataruns should be completed by now"
+        assert all(
+            r is not None for r in self.datarun), "All dataruns should be completed by now"
         print "Got responses"
 
         print("done %d runs in parallel" % (runcount))
-
 
     def run_future(self, runcount=None, runtime=None, *args, **kwargs):
         """
@@ -250,24 +264,28 @@ class Scenario(object):
                 value set on init
             runtime(int): Override simulation duration (normally inherited from config)
         """
-        self.mypath = os.path.join(kwargs.get("basepath",tempfile.mkdtemp()),self.title)
+        self.mypath = os.path.join(
+            kwargs.get("basepath", tempfile.mkdtemp()), self.title)
         os.mkdir(self.mypath)
         if runcount is None:
             runcount = self._default_run_count
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get("dataFile", True), 'outputPath':self.mypath}
+        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get(
+            "dataFile", True), 'outputPath': self.mypath}
         self.datarun = [None for _ in range(runcount)]
         self.runlist = []
         for run in range(runcount):
             if runcount > 1:
-                pp_defaults.update({'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
+                pp_defaults.update(
+                    {'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
             try:
                 title = self.title + "-%s" % run
                 self.runlist.append(
                     (
                         kwarger(config=self.config,
                                 title=title,
-                                logtofile=os.path.join(self.mypath,"%s.log"%title),
+                                logtofile=os.path.join(
+                                    self.mypath, "%s.log" % title),
                                 logtoconsole=logging.ERROR,
                                 progress_display=progress_display,
                                 sim_time=runtime),
@@ -278,7 +296,8 @@ class Scenario(object):
             except Exception:
                 raise
         self.datarun = ParSim.futures_version(self.runlist)
-        assert all(r is not None for r in self.datarun), "All dataruns should be completed by now"
+        assert all(
+            r is not None for r in self.datarun), "All dataruns should be completed by now"
         print "Got responses"
 
         print("done %d runs in parallel" % (runcount))
@@ -306,11 +325,11 @@ class Scenario(object):
         """
         Dump the datafiles into a path but creating a folder with our name
         """
-        for i,d in enumerate(self.datarun):
-            filename=os.path.join(self.mypath,str(i))
-            if hasattr(d,'write'):
+        for i, d in enumerate(self.datarun):
+            filename = os.path.join(self.mypath, str(i))
+            if hasattr(d, 'write'):
                 d.write(filename=filename)
-            pickle.dump(d,open(filename,'wb'))
+            pickle.dump(d, open(filename, 'wb'))
 
     def commit(self):
         """
@@ -321,7 +340,8 @@ class Scenario(object):
         if self.committed:
             raise (RuntimeError("Attempted to commit twice (or more)"))
         print("Scenario {} Committed with {} nodes configured and {} defined".format(self.title,
-                                                                                     len(self.nodes.keys()),
+                                                                                     len(self.nodes.keys(
+                                                                                     )),
                                                                                      self.node_count))
         if self.node_count > len(self.nodes.keys()):
             self.addDefaultNode(count=self.node_count - len(self.nodes.keys()))
@@ -349,7 +369,8 @@ class Scenario(object):
             DataPackage compatible ConfigObj
         """
         rawconf = self.generateConfig()
-        updateDict(rawconf, ['Node', 'Nodes', '__default__'], self._default_node_config)
+        updateDict(
+            rawconf, ['Node', 'Nodes', '__default__'], self._default_node_config)
         return ConfigObj(rawconf)
 
     def getBehaviourDict(self):
@@ -362,13 +383,13 @@ class Scenario(object):
         """
         default_bev = self._default_node_config['Behaviour']['protocol']
 
-        if isinstance(default_bev,list) and len(default_bev>1):
+        if isinstance(default_bev, list) and len(default_bev > 1):
             behaviour_set = set(default_bev)
         else:
             behaviour_set = set()
             behaviour_set.add(default_bev)
         behaviours = {}
-        behaviours[default_bev] = ['__default__',]
+        behaviours[default_bev] = ['__default__', ]
 
         if self._default_node_config['bev'] != 'Null':
             raise NotImplementedError(
@@ -400,9 +421,11 @@ class Scenario(object):
             count(int): New Node count
         """
         if self.committed:
-            raise (RuntimeError("Attempted to modify scenario after committing"))
+            raise (
+                RuntimeError("Attempted to modify scenario after committing"))
         if hasattr(self, "node_count"):
-            print("Updating nodecount from %d to %d" % (self.node_count, count))
+            print("Updating nodecount from %d to %d" %
+                  (self.node_count, count))
         self.node_count = count
 
     def setDuration(self, tmax):
@@ -412,7 +435,8 @@ class Scenario(object):
             tmax(int): New simulation time
         """
         if self.committed:
-            raise (RuntimeError("Attempted to modify scenario after committing"))
+            raise (
+                RuntimeError("Attempted to modify scenario after committing"))
         if hasattr(self.simulation, "sim_duration"):
             print("Updating simulation time from %d to %d"
                   % (self.simluation['sim_duration'], tmax))
@@ -425,7 +449,8 @@ class Scenario(object):
             environment([int,int,int]): New simulation environment extent
         """
         if self.committed:
-            raise (RuntimeError("Attempted to modify scenario after committing"))
+            raise (
+                RuntimeError("Attempted to modify scenario after committing"))
 
         self.environment = environment
 
@@ -481,7 +506,8 @@ class Scenario(object):
             RuntimeError if name definition doesn't make sense
         """
         if names is None:
-            node_names = nameGeneration(count, existing_names=self.nodes.keys())
+            node_names = nameGeneration(
+                count, existing_names=self.nodes.keys())
             if len(node_names) != count:
                 raise RuntimeError("Names don't make any sense: Asked for %d, got %d: %s"
                                    % (count, len(node_names), node_names))
@@ -503,11 +529,13 @@ class Scenario(object):
             RuntimeError if attempting to modify after commit.
         """
         if self.committed:
-            raise RuntimeError("Attempting to update default node config after committing")
+            raise RuntimeError(
+                "Attempting to update default node config after committing")
         self.updateNode(self._default_node_config, variable, value)
 
 
 class ExperimentManager(object):
+
     def __init__(self, node_count=4, title=None, parallel=False, *args, **kwargs):
         """
         The Experiment Manager Object deals with multiple scenarios build around a single or
@@ -529,7 +557,7 @@ class ExperimentManager(object):
         self._default_scenario.setNodeCount(self.node_count)
         self.parallel = parallel
         self.retain_data = kwargs.get("retain_data", True)
-        self.future = kwargs.get("future",True)
+        self.future = kwargs.get("future", True)
         if self.parallel and not self.future:
             ParSim.boot()
 
@@ -546,8 +574,8 @@ class ExperimentManager(object):
         Args:
             behaviour(str): new default behaviour
         """
-        for k,v in config_dict.iteritems():
-            self._default_scenario.updateDefaultNode(k,v)
+        for k, v in config_dict.iteritems():
+            self._default_scenario.updateDefaultNode(k, v)
 
     def updateDefaultBehaviour(self, behaviour):
         """
@@ -572,14 +600,15 @@ class ExperimentManager(object):
         self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
         self.orig_path = os.path.abspath(_results_dir)
         self.runcount = kwargs.get("runcount", 1)
-        kwargs.update({"basepath":self.exp_path, "retain_data":self.retain_data})
+        kwargs.update(
+            {"basepath": self.exp_path, "retain_data": self.retain_data})
         start = time.time()
         try:
             if not os.path.isdir(self.exp_path):
                 os.mkdir(self.exp_path)
         except:
             self.exp_path = tempfile.mkdtemp()
-            print("Filepath collision, using %s"%self.exp_path)
+            print("Filepath collision, using %s" % self.exp_path)
         try:
             os.chdir(self.exp_path)
             for scenario in self.scenarios:
@@ -593,7 +622,8 @@ class ExperimentManager(object):
                     scenario.run(**kwargs)
 
         except ConfigError as e:
-            print("Caught Configuration error %s on scenario config \n%s"%(str(e),pformat(scenario.config)))
+            print("Caught Configuration error %s on scenario config \n%s" %
+                  (str(e), pformat(scenario.config)))
             raise
         finally:
             try:
@@ -603,9 +633,10 @@ class ExperimentManager(object):
             finally:
                 os.chdir(self.orig_path)
 
-            if self.parallel: ParSim.kill()
+            if self.parallel:
+                ParSim.kill()
             print("Experimental results stored in %s" % self.exp_path)
-        self.runtime = time.time()-start
+        self.runtime = time.time() - start
         print("Runtime:{}".format(secondsToStr(self.runtime)))
 
     def generateSimulationStats(self):
@@ -648,11 +679,12 @@ class ExperimentManager(object):
         Args:
             environment([int,int,int]): update experiment simulation environment for all scenarios
         """
-        if isinstance(environment, np.ndarray) and environment.shape ==(3,):
+        if isinstance(environment, np.ndarray) and environment.shape == (3,):
             for s in self.scenarios:
                 s.setEnvironment(environment)
         else:
-            raise ValueError("Incorrect Environment Type given:{}{}".format(environment,type(environment)))
+            raise ValueError(
+                "Incorrect Environment Type given:{}{}".format(environment, type(environment)))
 
     def addVariableRangeScenario(self, variable, value_range, title_range=None):
         """
@@ -664,12 +696,11 @@ class ExperimentManager(object):
         """
         if title_range is None:
             title_range = ["{}({})".format(variable, v) for v in value_range]
-        for i,v in enumerate(value_range):
+        for i, v in enumerate(value_range):
             s = Scenario(title=title_range[i],
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({variable: v}, count=self.node_count)
             self.scenarios.append(s)
-
 
     def addVariableNodeScenario(self, node_range):
         """
@@ -694,7 +725,7 @@ class ExperimentManager(object):
             n_minority(int): number of minority attackers in each scenario (optional)
         """
         for v in behaviour_list:
-            s = Scenario(title="%s(%s)" % (title,v),
+            s = Scenario(title="%s(%s)" % (title, v),
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({"behaviour": v}, count=n_minority)
             s.addDefaultNode(count=self.node_count - n_minority)
@@ -739,7 +770,8 @@ class ExperimentManager(object):
         for ratio in np.linspace(start=0.0, stop=1.00, num=self.node_count + 1):
             title = "%s(%.2f%%)" % (badbehaviour, float(ratio) * 100)
             print(title)
-            s = Scenario(title=title, default_config=self._default_scenario.generateConfigObj())
+            s = Scenario(
+                title=title, default_config=self._default_scenario.generateConfigObj())
             count = int(ratio * self.node_count)
             invcount = int((1.0 - ratio) * self.node_count)
             s.addCustomNode({"behaviour": badbehaviour}, count=count)
@@ -749,13 +781,14 @@ class ExperimentManager(object):
             else:
                 s.addDefaultNode(count=invcount)
             self.scenarios.append(s)
+
     def addDefaultScenario(self, runcount=1, title=None):
         """
         Stick to the defaults
         """
         for i in range(runcount):
-            s= Scenario(default_config=self._default_scenario.generateConfigObj(),
-                        title=title if title is not None else "{}({})".format(self.title,i))
+            s = Scenario(default_config=self._default_scenario.generateConfigObj(),
+                         title=title if title is not None else "{}({})".format(self.title, i))
             s.addDefaultNode(self.node_count)
             self.scenarios.append(s)
 
@@ -772,22 +805,24 @@ class ExperimentManager(object):
         """
 
         if isinstance(experiment, ExperimentManager):
-            # Running as proper experiment Manager instance, no modification required
+            # Running as proper experiment Manager instance, no modification
+            # required
             scenario_iterable = experiment.scenarios
         elif isinstance(experiment, list) \
                 and all([isinstance(entry, Scenario) for entry in experiment]):
-            # Have been given list of Scenarios entities in a single 'scenario', treat as normalo
+            # Have been given list of Scenarios entities in a single
+            # 'scenario', treat as normalo
             scenario_iterable = experiment
         elif isinstance(experiment, list) \
-            and all([isinstance(entry, DataPackage) for entry in experiment]):
-            # Have been given list of DataPackage entities in a single 'scenario', treat as single virtual scenario
+                and all([isinstance(entry, DataPackage) for entry in experiment]):
+            # Have been given list of DataPackage entities in a single
+            # 'scenario', treat as single virtual scenario
             PseudoScenario = collections.NamedTuple("PseudoScenario",
-                                                    ["title","datarun"]
-            )
-            scenario_iterable = [PseudoScenario("PseudoScenario",experiment)]
+                                                    ["title", "datarun"]
+                                                    )
+            scenario_iterable = [PseudoScenario("PseudoScenario", experiment)]
         else:
             raise RuntimeWarning("Cannot validate experiment structure")
-
 
         def avg_of_dict(dict_list, keys):
             """
@@ -809,91 +844,98 @@ class ExperimentManager(object):
             return float(sum) / count
 
         correctness_stats = {}
-        print("Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\tCorrect/Confident\tSuspect ")
+        print(
+            "Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\tCorrect/Confident\tSuspect ")
         for s in scenario_iterable:
-            correctness_stats[s.title]=[]
+            correctness_stats[s.title] = []
             stats = [d.package_statistics() for d in s.datarun]
             #stats = temp_pool.map(lambda d: d.package_statistics(),s.datarun)
             suspects = []
             if isinstance(s, Scenario):
-                # Running on a real scenario so use information we shouldn't have
+                # Running on a real scenario so use information we shouldn't
+                # have
                 suspect_behaviour_list = [(bev, nodelist)
-                                           for bev, nodelist in s.getBehaviourDict().iteritems()
-                                           if '__default__' not in nodelist]
+                                          for bev, nodelist in s.getBehaviourDict().iteritems()
+                                          if '__default__' not in nodelist]
                 for _, nodelist in suspect_behaviour_list:
                     for node in nodelist:
-                            suspects.append(node)
+                        suspects.append(node)
             print("%s,%s" % (s.title, suspects))
-
 
             for i, r in enumerate(stats):
                 analysis = printAnalysis(s.datarun[i])
                 confident = analysis['trust_stdev'] > 100
-                correct_detection = (not bool(suspects) and not confident) or analysis['suspect_name'] in suspects
-                correctness_stats[s.title].append((correct_detection, confident))
+                correct_detection = (not bool(suspects) and not confident) or analysis[
+                    'suspect_name'] in suspects
+                correctness_stats[s.title].append(
+                    (correct_detection, confident))
                 if verbose:
                     print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%) %s, %s, %.2f, %.2f, %s" % (
                         i,
-                        r['motion']['fleet_distance'], r['motion']['fleet_efficiency'],
+                        r['motion']['fleet_distance'], r[
+                            'motion']['fleet_efficiency'],
                         r['motion']['std_of_INDA'], r['motion']['std_of_INDD'],
-                        r['achievements']['max_ach'], r['achievements']['avg_completion'] * 100.0,
-                        "%s(%.2f)"%(str((correct_detection,confident)), analysis['trust_stdev']),
-                        analysis['suspect_name']+" %d"%analysis["suspect"],
+                        r['achievements']['max_ach'], r[
+                            'achievements']['avg_completion'] * 100.0,
+                        "%s(%.2f)" % (
+                            str((correct_detection, confident)), analysis['trust_stdev']),
+                        analysis['suspect_name'] + " %d" % analysis["suspect"],
                         analysis['suspect_distrust'],
                         analysis['suspect_confidence'],
                         str(analysis["trust_average"])
                     )
-                )
+                    )
 
             print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
-              % (avg_of_dict(stats, ['motion', 'fleet_distance']),
-                 avg_of_dict(stats, ['motion', 'fleet_efficiency']),
-                 avg_of_dict(stats, ['motion', 'std_of_INDA']),
-                 avg_of_dict(stats, ['motion', 'std_of_INDD']),
-                 avg_of_dict(stats, ['achievements', 'max_ach']),
-                 avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0))
+                  % (avg_of_dict(stats, ['motion', 'fleet_distance']),
+                     avg_of_dict(stats, ['motion', 'fleet_efficiency']),
+                     avg_of_dict(stats, ['motion', 'std_of_INDA']),
+                     avg_of_dict(stats, ['motion', 'std_of_INDD']),
+                     avg_of_dict(stats, ['achievements', 'max_ach']),
+                     avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0))
 
         # Print out Correctness stats per scenario
         print("Scenario\t\t++\t+-\t-+\t--\t\t (Correct,Confident)")
-        cct=cnt=nct=nnt=0
+        cct = cnt = nct = nnt = 0
         for run, stats in sorted(correctness_stats.items()):
-            cc=sum([correct and confident for (correct,confident) in stats])
-            cn=sum([correct and not confident for (correct,confident) in stats])
-            nc=sum([not correct and confident for (correct,confident) in stats])
-            nn=sum([not correct and not confident for (correct,confident) in stats])
-            print("%s\t%d\t%d\t%d\t%d"%(run,cc,cn,nc,nn))
-            cct+=cc
-            cnt+=cn
-            nct+=nc
-            nnt+=nn
+            cc = sum([correct and confident for (correct, confident) in stats])
+            cn = sum(
+                [correct and not confident for (correct, confident) in stats])
+            nc = sum(
+                [not correct and confident for (correct, confident) in stats])
+            nn = sum(
+                [not correct and not confident for (correct, confident) in stats])
+            print("%s\t%d\t%d\t%d\t%d" % (run, cc, cn, nc, nn))
+            cct += cc
+            cnt += cn
+            nct += nc
+            nnt += nn
 
+        print("Subtot\t\t\t%d\t%d\t%d\t%d" % (cct, cnt, nct, nnt))
+        print("Total\t\t\t%d\t\t\t%d" % (cct + cnt, nct + nnt))
 
-        print("Subtot\t\t\t%d\t%d\t%d\t%d"%(cct,cnt,nct,nnt))
-        print("Total\t\t\t%d\t\t\t%d"%(cct+cnt,nct+nnt))
-
-        correct = cct+cnt
-        confident = cct+nct
-        incorrect = nct+nnt
-        unconfident = cnt+nnt
-        total = correct+incorrect
-        n_scenarios =  len(scenario_iterable)
+        correct = cct + cnt
+        confident = cct + nct
+        incorrect = nct + nnt
+        unconfident = cnt + nnt
+        total = correct + incorrect
+        n_scenarios = len(scenario_iterable)
 
         print("Detection Accuracy pct with {} runs: {:.2%}".format(
-            total, correct/total
+            total, correct / total
         ))
 
         print("False-Confidence pct with {} runs: {:.2%}".format(
-            total, nct/total
+            total, nct / total
         ))
 
         print("True-Confidence pct with {} runs: {:.2%}".format(
-            total, cct/total
+            total, cct / total
         ))
 
         print("True-Confidence pct with {} runs factoring in the Waypoint state (i.e. positive negatives or missed-detections via lack of confidence): {:.2%}".format(
-            total, (cnt-(total*(1/n_scenarios)))/total
+            total, (cnt - (total * (1 / n_scenarios))) / total
         ))
-
 
     def dump(self):
         """
@@ -901,12 +943,13 @@ class ExperimentManager(object):
         """
         s_paths = [None for _ in xrange(len(self.scenarios))]
 
-        for i,s in enumerate(self.scenarios):
+        for i, s in enumerate(self.scenarios):
             start = time.clock()
-            s_paths[i] = os.path.abspath(os.path.join(self.exp_path, s.title+".pkl"))
-            print("Writing %s to %s"%(s.title, s_paths[i]))
-            pickle.dump(s,open(s_paths[i], "wb"))
-            print("Done in %f seconds"%(time.clock()-start))
+            s_paths[i] = os.path.abspath(
+                os.path.join(self.exp_path, s.title + ".pkl"))
+            print("Writing %s to %s" % (s.title, s_paths[i]))
+            pickle.dump(s, open(s_paths[i], "wb"))
+            print("Done in %f seconds" % (time.clock() - start))
 
     def dump_dataruns(self):
         """
@@ -922,16 +965,16 @@ class ExperimentManager(object):
         Attempt to dump the entire experiment state
         """
         try:
-            dumppath = os.path.abspath(os.path.join(self.exp_path, self.title+".exp"))
+            dumppath = os.path.abspath(
+                os.path.join(self.exp_path, self.title + ".exp"))
             start = time.clock()
             print("Writing Experiment to {}".format(dumppath))
             pickle.dump(self, open(dumppath, 'wb'))
-            print("Done in %f seconds"%(time.clock()-start))
+            print("Done in %f seconds" % (time.clock() - start))
         except Exception:
             import traceback
             print traceback.format_exc()
             print "Pickle Failed Miserably"
-
 
     def dump_analysis(self):
         """
@@ -941,12 +984,14 @@ class ExperimentManager(object):
 
         for i, s in enumerate(self.scenarios):
             start = time.clock()
-            s_paths[i] = os.path.abspath(os.path.join(self.exp_path, s.title+".anl"))
-            print("Writing analysis %s to %s"%(s.title, s_paths[i]))
-            stats = [dict(printAnalysis(d).items() + d.package_statistics().items()) for d in s.datarun]
+            s_paths[i] = os.path.abspath(
+                os.path.join(self.exp_path, s.title + ".anl"))
+            print("Writing analysis %s to %s" % (s.title, s_paths[i]))
+            stats = [dict(
+                printAnalysis(d).items() + d.package_statistics().items()) for d in s.datarun]
 
-            pickle.dump(stats,open(s_paths[i], "wb"))
-            print("Done in %f seconds"%(time.clock()-start))
+            pickle.dump(stats, open(s_paths[i], "wb"))
+            print("Done in %f seconds" % (time.clock() - start))
 
     @classmethod
     def write_analysis(exp):
@@ -959,4 +1004,3 @@ class ExperimentManager(object):
         :param experiment:
         :return:
         """
-

@@ -27,6 +27,7 @@ debug = False
 
 
 class MAC():
+
     """Generic Class for MAC Algorithms
     The only real difference between MAC's are their packet types and State Machines
     """
@@ -37,6 +38,7 @@ class MAC():
         self.config = config
         self.layercake = layercake
         self.node = self.layercake.host
+        self.data_packet_length = config["data_packet_length"]
 
         self.macBuilder()
 
@@ -50,12 +52,14 @@ class MAC():
     def activate(self):
         self.logger.info('activating instance')
         self.timer = self.InternalTimer(self.sm)  # Instance of Internal Timer
-        self.timer_event = Sim.SimEvent("timer_event")  # SimPy Event for signalling
+        # SimPy Event for signalling
+        self.timer_event = Sim.SimEvent("timer_event")
         self.channel_access_retries = 0
         self.transmission_attempts = 0
         self.outgoing_queue = []
         self.incoming_packet = None
-        Sim.activate(self.timer, self.timer.lifecycle(self.timer_event))  # Tie the event to lifecycle function
+        # Tie the event to lifecycle function
+        Sim.activate(self.timer, self.timer.lifecycle(self.timer_event))
 
     def macBuilder(self):
         """Generate run-time MAC config
@@ -63,24 +67,26 @@ class MAC():
         raise TypeError("Tried to instantiate the base MAC class")
 
     class InternalTimer(Sim.Process):
+
         """The internal Timer of the MACs is a SimPy Process as well as the nodes themselves.
         In a practical sence, this mirrors the idea that the network interfaces on the Vectors
         operate independently from the 'Command and Control' functionality
         """
 
         def __init__(self, state_machine):
-            Sim.Process.__init__(self, name="%s_Timer" % self.__class__.__name__)
+            Sim.Process.__init__(
+                self, name="%s_Timer" % self.__class__.__name__)
             self.sm = state_machine
 
         def lifecycle(self, Request):
             while True:
                 yield Sim.waitevent, self, Request
-                yield Sim.hold, self, Request.signalparam[0]  # Wait for a given time
+                # Wait for a given time
+                yield Sim.hold, self, Request.signalparam[0]
                 if self.interrupted():
                     self.interruptReset()
                 else:
                     self.sm.process(Request.signalparam[1])  # Do something
-
 
     def InitialiseStateEngine(self):
         """Generate a FSM with an initial READY_WAIT state
@@ -102,18 +108,21 @@ class MAC():
         """
         packet = self.outgoing_queue[0]
         if self.layercake.phy.variable_bandwidth:
-            distance = self.layercake.phy.var_power['levelToDistance'][packet.tx_level]
+            distance = self.layercake.phy.var_power[
+                'levelToDistance'][packet.tx_level]
             bandwidth = distance2Bandwidth(self.power,
                                            self.layercake.phy.frequency,
                                            distance,
                                            self.layercake.phy.threshold['SNR']
-            )
+                                           )
         else:
             bandwidth = self.layercake.phy.bandwidth
 
-        duration = packet.length / self.layercake.phy.bandwidth_to_bit(bandwidth)
+        duration = packet.length / \
+            self.layercake.phy.bandwidth_to_bit(bandwidth)
 
-        in_air_time = self.layercake.phy.range / self.layercake.phy.medium_speed
+        in_air_time = self.layercake.phy.range / \
+            self.layercake.phy.medium_speed
 
         timeout = 2 * duration + 2 * in_air_time
 
@@ -134,7 +143,6 @@ class MAC():
             timeout = random() * (2 * in_air_time)
             self.timer_event.signal((timeout, self.sm.input_symbol))
 
-
     def onTX_success(self):
         """When an ACK has been received, we can assume it all went well
         """
@@ -154,14 +162,14 @@ class MAC():
     def postTX(self):
         """Succeeded or given up, either way, tidy up
         """
-        self.logger.debug("Tidying up packet to " + self.outgoing_queue[0].next_hop)
+        self.logger.debug(
+            "Tidying up packet to " + self.outgoing_queue[0].next_hop)
         self.outgoing_queue.pop(0)
         self.transmission_attempts = 0
 
         if len(self.outgoing_queue) > 0:
             random_delay = random() * self.retransmit_timeout
             self.timer_event.signal((random_delay, "send_DATA"))
-
 
     def recv(self, FromBelow):
         """Function Called from lower layers to recieve a packet
@@ -170,7 +178,9 @@ class MAC():
         """
         self.incoming_packet = FromBelow.decap()
         if FromBelow.isFor(self.node.name):
-            if debug: self.logger.debug("Processing {} from {}".format(self.signals[FromBelow.type], FromBelow.payload))
+            if debug:
+                self.logger.debug("Processing {} from {}".format(
+                    self.signals[FromBelow.type], FromBelow.payload))
             self.sm.process(self.signals[FromBelow.type])
         else:
             self.overheard()
@@ -211,7 +221,8 @@ class MAC():
         if self.transmission_attempts > self.max_retransmit:
             self.sm.process("fail")
         else:
-            self.timer_event.signal((random() * self.retransmit_timeout, "resend"))
+            self.timer_event.signal(
+                (random() * self.retransmit_timeout, "resend"))
 
     def queueData(self):
         """Log queueing
@@ -230,16 +241,18 @@ class MAC():
             states[state] = pydot.Node(state, *basestyle)
             graph.add_node(states[state])
 
-        #create function 'nodes'
+        # create function 'nodes'
         functions = {}
         for function in set(zip(*tuple(self.sm.state_transitions.values()))[0]):
-            functions[function.__name__] = pydot.Node(function.__name__, shape="parallelogram")
+            functions[function.__name__] = pydot.Node(
+                function.__name__, shape="parallelogram")
             graph.add_node(functions[function.__name__])
 
         for (signal, state) in self.sm.state_transitions:
             (function, next_state) = self.sm.state_transitions[(signal, state)]
-            graph.add_edge(pydot.Edge(states[state], functions[function.__name__], label=signal))
-            #differently formatted return edge
+            graph.add_edge(
+                pydot.Edge(states[state], functions[function.__name__], label=signal))
+            # differently formatted return edge
             graph.add_edge(
                 pydot.Edge(functions[function.__name__], states[next_state], style='dotted', shape='onormal'))
 
@@ -247,6 +260,7 @@ class MAC():
 
 
 class ALOHA(MAC):
+
     """A very simple algorithm
     """
 
@@ -261,29 +275,37 @@ class ALOHA(MAC):
         self.level = 0  # derived from routing layer
         self.T = 0
 
-
     def InitialiseStateEngine(self):
         """Set up the state machine for ALOHA
         """
         MAC.InitialiseStateEngine(self)
         ##############################
         # Transitions from READY_WAIT
-        self.sm.add_transition("got_DATA", "READY_WAIT", self.onRX, "READY_WAIT")
-        self.sm.add_transition("send_DATA", "READY_WAIT", self.transmit, "READY_WAIT")
+        self.sm.add_transition(
+            "got_DATA", "READY_WAIT", self.onRX, "READY_WAIT")
+        self.sm.add_transition(
+            "send_DATA", "READY_WAIT", self.transmit, "READY_WAIT")
 
         ##############################
-        #Transitions from WAIT_ACK
+        # Transitions from WAIT_ACK
         self.sm.add_transition("got_DATA", "WAIT_ACK", self.onRX, "WAIT_ACK")
-        self.sm.add_transition("send_DATA", "WAIT_ACK", self.queueData, "WAIT_ACK")
-        self.sm.add_transition("got_ACK", "WAIT_ACK", self.onTX_success, "READY_WAIT")
-        self.sm.add_transition("timeout", "WAIT_ACK", self.onTimeout, "WAIT_2_RESEND")
+        self.sm.add_transition(
+            "send_DATA", "WAIT_ACK", self.queueData, "WAIT_ACK")
+        self.sm.add_transition(
+            "got_ACK", "WAIT_ACK", self.onTX_success, "READY_WAIT")
+        self.sm.add_transition(
+            "timeout", "WAIT_ACK", self.onTimeout, "WAIT_2_RESEND")
 
         ##############################
-        #Transitions from WAIT_2_RESEND
-        self.sm.add_transition("resend", "WAIT_2_RESEND", self.transmit, "WAIT_2_RESEND")
-        self.sm.add_transition("got_DATA", "WAIT_2_RESEND", self.onRX, "WAIT_2_RESEND")
-        self.sm.add_transition("send_DATA", "WAIT_2_RESEND", self.queueData, "WAIT_2_RESEND")
-        self.sm.add_transition("fail", "WAIT_2_RESEND", self.onTX_fail, "READY_WAIT")
+        # Transitions from WAIT_2_RESEND
+        self.sm.add_transition(
+            "resend", "WAIT_2_RESEND", self.transmit, "WAIT_2_RESEND")
+        self.sm.add_transition(
+            "got_DATA", "WAIT_2_RESEND", self.onRX, "WAIT_2_RESEND")
+        self.sm.add_transition(
+            "send_DATA", "WAIT_2_RESEND", self.queueData, "WAIT_2_RESEND")
+        self.sm.add_transition(
+            "fail", "WAIT_2_RESEND", self.onTX_fail, "READY_WAIT")
 
     def overheard(self):
         """Steal some information from overheard packets
@@ -297,4 +319,4 @@ class ALOHA(MAC):
                     packet=self.incoming_packet
                 ))
                 self.sm.process("got_ACK")
-                #TODO Expand/Duplicate with overhearing position information
+                # TODO Expand/Duplicate with overhearing position information

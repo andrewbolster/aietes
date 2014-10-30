@@ -36,6 +36,7 @@ _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 class EventLoggingApp(wx.PySimpleApp):
+
     def FilterEvent(self, evt, *args, **kwargs):
         logging.info(evt)
         return -1
@@ -57,35 +58,35 @@ def main():
                         nargs='?', const='latest_aietes.npz_from_pwd',
                         metavar='XXX.npz',
                         help='Aietes DataPackage to be analysed'
-    )
+                        )
     parser.add_argument('-a', '--autostart',
                         dest='autostart', action='store_true', default=False,
                         help='Automatically launch animation on loading'
-    )
+                        )
     parser.add_argument('-x', '--autoexit',
                         dest='autoexit', action='store_true', default=False,
                         help='Automatically exit (after animation with -a)'
-    )
+                        )
     parser.add_argument('-l', '--loop',
                         dest='loop', action='store_true', default=False,
                         help='Loop animation'
-    )
+                        )
     parser.add_argument('-v', '--verbose',
                         dest='verbose', action='store_true', default=False,
                         help='Verbose Debugging Information'
-    )
+                        )
     parser.add_argument('-n', '--new-simulation',
                         dest='newsim', action='store_true', default=False,
                         help='Generate a new simulation from default'
-    )
+                        )
     args = parser.parse_args()
-
 
     if args.data_file is 'latest_aietes.npz_from_pwd':
         args.data_file = get_latest_aietes_datafile()
     elif args.data_file is not None:
         if not is_valid_aietes_datafile(args.data_file):
-            raise ValueError("Provided data file does not appear to be an aietes dataset:%s" % args.data_file)
+            raise ValueError(
+                "Provided data file does not appear to be an aietes dataset:%s" % args.data_file)
 
     logging.info("Using Latest AIETES file: %s" % args.data_file)
 
@@ -113,5 +114,3 @@ def debug():
 
 if __name__ == '__main__':
     main()
-
-

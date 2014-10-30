@@ -24,7 +24,10 @@ debug = False
 #####################################################################
 # Physical Layer
 #####################################################################
+
+
 class PHY():
+
     """A Generic Class for Physical interface layers
     """
 
@@ -58,29 +61,32 @@ class PHY():
         ##############################
         self.logger = layercake.logger.getChild("%s" % self.__class__.__name__)
         self.logger.info('creating instance:%s' % config)
-        #Inherit values from config
+        # Inherit values from config
         for k, v in config.items():
             setattr(self, k, v)
         self.layercake = layercake
 
         ##############################
-        #Inferred System Parameters
+        # Inferred System Parameters
         ##############################
-        self.threshold['receive'] = DB2Linear(ReceivingThreshold(self.frequency, self.bandwidth, self.threshold['SNR']))
-        self.threshold['listen'] = DB2Linear(ListeningThreshold(self.frequency, self.bandwidth, self.threshold['LIS']))
-        self.ambient_noise = DB2Linear(Noise(self.frequency) + 10 * math.log10(self.bandwidth * 1e3))  #In linear scale
+        self.threshold['receive'] = DB2Linear(
+            ReceivingThreshold(self.frequency, self.bandwidth, self.threshold['SNR']))
+        self.threshold['listen'] = DB2Linear(
+            ListeningThreshold(self.frequency, self.bandwidth, self.threshold['LIS']))
+        self.ambient_noise = DB2Linear(
+            Noise(self.frequency) + 10 * math.log10(self.bandwidth * 1e3))  # In linear scale
         self.interference = self.ambient_noise
         self.collision = False
 
         ##############################
-        #Generate modem/transd etc
+        # Generate modem/transd etc
         ##############################
         self.modem = Sim.Resource(name=self.__class__.__name__)
         self.transducer = Transducer(self)
         self.messages = []
 
         ##############################
-        #Statistics
+        # Statistics
         ##############################
         self.max_output_power_used = 0
         self.tx_energy = 0
@@ -100,13 +106,16 @@ class PHY():
         """Function called from upper layers to send packet
         """
         if not self.isIdle():
-            self.logger.warn("Channel is not idle!")  # The MAC protocol is the one that should check this before transmitting
+            # The MAC protocol is the one that should check this before
+            # transmitting
+            self.logger.warn("Channel is not idle!")
 
         self.collision = False
 
         if hasattr(self, "variable_power") and self.variable_power:
             tx_range = self.level2distance[FromAbove.level]
-            power = distance2Intensity(self.bandwidth, self.frequency, tx_range, self.SNR_threshold)
+            power = distance2Intensity(
+                self.bandwidth, self.frequency, tx_range, self.SNR_threshold)
         else:
             power = self.transmit_power
 
@@ -125,6 +134,7 @@ class PHY():
 # Transducer
 #####################################################################
 class Transducer(Sim.Resource):
+
     """Packets request the resource and can interfere
     """
 
@@ -170,7 +180,8 @@ class Transducer(Sim.Resource):
 
         [x.updateInterference(self.interference) for x in self.activeQ]
 
-    # Override SimPy Resource's "_release" function to update SIR for all incoming messages.
+    # Override SimPy Resource's "_release" function to update SIR for all
+    # incoming messages.
     def _release(self, event):
         # "arg[1] is a reference to the Packet instance that just completed
         packet = event[1]
@@ -187,7 +198,8 @@ class Transducer(Sim.Resource):
         # TODO shouldn't this be to <= ambient?
         self.interference = max(self.interference, self.phy.ambient_noise)
 
-        # Delete this from the transducer queue by calling the Parent form of "_release"
+        # Delete this from the transducer queue by calling the Parent form of
+        # "_release"
         Sim.Resource._release(self, event)
 
         # If it isn't doomed due to transmission & it is not interfered
@@ -197,11 +209,13 @@ class Transducer(Sim.Resource):
                     and packet.power >= self.phy.threshold['receive']:
                 # Properly received: enough power, not enough interference
                 self.collision = False
-                if debug: self.logger.debug("PHY Packet received: %s" % packet.data)
+                if debug:
+                    self.logger.debug("PHY Packet received: %s" % packet.data)
                 self.layercake.mac.recv(packet.decap())
 
             elif packet.power >= self.phy.threshold['receive']:
-                # Too much interference but enough power to receive it: it suffered a collision
+                # Too much interference but enough power to receive it: it
+                # suffered a collision
                 if self.host.name == payload.next_hop or self.host.name == payload.destination:
                     self.collision = True
                     self.collisions.append(payload)
@@ -221,15 +235,14 @@ class Transducer(Sim.Resource):
                 self.phy.logger.debug("Packet Not received")
 
         else:
-            # This should never appear, and in fact, it doesn't, but just to detect bugs (we cannot have a negative SIR in lineal scale).
+            # This should never appear, and in fact, it doesn't, but just to
+            # detect bugs (we cannot have a negative SIR in lineal scale).
             print packet.type, packet.source, packet.dest, packet.next_hop, self.physical_layer.host.name
-
 
     def onTX(self):
         self.transmitting = True
         # Doom all currently incoming packets to failure.
         [i.Doom() for i in self.activeQ]
-
 
     def postTX(self):
         self.transmitting = False
@@ -247,6 +260,7 @@ class Transducer(Sim.Resource):
 #####################################################################
 
 class AcousticEventListener(Sim.Process):
+
     """No physical analog.
     Waits for another node to send something and then activates
     an Arrival Scheduler instance.
@@ -263,7 +277,8 @@ class AcousticEventListener(Sim.Process):
 
             params = channel_event.signalparam
             sched = ArrivalScheduler(name="ArrivalScheduler" + self.name[-1])
-            Sim.activate(sched, sched.schedule_arrival(self.transducer, params, position_query()))
+            Sim.activate(sched, sched.schedule_arrival(
+                self.transducer, params, position_query()))
 
 
 #####################################################################
@@ -271,6 +286,7 @@ class AcousticEventListener(Sim.Process):
 #####################################################################
 
 class ArrivalScheduler(Sim.Process):
+
     """simulates the transit time of a message
     """
 
@@ -279,11 +295,12 @@ class ArrivalScheduler(Sim.Process):
         debug = False
 
         packet = params['packet']
-        if debug:    transducer.logger.debug("Scheduling Arrival of packet %s from %s at %s" % \
-                                             (packet.data,
-                                              packet.source,
-                                              pos)
-        )
+        if debug:
+            transducer.logger.debug("Scheduling Arrival of packet %s from %s at %s" %
+                                    (packet.data,
+                                     packet.source,
+                                     pos)
+                                    )
         # TODO This needs to be updated to deal with drift
         distance_to = distance(pos, params['pos'])
 
@@ -310,5 +327,3 @@ class ArrivalScheduler(Sim.Process):
         else:
             # transducer.logger.debug("Transmission too close")
             pass
-
-

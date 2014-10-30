@@ -64,6 +64,7 @@ Noah Spurrier 20020822
 
 
 class ExceptionFSM(Exception):
+
     '''This is the FSM Exception class.'''
 
     def __init__(self, value):
@@ -74,6 +75,7 @@ class ExceptionFSM(Exception):
 
 
 class FSM:
+
     '''This is a Finite State Machine (FSM).
     '''
 
@@ -110,7 +112,7 @@ class FSM:
                 (input_symbol, current_state) --> (action, next_state)
         The action may be set to None in which case the process() method 
         will ignore the action and only set the next_state.
-           
+
         You can also set transitions for a list of symbols by using
         add_transition_list().
         '''
@@ -150,7 +152,7 @@ class FSM:
         This leaves the FSM unchanged. This does not update the current state 
         nor does it trigger the output action. Normally you do not call 
         this method. It is called by process().
-        
+
         The sequence of steps to check for a defined transition goes from 
         the most specific to the least specific. 
         1. Check state_transitions[] that match (input_symbol, state)
@@ -182,7 +184,8 @@ class FSM:
         symbols (or a string) by calling process_list().
         '''
         self.input_symbol = input_symbol
-        (action, next_state) = self.get_transition(self.input_symbol, self.current_state)
+        (action, next_state) = self.get_transition(
+            self.input_symbol, self.current_state)
         # self.logger.info("%s(%s) -> %s" % (self.current_state, input_symbol, next_state))
         self.last_state = self.current_state
         self.current_state = next_state
@@ -197,7 +200,7 @@ class FSM:
         for c in s:
             self.process(c)
 
-            ##########################################################################
+            ###################################################################
             # The following example demonstrates the use of the FSM class in
             # processing RPN expressions. Run this module from the command line.
             # You will get a prompt > for input.
@@ -208,7 +211,7 @@ class FSM:
             # 167 3 2 2 * * * 1 - =
             # will print:
             # 2003
-            ##########################################################################
+            ###################################################################
 
             #import string
 
@@ -216,39 +219,39 @@ class FSM:
             # These define the actions.
             # Note that "something" is a list being used as a stack.
             #
-            #def BeginBuildNumber (fsm):
+            # def BeginBuildNumber (fsm):
             #fsm.something.append (fsm.input_symbol)
-            #def BuildNumber (fsm):
+            # def BuildNumber (fsm):
             #s = fsm.something.pop ()
             #s = s + fsm.input_symbol
             #fsm.something.append (s)
-            #def EndBuildNumber (fsm):
+            # def EndBuildNumber (fsm):
             #s = fsm.something.pop ()
             #fsm.something.append (int(s))
-            #def DoOperator (fsm):
+            # def DoOperator (fsm):
             #ar = fsm.something.pop()
             #al = fsm.something.pop()
-            #if fsm.input_symbol == '+':
+            # if fsm.input_symbol == '+':
             #fsm.something.append (al + ar)
-            #elif fsm.input_symbol == '-':
+            # elif fsm.input_symbol == '-':
             #fsm.something.append (al - ar)
-            #elif fsm.input_symbol == '*':
+            # elif fsm.input_symbol == '*':
             #fsm.something.append (al * ar)
-            #elif fsm.input_symbol == '/':
+            # elif fsm.input_symbol == '/':
             #fsm.something.append (al / ar)
-            #def DoEqual (fsm):
-            #print str(fsm.something.pop())
-            #def Error (fsm):
-            #print 'That does not compute.'
-            #print str(fsm.input_symbol)
+            # def DoEqual (fsm):
+            # print str(fsm.something.pop())
+            # def Error (fsm):
+            # print 'That does not compute.'
+            # print str(fsm.input_symbol)
 
             #
             # This is where the example starts and the FSM state transitions are defined.
             # Note that states (such as 'INIT') are strings. This is not necessary, but
             # it makes the example easier to read.
             #
-            #def example ():
-            #f = FSM ('INIT', []) # "something" will be used as a stack.
+            # def example ():
+            # f = FSM ('INIT', []) # "something" will be used as a stack.
             #f.set_default_transition (Error, 'INIT')
             #f.add_transition_any  ('INIT', None, 'INIT')
             #f.add_transition      ('=',               'INIT',            DoEqual,          'INIT')
@@ -257,15 +260,15 @@ class FSM:
             #f.add_transition_list (string.whitespace, 'BUILDING_NUMBER', EndBuildNumber,   'INIT')
             #f.add_transition_list ('+-*/',            'INIT',            DoOperator,       'INIT')
 
-            #print
-            #print 'Enter an RPN Expression.'
-            #print 'Numbers may be integers. Operators are * / + -'
-            #print 'Use the = sign to evaluate and print the expression.'
-            #print 'For example: '
-            #print '    167 3 2 2 * * * 1 - ='
+            # print
+            # print 'Enter an RPN Expression.'
+            # print 'Numbers may be integers. Operators are * / + -'
+            # print 'Use the = sign to evaluate and print the expression.'
+            # print 'For example: '
+            # print '    167 3 2 2 * * * 1 - ='
             #inputs = raw_input ('>')
-            #for s in inputs:
+            # for s in inputs:
             #f.process (s)
 
-            #if __name__ == '__main__':
+            # if __name__ == '__main__':
             #example ()

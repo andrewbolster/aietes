@@ -21,12 +21,14 @@
 # along with AUVNetSim.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###########################################################################
-nodes_geo = {}  # Contains all nodes' position - Only the sinks' position is needed
+# Contains all nodes' position - Only the sinks' position is needed
+nodes_geo = {}
 import math
 from priodict import priorityDictionary
 
 from aietes.Tools import distance, broadcast_address, debug, logging, Sim
-import collections, operator
+import collections
+import operator
 
 debug = False
 
@@ -41,17 +43,21 @@ def SetupRouting(node, config):
 
 
 class SimpleRoutingTable(dict):
+
     def __init__(self, layercake, config):
         dict.__init__(self)
         self.layercake = layercake
-        self.logger = layercake.logger.getChild("{}".format(self.__class__.__name__))
-        # if not debug: self.logger.setLevel(logging.WARNING) # You always forget about this
+        self.logger = layercake.logger.getChild(
+            "{}".format(self.__class__.__name__))
+        # if not debug: self.logger.setLevel(logging.WARNING) # You always
+        # forget about this
         self.has_routing_table = False
         self.packets = set([])
 
     def SendPacket(self, packet):
         packet["level"] = 0
-        packet["route"].append((self.layercake.hostname, self.layercake.get_current_position()))
+        packet["route"].append(
+            (self.layercake.hostname, self.layercake.get_current_position()))
         try:
             packet["through"] = self[packet["dest"][0]]
             self.logger.warn("Routing {} through {} to {}".format(
@@ -66,7 +72,8 @@ class SimpleRoutingTable(dict):
                 packet, e
             ))
 
-        packet["source_position"] = self.layercake.get_current_position()  # Current hop position
+        # Current hop position
+        packet["source_position"] = self.layercake.get_current_position()
         try:
             packet["through_position"] = nodes_geo[packet["through"]]
         except KeyError:
@@ -76,7 +83,8 @@ class SimpleRoutingTable(dict):
         except KeyError:
             packet["dest_position"] = None
 
-        if debug: self.logger.info("NET initiating TX of {}".format(packet['ID']))
+        if debug:
+            self.logger.info("NET initiating TX of {}".format(packet['ID']))
         self.layercake.mac.InitiateTransmission(packet)
 
     def OnPacketReception(self, packet):
@@ -87,16 +95,19 @@ class SimpleRoutingTable(dict):
         if not self.IsDuplicated(packet):
             self.packets.add(packet["ID"])
             if packet["dest"] == self.layercake.hostname:
-                self.logger.debug("received Packet from {src}".format(src=packet["source"]))
+                self.logger.debug(
+                    "received Packet from {src}".format(src=packet["source"]))
                 self.layercake.recv(packet)
             elif packet["dest"] == broadcast_address:
-                # Assume this has provided some info that the apps can get from the routing layer in a bit.
-                self.logger.debug("Heard Broadcast from {src}: storing record in route table".format(src=packet["source"]))
+                # Assume this has provided some info that the apps can get from
+                # the routing layer in a bit.
+                self.logger.debug("Heard Broadcast from {src}: storing record in route table".format(
+                    src=packet["source"]))
                 self[packet["source"]] = packet["route"]
             else:
-                self.logger.info("Relaying packet from {src} to {dest}".format(src=packet["source"], dest=packet['dest']))
+                self.logger.info("Relaying packet from {src} to {dest}".format(
+                    src=packet["source"], dest=packet['dest']))
                 self.SendPacket(packet)
-
 
     def NeedExplicitACK(self, current_level, destination):
         return True
@@ -106,8 +117,10 @@ class SimpleRoutingTable(dict):
 
     def IsDuplicated(self, packet):
         if packet["ID"] in self.packets:
-            # This packet was already received, I should directly acknolwedge it.
-            self.logger.debug("Discarding a duplicated packet. ID: " + packet["ID"])
+            # This packet was already received, I should directly acknolwedge
+            # it.
+            self.logger.debug(
+                "Discarding a duplicated packet. ID: " + packet["ID"])
             return True
 
         return False
@@ -118,6 +131,7 @@ RoutingEntry = collections.namedtuple("RoutingEntry",
 
 
 class DSDV(SimpleRoutingTable):
+
     """
     Destination Sequenced Discance Vector protocol uses the Bellnman Ford Algo. to calculate paths based on hop-lengths
 
@@ -129,8 +143,10 @@ class DSDV(SimpleRoutingTable):
 
     """
     has_routing_table = True  # NA
-    periodic_update_interval = 15  # Time between full-table exchanges among nodes
-    wst_enabled = True  # Enables Weighted Settling Time for updates before Advertisment
+    # Time between full-table exchanges among nodes
+    periodic_update_interval = 15
+    # Enables Weighted Settling Time for updates before Advertisment
+    wst_enabled = True
     settling_time = 6  # Minimum storage time before tx
     wst_factor = 0.875  # Fairly Obvious....
     buffer_enabled = True  # Buffer if no route available
@@ -141,10 +157,11 @@ class DSDV(SimpleRoutingTable):
     route_agg_enabled = False  # Aggregated updates
     route_agg_time = 1  # seconds over which DSDV updates are aggregated
 
-
     def __init__(self, layercake, config=None):
         SimpleRoutingTable.__init__(self, layercake, config)
-        self.seq_no = reduce(operator.xor, map(ord, self.layercake.hostname)) * 100  # Sneaky trick to make 'recognisable' sequence numbers'
+        # Sneaky trick to make 'recognisable' sequence numbers'
+        self.seq_no = reduce(
+            operator.xor, map(ord, self.layercake.hostname)) * 100
 
     def push_up(self, packet):
         if hasattr(packet, 'table'):
@@ -180,18 +197,24 @@ class DSDV(SimpleRoutingTable):
         """
         for dest, hop, seq_no in packet['table']:
             if not self.has_key(dest):
-                new_entry = RoutingEntry(packet['source'], hop + len(packet['route']), seq_no)
-                self.logger.info("Creating entry for {}:{}".format(dest, new_entry))
+                new_entry = RoutingEntry(
+                    packet['source'], hop + len(packet['route']), seq_no)
+                self.logger.info(
+                    "Creating entry for {}:{}".format(dest, new_entry))
                 self[dest] = new_entry
             elif seq_no > self[dest].seq:
-                new_entry = RoutingEntry(packet['source'], hop + len(packet['route']), seq_no)
-                self.logger.info("Updating entry for {}:{}".format(dest, new_entry))
+                new_entry = RoutingEntry(
+                    packet['source'], hop + len(packet['route']), seq_no)
+                self.logger.info(
+                    "Updating entry for {}:{}".format(dest, new_entry))
                 self[dest] = new_entry
 
-        self.logger.info("After update, table contains {}".format(self.items()))
+        self.logger.info(
+            "After update, table contains {}".format(self.items()))
 
 
 class Static(SimpleRoutingTable):
+
     ''' Note that it has not sense to use static routes when the network has mobile nodes. For MAC, CS-ALOHA or DACAP should be used.
         Variation 0: approximation to the transmission cone
         Variation 1: approximation to the receiver cone
@@ -201,16 +224,19 @@ class Static(SimpleRoutingTable):
     def __init__(self, layercake, config):
         SimpleRoutingTable.__init__(self, layercake, config)
         self.nodes_rel_pos = {}
-        self.nodes_pos = {layercake.hostname: layercake.get_current_position()}  # Contains already discovered positions
-        self.cone_angle = config["coneAngle"]  # Defines a cone where nodes may be of interest
-        self.cone_radius = config["coneRadius"]  # Defines a cone where nodes may be of interest
-        self.max_distance = config["maxDistance"]  # Maximum distance between any two nodes in the network
+        # Contains already discovered positions
+        self.nodes_pos = {layercake.hostname: layercake.get_current_position()}
+        # Defines a cone where nodes may be of interest
+        self.cone_angle = config["coneAngle"]
+        # Defines a cone where nodes may be of interest
+        self.cone_radius = config["coneRadius"]
+        # Maximum distance between any two nodes in the network
+        self.max_distance = config["maxDistance"]
         self.has_routing_table = False
         nodes_geo[layercake.hostname] = layercake.get_current_position()
         self.incoming_packet = None
         self.packets = set([])
         self.var = config["variation"]
-
 
     def OnPacketReception(self, packet):
         # if this is the final destination of the packet,
@@ -224,10 +250,10 @@ class Static(SimpleRoutingTable):
             else:
                 self.SendPacket(packet)
 
-
     def SendPacket(self, packet):
         self.incoming_packet = packet
-        self.incoming_packet["route"].append((self.layercake.hostname, self.layercake.get_current_position()))
+        self.incoming_packet["route"].append(
+            (self.layercake.hostname, self.layercake.get_current_position()))
         self.logger.debug("Processing packet with ID: " + packet["ID"])
 
         if self.incoming_packet["dest"] == "AnySink":
@@ -244,19 +270,23 @@ class Static(SimpleRoutingTable):
             self.has_routing_table = True
 
         self.incoming_packet["through"] = self[self.incoming_packet["dest"]]
-        self.incoming_packet["through_position"] = nodes_geo[self.incoming_packet["through"]]
+        self.incoming_packet["through_position"] = nodes_geo[
+            self.incoming_packet["through"]]
 
-        self.incoming_packet["source_position"] = self.layercake.get_current_position()  # Current hop position
-        self.incoming_packet["dest_position"] = nodes_geo[self.incoming_packet["dest"]]  # Final destination position
+        # Current hop position
+        self.incoming_packet[
+            "source_position"] = self.layercake.get_current_position()
+        self.incoming_packet["dest_position"] = nodes_geo[
+            self.incoming_packet["dest"]]  # Final destination position
 
-        self.incoming_packet["level"] = self.GetLevel(self.incoming_packet["through_position"])
+        self.incoming_packet["level"] = self.GetLevel(
+            self.incoming_packet["through_position"])
 
         if self.incoming_packet["level"] is None:
             # This should actually never happen
             print self.incoming_packet
 
         self.layercake.mac.InitiateTransmission(self.incoming_packet)
-
 
     def NeedExplicitACK(self, current_level, destination):
         if self.layercake.hostname == destination:
@@ -277,17 +307,17 @@ class Static(SimpleRoutingTable):
 
         return False
 
-
     def CloserSink(self):
         self.logger.debug("Looking for the closest Sink.")
         for name_item, pos_item in nodes_geo.iteritems():
             if name_item[0:4] == "Sink":
-                self.nodes_rel_pos[name_item] = distance(self.layercake.get_current_position(), pos_item)
+                self.nodes_rel_pos[name_item] = distance(
+                    self.layercake.get_current_position(), pos_item)
 
-        b = dict(map(lambda item: (item[1], item[0]), self.nodes_rel_pos.items()))
+        b = dict(
+            map(lambda item: (item[1], item[0]), self.nodes_rel_pos.items()))
         min_key = b[min(b.keys())]
         return min_key
-
 
     def GetLevel(self, destination):
         levels = self.layercake.phy.level2distance
@@ -299,11 +329,11 @@ class Static(SimpleRoutingTable):
     def Update(self, dest, dest_pos, through, through_pos):
         pass
 
-
     def BuildRoutingTable0(self):
         ''' Transmission Cone approach.
         '''
-        self.logger.debug("Building routing table for node " + self.layercake.hostname)
+        self.logger.debug(
+            "Building routing table for node " + self.layercake.hostname)
         self.nodes_rel_pos = {}
         for name_item, pos_item in nodes_geo.iteritems():
             if name_item == self.layercake.hostname:
@@ -331,8 +361,8 @@ class Static(SimpleRoutingTable):
                 for i, j in self.nodes_rel_pos.iteritems():
                     if debug:
                         print 'Trying a path through', i, 'with angle', j[1], 'and distance', j[0]
-                    if j[1] < ( rel_pos_item[1] + self.cone_angle / 2.0 ):
-                        if j[1] > ( rel_pos_item[1] - self.cone_angle / 2.0 ):
+                    if j[1] < (rel_pos_item[1] + self.cone_angle / 2.0):
+                        if j[1] > (rel_pos_item[1] - self.cone_angle / 2.0):
                             if inside:
                                 if j[0] > self.cone_radius:
                                     if debug:
@@ -367,7 +397,8 @@ class Static(SimpleRoutingTable):
                 if debug:
                     print i, self[i]
 
-        # Check if the power level needed for each next hop allows us to directly reaching destination, even being out of the cone
+        # Check if the power level needed for each next hop allows us to
+        # directly reaching destination, even being out of the cone
         for i in self:
             if self.GetLevel(nodes_geo[i]) is not None and self.GetLevel(nodes_geo[i]) <= self.GetLevel(nodes_geo[self[i]]):
                 self[i] = i
@@ -375,10 +406,10 @@ class Static(SimpleRoutingTable):
         if debug:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(), nodes_geo[self[i]])
 
-
     def BuildRoutingTable1(self):
         # Reception Cone
-        self.logger.debug("Building routing table for node " + self.layercake.hostname)
+        self.logger.debug(
+            "Building routing table for node " + self.layercake.hostname)
         self.nodes_rel_pos = {}
 
         for name_item, pos_item in nodes_geo.iteritems():
@@ -389,8 +420,10 @@ class Static(SimpleRoutingTable):
                 continue
 
             dist = distance(self.layercake.get_current_position(), pos_item)
-            tx_angle = self.layercake.get_current_position().anglewith(pos_item)
-            rx_angle = pos_item.anglewith(self.layercake.get_current_position())
+            tx_angle = self.layercake.get_current_position().anglewith(
+                pos_item)
+            rx_angle = pos_item.anglewith(
+                self.layercake.get_current_position())
 
             self.nodes_rel_pos[name_item] = dist, tx_angle, rx_angle
 
@@ -414,16 +447,18 @@ class Static(SimpleRoutingTable):
                     if debug:
                         print 'Trying a path through', i, 'with angle', j[1], 'and distance', j[0]
 
-                    if j[1] < ( (rel_pos_item[1] + 90.0) ):
-                        if j[1] > ( (rel_pos_item[1] - 90.0) ):
-                            # This means that the node is going forward to the destination
+                    if j[1] < ((rel_pos_item[1] + 90.0)):
+                        if j[1] > ((rel_pos_item[1] - 90.0)):
+                            # This means that the node is going forward to the
+                            # destination
                             if name_item == i:
                                 recep_angle = rel_pos_item[2]
                             else:
-                                recep_angle = nodes_geo[name_item].anglewith(nodes_geo[i])
+                                recep_angle = nodes_geo[
+                                    name_item].anglewith(nodes_geo[i])
 
-                            if recep_angle < ( (rel_pos_item[2] + self.cone_angle / 2.0) ):
-                                if recep_angle > ( (rel_pos_item[2] - self.cone_angle / 2.0) ):
+                            if recep_angle < ((rel_pos_item[2] + self.cone_angle / 2.0)):
+                                if recep_angle > ((rel_pos_item[2] - self.cone_angle / 2.0)):
                                     if inside:
                                         if j[0] > self.cone_radius:
                                             if debug:
@@ -431,11 +466,14 @@ class Static(SimpleRoutingTable):
                                             continue
 
                                         if j[0] > next_hop_rel_pos[0]:
-                                            # if nodes_geo[i].distanceto(nodes_geo[next_hop_name]) < next_dist:
+                                            # if
+                                            # nodes_geo[i].distanceto(nodes_geo[next_hop_name])
+                                            # < next_dist:
                                             if abs(abs(recep_angle) - abs(rel_pos_item[2])) < abs(abs(next_angle) - abs(rel_pos_item[2])):
                                                 next_hop_name = i
                                                 next_hop_rel_pos = j
-                                                next_dist = dist(nodes_geo[i], nodes_geo[next_hop_name])
+                                                next_dist = dist(
+                                                    nodes_geo[i], nodes_geo[next_hop_name])
                                                 next_angle = recep_angle
                                                 if debug:
                                                     print 'case 2'
@@ -445,20 +483,21 @@ class Static(SimpleRoutingTable):
                                             inside = True
                                             next_hop_name = i
                                             next_hop_rel_pos = j
-                                            next_dist = dist(nodes_geo[i], nodes_geo[next_hop_name])
+                                            next_dist = dist(
+                                                nodes_geo[i], nodes_geo[next_hop_name])
                                             next_angle = recep_angle
                                             if debug:
                                                 print 'case 3'
                                         elif j[0] < next_hop_rel_pos[0]:
                                             next_hop_name = i
                                             next_hop_rel_pos = j
-                                            next_dist = dist(nodes_geo[i], nodes_geo[next_hop_name])
+                                            next_dist = dist(
+                                                nodes_geo[i], nodes_geo[next_hop_name])
                                             next_angle = recep_angle
                                             if debug:
                                                 print 'case 4'
 
             self[name_item] = next_hop_name
-
 
         # Apply recursivity
         for i in self:
@@ -467,7 +506,8 @@ class Static(SimpleRoutingTable):
                 if debug:
                     print i, self[i]
 
-        # Check if the power level needed for each next hop allows us to directly reaching destination, even being out of the cone
+        # Check if the power level needed for each next hop allows us to
+        # directly reaching destination, even being out of the cone
         for i in self:
             if self.GetLevel(nodes_geo[i]) != None and self.GetLevel(nodes_geo[i]) <= self.GetLevel(nodes_geo[self[i]]):
                 self[i] = i
@@ -475,10 +515,10 @@ class Static(SimpleRoutingTable):
         if debug:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(), nodes_geo[self[i]])
 
-
     def BuildRoutingTable2(self):
         # Shortest path with level constraints
-        self.logger.debug("Building optimal routing table for node " + self.layercake.hostname)
+        self.logger.debug(
+            "Building optimal routing table for node " + self.layercake.hostname)
 
         G = self.BuildGraph()
         D, P = self.Dijkstra(G, self.layercake.hostname)
@@ -490,7 +530,8 @@ class Static(SimpleRoutingTable):
             Path = []
             while 1:
                 Path.append(end)
-                if end == self.layercake.hostname: break
+                if end == self.layercake.hostname:
+                    break
                 end = P[end]
             Path.reverse()
             self[i] = Path[1]
@@ -508,17 +549,16 @@ class Static(SimpleRoutingTable):
                 d = distance(fpos, tpos)
                 if self.GetLevelFT(d) != None:
                     # We can reach it using some power level
-                    graph[fname][tname] = self.layercake.phy.distance2power[self.GetLevelFT(d)]
+                    graph[fname][tname] = self.layercake.phy.distance2power[
+                        self.GetLevelFT(d)]
 
         return graph
-
 
     def GetLevelFT(self, d):
         levels = self.layercake.phy.level2distance
         for level, distance in levels.iteritems():
             if d <= distance:
                 return level
-
 
     def Dijkstra(self, G, start, end=None):
         """
@@ -549,11 +589,11 @@ class Static(SimpleRoutingTable):
         they can be any other object that obeys dict protocol,
         for instance a wrapper in which vertices are URLs
         and a call to G[v] loads the web page and finds its links.
-        
+
         The output is a pair (D,P) where D[v] is the distance
         from start to v and P[v] is the predecessor of v along
         the shortest path from s to v.
-        
+
         Dijkstra's algorithm is only guaranteed to work correctly
         when all edge lengths are positive. This code does not
         verify this property for all edges (only the edges seen
@@ -569,7 +609,8 @@ class Static(SimpleRoutingTable):
 
         for v in Q:
             D[v] = Q[v]
-            if v == end: break
+            if v == end:
+                break
 
             for w in G[v]:
                 vwLength = D[v] + G[v][w]
@@ -596,17 +637,18 @@ class Static(SimpleRoutingTable):
         Path = []
         while 1:
             Path.append(end)
-            if end == start: break
+            if end == start:
+                break
             end = P[end]
         Path.reverse()
         return Path
-
 
     def NodesPos2Str(self):
         print self.nodes_pos
 
 
 class FBR(SimpleRoutingTable):
+
     ''' In this case, DACAP4FBR should be selected as MAC protocol.
         Variation 0: Transmission cone
         Variation 1: Reception cone (transmission cone with big apperture)
@@ -614,14 +656,15 @@ class FBR(SimpleRoutingTable):
 
     def __init__(self, layercake, config):
         SimpleRoutingTable.__init__(self, layercake, config)
-        nodes_geo[layercake.hostname] = layercake.get_current_position()  # Does not make sense with mobile nodes: just for the sinks
+        # Does not make sense with mobile nodes: just for the sinks
+        nodes_geo[layercake.hostname] = layercake.get_current_position()
 
-        self.nodes_pos = {layercake.hostname: layercake.get_current_position()}  # Contains already discovered positions
+        # Contains already discovered positions
+        self.nodes_pos = {layercake.hostname: layercake.get_current_position()}
         self.cone_angle = config["coneAngle"]  # The cone aperture
         self.incoming_packet = None
         self.packets = set([])
         self.rx_cone = config["rx_cone"]
-
 
     def OnPacketReception(self, packet):
         # If this is the final destination of the packet,
@@ -638,38 +681,50 @@ class FBR(SimpleRoutingTable):
                 self.SendPacket(packet)
                 return False
 
-
     def SendPacket(self, packet):
         self.incoming_packet = packet
-        self.incoming_packet["route"].append((self.layercake.hostname, self.layercake.get_real_current_position()))
-        self.incoming_packet["source_position"] = self.layercake.get_current_position()  # Current hop position
+        self.incoming_packet["route"].append(
+            (self.layercake.hostname, self.layercake.get_real_current_position()))
+        # Current hop position
+        self.incoming_packet[
+            "source_position"] = self.layercake.get_current_position()
 
         if self.incoming_packet["dest"] == "AnySink":
             self.incoming_packet["dest"] = self.CloserSink()
-            self.nodes_pos[self.incoming_packet["dest"]] = nodes_geo[self.incoming_packet["dest"]]  # This information is known (the sinks)
-            self.incoming_packet["dest_position"] = self.nodes_pos[self.incoming_packet["dest"]]
+            self.nodes_pos[self.incoming_packet["dest"]] = nodes_geo[
+                self.incoming_packet["dest"]]  # This information is known (the sinks)
+            self.incoming_packet["dest_position"] = self.nodes_pos[
+                self.incoming_packet["dest"]]
         else:
-            # Only Data packets come through this level, and they are already directed to the sinks. I do know the position of the sinks.
-            self.nodes_pos[self.incoming_packet["dest"]] = nodes_geo[self.incoming_packet["dest"]]
-            self.incoming_packet["dest_position"] = self.nodes_pos[self.incoming_packet["dest"]]
+            # Only Data packets come through this level, and they are already
+            # directed to the sinks. I do know the position of the sinks.
+            self.nodes_pos[self.incoming_packet["dest"]] = nodes_geo[
+                self.incoming_packet["dest"]]
+            self.incoming_packet["dest_position"] = self.nodes_pos[
+                self.incoming_packet["dest"]]
 
         if self.IsNeighbor(self.incoming_packet["dest_position"]):
             self.incoming_packet["through"] = self.incoming_packet["dest"]
-            self.incoming_packet["through_position"] = self.incoming_packet["dest_position"]
+            self.incoming_packet[
+                "through_position"] = self.incoming_packet["dest_position"]
             self.incoming_packet["level"] = 0
         else:
             try:
-                self.incoming_packet["through"] = self[self.incoming_packet["dest"]]  # If this works, then this is because I know the through
-                self.incoming_packet["through_position"] = self.nodes_pos[self.incoming_packet["through"]]
-                self.incoming_packet["level"] = self.GetLevel(self.incoming_packet["through_position"])
+                # If this works, then this is because I know the through
+                self.incoming_packet["through"] = self[
+                    self.incoming_packet["dest"]]
+                self.incoming_packet["through_position"] = self.nodes_pos[
+                    self.incoming_packet["through"]]
+                self.incoming_packet["level"] = self.GetLevel(
+                    self.incoming_packet["through_position"])
             except KeyError:
-                self.logger.debug("WARNING: route to destination " + self.incoming_packet["dest"] + " not specified for " + self.layercake.hostname + ". Starting Discovery Process")
+                self.logger.debug("WARNING: route to destination " + self.incoming_packet[
+                                  "dest"] + " not specified for " + self.layercake.hostname + ". Starting Discovery Process")
                 self.incoming_packet["through"] = "ANY0"
                 self.incoming_packet["through_position"] = 0
                 self.incoming_packet["level"] = 0
 
         self.layercake.mac.InitiateTransmission(self.incoming_packet)
-
 
     def IsReachable(self, current_level, dest_pos):
         if self.GetLevel(dest_pos) == None:
@@ -677,10 +732,8 @@ class FBR(SimpleRoutingTable):
         else:
             return self.GetLevel(dest_pos) <= current_level
 
-
     def IsNeighbor(self, dest_pos):
         return self.IsReachable(0, dest_pos)
-
 
     def NeedExplicitACK(self, current_level, destination):
         if self.layercake.hostname == destination:
@@ -696,7 +749,6 @@ class FBR(SimpleRoutingTable):
 
         return True
 
-
     def GetLevel(self, destination):
         if destination[0:3] == "ANY":
             return destination[3]
@@ -706,17 +758,17 @@ class FBR(SimpleRoutingTable):
             if distance(self.layercake.get_current_position(), destination) <= r:
                 return level
 
-
     def CloserSink(self):
         self.logger.debug("Looking for the closest Sink.")
         self.nodes_rel_pos = {}
         for name_item, pos_item in nodes_geo.iteritems():
-            self.nodes_rel_pos[name_item] = distance(self.layercake.get_current_position(), pos_item)
+            self.nodes_rel_pos[name_item] = distance(
+                self.layercake.get_current_position(), pos_item)
 
-        b = dict(map(lambda item: (item[1], item[0]), self.nodes_rel_pos.items()))
+        b = dict(
+            map(lambda item: (item[1], item[0]), self.nodes_rel_pos.items()))
         min_key = b[min(b.keys())]
         return min_key
-
 
     def ImAValidCandidate(self, packet):
         if packet["dest"] == self.layercake.hostname:
@@ -736,7 +788,8 @@ class FBR(SimpleRoutingTable):
                 if (b ** 2 + c ** 2 - a ** 2) / (2 * b * c) > 0.99 or (b ** 2 + c ** 2 - a ** 2) / (2 * b * c) < -0.99:
                     A = 0.0
                 else:
-                    A = math.degrees(math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)))
+                    A = math.degrees(
+                        math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)))
 
                 if A <= self.cone_angle / 2.0:
                     self.logger.debug("I'm a valid candidate.")
@@ -757,30 +810,28 @@ class FBR(SimpleRoutingTable):
             else:
                 return False
 
-
                 # This information comes from the Multicast RTS and I may be interested in using it, or not.
                 ##        self.nodes_pos[packet["source"]] = packet["source_position"]
                 ##        self.nodes_pos[packet["dest"]] = packet["dest_position"]
-                ##        self[packet["source"]] = packet["source"] # This is a neighbor
-
+                # self[packet["source"]] = packet["source"] # This is a
+                # neighbor
 
     def AddNode(self, name, pos):
         self.nodes_pos[name] = pos
-
 
     def Update(self, dest, dest_pos, through, through_pos):
         self[dest] = through
         self.nodes_pos[dest] = dest_pos
 
-
     def IsDuplicated(self, packet):
         if packet["ID"] in self.packets:
-            # This packet was already received, I should directly acknowledge it
-            self.logger.debug("Discarding a duplicated packet. ID: " + packet["ID"])
+            # This packet was already received, I should directly acknowledge
+            # it
+            self.logger.debug(
+                "Discarding a duplicated packet. ID: " + packet["ID"])
             return True
 
         return False
-
 
     def SelectRoute(self, candidates, current_through, attemps, destination):
         dist = {}
@@ -792,11 +843,13 @@ class FBR(SimpleRoutingTable):
             self.logger.debug("Unable to reach " + current_through)
 
             if self.layercake.phy.CollisionDetected():
-                self.logger.debug("There has been a collision, let's give it another chance!")
+                self.logger.debug(
+                    "There has been a collision, let's give it another chance!")
                 return "2CHANCE", self.nodes_pos[current_through]
 
             if current_through[0:3] != "ANY":
-                # This is not a multicast RTS but a directed RTS which has been not answered
+                # This is not a multicast RTS but a directed RTS which has been
+                # not answered
                 if attemps < 2:
                     self.logger.debug("Let's give it another chance.")
                     return "2CHANCE", self.nodes_pos[current_through]
@@ -805,7 +858,8 @@ class FBR(SimpleRoutingTable):
                     return "ANY0", 0
 
             if int(current_through[3]) != (len(self.layercake.phy.level2distance) - 1):
-                # This is a multicast selection, but not with the maximum transmission power level
+                # This is a multicast selection, but not with the maximum
+                # transmission power level
                 self.logger.debug("Increasing transmission power.")
                 level = int(current_through[3]) + 1
 
@@ -816,11 +870,13 @@ class FBR(SimpleRoutingTable):
                     self.logger.debug("It is not reachable.")
                     return "ANY" + str(level), 0
             else:
-                self.logger.debug("Unable to reach any node within any transmission power. ABORTING transmission.")
+                self.logger.debug(
+                    "Unable to reach any node within any transmission power. ABORTING transmission.")
                 return "ABORT", 0
 
         else:
-            # There have been answers: for a given transmission power, I should always look for the one that is closer to the destination
+            # There have been answers: for a given transmission power, I should
+            # always look for the one that is closer to the destination
             if candidates.has_key(destination):
                 return destination, candidates[destination][2]
 
@@ -829,7 +885,8 @@ class FBR(SimpleRoutingTable):
                 dist[name] = distance(de[2], nodes_geo[destination])
                 ener[name] = de[1] * 0.0
 
-            # Average score: min energy and min distance to the final destination
+            # Average score: min energy and min distance to the final
+            # destination
             ee = dict(map(lambda item: (item[1], item[0]), ener.items()))
             max_ee = ee[max(ee.keys())]
 
@@ -838,7 +895,8 @@ class FBR(SimpleRoutingTable):
 
             for name, de in candidates.iteritems():
                 if ener[max_ee] > 0:
-                    score[name] = dist[name] / dist[max_dd] + ener[name] / ener[max_ee]
+                    score[name] = dist[name] / dist[max_dd] + \
+                        ener[name] / ener[max_ee]
                 else:
                     score[name] = dist[name] / dist[max_dd]
 
@@ -846,4 +904,3 @@ class FBR(SimpleRoutingTable):
             min_score = sc[min(sc.keys())]
 
             return min_score, self.nodes_pos[min_score]
-

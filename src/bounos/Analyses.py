@@ -24,6 +24,7 @@ from pandas.stats.moments import ewma
 from DataPackage import DataPackage
 from aietes.Tools import mkpickle
 
+
 def Find_Convergence(data, *args, **kwargs):
     """
     Return the Time of estimated convergence of the fleet along with some certainty value
@@ -38,7 +39,7 @@ def Find_Convergence(data, *args, **kwargs):
             detection_points, metrics (both just data)
 
     """
-    #TODO This isn't done at all
+    # TODO This isn't done at all
     assert isinstance(data, DataPackage)
     detection_points = data
     metrics = data
@@ -60,7 +61,7 @@ def get_valid_metric(metric):
     import bounos.Metrics as Metrics
 
     metric_arg = metric
-    if isinstance(metric_arg, type) and hasattr(metric_arg,'mro') and metric_arg.mro()[-2].__name__ == 'Metric':
+    if isinstance(metric_arg, type) and hasattr(metric_arg, 'mro') and metric_arg.mro()[-2].__name__ == 'Metric':
         metric_class = metric_arg
     elif isinstance(metric_arg, str):
         metric_class = getattr(Metrics, metric_arg)
@@ -106,7 +107,7 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
 
     metric.update(data)
     # IND has the highlight data to be the average of internode distances
-    #TODO implement scrolling stddev calc to adjust smearing value (5)
+    # TODO implement scrolling stddev calc to adjust smearing value (5)
     potential_misbehavers = {}
     detection_envelope = np.zeros((data.tmax), dtype=np.float64)
     deviance = np.zeros((data.tmax, data.n), dtype=np.float64)
@@ -122,15 +123,18 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
             raise TypeError("%s:%s" % (metric.__class__.__name__, e))
 
         # Select culprits that are deviating by 1 sigma/frac from the norm
-        detection_envelope[t] = this_detection_envelope = np.std(deviance[t]) / stddev_frac
+        detection_envelope[t] = this_detection_envelope = np.std(
+            deviance[t]) / stddev_frac
         culprits = [False]
         # None is both not True and not False
         if metric.signed is not False:
             # Positive Swing
-            culprits = (metric.data[t] > (metric.highlight_data[t] + this_detection_envelope))
+            culprits = (
+                metric.data[t] > (metric.highlight_data[t] + this_detection_envelope))
         elif metric.signed is not True:
             # Negative Swing
-            culprits = (metric.data[t] < (metric.highlight_data[t] - this_detection_envelope))
+            culprits = (
+                metric.data[t] < (metric.highlight_data[t] - this_detection_envelope))
         else:
             culprits = (metric.data[t] > (metric.highlight_data[t] + this_detection_envelope)) or (
                 metric.data[t] < (metric.highlight_data[t] - this_detection_envelope))
@@ -143,7 +147,7 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
             finally:
                 rolling_detections[t].append(culprit)
 
-            #Check if culprit is in all the last $envelope detection lists
+            # Check if culprit is in all the last $envelope detection lists
             if all(culprit in detection_list for detection_list in rolling_detections[t - confirmation_envelope:t]) \
                     and t > confirmation_envelope:
                 confirmed_detections[t].append(culprit)
@@ -181,7 +185,7 @@ def Deviation(data, *args, **kwargs):
     metric = get_valid_metric(metric_arg)
     metric.update(data)
     # IND has the highlight data to be the average of internode distances
-    #TODO implement scrolling stddev calc to adjust smearing value (5)
+    # TODO implement scrolling stddev calc to adjust smearing value (5)
     stddev = np.zeros((data.tmax), dtype=np.float64)
     deviance = np.zeros((data.tmax, data.n), dtype=np.float64)
 
@@ -199,7 +203,8 @@ def Deviation(data, *args, **kwargs):
 
 
 def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs):
-    # Combine multiple metrics detections into a general trust rating per node over time.
+    # Combine multiple metrics detections into a general trust rating per node
+    # over time.
     if not isinstance(metrics, list):
         raise ValueError("Should be passed a list of analyses")
     tmax = kwargs.get("tmax", data.tmax)
@@ -211,29 +216,33 @@ def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs)
 
     deviance_accumulator.fill(0.0)
     for m, metric in enumerate(metrics):
-        # Get Detections, Stddevs, Misbehavors, Deviance from Detect_MisBehaviour
+        # Get Detections, Stddevs, Misbehavors, Deviance from
+        # Detect_MisBehaviour
         if override_detection:
             results = Deviation(data, metric=metric)
             print("No misbehavors given, assuming everything")
-            misbehavors = {suspect: range(data.tmax) for suspect in range(data.n)}
+            misbehavors = {suspect: range(data.tmax)
+                           for suspect in range(data.n)}
         else:
             results = Detect_Misbehaviour(data, metric=metric)
             misbehavors = results['suspicions']
 
         stddev, deviance = results['detection_envelope'], results['deviance']
 
-        # Using culprits as a filter only searches for distrust, not 'good behaviour'
+        # Using culprits as a filter only searches for distrust, not 'good
+        # behaviour'
         if suspects_only:
             for culprit, times in misbehavors.iteritems():
                 deviance_accumulator[m, np.array(times), culprit] = (
-                    np.abs(np.divide(deviance[np.array(times), culprit], stddev[np.array(times)].clip(min=np.finfo(np.float64).eps)))
+                    np.abs(np.divide(deviance[np.array(times), culprit], stddev[
+                           np.array(times)].clip(min=np.finfo(np.float64).eps)))
                 )
         else:
             for culprit in xrange(n_nodes):
-                deviance_accumulator[m, : , culprit] = (
-                    np.abs(np.divide(deviance[:, culprit], stddev.clip(min=np.finfo(np.float64).eps)))
+                deviance_accumulator[m, :, culprit] = (
+                    np.abs(
+                        np.divide(deviance[:, culprit], stddev.clip(min=np.finfo(np.float64).eps)))
                 )
-
 
     windowed_trust_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
     deviance_lag_lead_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
@@ -244,7 +253,8 @@ def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs)
         deviance_lag_lead_accumulator[t] = np.sum(
             np.prod(deviance_accumulator[:, head:t, :], axis=0),
             axis=0)
-        windowed_trust_accumulator[t] = deviance_lag_lead_accumulator[t] - (t - head)
+        windowed_trust_accumulator[
+            t] = deviance_lag_lead_accumulator[t] - (t - head)
 
     return deviance_accumulator, windowed_trust_accumulator
 
@@ -255,7 +265,8 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
     Attempts to detect and guess malicious/'broken' node
     Deviance is unitless, in a shape [metrics,t,nodes]
     """
-    detection_sums = np.sum(deviance, axis=1) - deviance.shape[1] #Removes the 1.0 initial bias
+    detection_sums = np.sum(
+        deviance, axis=1) - deviance.shape[1]  # Removes the 1.0 initial bias
     detection_totals = np.sum(detection_sums, axis=1)
     detection_subtot = np.argmax(detection_sums, axis=1)
     detection_max = np.argmax(np.sum(detection_sums, axis=0))
@@ -267,19 +278,24 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
         if verbose:
             print("Untrustworthy behaviour detected")
             if names is None:
-                print("\n".join(["%s:%d(%f)"%(metrics[i].label, m_subtot, detection_totals[i] ) for i,m_subtot in enumerate(detection_subtot)]))
-                print("Prime Suspect:%s:%s"%(prime_distrusted_node, str(trust_average[prime_distrusted_node])))
+                print("\n".join(["%s:%d(%f)" % (metrics[i].label, m_subtot, detection_totals[
+                      i]) for i, m_subtot in enumerate(detection_subtot)]))
+                print("Prime Suspect:%s:%s" % (
+                    prime_distrusted_node, str(trust_average[prime_distrusted_node])))
             else:
-                print("\n".join(["%s:%s(%f)"%(metrics[i].label, names[m_subtot], detection_totals[i]) for i,m_subtot in enumerate(detection_subtot)]))
-                print("Prime Suspect:%s:%s"%(names[prime_distrusted_node], str(trust_average[prime_distrusted_node])))
+                print("\n".join(["%s:%s(%f)" % (metrics[i].label, names[
+                      m_subtot], detection_totals[i]) for i, m_subtot in enumerate(detection_subtot)]))
+                print("Prime Suspect:%s:%s" % (
+                    names[prime_distrusted_node], str(trust_average[prime_distrusted_node])))
     result = {"suspect": prime_distrusted_node,
               "suspect_name": names[prime_distrusted_node] if names is not None else None,
               "suspect_distrust": trust_average[prime_distrusted_node],
-              "suspect_confidence": (trust_average[prime_distrusted_node]-np.average(trust_average))/np.std(trust_average),
+              "suspect_confidence": (trust_average[prime_distrusted_node] - np.average(trust_average)) / np.std(trust_average),
               "trust_stdev": trust_stdev,
               "trust_average": trust_average,
               "detection_totals": detection_totals}
     return result
+
 
 def GRC_t(measurements, bias='zero', rho=0.5, w=None):
     """
@@ -319,17 +335,18 @@ def GRC_t(measurements, bias='zero', rho=0.5, w=None):
         :return:
         """
         delta = abs(delta)
-        upper = np.min(delta,axis=0) + (rho * np.max(delta, axis=0))
+        upper = np.min(delta, axis=0) + (rho * np.max(delta, axis=0))
         lower = (delta) + (rho * np.max(delta, axis=0))
         with np.errstate(invalid='ignore', ):
-            parterval = np.divide(upper,lower)
+            parterval = np.divide(upper, lower)
         return parterval
 
-    intervals = np.asarray(map(grc, [measurements-g,measurements-b]))
+    intervals = np.asarray(map(grc, [measurements - g, measurements - b]))
 
     # Now we have the per-metric theta and sigmas
     # return as [node,metric,[interval]]
-    return np.rollaxis(intervals,0,3)
+    return np.rollaxis(intervals, 0, 3)
+
 
 def GRG_t(c_intervals, weights=None):
     """
@@ -344,7 +361,8 @@ def GRG_t(c_intervals, weights=None):
     :param grcs:
     :return:
     """
-    return np.average(c_intervals, axis=1,weights=None)
+    return np.average(c_intervals, axis=1, weights=None)
+
 
 def T_kt(interval):
     """
@@ -354,15 +372,16 @@ def T_kt(interval):
     :return:
     """
     theta, sigma = interval
-    return 1.0/(
-        1.0+(
-            np.power(sigma,2)/np.power(theta,2)
-            )
+    return 1.0 / (
+        1.0 + (
+            np.power(sigma, 2) / np.power(theta, 2)
+        )
     )
 
+
 def dev_to_trust(per_metric_deviations):
-    #rotate pmdev to node-primary ([node,metric])
-    per_node_deviations = np.rollaxis(per_metric_deviations,0,3)
+    # rotate pmdev to node-primary ([node,metric])
+    per_node_deviations = np.rollaxis(per_metric_deviations, 0, 3)
     grcs = map(GRC_t, per_node_deviations)
     grgs = map(GRG_t, grcs)
     trust_values = np.asarray([

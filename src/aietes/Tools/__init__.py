@@ -59,6 +59,7 @@ _results_dir = '%s/../../results/' % _ROOT
 
 
 class SimTimeFilter(logging.Filter):
+
     """
     Brings Sim.now() into usefulness
     """
@@ -86,6 +87,7 @@ log_hdl.addFilter(SimTimeFilter())
 
 
 class ConfigError(Exception):
+
     """
     Raised when a configuration cannot be validated through ConfigObj/Validator
     Contains a 'status' with the boolean dict representation of the error
@@ -171,7 +173,8 @@ def distance(pos_a, pos_b, scale=1):
     try:
         return mag(pos_a - pos_b) * scale
     except (TypeError, FloatingPointError) as Err:
-        logging.error("Type/FP Error on Distances (%s,%s): %s" % (pos_a, pos_b, Err))
+        logging.error("Type/FP Error on Distances (%s,%s): %s" %
+                      (pos_a, pos_b, Err))
         raise
 
 
@@ -249,7 +252,8 @@ def sixvec(xyz):
     ptsnew = np.hstack((xyz, np.zeros(xyz.shape)))
     xy = xyz[0] ** 2 + xyz[1] ** 2
     ptsnew[3] = np.sqrt(xy + xyz[2] ** 2)
-    ptsnew[4] = np.arctan2(np.sqrt(xy), xyz[2])  # for elevation angle defined from Z-axis down
+    # for elevation angle defined from Z-axis down
+    ptsnew[4] = np.arctan2(np.sqrt(xy), xyz[2])
     ptsnew[5] = np.arctan2(xyz[1], xyz[0])
     return ptsnew
 
@@ -310,12 +314,16 @@ def Attenuation(f, d):
     """
 
     f2 = f ** 2
-    k = 1.5  # Practical Spreading, see http://www.mit.edu/~millitsa/resources/pdfs/bwdx.pdf
+    # Practical Spreading, see
+    # http://www.mit.edu/~millitsa/resources/pdfs/bwdx.pdf
+    k = 1.5
     DistanceInKm = d / 1000.0
 
-    # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on the frequency
+    # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on
+    # the frequency
     if f > 1:
-        absorption_coeff = 0.11 * (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
+        absorption_coeff = 0.11 * \
+            (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
     else:
         absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
 
@@ -446,7 +454,8 @@ class dotdictify(dict):
         try:
             dict.__setitem__(self, key, value)
         except TypeError:
-            logging.error("NOPE! {},{},{},{}".format(type(key), key, type(value), value))
+            logging.error(
+                "NOPE! {},{},{},{}".format(type(key), key, type(value), value))
             raise
 
     def __getitem__(self, key):
@@ -462,7 +471,8 @@ class dotdictify(dict):
         return newone
 
     def __deepcopy__(self):
-        raise (NotImplementedError, "Don't deep copy! This already deepcopy's on assignment")
+        raise (
+            NotImplementedError, "Don't deep copy! This already deepcopy's on assignment")
 
     def __eq__(self, other):
         key_intersect = set(self.keys()).intersection(other.keys())
@@ -483,7 +493,8 @@ class dotdictify(dict):
                     if not self[k] == other[k]:
                         return False
             except:
-                print("Crashed on key {}{}:{}{}".format(k, type(k), type(self[k]), type(other[k])))
+                print("Crashed on key {}{}:{}{}".format(
+                    k, type(k), type(self[k]), type(other[k])))
                 raise
 
         return True
@@ -493,6 +504,7 @@ class dotdictify(dict):
 
 
 class dotdict(dict):
+
     def __init__(self, arg, **kwargs):
         super(dotdict, self).__init__(**kwargs)
         for k in arg.keys():
@@ -512,6 +524,7 @@ class dotdict(dict):
 
 
 class memory_entry():
+
     def __init__(self, object_id, position, velocity, distance=None, name=None):
         self.object_id = object_id
         self.name = name
@@ -524,6 +537,7 @@ class memory_entry():
 
 
 class map_entry():
+
     def __init__(self, object_id, position, velocity, name=None, distance=None):
         self.object_id = object_id
         self.position = position
@@ -549,7 +563,8 @@ def fudge_normal(value, stdev):
     elif isinstance(value, list):
         shape = len(value)
     else:
-        raise ValueError("Cannot process value type %s:%s" % (type(value), value))
+        raise ValueError("Cannot process value type %s:%s" %
+                         (type(value), value))
 
     if stdev <= 0:
         return value
@@ -560,7 +575,8 @@ def fudge_normal(value, stdev):
 def randomstr(length):
     word = ''
     for i in range(length):
-        word += random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
+        word += random.choice(
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
     return word
 
 
@@ -740,14 +756,16 @@ def validateConfig(config=None, final_check=False):
     # GENERIC CONFIG ACQUISITION
     #
     if not isinstance(config, ConfigObj):
-        config = ConfigObj(config, configspec=_config_spec, stringify=True, interpolation=not final_check)
+        config = ConfigObj(
+            config, configspec=_config_spec, stringify=True, interpolation=not final_check)
     else:
         raise ConfigError("Skipping configobj for final validation")
     config_status = config.validate(validate.Validator(), copy=not final_check)
 
     if not config_status:
         # If config_spec doesn't match the input, bail
-        raise ConfigError("Configspec doesn't match given input structure: %s" % config_status)
+        raise ConfigError(
+            "Configspec doesn't match given input structure: %s" % config_status)
 
     return config
 
@@ -788,7 +806,6 @@ def timeit():
             logging.info("%s (%s)" % (func.__name__, time() - start))
             return res
 
-
         return wrapper
 
     return decorator
@@ -813,10 +830,12 @@ def are_equal_waypoints(wps):
 def get_latest_aietes_datafile(dir=None):
     fqp = os.getcwd() if dir is None else dir
     candidate_data_files = os.listdir(fqp)
-    candidate_data_files = [f for f in candidate_data_files if is_valid_aietes_datafile(f)]
+    candidate_data_files = [
+        f for f in candidate_data_files if is_valid_aietes_datafile(f)]
     candidate_data_files.sort(key=os.path.getmtime, reverse=True)
     if len(candidate_data_files) == 0:
-        raise ValueError("There are no valid datafiles in the working directory:%s" % os.getcwd())
+        raise ValueError(
+            "There are no valid datafiles in the working directory:%s" % os.getcwd())
     return os.path.join(fqp, candidate_data_files[0])
 
 

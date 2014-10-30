@@ -26,21 +26,25 @@ import aietes
 import bounos
 
 
-datapackage_per_node_members = ['p', 'v', 'names', 'contributions', 'achievements']
+datapackage_per_node_members = [
+    'p', 'v', 'names', 'contributions', 'achievements']
 
 
 class DefaultBehaviour(unittest.TestCase):
+
     def setUp(self):
         """Aietes should simulate fine with no input by pulling in from default values"""
         count = 4
         self.run_time = 100
         try:
-            self.simulation = aietes.Simulation(logtoconsole=logging.ERROR, progress_display=False)
+            self.simulation = aietes.Simulation(
+                logtoconsole=logging.ERROR, progress_display=False)
             self.prep_dict = self.simulation.prepare(sim_time=self.run_time)
             self.sim_time = self.simulation.simulate()
         except RuntimeError:
             print "Got Runtime Error on SetUp, trying one more time"
-            self.simulation = aietes.Simulation(logtoconsole=logging.ERROR, progress_display=False)
+            self.simulation = aietes.Simulation(
+                logtoconsole=logging.ERROR, progress_display=False)
             self.prep_dict = self.simulation.prepare(sim_time=self.run_time)
             self.sim_time = self.simulation.simulate()
 
@@ -60,6 +64,7 @@ class DefaultBehaviour(unittest.TestCase):
 
 
 class ConfigBehaviour(unittest.TestCase):
+
     @unittest.skip("Reminder for later")
     def testZeroFleetCreation(self):
         """Ensure failure on launching fleet with 0 nodes"""
@@ -68,6 +73,7 @@ class ConfigBehaviour(unittest.TestCase):
 
 
 class OutputBehaviour(unittest.TestCase):
+
     def testGifGeneration(self):
         """Ensure nothing goes too wrong with gif generation"""
         options = aietes.option_parser().defaults
@@ -89,4 +95,4 @@ class OutputBehaviour(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()
