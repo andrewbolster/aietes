@@ -57,7 +57,7 @@ class Layercake():
                                self.config['PHY'],
                                self.channel_event)
         # except AttributeError:
-        #     raise ConfigError("Can't find PHY: %s" % config['phy'])
+        # raise ConfigError("Can't find PHY: %s" % config['phy'])
         #
         except:
             raise
@@ -68,7 +68,7 @@ class Layercake():
         try:
             mac_mod = getattr(MAC, str(config['mac']))
             self.mac = mac_mod(self, config['MAC'])
-        #except AttributeError:
+        # except AttributeError:
         #    raise ConfigError("Can't find MAC: %s" % config['mac'])
         except:
             raise
@@ -78,7 +78,7 @@ class Layercake():
         ##############################
         # Routing
         ##############################
-        #try:
+        # try:
         net_mod = getattr(Net, str(config['net']))
         self.net = net_mod(self, config['Network'])
         #except AttributeError as e:

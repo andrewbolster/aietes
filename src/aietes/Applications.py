@@ -49,6 +49,7 @@ class Application(Sim.Process):
         self.config = config
         self.layercake = layercake
         self.sim_duration = node.simulation.config.Simulation.sim_duration
+        self.packet_length = layercake.mac.data_packet_length
 
         packet_rate = getattr(config, 'packet_rate')
         packet_count = getattr(config, 'packet_count')
@@ -104,6 +105,7 @@ class Application(Sim.Process):
             id=FromBelow['ID'],
             src=FromBelow['source']
         ))
+        FromBelow['received'] = Sim.now()
         self.logPacket(FromBelow)
         self.packetRecv(FromBelow)
 
@@ -112,19 +114,17 @@ class Application(Sim.Process):
         Grab packet statistics
         """
         source = packet["route"][0][0]
-        if hasattr(self.received_log,source):
-            self.received_log[source].append(packet)
-        else:
-            self.received_log[source]=[packet]
+
 
         if debug:
             self.logger.info("App Packet received from %s" % source)
         self.stats['packets_received'] += 1
-        if source in self.received_log.keys():
+
+        if self.received_log.has_key(source):
             self.received_log[source].append(packet)
         else:
-            self.received_log[source] = [packet]
-        delay = Sim.now() - packet['time_stamp']
+            self.received_log[source]=[packet]
+        delay = packet['received'] - packet['time_stamp']
         # Ignore first hop (source)
         hops = len(packet['route'])
 
@@ -205,7 +205,7 @@ class AccessibilityTest(Application):
         exhibiting poisson departure behaviour
         """
         packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
-        packet = {"ID": packet_ID, "dest": destination, "source": self.layercake.hostname, "route": [], "type": "DATA", "time_stamp": Sim.now(), "length": self.node.config["DataPacketLength"]}
+        packet = {"ID": packet_ID, "dest": destination, "source": self.layercake.hostname, "route": [], "type": "DATA", "time_stamp": Sim.now(), "length": self.packet_length}
         period = poisson(float(period))
         return packet, period
 
@@ -264,7 +264,7 @@ class RoutingTest(Application):
                   "source": self.layercake.hostname,
                   "route": [], "type": "DATA",
                   "time_stamp": Sim.now(),
-                  "length": self.config["packet_length"],
+                  "length": self.packet_length,
                   "data": None}
         period = poisson(float(period))
         return packet, period
@@ -305,6 +305,7 @@ class CommsTrust(RoutingTest):
     current_target=None
     test_stream_length=6
     stream_period_ratio = 0.1
+    trust_assessment_period = 60
 
     def activate(self):
         self.forced_nodes = self.layercake.host.fleet.nodeNames()
@@ -317,6 +318,8 @@ class CommsTrust(RoutingTest):
         super(CommsTrust,self).activate()
 
     def tick(self):
+        if not Sim.now() % self.trust_assessment_period:
+            self.logger.warn("Assessing Trust")
         pass
 
     def packetGen(self, period, destination=None, data=None, *args, **kwargs):
@@ -355,7 +358,7 @@ class CommsTrust(RoutingTest):
                   "source": self.layercake.hostname,
                   "route": [], "type": "DATA",
                   "time_stamp": Sim.now(),
-                  "length": self.config["packet_length"],
+                  "length": self.packet_length,
                   "data": self.test_packet_counter[destination]}
         self.sent_counter[destination] += 1
         self.test_packet_counter[destination] += 1
@@ -380,7 +383,7 @@ class CommsTrust(RoutingTest):
         self.result_packet_dl[packet['source']].append(packet['data'])
 
         if not (packet['data']+1)%self.test_stream_length:
-            self.logger.warn("Got Stream {count} from {src} after {delay}".format(
+            self.logger.info("Got Stream {count} from {src} after {delay}".format(
                 count = (packet['data']+1)/self.test_stream_length,
                 src = packet['source'],
                 delay=Sim.now()-packet['time_stamp']
