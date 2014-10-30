@@ -37,7 +37,7 @@ from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex
 
 
 
-#Local Debug
+# Local Debug
 debug = False
 
 
@@ -79,7 +79,8 @@ class Fleet(Sim.Process):
         if self.simulation.progress_display:
             try:
                 from random import choice
-                colors = ["BLUE","GREEN","CYAN","RED","MAGENTA","YELLOW"]
+
+                colors = ["BLUE", "GREEN", "CYAN", "RED", "MAGENTA", "YELLOW"]
                 progress_bar = ProgressBar(choice(colors), width=20, block='▣', empty='□')
             except TypeError as exp:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -91,7 +92,7 @@ class Fleet(Sim.Process):
             progress_bar = None
 
         # Canary for mission completeness
-        USS_Abraham_Lincoln=True
+        USS_Abraham_Lincoln = True
 
         while True:
             self.simulation.waiting = True
@@ -105,7 +106,7 @@ class Fleet(Sim.Process):
             if self.isMissionComplete():
                 if USS_Abraham_Lincoln:
                     self.logger.critical("Mission accomplished at {}".format(secondsToStr(Sim.now())))
-                    USS_Abraham_Lincoln=False
+                    USS_Abraham_Lincoln = False
                     Sim.stopSimulation()
 
             # Pretty Printing
@@ -127,7 +128,7 @@ class Fleet(Sim.Process):
             if debug: self.logger.debug("Yield for allPassive: Fleet Updates")
             yield Sim.waituntil, self, allPassive
 
-    def nodenum(self,node):
+    def nodenum(self, node):
         """
         Return the index of the requested node
         """
@@ -162,17 +163,17 @@ class Fleet(Sim.Process):
             latest_logs = self.shared_map.latest_logs()
         else:
             latest_logs = self.environment.latest_logs()
-        positions = [ None for _ in range(self.nodeCount())]
-        times = [ -1 for _ in range(self.nodeCount())]
-        for id,log in latest_logs.items():
+        positions = [None for _ in range(self.nodeCount())]
+        times = [-1 for _ in range(self.nodeCount())]
+        for id, log in latest_logs.items():
             index = self.nodenum_from_id(id)
-            positions[index]=log.position
-            times[index]=log.time
+            positions[index] = log.position
+            times[index] = log.time
             if debug: self.logger.debug("Node last seen at {} at {} @ {}".format(
                 log.name, log.position, log.time
             ))
 
-        if len(set(times))>1:
+        if len(set(times)) > 1:
             raise ValueError("Latest shared logs not coalesced:{}".format(times))
 
         return np.asarray(positions)
@@ -185,7 +186,7 @@ class Fleet(Sim.Process):
             kb = self.shared_map.logs_at_time(t)
         else:
             kb = self.environment.logs_at_time(t)
-        positions = [ None for _ in range(self.nodeCount())]
+        positions = [None for _ in range(self.nodeCount())]
         for id, log in kb.items():
             positions[self.nodenum_from_id(id)] = log.position
         return np.asarray(positions)
@@ -199,10 +200,10 @@ class Fleet(Sim.Process):
             kb = self.shared_map
         else:
             kb = self.environment
-        positions = [ None for _ in range(self.nodeCount())]
-        for nodeid in map(attrgetter('id'),self.nodes):
+        positions = [None for _ in range(self.nodeCount())]
+        for nodeid in map(attrgetter('id'), self.nodes):
             positions[self.nodenum_from_id(nodeid)] = kb.node_pos_log(nodeid)
-        return np.asarray(positions).swapaxes(2,1)
+        return np.asarray(positions).swapaxes(2, 1)
 
     def nodeCheatDriftPositions(self):
         """
@@ -226,13 +227,13 @@ class Fleet(Sim.Process):
         """
         I hate this so much
         """
-        return np.asarray([node.pos_log[:,t] for node in self.nodes])
+        return np.asarray([node.pos_log[:, t] for node in self.nodes])
 
     def nodeCheatPositionsAt(self, t):
         """
         I Hate this so much
         """
-        return np.asarray([node.drift.pos_log[:,t] for node in self.nodes])
+        return np.asarray([node.drift.pos_log[:, t] for node in self.nodes])
 
     def nodePositionErrors(self, shared=True, error=0.001):
         """
@@ -242,15 +243,14 @@ class Fleet(Sim.Process):
         """
         original_positions = self.nodePositionsAt(0, shared=False)
         t = Sim.now()
-        if t>0:
+        if t > 0:
             current_positions = self.nodePositions(shared=shared)
         else:
             current_positions = original_positions.copy()
 
-        delta = ((current_positions-original_positions)*error) + error
-        delta *=[1,1,0] # THIS IS A TERRIBLE HACK TO AVOID NANS IN THE WEIGHTING
+        delta = ((current_positions - original_positions) * error) + error
+        delta *= [1, 1, 0]  # THIS IS A TERRIBLE HACK TO AVOID NANS IN THE WEIGHTING
         return np.abs(delta)
-
 
 
     def timeOfFlightMatrix(self, shared=False, speed_of_sound=1490.0, guess_index=0):

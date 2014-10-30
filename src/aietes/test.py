@@ -63,7 +63,7 @@ class ConfigBehaviour(unittest.TestCase):
     @unittest.skip("Reminder for later")
     def testZeroFleetCreation(self):
         """Ensure failure on launching fleet with 0 nodes"""
-        #TODO
+        # TODO
         pass
 
 

@@ -27,7 +27,7 @@ class ProgressBar(object):
         block -- progress display character (default '█')
         empty -- bar display character (default ' ')
         """
-        if hasattr(terminal,"COLUMNS") and terminal.COLUMNS > 1:
+        if hasattr(terminal, "COLUMNS") and terminal.COLUMNS > 1:
             if color:
                 self.color = getattr(terminal, color.upper())
             else:
@@ -44,7 +44,7 @@ class ProgressBar(object):
             self.alive = True
         else:
             self.alive = False
-            warnings.warn("Probably running headless",RuntimeWarning)
+            warnings.warn("Probably running headless", RuntimeWarning)
 
     def render(self, percent, message=''):
         """Print the progress bar

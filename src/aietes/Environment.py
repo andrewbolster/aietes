@@ -27,6 +27,7 @@ from aietes.Tools import map_entry, distance, debug, ConfigError
 
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
 
+
 class Environment():
     """
     Environment Class representing the physical environment inc any objects
@@ -61,7 +62,7 @@ class Environment():
     # TODO 'Tidal motion' factor
 
     def _start_log(self, parent, name):
-        self.logger = parent.logger.getChild("{}{}".format(name,self.__class__.__name__))
+        self.logger = parent.logger.getChild("{}{}".format(name, self.__class__.__name__))
         self.logger.debug('creating instance')
 
 
@@ -71,13 +72,13 @@ class Environment():
         """
         is_empty = False
         if on_a_plane:
-            z_plane = self.shape[2]/2.0
+            z_plane = self.shape[2] / 2.0
 
         while not is_empty:
-            ran_x = np.random.uniform(buff, self.shape[0]-buff)
-            ran_y = np.random.uniform(buff, self.shape[1]-buff)
-            ran_z = np.random.uniform(buff, self.shape[2]-buff) if not on_a_plane else z_plane
-            candidate_pos = self.position_around(np.asarray((ran_x, ran_y, ran_z)),on_a_plane=on_a_plane)
+            ran_x = np.random.uniform(buff, self.shape[0] - buff)
+            ran_y = np.random.uniform(buff, self.shape[1] - buff)
+            ran_z = np.random.uniform(buff, self.shape[2] - buff) if not on_a_plane else z_plane
+            candidate_pos = self.position_around(np.asarray((ran_x, ran_y, ran_z)), on_a_plane=on_a_plane)
             is_empty = self.is_empty(candidate_pos)
 
         return candidate_pos
@@ -88,11 +89,11 @@ class Environment():
         """
         if position is None:
             position = np.asarray(self.shape) / 2
-        if isinstance(position,basestring):
+        if isinstance(position, basestring):
             if position == "surface":
                 position = np.zeros(3)
-                position[0] = 3*stddev
-                position[1] = 3*stddev
+                position[0] = 3 * stddev
+                position[1] = 3 * stddev
                 position[2] = self.shape[2] - (2 * stddev)
             else:
                 raise ValueError("Incorrect position string")
@@ -104,23 +105,23 @@ class Environment():
         else:
             valid = False
             while not valid:
-                candidate_pos = np.random.normal(np.asarray(position), [stddev,stddev,stddev/3])
+                candidate_pos = np.random.normal(np.asarray(position), [stddev, stddev, stddev / 3])
                 candidate_pos = np.asarray(candidate_pos, dtype=int)
                 # if generating a position on a plane, retain the zaxis
                 if on_a_plane:
-                    candidate_pos[2]=position[2]
+                    candidate_pos[2] = position[2]
                 valid = self.is_safe(candidate_pos, 50)
                 if debug:
                     self.logger.debug("Candidate position: %s:%s" % (candidate_pos, valid))
         return tuple(candidate_pos)
 
     def is_outside(self, position, tolerance=10):
-        too_high = any(position > self.shape-tolerance)
+        too_high = any(position > self.shape - tolerance)
         too_low = any(position < tolerance)
         return too_high or too_low
 
     def is_safe(self, position, tolerance=30):
-        return self.is_empty(position, tolerance=tolerance) and not self.is_outside(position,tolerance=tolerance)
+        return self.is_empty(position, tolerance=tolerance) and not self.is_outside(position, tolerance=tolerance)
 
     def is_empty(self, position, tolerance=10):
         """
@@ -142,16 +143,16 @@ class Environment():
                                                                                          pos=position)
             )
 
-        #debug=True
+        # debug=True
         if t < self.simulation.duration_intervals:
             try:
                 assert self.map[object_id].position is not position, "Attempted direct obj=obj comparison"
                 update_distance = distance(self.map[object_id].position, position)
                 if debug:
                     self.logger.debug("Moving %s %f from %s to %s @ %d" % (object_name,
-                                                                      update_distance,
-                                                                      self.map[object_id].position,
-                                                                      position, t))
+                                                                           update_distance,
+                                                                           self.map[object_id].position,
+                                                                           position, t))
                 self.map[object_id] = map_entry(object_id, position, velocity, object_name)
             except KeyError:
                 if debug:
@@ -163,28 +164,28 @@ class Environment():
                                     time=t
             ))
         else:
-            self.logger.debug("Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t,t,t+1))
+            self.logger.debug("Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t, t, t + 1))
 
     def node_pos_log(self, uid):
         """
         Returns the poslog (3,t) for a node of a given uuid
         """
         pos_get = attrgetter('position')
-        node_get = lambda l: l.object_id==uid
-        pos_log = np.asarray(map(pos_get,filter(node_get,self.pos_log)))
+        node_get = lambda l: l.object_id == uid
+        pos_log = np.asarray(map(pos_get, filter(node_get, self.pos_log)))
         return pos_log
 
     def logs_at_time(self, t):
         """
         Return the object logs for the fleet at a given time
         """
-        return { l.object_id:l for l in filter(lambda l:l.time == t, self.pos_log)}
+        return {l.object_id: l for l in filter(lambda l: l.time == t, self.pos_log)}
 
     def latest_logs(self):
         """
         Returns the latest positions (n,3) for the nodes in the fleet
         """
-        last_log = { id: None for id in self.object_ids()}
+        last_log = {id: None for id in self.object_ids()}
         for log in reversed(self.pos_log):
             if last_log[log.object_id] is None:
                 last_log[log.object_id] = log
@@ -193,8 +194,6 @@ class Environment():
                 break
 
         return last_log
-
-
 
 
     def object_ids(self):

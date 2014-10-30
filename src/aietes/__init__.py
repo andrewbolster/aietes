@@ -62,7 +62,7 @@ class Simulation():
         logtoconsole = kwargs.get("logtoconsole", logging.INFO)
 
         if kwargs.get("logger", None) is None and __name__ in logging.Logger.manager.loggerDict:
-            #Assume we need to make our own logger with NO preexisting handlers
+            # Assume we need to make our own logger with NO preexisting handlers
             try:
                 _tmplogdict = logging.Logger.manager.loggerDict[__name__]
                 while len(_tmplogdict.handlers) > 0:
@@ -70,7 +70,7 @@ class Simulation():
             except KeyError:
                 """Assumes that this is the first one"""
                 pass
-        self.logger = kwargs.get("logger",None)
+        self.logger = kwargs.get("logger", None)
         if self.logger is None:
             self.logger = logging.getLogger(self.title)
             self.logger.addHandler(log_hdl)
@@ -104,11 +104,11 @@ class Simulation():
                 self.config = validateConfig(self.config_file)
                 self.config = self.generateConfig(self.config)
             else:
-                raise ConfigError("Cannot open given config file:%s"% self.config_file)
+                raise ConfigError("Cannot open given config file:%s" % self.config_file)
         if "__default__" in self.config.Node.Nodes.keys():
             raise RuntimeError("Dun fucked up: __default__ node detected")
 
-        #Once Validated we've got no reason to hold on to the configobj structure
+        # Once Validated we've got no reason to hold on to the configobj structure
 
         self.nodes = []
         self.fleets = []
@@ -178,7 +178,7 @@ class Simulation():
         try:
             Sim.simulate(until=self.duration_intervals, callback=callback)
             self.logger.info("Finished Simulation at %s(%s) after %s" % (
-            Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
+                Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
         except RuntimeError as err:
             self.logger.critical("Expected Exception, Quitting gracefully: {}".format(err))
             raise
@@ -231,7 +231,7 @@ class Simulation():
             achievements.append(node.achievements_log)
 
         for fleet in self.fleets:
-            positions.extend(fleet.nodePosLogs(shared=False)) # Environmental State Log; 'guaranteed perfect'
+            positions.extend(fleet.nodePosLogs(shared=False))  # Environmental State Log; 'guaranteed perfect'
 
         state = {'p': np.asarray(positions),
                  'v': np.asarray(vectors),
@@ -246,7 +246,7 @@ class Simulation():
 
         # 'Quirky' Optional State Info
 
-        #If any node is using waypoint bev, grab it.
+        # If any node is using waypoint bev, grab it.
 
         if any([isinstance(node.behaviour, Behaviour.WaypointMixin) for node in self.nodes]):
             waypointss = [getattr(node.behaviour, "waypoints", None) for node in self.nodes]
@@ -276,20 +276,19 @@ class Simulation():
             # therefore use the shared map data that tracks the error information (hopefully)
             state.update({'ecea_positions': self.fleets[0].nodePosLogs(shared=True)})
 
-            state.update({'additional':[node.ecea.dump() for node in self.nodes if node.ecea]})
+            state.update({'additional': [node.ecea.dump() for node in self.nodes if node.ecea]})
 
 
         ###
         # Grab Comms Stuff Just Raw
         ###
-        comms_stats= {node.name:node.app.dump_stats() for node in self.nodes if node.app}
-        comms_logs= {node.name:node.app.dump_logs() for node in self.nodes if node.app}
+        comms_stats = {node.name: node.app.dump_stats() for node in self.nodes if node.app}
+        comms_logs = {node.name: node.app.dump_logs() for node in self.nodes if node.app}
         comms = {
             'stats': pd.DataFrame.from_dict(comms_stats, orient='index'),
             'logs': comms_logs
         }
-        state.update({'comms':comms})
-
+        state.update({'comms': comms})
 
         return state
 
@@ -302,6 +301,7 @@ class Simulation():
                 else:
                     d[k] = u[k]
             return d
+
         #
         # NODE CONFIGURATION
         #
@@ -330,7 +330,7 @@ class Simulation():
 
         #
         # Check and generate application distribution
-        #   i.e. app = ["App A","App B"]
+        # i.e. app = ["App A","App B"]
         #        dist = [ 4, 5 ]
         try:
             appp = node_default_config_dict.Application.protocol
@@ -344,7 +344,6 @@ class Simulation():
                         app,
                         appp
                     ))
-
 
             dist = node_default_config_dict.Application.distribution
             nodes_count = config_dict.Node.count
@@ -445,7 +444,7 @@ class Simulation():
             # Overlay Preconfigured with their own settings
             for node_name, node_config in config_dict.Node.Nodes.items():
                 # Import the magic!
-                update(nodes_config[node_name],node_config.copy())
+                update(nodes_config[node_name], node_config.copy())
 
 
         except AttributeError as e:
@@ -541,10 +540,9 @@ class Simulation():
 
         dp = DataPackage(**(self.currentState()))
 
-
         filename = outputFile if outputFile is not None else dp.title
         if outputPath is not None:
-            filename = os.path.join(outputPath,filename)
+            filename = os.path.join(outputPath, filename)
         filename = "%s.aietes" % results_file(filename)
         return_dict = {}
 
@@ -573,7 +571,7 @@ class Simulation():
 # import readline, atexit
 # histfile = os.path.join(os.environ['HOME'], '.TODO_history')
 # try:
-#    readline.read_history_file(histfile)
+# readline.read_history_file(histfile)
 # except IOError:
 #    pass
 # atexit.register(readline.write_history_file, histfile)
@@ -581,11 +579,11 @@ class Simulation():
 
 def go(options, args=None):
     if options.quiet:
-        logtoconsole=logging.ERROR
+        logtoconsole = logging.ERROR
     elif options.verbose:
-        logtoconsole=logging.DEBUG
+        logtoconsole = logging.DEBUG
     else:
-        logtoconsole=logging.INFO
+        logtoconsole = logging.INFO
 
     sim = Simulation(config_file=options.config,
                      title=options.title,
@@ -657,8 +655,8 @@ def main():
         start_time = time()
         (options, args) = option_parser().parse_args()
         exit_code = 0
-        if options.title is None:                               # if no custom title
-            if options.config is not None:                      # and have a config
+        if options.title is None:  # if no custom title
+            if options.config is not None:  # and have a config
                 options.title = os.path.splitext(os.path.splitext(os.path.basename(options.config))[0])[
                     0]  # use config title
         if options.runs > 1:

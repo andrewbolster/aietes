@@ -69,7 +69,7 @@ class Layercake():
             mac_mod = getattr(MAC, str(config['mac']))
             self.mac = mac_mod(self, config['MAC'])
         # except AttributeError:
-        #    raise ConfigError("Can't find MAC: %s" % config['mac'])
+        # raise ConfigError("Can't find MAC: %s" % config['mac'])
         except:
             raise
 
@@ -81,7 +81,7 @@ class Layercake():
         # try:
         net_mod = getattr(Net, str(config['net']))
         self.net = net_mod(self, config['Network'])
-        #except AttributeError as e:
+        # except AttributeError as e:
         #    raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
 
 

@@ -53,11 +53,11 @@ class Packet(object):
         else:
             self._start_log()
 
-        #Import everything from the upper packet
+        # Import everything from the upper packet
         for k, v in packet.__dict__.items():
             if debug: self.logger.debug("Got KV: %s %s" % (k, v))
             setattr(self, k, v)
-        self.payload = packet         #Overwrite the 'upper' packet payload with the packet
+        self.payload = packet  #Overwrite the 'upper' packet payload with the packet
 
     def _start_log(self, logger=None):
         if logger is None:
@@ -66,7 +66,7 @@ class Packet(object):
             self.logger = logger.getChild("%s" % self.__class__.__name__)
 
     def decap(self):
-        return self.payload #Should return the upper level packet class
+        return self.payload  # Should return the upper level packet class
 
     def isFor(self, node):
         """ Boolean if packet directed at node by either
@@ -74,7 +74,7 @@ class Packet(object):
         """
         if self.payload.destination == broadcast_address:
             return True
-        elif hasattr(node,'name'):
+        elif hasattr(node, 'name'):
             # Non-invasive way of assessing if it's a node object or not
             return self.payload.destination == node.name
         else:
@@ -82,6 +82,7 @@ class Packet(object):
 
     def __str__(self):
         return str("To: %s, From: %s, at %d, %s" % (self.destination, self.source, self.launch_time, self.data))
+
 
 #####################################################################
 # Application Packet
@@ -93,7 +94,7 @@ class AppPacket(Packet):
     destination = None
     type = None
     data = None
-    length = 24 # Default Packet Length
+    length = 24  # Default Packet Length
 
     def __init__(self, source, dest, pkt_type="DATA", data=None, route=None, logger=None):
         self._start_log(logger=logger)
@@ -106,12 +107,13 @@ class AppPacket(Packet):
             self.data = data
             self.length = len(data)
         else:
-            self.data = "{}:{}".format(AppPacket.data,source)
+            self.data = "{}:{}".format(AppPacket.data, source)
             self.length = AppPacket.length
 
         self.requests_ack = True
 
-        self.id = uuid.uuid4() #Hopefully unique id
+        self.id = uuid.uuid4()  # Hopefully unique id
+
 
 #####################################################################
 # Network Packet
@@ -123,7 +125,7 @@ class RoutePacket(Packet):
     def __init__(self, route_layer, packet, tx_level=0.0):
         Packet.__init__(self, packet)
         self.tx_level = tx_level
-        self.next_hop = None #Analogue to packet['through'] in AUVNetSim
+        self.next_hop = None  # Analogue to packet['through'] in AUVNetSim
         self.source_position = None
         self.destination_position = None
 
@@ -139,6 +141,7 @@ class RoutePacket(Packet):
     def set_next_hop(self, hop):
         self.next_hop = hop
 
+
 #####################################################################
 # Acknowledgement Packet
 #####################################################################
@@ -148,7 +151,8 @@ class ACK(Packet):
 
     Overrides init and payload relevant
     """
-    length=24
+    length = 24
+
     def __init__(self, node, packet):
         if hasattr(packet, 'logger'):
             self._start_log(logger=packet.logger)
@@ -182,8 +186,9 @@ class MACPacket(Packet):
         return self.route[-1]
 
     def customBehaviour(self):
-        #TODO What does a MAC packet do differently?
+        # TODO What does a MAC packet do differently?
         pass
+
 
 #####################################################################
 # Physical Packet
@@ -213,7 +218,7 @@ class PHYPacket(Sim.Process, Packet, KeepRefs):
         self.max_interference = None
 
         # POWER is TX power initially on encapsulation of the packet, but is the attenuated received power on decapsulation
-        #For Incoming Packet (RX), is Linear
+        # For Incoming Packet (RX), is Linear
         self.power = power
 
 
@@ -221,12 +226,12 @@ class PHYPacket(Sim.Process, Packet, KeepRefs):
         assert phy is not None, "Really Buggered your testing, haven't you!"
 
         self.logger.debug("Sending Packet :%s with power %s" % (self.data, self.power))
-        #Lock Modem
+        # Lock Modem
         yield Sim.request, self, phy.modem
 
         #Generate Bandwidth info
         if phy.variable_bandwidth:
-            distance = phy.var_power['levelToDistance'][self.packet.tx_level] #TODO Packet description
+            distance = phy.var_power['levelToDistance'][self.packet.tx_level]  #TODO Packet description
             bandwidth = distance2Bandwidth(self.power,
                                            phy.frequency,
                                            distance,
@@ -272,7 +277,7 @@ class PHYPacket(Sim.Process, Packet, KeepRefs):
             transducer.updatePowerOnRecieve(duration)
         else:
             self.logger.debug("RX from %s with power %.2fdB below lis" % (
-            self.source, self.power))
+                self.source, self.power))
 
     def updateInterference(self, interference):
         """A simple ratchet of interference based on the transducer _request func
@@ -280,7 +285,7 @@ class PHYPacket(Sim.Process, Packet, KeepRefs):
         self.max_interference = max(self.max_interference, interference)
 
     def getMinSIR(self):
-        return self.power / (self.max_interference - self.power + 1) # TODO BODMAS?
+        return self.power / (self.max_interference - self.power + 1)  # TODO BODMAS?
 
     def Doom(self):
         self.doomed = True

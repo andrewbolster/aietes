@@ -202,7 +202,7 @@ class FSM:
             # Numbers may be integers. Operators are * / + -
             # Use the = sign to evaluate and print the expression.
             # For example:
-            #    167 3 2 2 * * * 1 - =
+            # 167 3 2 2 * * * 1 - =
             # will print:
             #    2003
             #

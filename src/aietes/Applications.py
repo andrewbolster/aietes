@@ -115,7 +115,6 @@ class Application(Sim.Process):
         """
         source = packet["route"][0][0]
 
-
         if debug:
             self.logger.info("App Packet received from %s" % source)
         self.stats['packets_received'] += 1
@@ -123,7 +122,7 @@ class Application(Sim.Process):
         if self.received_log.has_key(source):
             self.received_log[source].append(packet)
         else:
-            self.received_log[source]=[packet]
+            self.received_log[source] = [packet]
         delay = packet['received'] - packet['time_stamp']
         # Ignore first hop (source)
         hops = len(packet['route'])
@@ -146,22 +145,22 @@ class Application(Sim.Process):
         for pkt in self.sent_log:
             total_bits_out += pkt['length']
 
-        throughput = total_bits_in/Sim.now()*self.stats['packets_hops']
-        offeredload = total_bits_out/Sim.now()*self.stats['packets_hops']
+        throughput = total_bits_in / Sim.now() * self.stats['packets_hops']
+        offeredload = total_bits_out / Sim.now() * self.stats['packets_hops']
         try:
             avg_length = total_bits_in / self.stats['packets_received']
-            average_rx_delay= self.stats['packets_time']/self.stats['packets_received']
+            average_rx_delay = self.stats['packets_time'] / self.stats['packets_received']
         except ZeroDivisionError:
             if self.stats['packets_received'] == 0:
                 avg_length = 0
-                average_rx_delay=inf
+                average_rx_delay = inf
             else:
                 raise RuntimeError("Got a zero in a weird place: {}/{}".format(
                     total_bits_in,
                     self.stats['packets_received']
                 ))
 
-        left_in_q= len(self.layercake.mac.outgoing_packet_queue)
+        left_in_q = len(self.layercake.mac.outgoing_packet_queue)
 
         app_stats = {
             "rx_counts": self.stats['packets_received'],
@@ -183,9 +182,9 @@ class Application(Sim.Process):
         Return the packet tx/rx logs
         """
         return {
-            'tx':self.sent_log,
-            'rx':self.received_log,
-            'tx_queue':self.layercake.mac.outgoing_packet_queue
+            'tx': self.sent_log,
+            'rx': self.received_log,
+            'tx_queue': self.layercake.mac.outgoing_packet_queue
         }
 
     def packetGen(self, period, destination, *args, **kwargs):
@@ -244,10 +243,10 @@ class RoutingTest(Application):
 
         self.mergeCounters()
 
-        if len(self.received_counter)>1:
+        if len(self.received_counter) > 1:
             most_common = self.received_counter.most_common()
             least_count = most_common[-1][1]
-            destination = random.choice([n for n,c in most_common if c == least_count])
+            destination = random.choice([n for n, c in most_common if c == least_count])
             self.sent_counter[destination] += 1
             self.logger.info("Sending to {} with count {}({})".format(destination, least_count, most_common))
         elif len(self.total_counter) == 1:
@@ -285,7 +284,7 @@ class RoutingTest(Application):
         for n in not_in_tx:
             self.sent_counter[n] = 0
         for n in learned_and_implied_nodes:
-            self.total_counter[n] = self.sent_counter[n]+self.received_counter[n]
+            self.total_counter[n] = self.sent_counter[n] + self.received_counter[n]
         if not_in_rx or not_in_tx or not_in_tot:
             self.logger.info("Synchronising counters: {} not in rx and {} not in tx, {} not in total".format(not_in_rx, not_in_tx, not_in_tot))
 
@@ -298,12 +297,13 @@ class RoutingTest(Application):
         })
         return initial
 
+
 class CommsTrust(RoutingTest):
     """
     Vaguely Emulated Bellas Traffic Scenario
     """
-    current_target=None
-    test_stream_length=6
+    current_target = None
+    test_stream_length = 6
     stream_period_ratio = 0.1
     trust_assessment_period = 60
 
@@ -312,10 +312,10 @@ class CommsTrust(RoutingTest):
         if self.forced_nodes:
             for node in self.forced_nodes:
                 if node != self.layercake.hostname:
-                    self.total_counter[node]=0
+                    self.total_counter[node] = 0
         self.test_packet_counter = Counter(self.total_counter)
-        self.result_packet_dl = { name: [] for name in self.total_counter.keys() }
-        super(CommsTrust,self).activate()
+        self.result_packet_dl = {name: [] for name in self.total_counter.keys()}
+        super(CommsTrust, self).activate()
 
     def tick(self):
         if not Sim.now() % self.trust_assessment_period:
@@ -346,7 +346,7 @@ class CommsTrust(RoutingTest):
         if not self.current_target:
             self.current_target = random.choice(
                 [n
-                 for n,c in most_common
+                 for n, c in most_common
                  if c == most_common[-1][1]
                 ]
             )
@@ -365,12 +365,12 @@ class CommsTrust(RoutingTest):
 
         if self.test_packet_counter[destination] % self.test_stream_length:
             # In Stream
-            period = poisson(float(self.period*self.stream_period_ratio))
+            period = poisson(float(self.period * self.stream_period_ratio))
         else:
             # Finished Stream
             period = poisson(float(self.period))
             self.logger.info("Finished Stream {} for {}, sleeping for {}".format(
-                self.test_packet_counter[destination]/self.test_stream_length,
+                self.test_packet_counter[destination] / self.test_stream_length,
                 destination,
                 period
             ))
@@ -382,11 +382,11 @@ class CommsTrust(RoutingTest):
         self.received_counter[packet['source']] += 1
         self.result_packet_dl[packet['source']].append(packet['data'])
 
-        if not (packet['data']+1)%self.test_stream_length:
+        if not (packet['data'] + 1) % self.test_stream_length:
             self.logger.info("Got Stream {count} from {src} after {delay}".format(
-                count = (packet['data']+1)/self.test_stream_length,
-                src = packet['source'],
-                delay=Sim.now()-packet['time_stamp']
+                count=(packet['data'] + 1) / self.test_stream_length,
+                src=packet['source'],
+                delay=Sim.now() - packet['time_stamp']
             ))
         del packet
 

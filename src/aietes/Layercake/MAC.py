@@ -16,7 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-
 from Packet import MACPacket, ACK
 from aietes.Tools import debug, Sim, distance2Bandwidth
 from aietes.Tools.FSM import *
@@ -50,13 +49,13 @@ class MAC():
 
     def activate(self):
         self.logger.info('activating instance')
-        self.timer = self.InternalTimer(self.sm)                             #Instance of Internal Timer
-        self.timer_event = Sim.SimEvent("timer_event")                    #SimPy Event for signalling
+        self.timer = self.InternalTimer(self.sm)  # Instance of Internal Timer
+        self.timer_event = Sim.SimEvent("timer_event")  # SimPy Event for signalling
         self.channel_access_retries = 0
         self.transmission_attempts = 0
         self.outgoing_queue = []
         self.incoming_packet = None
-        Sim.activate(self.timer, self.timer.lifecycle(self.timer_event))  #Tie the event to lifecycle function
+        Sim.activate(self.timer, self.timer.lifecycle(self.timer_event))  # Tie the event to lifecycle function
 
     def macBuilder(self):
         """Generate run-time MAC config
@@ -76,11 +75,11 @@ class MAC():
         def lifecycle(self, Request):
             while True:
                 yield Sim.waitevent, self, Request
-                yield Sim.hold, self, Request.signalparam[0]  #Wait for a given time
+                yield Sim.hold, self, Request.signalparam[0]  # Wait for a given time
                 if self.interrupted():
                     self.interruptReset()
                 else:
-                    self.sm.process(Request.signalparam[1])   #Do something
+                    self.sm.process(Request.signalparam[1])  # Do something
 
 
     def InitialiseStateEngine(self):
@@ -114,9 +113,9 @@ class MAC():
 
         duration = packet.length / self.layercake.phy.bandwidth_to_bit(bandwidth)
 
-        in_air_time = self.layercake.phy.range/self.layercake.phy.medium_speed
+        in_air_time = self.layercake.phy.range / self.layercake.phy.medium_speed
 
-        timeout = 2*duration + 2*in_air_time
+        timeout = 2 * duration + 2 * in_air_time
 
         if self.layercake.phy.isIdle():
             self.transmission_attempts += 1
@@ -131,8 +130,8 @@ class MAC():
                 self.logger.info("NOT Waiting on ACK for {}".format(packet))
         else:
             self.logger.info("Channel Not Idle")
-            self.channel_access_retries +=1
-            timeout = random()*(2*in_air_time)
+            self.channel_access_retries += 1
+            timeout = random() * (2 * in_air_time)
             self.timer_event.signal((timeout, self.sm.input_symbol))
 
 
@@ -160,7 +159,7 @@ class MAC():
         self.transmission_attempts = 0
 
         if len(self.outgoing_queue) > 0:
-            random_delay = random()*self.retransmit_timeout
+            random_delay = random() * self.retransmit_timeout
             self.timer_event.signal((random_delay, "send_DATA"))
 
 
@@ -171,7 +170,7 @@ class MAC():
         """
         self.incoming_packet = FromBelow.decap()
         if FromBelow.isFor(self.node.name):
-            if debug: self.logger.debug("Processing {} from {}".format(self.signals[FromBelow.type],FromBelow.payload))
+            if debug: self.logger.debug("Processing {} from {}".format(self.signals[FromBelow.type], FromBelow.payload))
             self.sm.process(self.signals[FromBelow.type])
         else:
             self.overheard()
@@ -188,7 +187,7 @@ class MAC():
         origin = self.incoming_packet.last_sender()
 
         if self.layercake.net.explicitACK(self.incoming_packet):
-            self.layercake.phy.send(ACK(self.node,self.incoming_packet))
+            self.layercake.phy.send(ACK(self.node, self.incoming_packet))
         # Send up to next level in stack
         self.layercake.net.recv(self.incoming_packet)
 
@@ -207,16 +206,16 @@ class MAC():
     def onTimeout(self):
         """When it all goes wrong
         """
-        self.transmission_attempts +=1
+        self.transmission_attempts += 1
         self.logger.info("ACK Timeout")
         if self.transmission_attempts > self.max_retransmit:
             self.sm.process("fail")
         else:
-            self.timer_event.signal((random()*self.retransmit_timeout, "resend"))
+            self.timer_event.signal((random() * self.retransmit_timeout, "resend"))
 
     def queueData(self):
         """Log queueing
-        """ #TODO what the hell is this?
+        """  # TODO what the hell is this?
         self.logger.info("Queueing Data")
 
     def draw(self):
@@ -224,7 +223,7 @@ class MAC():
 
         graph = pydot.Dot(graph_type='digraph')
 
-        #create base state nodes (set of destination states)
+        # create base state nodes (set of destination states)
         basestyle = ''
         states = {}
         for state in set(zip(*tuple(self.sm.state_transitions.values()))[1]):
@@ -250,15 +249,16 @@ class MAC():
 class ALOHA(MAC):
     """A very simple algorithm
     """
+
     def macBuilder(self):
         self.signals = {
             'ACK': "got_ACK",
             'DATA': "got_DATA"
         }
 
-        #Adapted/derived variables
-        self.timeout = 0    # co-adapted with TX pwr
-        self.level = 0      # derived from routing layer
+        # Adapted/derived variables
+        self.timeout = 0  # co-adapted with TX pwr
+        self.level = 0  # derived from routing layer
         self.T = 0
 
 
@@ -267,7 +267,7 @@ class ALOHA(MAC):
         """
         MAC.InitialiseStateEngine(self)
         ##############################
-        #Transitions from READY_WAIT
+        # Transitions from READY_WAIT
         self.sm.add_transition("got_DATA", "READY_WAIT", self.onRX, "READY_WAIT")
         self.sm.add_transition("send_DATA", "READY_WAIT", self.transmit, "READY_WAIT")
 

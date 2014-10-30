@@ -25,18 +25,23 @@ import numpy as np
 
 from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
-debug=True
+debug = True
+
 
 class _waypoint(object):
-    position=None
-    prox=None
-    def __init__(self, position, prox):
-        self.position=position
-        self.prox=prox
-    def __repr__(self):
-        return "({},{})".format(self.position,self.prox)
+    position = None
+    prox = None
 
-waypoint = namedtuple("waypoint",['position','prox'])
+    def __init__(self, position, prox):
+        self.position = position
+        self.prox = prox
+
+    def __repr__(self):
+        return "({},{})".format(self.position, self.prox)
+
+
+waypoint = namedtuple("waypoint", ['position', 'prox'])
+
 
 class Behaviour(object):
     """
@@ -116,7 +121,7 @@ class Behaviour(object):
         forceVector += sum(contributions.values())
 
         # TODO Under Drift, it's probably better to do wall-detection twice: once on node and once on environment
-        #forceVector = self.avoidWall(self.node.getPos(), self.node.velocity, forceVector)
+        # forceVector = self.avoidWall(self.node.getPos(), self.node.velocity, forceVector)
         if self.debug and False:
             self.logger.debug("Response:%s" % forceVector)
         if self.debug and True:
@@ -161,7 +166,7 @@ class Behaviour(object):
     def repulseFromPosition(self, position, repulsive_position, d_limit=1):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         distanceVal = distance(position, repulsive_position)
-        forceVector = unit(position - repulsive_position) * d_limit / float(min(distanceVal,self.neighbourhood_max_rad))
+        forceVector = unit(position - repulsive_position) * d_limit / float(min(distanceVal, self.neighbourhood_max_rad))
 
         if distanceVal < 1:
             raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
@@ -179,7 +184,7 @@ class Behaviour(object):
     def attractToPosition(self, position, attractive_position, d_limit=1):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         distanceVal = distance(position, attractive_position)
-        forceVector = unit(attractive_position - position) * (min(distanceVal,self.neighbourhood_max_rad)/ float(d_limit))
+        forceVector = unit(attractive_position - position) * (min(distanceVal, self.neighbourhood_max_rad) / float(d_limit))
         if self.debug:
             self.logger.debug(
                 "Attraction to %s: %s, at range of %s" % (forceVector, attractive_position, distanceVal))
@@ -214,7 +219,7 @@ class Behaviour(object):
             # response = 0.5 * (position-avoiding_position)
             self.debug = True
             try:
-                response = self.repulseFromPosition(position, avoiding_position, 2*min_dist)
+                response = self.repulseFromPosition(position, avoiding_position, 2 * min_dist)
             except RuntimeError:
                 raise RuntimeError(
                     "Crashed out of environment with given position:{}, wall position:{}".format(position,
@@ -224,10 +229,12 @@ class Behaviour(object):
 
         return response
 
+
 class RandomWalk(Behaviour):
     """
     Generic Wandering Behaviour
     """
+
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
         self.behaviours.append(self.randomWalk)
@@ -235,15 +242,18 @@ class RandomWalk(Behaviour):
         self.my_random_direction = random_three_vector()
 
     def randomWalk(self, position, velocity):
-        if angle_between(velocity, self.my_random_direction) < 0.2: #Roughly 6 degrees or pi/32 rad
+        if angle_between(velocity, self.my_random_direction) < 0.2:  # Roughly 6 degrees or pi/32 rad
             self.my_random_direction = random_three_vector()
         return np.asarray(self.my_random_direction
 
         )
+
+
 class RandomWalk(Behaviour):
     """
     Generic Wandering Behaviour on a plane
     """
+
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
         self.behaviours.append(self.randomWalk)
@@ -251,18 +261,21 @@ class RandomWalk(Behaviour):
         self.my_random_direction = random_xy_vector()
 
     def randomWalk(self, position, velocity):
-        if angle_between(velocity, self.my_random_direction) < 0.2: #Roughly 6 degrees or pi/32 rad
+        if angle_between(velocity, self.my_random_direction) < 0.2:  # Roughly 6 degrees or pi/32 rad
             self.my_random_direction = random_xy_vector()
         return np.asarray(self.my_random_direction
 
         )
 
+
 class Nothing(Behaviour):
     """
     Do Nothing
     """
+
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
+
 
 class Flock(Behaviour):
     """
@@ -334,7 +347,7 @@ class Flock(Behaviour):
                 forceVector += partVector
 
                 # Return an inverse vector to the obstacles
-        if self.debug and not mag(forceVector)>0.0:
+        if self.debug and not mag(forceVector) > 0.0:
             self.logger.debug("Repulse:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.repulsive_factor
 
@@ -434,13 +447,13 @@ class WaypointMixin():
         """
         shape = np.asarray(self.env_shape)
         prox = 50
-        self.waypoints = [waypoint(shape * (((vertex - 0.5) /3) + 0.5), prox) for vertex in np.asarray([[0.5,0,0.5],[0.5,0.5,0.5]])]
+        self.waypoints = [waypoint(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in np.asarray([[0.5, 0, 0.5], [0.5, 0.5, 0.5]])]
         self.nextwaypoint = 0
 
     def waypointVector(self, position, velocity):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         if self.nextwaypoint is not None:
-            if isinstance(self, SoloWaypoint) or len(self.nearest_neighbours)==0:
+            if isinstance(self, SoloWaypoint) or len(self.nearest_neighbours) == 0:
                 neighbourhood_avg = position
             else:
                 neighbourhood_avg = sum(n.position for n in self.nearest_neighbours) / len(self.nearest_neighbours)
@@ -451,7 +464,7 @@ class WaypointMixin():
             if neighbourhood_d < target.prox or real_d < target.prox:
                 self.goto_next_waypoint(target.position, real_d)
             else:
-                forceVector = self.attractToPosition(position, target.position, target.prox/2)
+                forceVector = self.attractToPosition(position, target.position, target.prox / 2)
         else:
             if self.node.on_mission:
                 self.logger.info("No Waypoint")
@@ -461,9 +474,9 @@ class WaypointMixin():
     def goto_next_waypoint(self, position, real_d):
         # GRANT ACHIEVEMENT
         self.node.grantAchievement((position, real_d))
-        self.nextwaypoint=(self.nextwaypoint+1)
+        self.nextwaypoint = (self.nextwaypoint + 1)
 
-        if self.nextwaypoint > len(self.waypoints)-1:
+        if self.nextwaypoint > len(self.waypoints) - 1:
             if self.waypointloop:
                 self.nextwaypoint = 0
             else:
@@ -482,6 +495,7 @@ class AlternativeWaypoint(AlternativeFlock, Waypoint):
         AlternativeFlock.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
 
+
 class SoloWaypoint(Nothing, WaypointMixin):
     def __init__(self, *args, **kwargs):
         Nothing.__init__(self, *args, **kwargs)
@@ -492,8 +506,10 @@ class StationKeep(Nothing):
     """
     Simple behaviour that represents a station-keeping state / buoy.
     """
+
     def __init__(self, *args, **kwargs):
-        Nothing.__init__(self,*args, **kwargs)
+        Nothing.__init__(self, *args, **kwargs)
+
 
 class FleetLawnmower(Flock, WaypointMixin):
     """
@@ -509,7 +525,7 @@ class FleetLawnmower(Flock, WaypointMixin):
     factor config entry, but disregards other behaviours
     """
 
-    #TODO The guts of this are in notebook
+    # TODO The guts of this are in notebook
 
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
@@ -537,9 +553,9 @@ class FleetLawnmower(Flock, WaypointMixin):
         careAboutBoresight = self.nextwaypoint is not None and self.node.on_mission
         if careAboutBoresight:
             target = self.waypoints[self.nextwaypoint]
-            angle = angle_between(target.position-position,velocity)
-            if self.debug: self.logger.info("Boresight:{}@{}".format(np.rad2deg(angle),distance(target.position,position)))
-            forceVector=-velocity * np.pi*angle * self.waypoint_factor
+            angle = angle_between(target.position - position, velocity)
+            if self.debug: self.logger.info("Boresight:{}@{}".format(np.rad2deg(angle), distance(target.position, position)))
+            forceVector = -velocity * np.pi * angle * self.waypoint_factor
         return forceVector
 
     def tracked_avoidance(self, position, velocity):
@@ -547,7 +563,7 @@ class FleetLawnmower(Flock, WaypointMixin):
         for neighbour in self.nearest_neighbours:
             if distance(position, neighbour.position) < self.collision_avoidance_d:
                 partVector = self.repulseFromPosition(position, neighbour.position, self.collision_avoidance_d)
-                partVector = unit(-velocity)*mag(partVector)
+                partVector = unit(-velocity) * mag(partVector)
                 if self.debug:
                     self.logger.debug(
                         "Avoiding %s:%f:%s" % (
@@ -555,12 +571,12 @@ class FleetLawnmower(Flock, WaypointMixin):
                 forceVector += partVector
 
                 # Return an inverse vector to the obstacles
-        if self.debug and not mag(forceVector)>0.0:
+        if self.debug and not mag(forceVector) > 0.0:
             self.logger.debug("Repulse:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.repulsive_factor
 
 
-    def per_node_lawnmower(self,environment, swath, base_axis=0, altitude=None):
+    def per_node_lawnmower(self, environment, swath, base_axis=0, altitude=None):
         """
         Generates a flat segmented lawnmower waypoint loop
         """
@@ -571,127 +587,127 @@ class FleetLawnmower(Flock, WaypointMixin):
             back = min(environment[bool(base_axis)])
             left = min(environment[not bool(base_axis)])
             right = max(environment[not bool(base_axis)])
-            if altitude is None and len(environment)!=3:
-                raise ConfigError("altitude makes no sense for environment %s"%environment)
+            if altitude is None and len(environment) != 3:
+                raise ConfigError("altitude makes no sense for environment %s" % environment)
             elif altitude is None:
                 altitude = np.diff(environment[-1])
 
-            inc = np.sign(front-back)
-            swath = inc*swath
+            inc = np.sign(front - back)
+            swath = inc * swath
         except Exception:
-            logging.error("Error on per node lawnmower %s"%str(environment))
+            logging.error("Error on per node lawnmower %s" % str(environment))
             raise
 
-        step = 0 #on a plateau going left or right (Odd-Rightward (max))
-        stepping = 0 # on a rise going up or down (Odd-Upward (max))
+        step = 0  #on a plateau going left or right (Odd-Rightward (max))
+        stepping = 0  # on a rise going up or down (Odd-Upward (max))
         over_ratio = 8
         current_y = back - swath
         current_x = left - swath
 
-        start = [current_x,current_y, altitude]
+        start = [current_x, current_y, altitude]
 
-        if not stepping%2:
-            current_x = left - swath/over_ratio
+        if not stepping % 2:
+            current_x = left - swath / over_ratio
 
         points = []
 
-        while current_y < front + (stepping%2)*swath:
+        while current_y < front + (stepping % 2) * swath:
             # four phases to a lawnmower iteration from back-left last point
             # 1) right to edge + swath
             # 2) up to step (if not above front + swath) else origin
             # 3) left to edge + swath
             # 4) up to step (if not above front + swath) else origin
-            if stepping%2:
-                if step % 2: # If on rightward leg
-                    current_x = right + swath/over_ratio
+            if stepping % 2:
+                if step % 2:  # If on rightward leg
+                    current_x = right + swath / over_ratio
                 else:
-                    current_x = left - swath/over_ratio
+                    current_x = left - swath / over_ratio
             else:
                 # Intermediate apex to smooth turns
-                if step % 2: # If on rightward leg
-                    points.append([current_x+(2*swath), current_y+(swath/2), altitude])
+                if step % 2:  # If on rightward leg
+                    points.append([current_x + (2 * swath), current_y + (swath / 2), altitude])
                 else:
-                    points.append([current_x-(2*swath), current_y+(swath/2), altitude])
+                    points.append([current_x - (2 * swath), current_y + (swath / 2), altitude])
                 current_y += swath
                 step += 1
             points.append([current_x, current_y, altitude])
             stepping += 1
         if bool(base_axis):
-            points = np.asarray([[y,x,z] for (x,y,z) in points])
+            points = np.asarray([[y, x, z] for (x, y, z) in points])
         else:
             points = np.asarray(points)
 
-
         return points
 
-    def lawnmower(self, n, overlap = 0, base_axis = 0, twister = False, swath = 100, prox=25):
+    def lawnmower(self, n, overlap=0, base_axis=0, twister=False, swath=100, prox=25):
         """
         N is either a single number (i.e. n rows of a shape) or a tuple (x, 1/y rows)
         """
-        extent = np.asarray(zip(np.zeros(3),np.asarray(self.env_shape)))
-        environment = np.asarray([ self.env_shape[0:2] * (((vertex - 0.5) / 3) + 0.5) for vertex in np.asarray([[0,0],[0,1],[1,0],[1,1]])])
+        extent = np.asarray(zip(np.zeros(3), np.asarray(self.env_shape)))
+        environment = np.asarray([self.env_shape[0:2] * (((vertex - 0.5) / 3) + 0.5) for vertex in np.asarray([[0, 0], [0, 1], [1, 0], [1, 1]])])
 
-        front = np.max(environment,axis=0)[bool(base_axis)]
-        back = np.min(environment,axis=0)[bool(base_axis)]
-        right = np.max(environment,axis=0)[not bool(base_axis)]
-        left = np.min(environment,axis=0)[not bool(base_axis)]
+        front = np.max(environment, axis=0)[bool(base_axis)]
+        back = np.min(environment, axis=0)[bool(base_axis)]
+        right = np.max(environment, axis=0)[not bool(base_axis)]
+        left = np.min(environment, axis=0)[not bool(base_axis)]
         top = max(extent[2])
         bottom = min(extent[2])
-        mid_z = 2*(top+bottom)/3.0
+        mid_z = 2 * (top + bottom) / 3.0
 
         self.logger.info("Survey area:{}km^2 ({}), swath:{}, overlap:{}".format(
-            (front-back)*(right-left)/1e6,
-            [front,back,right,left],
-            swath,overlap)
+            (front - back) * (right - left) / 1e6,
+            [front, back, right, left],
+            swath, overlap)
         )
 
-        inc = np.sign(front-back)
-        swath = inc*swath
+        inc = np.sign(front - back)
+        swath = inc * swath
 
-        if isinstance(n,tuple):
+        if isinstance(n, tuple):
             row_count = n[base_axis]
             col_count = n[not base_axis]
-        elif not np.sqrt(n)%1>0:
+        elif not np.sqrt(n) % 1 > 0:
             row_count = col_count = int(np.sqrt(n))
-        elif n%4 == 0:
-            row_count = n/4
+        elif n % 4 == 0:
+            row_count = n / 4
             col_count = 4
-        elif n%3 == 0:
-            row_count = n/3
+        elif n % 3 == 0:
+            row_count = n / 3
             col_count = 3
-        elif n%2 == 0:
-            row_count = n/2
+        elif n % 2 == 0:
+            row_count = n / 2
             col_count = 2
         else:
             row_count = n
             col_count = 1
 
-        row_height = (front-back)/col_count
-        row_width = (right-left)/row_count
+        row_height = (front - back) / col_count
+        row_width = (right - left) / row_count
 
         courses = []
 
-        for r,c in product(range(row_count),range(col_count)):
-            sub_shape = [[(left+r*row_width)-overlap, (left+(r+1)*row_width)+overlap],
-                         [(back+c*row_height)-overlap, (back+(c+1)*row_height)+overlap]]
+        for r, c in product(range(row_count), range(col_count)):
+            sub_shape = [[(left + r * row_width) - overlap, (left + (r + 1) * row_width) + overlap],
+                         [(back + c * row_height) - overlap, (back + (c + 1) * row_height) + overlap]]
             if twister:
-                axis = base_axis+c%2
+                axis = base_axis + c % 2
             else:
                 axis = base_axis
-            courses.append(self.per_node_lawnmower(sub_shape,swath=swath, altitude=mid_z, base_axis=axis))
+            courses.append(self.per_node_lawnmower(sub_shape, swath=swath, altitude=mid_z, base_axis=axis))
 
-        self.waypoints = [waypoint(point,prox) for point in courses[self.node.nodenum]]
+        self.waypoints = [waypoint(point, prox) for point in courses[self.node.nodenum]]
         if not self.waypointloop:
             self.waypoints.append(
                 waypoint(
-                    agitate_position(self.node.position.copy(), maximum=self.env_shape, var=prox*2),
-                    prox*2)
+                    agitate_position(self.node.position.copy(), maximum=self.env_shape, var=prox * 2),
+                    prox * 2)
             )
         self.nextwaypoint = 0
 
+
 class FleetLawnmowerLoop(FleetLawnmower):
     def __init__(self, *args, **kwargs):
-        super(FleetLawnmowerLoop,self).__init__(*args,**kwargs)
+        super(FleetLawnmowerLoop, self).__init__(*args, **kwargs)
         self.waypointloop = True
 
 
@@ -739,6 +755,6 @@ class SlowCoach(Flock):
 # Malicious Class Aliases because I'm Lazy
 ####
 
-#In the general case where everyone else is waypointing, the untargeted Flock behaviour is analogous
+# In the general case where everyone else is waypointing, the untargeted Flock behaviour is analogous
 #   to a un-initiated node 'shadowing' the fleet.
 Shadow = Flock

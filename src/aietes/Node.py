@@ -37,7 +37,7 @@ class Node(Sim.Process):
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
         self.logger = kwargs.get("logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
-        fh=logging.FileHandler("Node[{}].log".format(name))
+        fh = logging.FileHandler("Node[{}].log".format(name))
         fh.setFormatter(log_fmt)
         fh.addFilter(SimTimeFilter())
         fh.setLevel(logging.DEBUG)
@@ -68,8 +68,8 @@ class Node(Sim.Process):
         self.fleet = None
 
         # Optional Features
-        self.ecea = False # Kalman filtering of INS position
-        self.drifting = False # Drift simulation using DVR / GYR noise        #
+        self.ecea = False  # Kalman filtering of INS position
+        self.drifting = False  # Drift simulation using DVR / GYR noise        #
 
         # Physical Configuration
         #
@@ -140,7 +140,7 @@ class Node(Sim.Process):
 
         self.behaviour = behave_mod(node=self,
                                     bev_config=self.config['Behaviour'],
-                                    map=self.simulation.environment.map) ##TODO FIX SLAM MAP
+                                    map=self.simulation.environment.map)  ##TODO FIX SLAM MAP
         if hasattr(self.behaviour, "wallCheckDisabled"):
             self.wallCheckDisabled = self.behaviour.wallCheckDisabled
         else:
@@ -155,14 +155,16 @@ class Node(Sim.Process):
         # Kalman Filter Characteristics from Contribs
         if self.config['ecea'] == "KF":
             from contrib.Ghia.ecea.EceaFilter import ECEAFilter, ECEAParams
+
             confobj = ConfigObj(self.simulation.config)
-            self.ecea = ECEAFilter(self, ECEAParams.from_aietes_conf(confobj))        #
+            self.ecea = ECEAFilter(self, ECEAParams.from_aietes_conf(confobj))  #
         elif self.config['ecea'].startswith("Simple"):
             from contrib.Ghia.ecea.LSEFilter import SimpleFilter
-            params_dict= {'Delta':int(self.config['beacon_rate'])}
+
+            params_dict = {'Delta': int(self.config['beacon_rate'])}
             iterations = self.config['ecea'].split("Simple")
-            if len(iterations)>1 and iterations[1] !='':
-                params_dict.update({'iterations':int(iterations[1])})
+            if len(iterations) > 1 and iterations[1] != '':
+                params_dict.update({'iterations': int(iterations[1])})
             self.tof_type = self.config['tof_type']
             if params_dict:
                 self.ecea = SimpleFilter(self, params=params_dict)
@@ -172,8 +174,9 @@ class Node(Sim.Process):
         # Drift Characteristics from Contribs?
         if self.config['drift'] != "Null":
             import contrib.Ghia.uuv_position_drift_model.DriftFactors as Driftmodels
-            drift_scales = getattr(self.config,'drift_scales',{})
-            drift_noises = getattr(self.config,'drift_noises',{})
+
+            drift_scales = getattr(self.config, 'drift_scales', {})
+            drift_noises = getattr(self.config, 'drift_noises', {})
 
             self.drift = getattr(Driftmodels, self.config['drift'])(self, scales=drift_scales, noises=drift_noises)
             self.logger.debug("Drift activated from config: {} with {}, {}".format(self.config['drift'], drift_scales, drift_noises))
@@ -205,7 +208,7 @@ class Node(Sim.Process):
             self.layercake.activate(self.app.recv)
 
         # Messy nasty way to deal with some behaviours that need activating
-        if hasattr(self.behaviour,'activate'):
+        if hasattr(self.behaviour, 'activate'):
             self.behaviour.activate(**launch_args)
 
         self.update_environment()
@@ -282,7 +285,7 @@ class Node(Sim.Process):
         # v(t+e) = v(t)+(F*dt)/m
         if np.all(self.acceleration_force == 0.0):
             # Braking as there's no acceleration vector
-            #FIXME This should be -0.2*self.velocity or something
+            # FIXME This should be -0.2*self.velocity or something
             new_velocity = np.zeros(3)
         else:
             new_velocity = self.velocity + ((self.acceleration_force * dT) / self.mass)
@@ -326,7 +329,6 @@ class Node(Sim.Process):
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
             raise RuntimeError("{} Crashed out of the environment at {}".format(self.name, Sim.now()))
 
-
         assert not np.isnan(sum(self.pos_log[:, self._lastupdate]))
 
         self.highest_attained_speed = max(self.highest_attained_speed, mag(self.velocity))
@@ -344,12 +346,13 @@ class Node(Sim.Process):
             # behaviour decisions #TODO
 
             self.fleet.shared_map.update(self.id,
-                                          self.ecea.getPos(),
-                                          self.ecea.getVec())
+                                         self.ecea.getPos(),
+                                         self.ecea.getVec())
         else:
             self.fleet.shared_map.update(self.id,
-                                          self.getPos(),
-                                          self.getVec())
+                                         self.getPos(),
+                                         self.getVec())
+
     def fleet_preprocesses(self):
         """
         Perform operations that require fleet state to be coalesced before informing per-node behaviours
@@ -375,31 +378,31 @@ class Node(Sim.Process):
                     # Drift is based on each nodes REPORTED position from the previous REPORTED position
                     true_positions = self.fleet.nodeCheatPositions()
                     drifted_positions = self.fleet.nodeCheatDriftPositions()
-                    last_index = max(0,Sim.now()-self.ecea.params.Delta)
-                    #this_index = Sim.now()
-                    last_drifted_positions = self.fleet.nodeCheatDriftPositionsAt(last_index) # INS Delta since last
+                    last_index = max(0, Sim.now() - self.ecea.params.Delta)
+                    # this_index = Sim.now()
+                    last_drifted_positions = self.fleet.nodeCheatDriftPositionsAt(last_index)  # INS Delta since last
                     drifted_deltas = drifted_positions - last_drifted_positions
-                    last_true_positions = self.fleet.nodeCheatPositionsAt(last_index) # True Delta since last
+                    last_true_positions = self.fleet.nodeCheatPositionsAt(last_index)  # True Delta since last
                     #true_deltas = true_positions-last_true_positions
 
                 if self.ecea.type == SIMPLE:
-                    error_estimates=self.fleet.nodePositionErrors() * self.ecea.params.Delta
+                    error_estimates = self.fleet.nodePositionErrors() * self.ecea.params.Delta
                     tof = self.fleet.timeOfFlightMatrix(guess_index=self.tof_type)
                     # True positions only used for statistics
                     improved_positions = self.ecea.update(time_of_flight_matrix=tof,
                                                           drifted_positions=drifted_positions,
                                                           error_estimates=error_estimates,
                                                           true_positions=true_positions,
-                                                          est_deltas=drifted_deltas) #Swap these lines commenting to enable feedback
-                                                          #last_estimate=drifted_positions) #Or disable feedback
+                                                          est_deltas=drifted_deltas)  # Swap these lines commenting to enable feedback
+                    # last_estimate=drifted_positions) #Or disable feedback
                     if __debug__:
-                        drift_d =  np.linalg.norm(true_positions[self.nodenum]-drifted_positions[self.nodenum])
-                        improved_d =  np.linalg.norm(true_positions[self.nodenum]-improved_positions[self.nodenum])
+                        drift_d = np.linalg.norm(true_positions[self.nodenum] - drifted_positions[self.nodenum])
+                        improved_d = np.linalg.norm(true_positions[self.nodenum] - improved_positions[self.nodenum])
                         with np.errstate(divide='ignore', invalid='ignore'):
                             self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
                                 self.name, true_positions[self.nodenum],
-                                drifted_positions[self.nodenum],drift_d,
-                                improved_positions[self.nodenum], improved_d, (1.0-(improved_d/drift_d))*100.0
+                                drifted_positions[self.nodenum], drift_d,
+                                improved_positions[self.nodenum], improved_d, (1.0 - (improved_d / drift_d)) * 100.0
                             ))
                 else:
                     raise RuntimeError("There's no way you should be in here...:{}".format(self.ecea))
@@ -408,7 +411,6 @@ class Node(Sim.Process):
                 # Pass for processing in between deltas
                 pass
             pass
-
 
 
     def setPos(self, placeVector):
@@ -439,11 +441,11 @@ class Node(Sim.Process):
             it's 'true' velocity is requested using the keyword arg
         """
         if self.drifting and true:
-                velocity = self.drift.getVec()
-        ## FIXME For the time being assume that the control output is a fixed track and don't use the KF for  updated info
-        #elif self.drifting and self.ecea:
+            velocity = self.drift.getVec()
+            ## FIXME For the time being assume that the control output is a fixed track and don't use the KF for  updated info
+            # elif self.drifting and self.ecea:
             # If using the kalman filter, get the corrected position
-        #    velocity = self.ecea.getVec()
+        # velocity = self.ecea.getVec()
         else:
             velocity = self.velocity.copy()
         return velocity
@@ -463,16 +465,16 @@ class Node(Sim.Process):
         else:
             raise RuntimeError("Non standard Achievement passed:%s" % achievement)
 
-    def timeSinceLastAchievement(self) :
+    def timeSinceLastAchievement(self):
         try:
-            return [ i for i,l in enumerate(self.achievements_log) if len(l[i])][-1]
+            return [i for i, l in enumerate(self.achievements_log) if len(l[i])][-1]
         except IndexError:
             return self._lastupdate
 
     def meanAchievementTime(self):
         try:
-            wins = [ i for i,l in enumerate(self.achievements_log) if len(l[0])]
-            return sum(wins)/len(wins)
+            wins = [i for i, l in enumerate(self.achievements_log) if len(l[0])]
+            return sum(wins) / len(wins)
         except IndexError:
             return self._lastupdate
 
@@ -487,8 +489,8 @@ class Node(Sim.Process):
         # have exposed their positions to the fleet and BEFORE t>0
 
 
-        debug=False
-        while Sim.now()<self.simulation.duration_intervals:
+        debug = False
+        while Sim.now() < self.simulation.duration_intervals:
 
             yield Sim.passivate, self
             #
@@ -529,7 +531,7 @@ class Node(Sim.Process):
             # Update Environment State
             # Initial environment is instantiated in activate; so if it's the first interval, skip this
             #
-            if Sim.now()>0:
+            if Sim.now() > 0:
                 if debug:
                     self.logger.info('updating map at {}'.format(Sim.now()))
                 try:

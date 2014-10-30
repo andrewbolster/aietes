@@ -2,7 +2,7 @@
 ###########################################################################
 #
 # Copyright (C) 2007 by Justin Eskesen and Josep Miquel Jornet Montana
-#    <jge@mit.edu> <jmjornet@mit.edu>
+# <jge@mit.edu> <jmjornet@mit.edu>
 #
 # Copyright: See COPYING file that comes with this distribution
 #

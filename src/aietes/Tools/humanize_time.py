@@ -1,5 +1,5 @@
 __author__ = 'bolster'
-#!/usr/bin/env python
+# !/usr/bin/env python
 
 INTERVALS = [1, 60, 3600, 86400, 604800, 2419200, 29030400]
 NAMES = [('second', 'seconds'),

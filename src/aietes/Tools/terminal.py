@@ -25,8 +25,8 @@ CONTROLS = {
 
 # List of numeric capabilities
 VALUES = {
-    'COLUMNS': 'cols', # Width of the terminal (None for unknown)
-    'LINES': 'lines', # Height of the terminal (None for unknown)
+    'COLUMNS': 'cols',  # Width of the terminal (None for unknown)
+    'LINES': 'lines',  # Height of the terminal (None for unknown)
     'MAX_COLORS': 'colors',
 }
 

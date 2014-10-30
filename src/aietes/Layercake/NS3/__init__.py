@@ -22,7 +22,7 @@ import ns.visualizer
 def main(argv):
     cmd = ns.core.CommandLine()
     cmd.Parse(argv)
-    #  First, we declare and initialize a few local variables that control some
+    # First, we declare and initialize a few local variables that control some
     #  simulation parameters.
     #
     backboneNodes = 10
@@ -77,7 +77,7 @@ def main(argv):
     mac = ns.wifi.NqosWifiMacHelper.Default()
     mac.SetType("ns3::AdhocWifiMac")
     wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
-                                  "DataMode", ns.core.StringValue("OfdmRate54Mbps"))
+                                 "DataMode", ns.core.StringValue("OfdmRate54Mbps"))
     wifiPhy = ns.wifi.YansWifiPhyHelper.Default()
     wifiChannel = ns.wifi.YansWifiChannelHelper.Default()
     wifiPhy.SetChannel(wifiChannel.Create())
@@ -88,7 +88,7 @@ def main(argv):
     print "Enabling OLSR routing on all backbone nodes"
     internet = ns.internet.InternetStackHelper()
     olsr = ns.olsr.OlsrHelper()
-    internet.SetRoutingHelper(olsr); # has effect on the next Install ()
+    internet.SetRoutingHelper(olsr);  # has effect on the next Install ()
     internet.Install(backbone);
     # re-initialize for non-olsr routing.
     # internet.Reset()
@@ -113,9 +113,9 @@ def main(argv):
                                   "GridWidth", ns.core.UintegerValue(5),
                                   "LayoutType", ns.core.StringValue("RowFirst"))
     mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
-                               "Bounds", ns.mobility.RectangleValue(ns.mobility.Rectangle(-500, 500, -500, 500)),
-                               "Speed", ns.core.StringValue ("ns3::ConstantRandomVariable[Constant=2]"),
-                               "Pause", ns.core.StringValue ("ns3::ConstantRandomVariable[Constant=0.2]"))
+                              "Bounds", ns.mobility.RectangleValue(ns.mobility.Rectangle(-500, 500, -500, 500)),
+                              "Speed", ns.core.StringValue("ns3::ConstantRandomVariable[Constant=2]"),
+                              "Pause", ns.core.StringValue("ns3::ConstantRandomVariable[Constant=0.2]"))
     mobility.Install(backbone)
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # /
@@ -168,13 +168,13 @@ def main(argv):
         mobilityLan = ns.mobility.MobilityHelper()
         positionAlloc = ns.mobility.ListPositionAllocator()
         for j in range(newLanNodes.GetN()):
-            positionAlloc.Add(ns.core.Vector(0.0, (j*10 + 10), 0.0))
+            positionAlloc.Add(ns.core.Vector(0.0, (j * 10 + 10), 0.0))
 
         mobilityLan.SetPositionAllocator(positionAlloc)
         mobilityLan.PushReferenceMobilityModel(backbone.Get(i))
         mobilityLan.SetMobilityModel("ns3::ConstantPositionMobilityModel")
         mobilityLan.Install(newLanNodes);
- # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # /
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # /
     #                                                                        #
     #  Construct the mobile networks                                         #
     #                                                                        #
@@ -243,8 +243,8 @@ def main(argv):
         mobility.SetPositionAllocator(subnetAlloc)
         mobility.SetMobilityModel("ns3::RandomDirection2dMobilityModel",
                                   "Bounds", ns.mobility.RectangleValue(ns.mobility.Rectangle(-10, 10, -10, 10)),
-                                  "Speed", ns.core.StringValue ("ns3::ConstantRandomVariable[Constant=3]"),
-                                  "Pause", ns.core.StringValue ("ns3::ConstantRandomVariable[Constant=0.4]"))
+                                  "Speed", ns.core.StringValue("ns3::ConstantRandomVariable[Constant=3]"),
+                                  "Pause", ns.core.StringValue("ns3::ConstantRandomVariable[Constant=0.4]"))
         mobility.Install(stas)
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # /
@@ -256,23 +256,23 @@ def main(argv):
     #  Create the OnOff application to send UDP datagrams of size
     #  210 bytes at a rate of 448 Kb/s, between two nodes
     print "Create Applications."
-    port = 9   #  Discard port(RFC 863)
+    port = 9  #  Discard port(RFC 863)
 
     appSource = ns.network.NodeList.GetNode(backboneNodes)
-    lastNodeIndex = backboneNodes + backboneNodes*(lanNodes - 1) + backboneNodes*(infraNodes - 1) - 1
+    lastNodeIndex = backboneNodes + backboneNodes * (lanNodes - 1) + backboneNodes * (infraNodes - 1) - 1
     appSink = ns.network.NodeList.GetNode(lastNodeIndex)
     # Let's fetch the IP address of the last node, which is on Ipv4Interface 1
-    remoteAddr = appSink.GetObject(ns.internet.Ipv4.GetTypeId()).GetAddress(1,0).GetLocal()
+    remoteAddr = appSink.GetObject(ns.internet.Ipv4.GetTypeId()).GetAddress(1, 0).GetLocal()
 
     onoff = ns.applications.OnOffHelper("ns3::UdpSocketFactory",
-                            ns.network.Address(ns.network.InetSocketAddress(remoteAddr, port)))
+                                        ns.network.Address(ns.network.InetSocketAddress(remoteAddr, port)))
     apps = onoff.Install(ns.network.NodeContainer(appSource))
     apps.Start(ns.core.Seconds(3))
     apps.Stop(ns.core.Seconds(stopTime - 1))
 
     #  Create a packet sink to receive these packets
     sink = ns.applications.PacketSinkHelper("ns3::UdpSocketFactory",
-                                ns.network.InetSocketAddress(ns.network.Ipv4Address.GetAny(), port))
+                                            ns.network.InetSocketAddress(ns.network.Ipv4Address.GetAny(), port))
     apps = sink.Install(ns.network.NodeContainer(appSink))
     apps.Start(ns.core.Seconds(3))
 
@@ -299,10 +299,10 @@ def main(argv):
     wifiPhy.EnablePcap("mixed-wireless", backboneDevices)
     wifiPhy.EnablePcap("mixed-wireless", appSink.GetId(), 0)
 
-#   #ifdef ENABLE_FOR_TRACING_EXAMPLE
-#     Config.Connect("/NodeList/*/$MobilityModel/CourseChange",
-#       MakeCallback(&CourseChangeCallback))
-#   #endif
+    #   #ifdef ENABLE_FOR_TRACING_EXAMPLE
+    #     Config.Connect("/NodeList/*/$MobilityModel/CourseChange",
+    #       MakeCallback(&CourseChangeCallback))
+    #   #endif
 
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -320,4 +320,5 @@ def main(argv):
 
 if __name__ == '__main__':
     import sys
+
     main(sys.argv)

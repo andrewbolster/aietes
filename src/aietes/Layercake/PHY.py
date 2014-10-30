@@ -54,7 +54,7 @@ class PHY():
             }
         """
         ##############################
-        #Generic Spec
+        # Generic Spec
         ##############################
         self.logger = layercake.logger.getChild("%s" % self.__class__.__name__)
         self.logger.info('creating instance:%s' % config)
@@ -68,7 +68,7 @@ class PHY():
         ##############################
         self.threshold['receive'] = DB2Linear(ReceivingThreshold(self.frequency, self.bandwidth, self.threshold['SNR']))
         self.threshold['listen'] = DB2Linear(ListeningThreshold(self.frequency, self.bandwidth, self.threshold['LIS']))
-        self.ambient_noise = DB2Linear(Noise(self.frequency) + 10 * math.log10(self.bandwidth * 1e3)) #In linear scale
+        self.ambient_noise = DB2Linear(Noise(self.frequency) + 10 * math.log10(self.bandwidth * 1e3))  #In linear scale
         self.interference = self.ambient_noise
         self.collision = False
 
@@ -100,7 +100,7 @@ class PHY():
         """Function called from upper layers to send packet
         """
         if not self.isIdle():
-            self.logger.warn("Channel is not idle!") # The MAC protocol is the one that should check this before transmitting
+            self.logger.warn("Channel is not idle!")  # The MAC protocol is the one that should check this before transmitting
 
         self.collision = False
 
@@ -113,12 +113,13 @@ class PHY():
         if power > self.max_output_power_used:
             self.max_output_power_used = power
 
-        #generate PHYPacket with set power
+        # generate PHYPacket with set power
         packet = PHYPacket(packet=FromAbove, power=power)
         Sim.activate(packet, packet.send(phy=self))
 
     def bandwidth_to_bit(self, bandwidth):
         return bandwidth * 1e3 * self.bandwidth_to_bit_ratio
+
 
 #####################################################################
 # Transducer
@@ -146,7 +147,7 @@ class Transducer(Sim.Resource):
         self.threshold = self.phy.threshold
 
         ##############################
-        #Configure event listener
+        # Configure event listener
         ##############################
         self.listener = AcousticEventListener(self)
         Sim.activate(
@@ -160,7 +161,7 @@ class Transducer(Sim.Resource):
         """Overiding SimPy's to update interference information upon queuing of a new incoming packet from the channel
         """
         Sim.Resource._request(self, event)
-        #Arg[1] is a reference to the newly queued incoming packet
+        # Arg[1] is a reference to the newly queued incoming packet
         packet = event[1]
         if self.transmitting:
             packet.Doom()
@@ -183,7 +184,7 @@ class Transducer(Sim.Resource):
         # Reduce the overall interference by this message's power
         self.interference -= packet.power
         # Prevent rounding errors
-        #TODO shouldn't this be to <= ambient?
+        # TODO shouldn't this be to <= ambient?
         self.interference = max(self.interference, self.phy.ambient_noise)
 
         # Delete this from the transducer queue by calling the Parent form of "_release"
@@ -192,8 +193,8 @@ class Transducer(Sim.Resource):
         # If it isn't doomed due to transmission & it is not interfered
         if minSIR > 0:
             if not doomed \
-                and Linear2DB(minSIR) >= self.phy.threshold['SIR'] \
-                and packet.power >= self.phy.threshold['receive']:
+                    and Linear2DB(minSIR) >= self.phy.threshold['SIR'] \
+                    and packet.power >= self.phy.threshold['receive']:
                 # Properly received: enough power, not enough interference
                 self.collision = False
                 if debug: self.logger.debug("PHY Packet received: %s" % packet.data)
@@ -238,7 +239,7 @@ class Transducer(Sim.Resource):
         :param duration: Length of time in an RX state
         :return: none
         """
-        self.phy.rx_energy+=DB2Linear(self.phy.receive_power) * duration
+        self.phy.rx_energy += DB2Linear(self.phy.receive_power) * duration
 
 
 #####################################################################
@@ -257,7 +258,7 @@ class AcousticEventListener(Sim.Process):
 
     def listen(self, channel_event, position_query):
         while True:
-            #Wait until something happens on the channel
+            # Wait until something happens on the channel
             yield Sim.waitevent, self, channel_event
 
             params = channel_event.signalparam
@@ -295,7 +296,7 @@ class ArrivalScheduler(Sim.Process):
             receive_power = DB2Linear(receive_power)
 
             # transducer.logger.debug("Packet from %s to %s will take %s to cover %s" % (
-            #     packet.source, packet.destination, travel_time, distance_to)
+            # packet.source, packet.destination, travel_time, distance_to)
             # )
 
             yield Sim.hold, self, travel_time
@@ -307,7 +308,7 @@ class ArrivalScheduler(Sim.Process):
             Sim.activate(new_incoming_packet,
                          new_incoming_packet.recv(transducer=transducer, duration=params["duration"]))
         else:
-            #transducer.logger.debug("Transmission too close")
+            # transducer.logger.debug("Transmission too close")
             pass
 
 

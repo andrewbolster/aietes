@@ -47,7 +47,6 @@ from colorlog import ColoredFormatter
 
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
-
 np.seterr(all='raise', under='warn')
 
 debug = False
@@ -59,31 +58,32 @@ _config_spec = '%s/configs/default.conf' % _ROOT
 _results_dir = '%s/../../results/' % _ROOT
 
 
-
-
 class SimTimeFilter(logging.Filter):
     """
     Brings Sim.now() into usefulness
     """
+
     def filter(self, record):
-        record.simtime=Sim.now()
+        record.simtime = Sim.now()
         return True
 
+
 log_fmt = ColoredFormatter(
-        "%(log_color)s%(simtime)-8.3f %(levelname)-6s %(name)s:%(message)s (%(lineno)d)",
-        datefmt=None,
-        reset=True,
-        log_colors={
-                'DEBUG':    'cyan',
-                'INFO':     'green',
-                'WARNING':  'yellow',
-                'ERROR':    'red',
-                'CRITICAL': 'red',
-        }
+    "%(log_color)s%(simtime)-8.3f %(levelname)-6s %(name)s:%(message)s (%(lineno)d)",
+    datefmt=None,
+    reset=True,
+    log_colors={
+        'DEBUG': 'cyan',
+        'INFO': 'green',
+        'WARNING': 'yellow',
+        'ERROR': 'red',
+        'CRITICAL': 'red',
+    }
 )
 log_hdl = logging.StreamHandler()
 log_hdl.setFormatter(log_fmt)
 log_hdl.addFilter(SimTimeFilter())
+
 
 class ConfigError(Exception):
     """
@@ -142,25 +142,27 @@ def angle_between(v1, v2):
     """
     v1_u = unit(v1)
     v2_u = unit(v2)
-    if np.allclose(v1_u,v2_u):
+    if np.allclose(v1_u, v2_u):
         return 0.0
     else:
         try:
             angle = np.arccos(np.dot(v1_u, v2_u))
         except FloatingPointError:
-            logging.critical("FPE: 1:{},2:{}".format(v1_u,v2_u))
+            logging.critical("FPE: 1:{},2:{}".format(v1_u, v2_u))
             raise
     if np.isnan(angle):
         return np.pi
     else:
         return angle
 
+
 def bearing(v):
     """radian angle between a given vector and 'north'"""
-    if np.all(v==0):
+    if np.all(v == 0):
         return 0.0
     else:
-        return angle_between(v,np.array([1,0]))
+        return angle_between(v, np.array([1, 0]))
+
 
 def distance(pos_a, pos_b, scale=1):
     """
@@ -179,9 +181,8 @@ def mag(vector):
     %timeit np.sqrt((uu1[0]-uu2[0])**2 +(uu1[1]-uu2[1])**2 +(uu1[2]-uu2[2])**2)-> 7.08us,
     %timeit np.linalg.norm(uu1-uu2) -> 11.7us.
     """
-    #FIXME  Might be faster unrolled
+    # FIXME  Might be faster unrolled
     return np.linalg.norm(vector)
-
 
 
 def unit(vector):
@@ -194,7 +195,7 @@ def unit(vector):
         return vector / mag(vector)
 
 
-def agitate_position(position,maximum,var=10,minimum=None):
+def agitate_position(position, maximum, var=10, minimum=None):
     """
     Fluff a position i by randn*var, limited to maximum/minimum
     :param position:
@@ -204,19 +205,20 @@ def agitate_position(position,maximum,var=10,minimum=None):
     :return:
     """
     if minimum is None:
-        minimum = np.zeros(3)+var
+        minimum = np.zeros(3) + var
     return np.max(
         np.vstack((
             minimum,
             np.min(
                 np.vstack((
-                    maximum-var,
-                    position+np.random.randn(3)*var
+                    maximum - var,
+                    position + np.random.randn(3) * var
                 )),
                 axis=0)
         )),
         axis=0
     )
+
 
 def random_three_vector():
     """
@@ -224,14 +226,15 @@ def random_three_vector():
     Algo from http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution
     :return:
     """
-    phi = np.random.uniform(0,np.pi*2)
-    costheta = np.random.uniform(-1,1)
+    phi = np.random.uniform(0, np.pi * 2)
+    costheta = np.random.uniform(-1, 1)
 
-    theta = np.arccos( costheta )
-    x = np.sin( theta) * np.cos( phi )
-    y = np.sin( theta) * np.sin( phi )
-    z = np.cos( theta )
-    return (x,y,z)
+    theta = np.arccos(costheta)
+    x = np.sin(theta) * np.cos(phi)
+    y = np.sin(theta) * np.sin(phi)
+    z = np.cos(theta)
+    return (x, y, z)
+
 
 def random_xy_vector():
     """
@@ -239,7 +242,8 @@ def random_xy_vector():
     this is a horrible cheat but it works.
     :return:
     """
-    return (random_three_vector()[0:2]+(0,))
+    return (random_three_vector()[0:2] + (0,))
+
 
 def sixvec(xyz):
     ptsnew = np.hstack((xyz, np.zeros(xyz.shape)))
@@ -286,6 +290,7 @@ def nodeIDs(pos_log):
 
 def objectLog(pos_log, object_id):
     return [(entry.time, entry.position) for entry in pos_log if entry.object_id == object_id]
+
 
 #
 # Propagation functions
@@ -416,6 +421,7 @@ def DB2Linear(dB):
 def Linear2DB(Linear):
     return 10.0 * math.log10(Linear + 0.0)
 
+
 #
 # Helper Classes
 #
@@ -440,7 +446,7 @@ class dotdictify(dict):
         try:
             dict.__setitem__(self, key, value)
         except TypeError:
-            logging.error("NOPE! {},{},{},{}".format(type(key),key,type(value),value))
+            logging.error("NOPE! {},{},{},{}".format(type(key), key, type(value), value))
             raise
 
     def __getitem__(self, key):
@@ -456,7 +462,7 @@ class dotdictify(dict):
         return newone
 
     def __deepcopy__(self):
-        raise(NotImplementedError,"Don't deep copy! This already deepcopy's on assignment")
+        raise (NotImplementedError, "Don't deep copy! This already deepcopy's on assignment")
 
     def __eq__(self, other):
         key_intersect = set(self.keys()).intersection(other.keys())
@@ -469,7 +475,7 @@ class dotdictify(dict):
 
         for k in key_intersect:
             try:
-                if isinstance(self[k], np.ndarray) and not np.allclose(self[k],other[k]):
+                if isinstance(self[k], np.ndarray) and not np.allclose(self[k], other[k]):
                     return False
                 elif isinstance(self[k], dotdictify) and not self[k] == other[k]:
                     return False
@@ -477,7 +483,7 @@ class dotdictify(dict):
                     if not self[k] == other[k]:
                         return False
             except:
-                print("Crashed on key {}{}:{}{}".format(k,type(k), type(self[k]),type(other[k])))
+                print("Crashed on key {}{}:{}{}".format(k, type(k), type(self[k]), type(other[k])))
                 raise
 
         return True
@@ -575,7 +581,7 @@ def nameGeneration(count, naming_convention=None, existing_names=None):
     for n in range(count):
         candidate_name = naming_convention[n]
         while candidate_name in node_names or candidate_name in existing_names:
-            n+=1
+            n += 1
             candidate_name = naming_convention[n]
 
         node_names.append(candidate_name)
@@ -655,8 +661,10 @@ def itersubclasses(cls, _seen=None):
             for sub in itersubclasses(sub, _seen):
                 yield sub
 
+
 class KeepRefs(object):
     __refs__ = collections.defaultdict(list)
+
     def __init__(self):
         self.__refs__[self.__class__].append(weakref.ref(self))
 
@@ -687,36 +695,34 @@ def unext(filename):
 def kwarger(**kwargs):
     return kwargs
 
+
 def unpickle(filename):
     with open(filename, 'rb') as f:
-        data=pickle.load(f)
+        data = pickle.load(f)
     return data
+
 
 def mkpickle(filename, object):
     with open(filename, 'wb') as f:
-        data=pickle.dump(object,f)
+        data = pickle.dump(object, f)
     return f
-
-
 
 
 def log_level_lookup(log_level):
     if isinstance(log_level, str):
         return LOGLEVELS[log_level]
     else:
-        #assume numeric/loglevel type, reverse lookup
+        # assume numeric/loglevel type, reverse lookup
         for k, v in LOGLEVELS.iteritems():
             if v == log_level:
                 return k
 
-def results_file(proposed_name):
 
+def results_file(proposed_name):
     if os.path.dirname(proposed_name) is not None:
         # Have not been given a FQN Path: Assume to use the results directory
-        proposed_name=os.path.join(_results_dir,proposed_name)
+        proposed_name = os.path.join(_results_dir, proposed_name)
     return proposed_name
-
-
 
 
 def validateConfig(config=None, final_check=False):
@@ -747,7 +753,7 @@ def validateConfig(config=None, final_check=False):
 
 
 def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
-    @functools.wraps(fn) #keeps name and docstring of old function
+    @functools.wraps(fn)  # keeps name and docstring of old function
     def new_fn(*args, **kwargs):
         for i in xrange(x):
             try:
@@ -760,7 +766,7 @@ def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
 
 
 def try_forever(exceptions_to_catch, fn):
-    @functools.wraps(fn) #keeps name and docstring of old function
+    @functools.wraps(fn)  # keeps name and docstring of old function
     def new_fn(*args, **kwargs):
         count = 0
         while True:
@@ -779,13 +785,15 @@ def timeit():
         def wrapper(*args, **kwargs):
             start = time()
             res = func(*args, **kwargs)
-            logging.info("%s (%s)" % (func.__name__, time()-start))
+            logging.info("%s (%s)" % (func.__name__, time() - start))
             return res
 
 
         return wrapper
 
     return decorator
+
+
 def are_equal_waypoints(wps):
     """Compare Waypoint Objects as used by WaypointMixin ([pos],prox)
         Will exclude 'None' records in wps and only compare valid waypoint lists
@@ -813,34 +821,36 @@ def get_latest_aietes_datafile(dir=None):
 
 
 def is_valid_aietes_datafile(file):
-    #TODO This isn't a very good test...
+    # TODO This isn't a very good test...
     test = re.compile(".npz$")
     return test.search(file)
+
 
 import os
 
 _proc_status = '/proc/%d/status' % os.getpid()
 
-_scale = {'kB': 1024.0, 'mB': 1024.0*1024.0,
-          'KB': 1024.0, 'MB': 1024.0*1024.0}
+_scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
+          'KB': 1024.0, 'MB': 1024.0 * 1024.0}
+
 
 def _VmB(VmKey):
     '''Private.
     '''
     global _proc_status, _scale
-     # get pseudo file  /proc/<pid>/status
+    # get pseudo file  /proc/<pid>/status
     try:
         t = open(_proc_status)
         v = t.read()
         t.close()
     except:
         return 0.0  # non-Linux?
-     # get VmKey line e.g. 'VmRSS:  9999  kB\n ...'
+        # get VmKey line e.g. 'VmRSS:  9999  kB\n ...'
     i = v.index(VmKey)
     v = v[i:].split(None, 3)  # whitespace
     if len(v) < 3:
         return 0.0  # invalid format?
-     # convert Vm value to bytes
+        # convert Vm value to bytes
     return float(v[1]) * _scale[v[2]]
 
 

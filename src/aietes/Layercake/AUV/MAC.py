@@ -115,7 +115,7 @@ class ALOHA:
         self.fsm.add_transition("got_DATA", "READY_WAIT", self.OnDataReception, "READY_WAIT")
         self.fsm.add_transition("send_DATA", "READY_WAIT", self.Transmit, "READY_WAIT")
 
-        #Transitions from WAIT_ACK
+        # Transitions from WAIT_ACK
         self.fsm.add_transition("got_DATA", "WAIT_ACK", self.OnDataReception, "WAIT_ACK")
         self.fsm.add_transition("send_DATA", "WAIT_ACK", self.QueueData, "WAIT_ACK")
         self.fsm.add_transition("got_ACK", "WAIT_ACK", self.OnTransmitSuccess, "READY_WAIT")
@@ -615,7 +615,7 @@ class DACAP:
         self.fsm.add_transition("got_WAR", "READY_WAIT", self.IgnoreWAR, "READY_WAIT")
         self.fsm.add_transition("got_CTS", "READY_WAIT", self.IgnoreCTS, "READY_WAIT")
 
-        #Transitions from WAIT_CTS
+        # Transitions from WAIT_CTS
         # Normal transitions
         self.fsm.add_transition("send_DATA", "WAIT_CTS", self.QueueData, "WAIT_CTS")
         self.fsm.add_transition("got_CTS", "WAIT_CTS", self.ProcessCTS, "WAIT_TIME")
@@ -918,8 +918,8 @@ class DACAP:
         timewait = self.TimeWait(self.T, U)
 
         self.logger.debug("Waiting for " + str(timewait) + " due to " + self.incoming_packet["type"]
-                         + " coming from " + self.incoming_packet["source"]
-                         + " through " + self.incoming_packet["through"])
+                          + " coming from " + self.incoming_packet["source"]
+                          + " through " + self.incoming_packet["through"])
 
         self.TimerRequest.signal((timewait, "timeout"))
 
@@ -1528,15 +1528,15 @@ class CSMA:
 
         # Transitions from READY_WAIT
         # Normal transitions
-        self.fsm.add_transition("send_DATA", "READY_WAIT", self.SendRTS, "READY_WAIT")  #Only if the channel is idle will I transmit
-        self.fsm.add_transition("got_RTS", "READY_WAIT", self.CheckRTS, "READY_WAIT")  #Check if it is duplicated
+        self.fsm.add_transition("send_DATA", "READY_WAIT", self.SendRTS, "READY_WAIT")  # Only if the channel is idle will I transmit
+        self.fsm.add_transition("got_RTS", "READY_WAIT", self.CheckRTS, "READY_WAIT")  # Check if it is duplicated
 
         self.fsm.add_transition("got_X", "READY_WAIT", self.XOverheard, "BACKOFF")
         # Strange but possible transitions
         self.fsm.add_transition("got_DATA", "READY_WAIT", self.CheckPendingData, "READY_WAIT")
         self.fsm.add_transition("got_ACK", "READY_WAIT", self.CheckPendingACK, "READY_WAIT")
 
-        #Transitions from WAIT_CTS
+        # Transitions from WAIT_CTS
         # Normal transitions
         self.fsm.add_transition("send_DATA", "WAIT_CTS", self.QueueData, "WAIT_CTS")
         self.fsm.add_transition("got_CTS", "WAIT_CTS", self.Transmit, "WAIT_ACK")  #This is the main difference with DACAP
@@ -1624,9 +1624,9 @@ class CSMA:
             backoff = self.next_timeout - Sim.now()
 
         if debug: self.logger.debug("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
-                         + " coming from " + self.incoming_packet["source"]
-                         + " to " + self.incoming_packet["dest"]
-                         + " through " + self.incoming_packet["through"])
+                                    + " coming from " + self.incoming_packet["source"]
+                                    + " to " + self.incoming_packet["dest"]
+                                    + " through " + self.incoming_packet["through"])
 
         self.TimerRequest.signal((backoff, "timeout"))
         self.next_timeout = Sim.now() + backoff
