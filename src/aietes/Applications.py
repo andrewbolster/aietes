@@ -45,7 +45,7 @@ class Application(Sim.Process):
                       'packets_received': 0,
                       'packets_time': 0,
                       'packets_hops': 0,
-                      'packets_dhops': 0
+                      'packets_dhops': 0,
                       }
         self.received_log = []
         self.sent_log = []
@@ -80,6 +80,10 @@ class Application(Sim.Process):
             "App:%s" % self.__class__.__name__)
 
     def activate(self):
+
+        self.layercake.tx_good_signal_hdlrs.append(self.signal_good_tx)
+        self.layercake.tx_lost_signal_hdlrs.append(self.signal_lost_tx)
+
         Sim.activate(self, self.lifecycle())
 
 
@@ -347,7 +351,8 @@ class CommsTrust(RoutingTest):
 
         self.current_target = None
         self.last_trust_assessment = None
-        self.last_assessed_packet = None
+        self.last_accessed_rx_packet = None
+        self.last_accessed_tx_packet = None
 
         self.trust_assessments = {} # My generated trust metrics, [node][t][n_observation_arrays]
         self.trust_accessories = {} # Extra information that might be interesting in the longer term.
@@ -364,16 +369,13 @@ class CommsTrust(RoutingTest):
         self.result_packet_dl = {name: []
                                  for name in self.total_counter.keys()}
 
-        self.layercake.tx_good_signal_hdlrs.append(self.signal_good_tx)
-        self.layercake.tx_lost_signal_hdlrs.append(self.signal_lost_tx)
-
         super(CommsTrust, self).activate()
 
     @classmethod
-    def get_metrics_from_packet(self, packet):
+    def get_metrics_from_packet(cls, packet):
         """
         Extracts the following measurements from a packet
-            - tx level
+            - tx power
             - rx power
             - delay
             - data length
@@ -383,7 +385,31 @@ class CommsTrust(RoutingTest):
         pkt_indexes = ['tx_pwr_db','rx_pwr_db', 'delay', 'length']
         return [packet[_] for _ in pkt_indexes]
 
+    def get_metrics_from_batch(self, batch):
+        """
+        Extracts per-packet metrics, averages them, and tags on the following cross packet metrics
+            - rx-throughput
+        :param batch:
+        :return:
+        """
 
+        nodepktstats = []
+        throughput = 0 # SUM Length
+
+        for j_pkt, pkt in enumerate(batch):
+            nodepktstats.append(self.get_metrics_from_packet(pkt))
+            throughput+=pkt['length']
+
+        if throughput:
+            try:
+                return append(average(nodepktstats, axis=0),[throughput])
+            except:
+                self.logger.error("PKTS:{},TP:{},NANMEAN:{}".format(
+                    nodepktstats, throughput, nanmean(nodepktstats, axis=0)
+                ))
+                raise
+        else:
+            return []
 
     def tick(self):
         if not Sim.now() % self.trust_assessment_period:
@@ -395,19 +421,46 @@ class CommsTrust(RoutingTest):
                 if not self.trust_assessments.has_key(node):
                     self.trust_assessments[node] = []
 
-            relevant_packets = self.received_log[self.last_assessed_packet:]
-            self.last_assessed_packet = len(self.received_log)
+            relevant_packets = self.received_log[self.last_accessed_rx_packet:]
+            self.last_accessed_rx_packet = len(self.received_log)
 
-            if self.layercake.hostname in self.trust_assessments:
-                raise RuntimeError("You have to be kidding me? {} {}".format(self.total_counter, self.trust_assessments))
-
+            rx_stats={}
             for node in self.trust_assessments.keys():
-                nodestats = []
-                for j_pkt, pkt in enumerate([packet for packet in relevant_packets if packet['source'] == node]):
-                    nodestats.append(self.get_metrics_from_packet(pkt))
-                self.trust_assessments[node].append(nodestats)
+                pkt_batch = [packet for packet in relevant_packets if packet['source'] == node]
+                rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
+                # avg(tx pwr, rx pwr, delay, length), rx throughput
 
-            # Accessories cus we can.
+
+            # TODO NamedTuples for safety
+            relevant_packets = []
+            last_relevant_time = Sim.now()-self.trust_assessment_period
+            for i,p in enumerate(self.sent_log):
+                if p.has_key('delivered') and p['time_stamp']<last_relevant_time:
+                    try:
+                        relevant_packets.append((i,p['dest'],p['length'], p['delivered']))
+                    except:
+                        self.logger.error("FKSD:{}".format(p))
+                        raise
+
+            tx_stats = {}
+            for node in self.trust_assessments.keys():
+                per = nanmean(
+                    map(
+                        lambda p: float(not p[3]),
+                        filter(
+                            lambda p: p[1]==node,
+                            relevant_packets)
+                    )
+                )
+                tx_stats[node]=[per if not isnan(per) else 0.0]
+                # Packet Error Rate (all time)
+                if len(rx_stats[node]):
+                    nodestat = append(rx_stats[node],tx_stats[node])
+                else:
+                    nodestat = []
+                self.trust_assessments[node].append(nodestat)
+
+
             self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))
             self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
 
