@@ -1892,7 +1892,13 @@ class CSMA:
         """
         self.last_outgoing_id = self.outgoing_packet_queue[0]['ID']
         self.level = self.outgoing_packet_queue[0]["level"]
-        self.T = self.layercake.phy.level2delay(self.level)
+        try:
+            self.T = self.layercake.phy.level2delay(self.level)
+        except:
+            self.logger.error("Died trying to get delay for packet {}".format(
+                self.outgoing_packet_queue[0]
+            ))
+            raise
 
         if self.layercake.phy.IsIdle():
             self.transmission_attempts = self.transmission_attempts + 1
@@ -2183,11 +2189,13 @@ class CSMA:
         p = Sim.Process()
         p.interrupt(self.timer)
 
+        self.layercake.signal_good_tx(self.incoming_packet['ID'])
         self.PostSuccessOrFail()
 
     def OnTransmitFail(self):
         """ All the transmission attemps have been completed. It's impossible to reach the node.
         """
+        self.layercake.signal_lost_tx(self.outgoing_packet_queue[0]['ID'])
         self.logger.debug(
             "Failed to transmit to " + self.outgoing_packet_queue[0]["dest"])
         self.PostSuccessOrFail()

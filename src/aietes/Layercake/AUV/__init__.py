@@ -49,6 +49,12 @@ class Layercake():
         self.channel_event = self.host.simulation.channel_event
         self.logger = host.logger.getChild("%s" % self.__class__.__name__)
         self.sim_duration = host.simulation.duration_intervals
+        ###
+        # App Signal Handlers
+        ###
+        self.tx_good_signal_hdlrs=[]
+        self.tx_lost_signal_hdlrs=[]
+
         ##############################
         # PHY
         ##############################
@@ -104,6 +110,14 @@ class Layercake():
             self.app_rx_handler(payload)
         else:
             raise NotImplementedError("No App RX Handler configured")
+
+    def signal_good_tx(self, packetid):
+        for hdlr in self.tx_good_signal_hdlrs:
+            hdlr(packetid)
+
+    def signal_lost_tx(self, packetid):
+        for hdlr in self.tx_lost_signal_hdlrs:
+            hdlr(packetid)
 
     def get_current_position(self):
         """

@@ -172,6 +172,7 @@ class PhysicalLayer():
             distance = self.level2distance[str(level)]
         except AttributeError:
             distance = self.range
+
         return distance / self.medium_speed
 
     def __str__(self):
@@ -314,6 +315,10 @@ class IncomingPacket(Sim.Process):
         self.physical_layer = physical_layer
         self.doomed = False
         self.MaxInterference = 1
+
+        # Need to add this info in for higher layers
+        self.packet['rx_pwr_db']=Linear2DB(self.power)
+
         if debug:
             self.physical_layer.logger.debug("Packet {id} from {src} to {dest} recieved with power {pwr}".format(
                 id=packet['ID'], src=packet[
@@ -336,8 +341,6 @@ class IncomingPacket(Sim.Process):
             # Even if a packet is not received properly, we have consumed power
             self.physical_layer.rx_energy += DB2Linear(
                 self.physical_layer.receive_power) * duration
-        else:
-            print(self.power)
 
     def GetMinSIR(self):
         return self.power / (self.MaxInterference - self.power + 1)
@@ -350,7 +353,9 @@ class OutgoingPacket(Sim.Process):
 
     """OutgoingPacket: A small class to represent a message being transmitted
         by the transducer.  It establishes the packet duration according to
-        the bandwidth. Powers are in linear scale, not in dB.
+        the bandwidth.
+
+        Powers are in linear scale, not in dB, no they're bloody not....
     """
 
     def __init__(self, physical_layer):
@@ -380,6 +385,9 @@ class OutgoingPacket(Sim.Process):
                 s=duration,
                 dest=packet['dest']
             ))
+
+        # Need to add this info in for higher layers
+        packet['tx_pwr_db']=(power)
 
         self.physical_layer.transducer.channel_event.signal({"pos": self.physical_layer.layercake.get_real_current_position,
                                                              "power": power, "duration": duration, "frequency": self.physical_layer.freq,

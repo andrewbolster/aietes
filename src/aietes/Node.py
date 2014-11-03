@@ -527,6 +527,7 @@ class Node(Sim.Process):
                 self.logger.info('updating behaviour')
             try:
                 self.behaviour.process()
+                self.app.tick()
             except Exception:
                 self.logger.error("Exception in Process")
                 raise

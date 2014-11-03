@@ -268,12 +268,10 @@ class RandomWalk(Behaviour):
         # Roughly 6 degrees or pi/32 rad
         if angle_between(velocity, self.my_random_direction) < 0.2:
             self.my_random_direction = random_three_vector()
-        return np.asarray(self.my_random_direction
-
-                          )
+        return np.asarray(self.my_random_direction)
 
 
-class RandomWalk(Behaviour):
+class RandomFlatWalk(Behaviour):
 
     """
     Generic Wandering Behaviour on a plane
@@ -289,9 +287,21 @@ class RandomWalk(Behaviour):
         # Roughly 6 degrees or pi/32 rad
         if angle_between(velocity, self.my_random_direction) < 0.2:
             self.my_random_direction = random_xy_vector()
-        return np.asarray(self.my_random_direction
+        return np.asarray(self.my_random_direction)
 
-                          )
+class RandomFlatCentredWalk(RandomFlatWalk):
+
+    # Should probably add some intelligence in here to select a random point within the environment to head towards
+    # rather than picking a random direction....
+    def __init__(self, *args, **kwargs):
+        super(RandomFlatCentredWalk,self).__init__(*args, **kwargs)
+        self.wallCheckDisabled = False
+        self.original_position = self.node.getPos()
+        self.behaviours.append(self.attractToOrigin)
+
+    def attractToOrigin(self, position, velocity):
+        return np.asarray(self.attractToPosition(position, self.original_position))*0.01
+
 
 
 class Nothing(Behaviour):

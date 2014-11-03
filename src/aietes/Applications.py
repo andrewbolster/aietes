@@ -19,6 +19,8 @@ __email__ = "me@andrewbolster.info"
 from numpy import *
 from numpy.random import poisson
 
+import pandas as pd
+
 from collections import Counter, OrderedDict
 import networkx as nx
 
@@ -45,7 +47,7 @@ class Application(Sim.Process):
                       'packets_hops': 0,
                       'packets_dhops': 0
                       }
-        self.received_log = OrderedDict()
+        self.received_log = []
         self.sent_log = []
         self.config = config
         self.layercake = layercake
@@ -79,6 +81,17 @@ class Application(Sim.Process):
 
     def activate(self):
         Sim.activate(self, self.lifecycle())
+
+
+    def signal_good_tx(self,packetid):
+        for sent in self.sent_log:
+            if sent['ID']==packetid:
+                sent['delivered']=True
+
+    def signal_lost_tx(self,packetid):
+        for sent in self.sent_log:
+            if sent['ID']==packetid:
+                sent['delivered']=False
 
     def tick(self):
         """ Method called at each simulation instance"""
@@ -128,11 +141,10 @@ class Application(Sim.Process):
             self.logger.info("App Packet received from %s" % source)
         self.stats['packets_received'] += 1
 
-        if self.received_log.has_key(source):
-            self.received_log[source].append(packet)
-        else:
-            self.received_log[source] = [packet]
-        delay = packet['received'] - packet['time_stamp']
+        delay = packet['delay'] = packet['received'] - packet['time_stamp']
+
+        self.received_log.append(packet)
+
         # Ignore first hop (source)
         hops = len(packet['route'])
 
@@ -146,9 +158,8 @@ class Application(Sim.Process):
     def dump_stats(self):
 
         total_bits_in = total_bits_out = 0
-        for txr, pkts in self.received_log.items():
-            for pkt in pkts:
-                total_bits_in += pkt['length']
+        for pkt in self.received_log:
+            total_bits_in += pkt['length']
 
         for pkt in self.sent_log:
             total_bits_out += pkt['length']
@@ -324,13 +335,26 @@ class CommsTrust(RoutingTest):
 
     """
     Vaguely Emulated Bellas Traffic Scenario
+    Trust Values retained per interval:
+        Packet Loss Rate
+
     """
-    current_target = None
     test_stream_length = 6
     stream_period_ratio = 0.1
-    trust_assessment_period = 60
+    trust_assessment_period = 600
 
     def activate(self):
+
+        self.current_target = None
+        self.last_trust_assessment = None
+        self.last_assessed_packet = None
+
+        self.trust_assessments = {} # My generated trust metrics, [node][t][n_observation_arrays]
+        self.trust_accessories = {} # Extra information that might be interesting in the longer term.
+        self.trust_accessories['queue_length']=[]
+        self.trust_accessories['collisions']=[]
+
+
         self.forced_nodes = self.layercake.host.fleet.nodeNames()
         if self.forced_nodes:
             for node in self.forced_nodes:
@@ -339,12 +363,54 @@ class CommsTrust(RoutingTest):
         self.test_packet_counter = Counter(self.total_counter)
         self.result_packet_dl = {name: []
                                  for name in self.total_counter.keys()}
+
+        self.layercake.tx_good_signal_hdlrs.append(self.signal_good_tx)
+        self.layercake.tx_lost_signal_hdlrs.append(self.signal_lost_tx)
+
         super(CommsTrust, self).activate()
+
+    @classmethod
+    def get_metrics_from_packet(self, packet):
+        """
+        Extracts the following measurements from a packet
+            - tx level
+            - rx power
+            - delay
+            - data length
+        :param packet:
+        :return:
+        """
+        pkt_indexes = ['tx_pwr_db','rx_pwr_db', 'delay', 'length']
+        return [packet[_] for _ in pkt_indexes]
+
+
 
     def tick(self):
         if not Sim.now() % self.trust_assessment_period:
-            self.logger.warn("Assessing Trust")
-        pass
+
+            # Set up the data structures
+            for node in self.total_counter.keys():
+                # Relevant Packets RX since last interval
+
+                if not self.trust_assessments.has_key(node):
+                    self.trust_assessments[node] = []
+
+            relevant_packets = self.received_log[self.last_assessed_packet:]
+            self.last_assessed_packet = len(self.received_log)
+
+            if self.layercake.hostname in self.trust_assessments:
+                raise RuntimeError("You have to be kidding me? {} {}".format(self.total_counter, self.trust_assessments))
+
+            for node in self.trust_assessments.keys():
+                nodestats = []
+                for j_pkt, pkt in enumerate([packet for packet in relevant_packets if packet['source'] == node]):
+                    nodestats.append(self.get_metrics_from_packet(pkt))
+                self.trust_assessments[node].append(nodestats)
+
+            # Accessories cus we can.
+            self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))
+            self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
+
 
     def packetGen(self, period, destination=None, data=None, *args, **kwargs):
         """
@@ -395,12 +461,12 @@ class CommsTrust(RoutingTest):
         else:
             # Finished Stream
             period = poisson(float(self.period))
-            self.logger.info("Finished Stream {} for {}, sleeping for {}".format(
-                self.test_packet_counter[
-                    destination] / self.test_stream_length,
-                destination,
-                period
-            ))
+            if debug:
+                self.logger.info("Finished Stream {} for {}, sleeping for {}".format(
+                    self.test_packet_counter[destination] / self.test_stream_length,
+                    destination,
+                    period
+                ))
             self.current_target = None
         return packet, period
 
@@ -409,13 +475,27 @@ class CommsTrust(RoutingTest):
         self.received_counter[packet['source']] += 1
         self.result_packet_dl[packet['source']].append(packet['data'])
 
+
+
         if not (packet['data'] + 1) % self.test_stream_length:
-            self.logger.info("Got Stream {count} from {src} after {delay}".format(
-                count=(packet['data'] + 1) / self.test_stream_length,
-                src=packet['source'],
-                delay=Sim.now() - packet['time_stamp']
-            ))
+            if debug:
+                self.logger.info("Got Stream {count} from {src} after {delay}".format(
+                    count=(packet['data'] + 1) / self.test_stream_length,
+                    src=packet['source'],
+                    delay=Sim.now() - packet['time_stamp']
+                ))
         del packet
+
+    def dump_logs(self):
+        initial = super(CommsTrust, self).dump_logs()
+        initial.update({
+            'trust': self.trust_assessments,
+            'trust_accessories': self.trust_accessories
+        })
+        return initial
+
+class CommsTrustRoundRobin(CommsTrust):
+    test_stream_length = 1
 
 
 class Null(Application):

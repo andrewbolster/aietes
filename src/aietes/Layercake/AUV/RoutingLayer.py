@@ -717,6 +717,8 @@ class FBR(SimpleRoutingTable):
                     self.incoming_packet["through"]]
                 self.incoming_packet["level"] = self.GetLevel(
                     self.incoming_packet["through_position"])
+                # If I've been given a silly level, this will trip the exception.
+                self.layercake.phy.level2delay(self.incoming_packet['level'])
             except KeyError:
                 self.logger.debug("WARNING: route to destination " + self.incoming_packet[
                                   "dest"] + " not specified for " + self.layercake.hostname + ". Starting Discovery Process")
@@ -740,7 +742,11 @@ class FBR(SimpleRoutingTable):
             return True
 
         if self.has_key(destination):
-            if self.GetLevel(self.nodes_pos[self[destination]]) == None:
+            # When Broadcast flags go into the route table, the node_pos lookup dies miserably
+            candidate = self[destination]
+            if not self.nodes_pos.has_key(candidate):
+                return True
+            if self.GetLevel(self.nodes_pos[self[destination]]) is None:
                 return True
             elif self.GetLevel(self.nodes_pos[self[destination]]) < current_level:
                 return True
@@ -750,13 +756,22 @@ class FBR(SimpleRoutingTable):
         return True
 
     def GetLevel(self, destination):
-        if destination[0:3] == "ANY":
-            return destination[3]
-        levels = self.layercake.phy.level2distance
+        # Defaults to None for Reachablility assessment
+        new_level = None
 
-        for level, r in levels.iteritems():
+        # ANY0/ANY1 etc
+        if destination[0:3] == "ANY":
+            new_level = destination[3]
+
+        # Otherwise check if any known levels will satisfy the distance
+        for level, r in self.layercake.phy.level2distance.iteritems():
             if distance(self.layercake.get_current_position(), destination) <= r:
-                return level
+                new_level = level
+
+        return new_level
+
+
+
 
     def CloserSink(self):
         self.logger.debug("Looking for the closest Sink.")
