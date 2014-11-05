@@ -19,7 +19,7 @@ __email__ = "me@andrewbolster.info"
 import uuid
 import sys
 
-from Layercake.AUV import Layercake
+from Layercake import Layercake
 import Behaviour
 import Applications
 from aietes.Tools import *

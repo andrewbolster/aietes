@@ -18,6 +18,8 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
 
+
+
 import numpy as np
 from pandas.stats.moments import ewma
 
@@ -295,98 +297,3 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
               "trust_average": trust_average,
               "detection_totals": detection_totals}
     return result
-
-
-def GRC_t(measurements, bias='zero', rho=0.5, w=None):
-    """
-    Grey relational coefficient calculation per time slice
-
-    measurement should be in [node,metric] order
-
-    Assumes that measurements are zero-based (i.e. deviation from norm).
-
-    Output is in the order [node,metric,[grc]]
-
-    :param measurements:
-    :return:
-    """
-
-    # Quick Checks
-    n_nodes, n_metrics = measurements.shape
-    zero_based = bias == 'zero'
-
-    # Take the best reference sequence
-
-    if zero_based:
-        g = np.zeros(n_metrics)
-    else:
-        g = np.min(measurements, axis=0)
-
-    # And the worst
-    b = np.max(measurements, axis=0)
-
-    def grc(delta):
-        """
-        GRC Inner function
-
-
-        :param delta:
-        :param rho:
-        :return:
-        """
-        delta = abs(delta)
-        upper = np.min(delta, axis=0) + (rho * np.max(delta, axis=0))
-        lower = (delta) + (rho * np.max(delta, axis=0))
-        with np.errstate(invalid='ignore', ):
-            parterval = np.divide(upper, lower)
-        return parterval
-
-    intervals = np.asarray(map(grc, [measurements - g, measurements - b]))
-
-    # Now we have the per-metric theta and sigmas
-    # return as [node,metric,[interval]]
-    return np.rollaxis(intervals, 0, 3)
-
-
-def GRG_t(c_intervals, weights=None):
-    """
-    Grey Relational Grade
-
-    Weighted sum given input structure
-
-        [node,metric,[interval]]
-
-    returns
-        [node, [interval]]
-    :param grcs:
-    :return:
-    """
-    return np.average(c_intervals, axis=1, weights=None)
-
-
-def T_kt(interval):
-    """
-    Generate a single trust value from a GRG
-    1/ (1+ sigma^2/theta^2)
-    :param interval:
-    :return:
-    """
-    theta, sigma = interval
-    return 1.0 / (
-        1.0 + (
-            np.power(sigma, 2) / np.power(theta, 2)
-        )
-    )
-
-
-def dev_to_trust(per_metric_deviations):
-    # rotate pmdev to node-primary ([node,metric])
-    per_node_deviations = np.rollaxis(per_metric_deviations, 0, 3)
-    grcs = map(GRC_t, per_node_deviations)
-    grgs = map(GRG_t, grcs)
-    trust_values = np.asarray([
-        np.asarray([
-            T_kt(interval) for interval in node
-        ]) for node in grgs
-    ])
-    return trust_values

@@ -22,7 +22,7 @@ import optparse
 import cProfile
 import collections
 
-from Layercake.AUV import MAC
+from Layercake import MAC
 from Environment import Environment
 import Fleet
 from Node import Node

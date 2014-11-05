@@ -27,6 +27,7 @@ from scipy.spatial.distance import pdist, squareform
 from ast import literal_eval
 
 import numpy as np
+import pandas as pd
 
 
 from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig, results_file
@@ -686,8 +687,64 @@ class DataPackage(object):
                                             writer='imagemagick', bitrate=-1, fps=fps)
         return plt, return_dict
 
-    def plot_axes_views(self):
+    def plot_axes_views(self, res=120):
         """
+        Plot a physical overview of the fleet and it's motion.
+        :param res: timing resolution multiplier in seconds (default 'every 2 minutes of simulated time')
+        :return: f
+        """
+        import matplotlib.pyplot as plt
+        f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+        f.suptitle("Node Layout and mobility for {}".format(self.title))
+        for n, node_p in enumerate(self.p):
+            x,y,z=node_p[:,1]
 
-        :return:
+            ax1.annotate(self.names[n], xy=(x, y), xytext=(-20,5),textcoords='offset points', ha='center', va='bottom',\
+                bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),\
+                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
+                                color='red')
+                )
+            ax1.scatter(x,y)
+            ax2.scatter(y,z)
+            ax3.scatter(x,z)
+
+            xs=node_p[0,::res]
+            ys=node_p[1,::res]
+            zs=node_p[2,::res]
+            ax1.plot(xs,ys, alpha=0.6)
+            ax2.plot(ys,zs, alpha=0.6)
+            ax3.plot(xs,zs, alpha=0.6)
+            ax4.plot(
+                np.abs(np.linalg.norm(node_p[:,:], axis=0)-np.linalg.norm(node_p[:,0])),
+                label=self.names[n],
+                alpha=0.6
+            )
+
+
+        ax1.set_title("X-Y (Top)")
+        ax2.set_title("Y-Z (Side)")
+        ax3.set_title("X-Z (Front)")
+        ax4.set_title("Distance from initial position (m)")
+        ax4.legend(loc='upper centre', ncol=3)
+
+        return f
+
+    def get_global_packet_logs(self, pkt_type='rx', sort=None):
         """
+        Returns the global packet log, defaults to recieved packets
+
+        Can select to be sorted by time_stamp.
+        :param pkt_type: string (rx/tx)
+        :param sorted: None, or Bool
+        :return DataFrame:
+        """
+        valid_types = ['rx','tx']
+        if pkt_type not in valid_types:
+            raise ValueError("No such packet classification {}, valid choices are {}".format(pkt_type, valid_types))
+
+        packets=[]
+        _ =[ packets.extend(nlog[pkt_type]) for nlog in self.comms.tolist()['logs'].values()]
+        if sorted is not None and sorted:
+            rx_packet=sorted(packets, key=lambda k: k['time_stamp'])
+        pf=pd.DataFrame(packets)
+        return pf

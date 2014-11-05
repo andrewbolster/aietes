@@ -24,11 +24,12 @@
 # Contains all nodes' position - Only the sinks' position is needed
 nodes_geo = {}
 import math
-from priodict import priorityDictionary
-
-from aietes.Tools import distance, broadcast_address, debug, logging, Sim
 import collections
 import operator
+
+from aietes.Layercake.priodict import priorityDictionary
+from aietes.Tools import distance, broadcast_address, debug
+
 
 debug = False
 

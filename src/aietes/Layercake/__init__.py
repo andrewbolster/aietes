@@ -19,9 +19,9 @@ __email__ = "me@andrewbolster.info"
 import logging
 
 from aietes.Tools import ConfigError
-import PHY
+import PhysicalLayer as PHY
 import MAC
-import Net
+import RoutingLayer as Net
 
 
 class Layercake():
@@ -44,22 +44,30 @@ class Layercake():
         """
 
         self.host = host
+        self.hostname = host.name
         self.config = config
         self.channel_event = self.host.simulation.channel_event
         self.logger = host.logger.getChild("%s" % self.__class__.__name__)
         self.sim_duration = host.simulation.duration_intervals
+        ###
+        # App Signal Handlers
+        ###
+        self.tx_good_signal_hdlrs=[]
+        self.tx_lost_signal_hdlrs=[]
+
         ##############################
         # PHY
         ##############################
         try:
             phy_mod = getattr(PHY, str(config['phy']))
             self.phy = phy_mod(self,
-                               self.channel_event,
-                               self.config['PHY'])
-        except KeyError:
-            logging.warn("No PHY Configured")
-        except AttributeError:
-            raise ConfigError("Can't find PHY: %s" % config['phy'])
+                               self.config['PHY'],
+                               self.channel_event)
+        # except AttributeError:
+        # raise ConfigError("Can't find PHY: %s" % config['phy'])
+        #
+        except:
+            raise
 
         ##############################
         # MAC
@@ -67,21 +75,19 @@ class Layercake():
         try:
             mac_mod = getattr(MAC, str(config['mac']))
             self.mac = mac_mod(self, config['MAC'])
-        except KeyError:
-            logging.warn("No MAC Configured, activation is going to go wrong!")
-        except AttributeError:
-            raise ConfigError("Can't find MAC: %s" % config['mac'])
+        # except AttributeError:
+        # raise ConfigError("Can't find MAC: %s" % config['mac'])
+        except:
+            raise
 
         ##############################
         # Routing
         ##############################
-        try:
-            net_mod = getattr(Net, str(config['net']))
-            self.net = net_mod(self, config['Network'])
-        except KeyError:
-            logging.warn("No NET Configured")
-            # except AttributeError as e:
-            #    raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
+        # try:
+        net_mod = getattr(Net, str(config['net']))
+        self.net = net_mod(self, config['Network'])
+        # except AttributeError as e:
+        #    raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
 
     def activate(self, rx_handler=None):
         """
@@ -94,7 +100,7 @@ class Layercake():
         """
         Initialise payload transmission down the stack
         """
-        self.net.send(payload)
+        self.net.SendPacket(payload)
 
     def recv(self, payload):
         """
@@ -104,3 +110,27 @@ class Layercake():
             self.app_rx_handler(payload)
         else:
             raise NotImplementedError("No App RX Handler configured")
+
+    def signal_good_tx(self, packetid):
+        for hdlr in self.tx_good_signal_hdlrs:
+            hdlr(packetid)
+
+    def signal_lost_tx(self, packetid):
+        for hdlr in self.tx_lost_signal_hdlrs:
+            hdlr(packetid)
+
+    def get_current_position(self):
+        """
+        Host position as far as it's concerned (unless overridden with 'true' which will return the real physical location
+        :param true:
+        :return:
+        """
+        return self.host.getPos()
+
+    def get_real_current_position(self):
+        """
+        Host position as far as it's concerned (unless overridden with 'true' which will return the real physical location
+        :param true:
+        :return:
+        """
+        return self.host.getPos(True)
