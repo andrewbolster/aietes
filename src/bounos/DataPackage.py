@@ -697,7 +697,7 @@ class DataPackage(object):
         f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
         f.suptitle("Node Layout and mobility for {}".format(self.title))
         for n, node_p in enumerate(self.p):
-            x,y,z=node_p[:,1]
+            x,y,z=node_p[:,0]
 
             ax1.annotate(self.names[n], xy=(x, y), xytext=(-20,5),textcoords='offset points', ha='center', va='bottom',\
                 bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),\
@@ -725,7 +725,7 @@ class DataPackage(object):
         ax2.set_title("Y-Z (Side)")
         ax3.set_title("X-Z (Front)")
         ax4.set_title("Distance from initial position (m)")
-        ax4.legend(loc='upper centre', ncol=3)
+        ax4.legend(loc='upper center', ncol=3)
 
         return f
 

@@ -52,28 +52,31 @@ class Application(Sim.Process):
         self.config = config
         self.layercake = layercake
         self.sim_duration = node.simulation.config.Simulation.sim_duration
-        self.packet_length = layercake.mac.data_packet_length
+        if self.HAS_LAYERCAKE:
+            self.packet_length = layercake.packet_length
 
-        packet_rate = getattr(config, 'packet_rate')
-        packet_count = getattr(config, 'packet_count')
-        if packet_rate > 0 and packet_count == 0:
-            self.packet_rate = getattr(config, 'packet_rate')
-            if debug:
-                self.logger.debug(
-                    "Taking Packet_Rate from config: %s" % self.packet_rate)
-        elif packet_count > 0 and packet_rate == 0:
-            # If packet count defined, only send our N packets
-            self.packet_rate = packet_count / float(self.sim_duration)
-            if debug:
-                self.logger.debug(
-                    "Taking Packet_Count from config: %s" % self.packet_rate)
+            packet_rate = getattr(config, 'packet_rate')
+            packet_count = getattr(config, 'packet_count')
+            if packet_rate > 0 and packet_count == 0:
+                self.packet_rate = getattr(config, 'packet_rate')
+                if debug:
+                    self.logger.debug(
+                        "Taking Packet_Rate from config: %s" % self.packet_rate)
+            elif packet_count > 0 and packet_rate == 0:
+                # If packet count defined, only send our N packets
+                self.packet_rate = packet_count / float(self.sim_duration)
+                if debug:
+                    self.logger.debug(
+                        "Taking Packet_Count from config: %s" % self.packet_rate)
+            else:
+                raise ConfigError("Packet Rate/Count doesn't make sense! {}/{}".format(
+                    packet_rate,
+                    packet_count
+                ))
+
+            self.period = 1 / float(self.packet_rate)
         else:
-            raise ConfigError("Packet Rate/Count doesn't make sense! {}/{}".format(
-                packet_rate,
-                packet_count
-            ))
-
-        self.period = 1 / float(self.packet_rate)
+            self.period = 0
 
     def _start_log(self, parent):
         self.logger = parent.logger.getChild(

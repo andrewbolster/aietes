@@ -18,13 +18,13 @@ def redirected(stdout):
 def set():
     exp = EXP(node_count=6,
               title="Comms Behaviour Testing Scenarios",
-              parallel=True,
-              future=True
+              #parallel=True,
+              #future=True,
+              base_config_file='bella_static.conf'
              )
 
     default_updates = {
         'behaviour':"StationKeep",
-        'positioning':"randomPlane"
     }
     # Set the default behaviour to static
     exp.updateDefaultNode(default_updates)

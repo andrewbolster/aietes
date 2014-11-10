@@ -37,11 +37,12 @@ import numpy as np
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded as ParSim
-from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr
+from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict
 from bounos import DataPackage, printAnalysis
 from contrib.Ghia.ecea.data_grapher import data_grapher
 
 _config_spec = '%s/configs/default.conf' % _ROOT
+_config_dir = "%s/configs/" % _ROOT
 _results_dir = '%s/../../results/' % _ROOT
 
 # Mask in-sim progress display and let joblib do it's... job...
@@ -53,6 +54,14 @@ def getConfig(source_config_file=None, config_spec=_config_spec):
     Get a configuration, either using default values from aietes.configs or
         by taking a configobj compatible file path
     """
+    # If file is defined but not a file then something is wrong
+    if source_config_file and not os.path.isfile(source_config_file):
+        if os.path.isfile(os.path.join(_config_dir,source_config_file)):
+            source_config_file = os.path.join(_config_dir, source_config_file)
+        else:
+            raise ConfigError("Given Source File {} is not present in {}".format(
+                source_config_file, _config_dir
+            ))
     config = ConfigObj(source_config_file,
                        configspec=config_spec,
                        stringify=True, interpolation=True)
@@ -63,6 +72,7 @@ def getConfig(source_config_file=None, config_spec=_config_spec):
         else:
             raise RuntimeError("Configspec doesn't match given input structure: %s"
                                % source_config_file)
+    #config = Simulation.populateConfig(config, retain_default=True)
     return config
 
 
@@ -90,7 +100,12 @@ class Scenario(object):
         'drift_dvl_scale': ['drift_scales', 'dvl'],
         'drift_gyro_scale': ['drift_scales', 'gyro'],
         'tof_type': ['tof_type'],
-        'drift_noises': ['drift_noises']
+        'drift_noises': ['drift_noises'],
+        'net': ['Network','protocol'],
+        'mac': ['MAC','protocol'],
+        'app': ['Application','protocol'],
+        'app_rate': ['Application', 'packet_rate'],
+        'app_length': ['Application', 'packet_length'],
     }
 
     def __init__(self, *args, **kwargs):
@@ -105,14 +120,22 @@ class Scenario(object):
             title(str)
         """
 
-        self._default_config = kwargs.get("default_config",
-                                          getConfig(kwargs.get("default_config_file", None)))
-        if not isinstance(self._default_config, ConfigObj):
+        self._default_config = kwargs.get(
+            "default_config",
+            getConfig(kwargs.get(
+                "default_config_file",
+                None)
+            )
+        )
+        if not isinstance(self._default_config, (ConfigObj, dotdict)):
             raise RuntimeError(
                 "Given invalid Config of type %s: %s"
                 % (type(self._default_config), self._default_config))
 
-        self._default_config_dict = self._default_config.dict()
+        if isinstance(self._default_config, ConfigObj):
+            self._default_config_dict = self._default_config.dict()
+        else:
+            self._default_config_dict = dict(self._default_config)
         self._default_node_config = self._default_config_dict[
             'Node']['Nodes'].pop("__default__")
         self._default_custom_nodes = self._default_config_dict['Node']['Nodes']
@@ -124,7 +147,8 @@ class Scenario(object):
         self.node_count = self._default_node_count = self._default_config_dict[
             'Node']['count']
         self.nodes = {}
-        self._default_behaviour_dict = self.getBehaviourDict()
+        # May be unnecessary
+        # self._default_behaviour_dict = self.getBehaviourDict()
 
         self.title = kwargs.get("title", "DefaultScenario")
 
@@ -536,7 +560,11 @@ class Scenario(object):
 
 class ExperimentManager(object):
 
-    def __init__(self, node_count=4, title=None, parallel=False, *args, **kwargs):
+    def __init__(self,
+                 node_count=4,
+                 title=None, parallel=False, future=True, retain_data=True,
+                 base_config_file=None, *args, **kwargs
+    ):
         """
         The Experiment Manager Object deals with multiple scenarios build around a single or
             multiple experimental input. (Number of nodes, ratio of behaviours, etc)
@@ -546,9 +574,12 @@ class ExperimentManager(object):
             title(str): define a title for this experiment, to be used for file and folder naming,
                 if not set, this defaults to a timecode and initialisation (not execution)
             retain_data(bool): Decides wether the scenario state data is maintained or allowed to be GC's
+            future(bool): option to maintain datapackages created in memory or not (default True)
+            base_config_file (str->FQPath): aietes config file to base the default scenario off of.
         """
         self.scenarios = []
-        self._default_scenario = Scenario(title="__default__")
+        self._default_scenario = Scenario(title="__default__",
+                                          default_config_file=base_config_file)
         self.node_count = node_count
         if title is None:
             self.title = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
@@ -556,8 +587,8 @@ class ExperimentManager(object):
             self.title = title
         self._default_scenario.setNodeCount(self.node_count)
         self.parallel = parallel
-        self.retain_data = kwargs.get("retain_data", True)
-        self.future = kwargs.get("future", True)
+        self.retain_data = retain_data
+        self.future = future
         if self.parallel and not self.future:
             ParSim.boot()
 

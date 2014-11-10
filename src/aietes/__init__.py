@@ -51,6 +51,7 @@ class Simulation():
         config_file:str(None)
         config:dict(None)
     """
+    logger = logging.getLogger("BaseSimulationClass")
 
     def __init__(self, *args, **kwargs):
         self._done = False
@@ -93,7 +94,7 @@ class Simulation():
         if self.config_file is None and self.config is None:
             self.logger.info("creating instance from default")
             self.config = validateConfig(None)
-            self.config = self.generateConfig(self.config)
+            self.config = self.populateConfig(self.config)
         # If given a manual, **string** config, use it.
         elif self.config_file is None and self.config is not None:
             self.logger.info("using given config")
@@ -106,7 +107,7 @@ class Simulation():
                 self.logger.info("creating instance from %s" %
                                  self.config_file)
                 self.config = validateConfig(self.config_file)
-                self.config = self.generateConfig(self.config)
+                self.config = self.populateConfig(self.config)
             else:
                 raise ConfigError(
                     "Cannot open given config file:%s" % self.config_file)
@@ -315,7 +316,8 @@ class Simulation():
 
         return state
 
-    def generateConfig(self, config):
+    @classmethod
+    def populateConfig(cls, config, retain_default=False):
         def update(d, u):
             for k, v in u.iteritems():
                 if isinstance(v, collections.Mapping):
@@ -331,12 +333,12 @@ class Simulation():
         preconfigured_nodes_count = 0
         pre_node_names = []
         nodes_config = {}
-        node_default_config_dict = dotdict(
-            config['Node']['Nodes'].pop('__default__').dict())
-        config_dict = dotdict(config.dict())
-        # Add the stuff we know whould be there...
-        self.logger.debug("Initial Node Config from %s: %s" %
-                          (self.config_file, pformat(node_default_config_dict)))
+        try:
+            node_default_config_dict = dotdict(
+                config['Node']['Nodes'].pop('__default__').dict())
+            config_dict = dotdict(config.dict())
+        except KeyError:
+            raise ConfigError("Config has no __default__ node, the may be due to a doubly-configured file. Aborting")
         node_default_config_dict.update(
             # TODO import PHY,Behaviour, etc into the node config?
         )
@@ -347,7 +349,7 @@ class Simulation():
             #
             # There Are Detailed Config Instances
             preconfigured_nodes_count = len(config_dict.Node.Nodes)
-            self.logger.info("Have %d nodes from config: %s" % (
+            cls.logger.info("Have %d nodes from config: %s" % (
                 preconfigured_nodes_count,
                 nodes_config)
             )
@@ -373,8 +375,8 @@ class Simulation():
             dist = node_default_config_dict.Application.distribution
             nodes_count = config_dict.Node.count
         except AttributeError as e:
-            self.logger.error("Error:%s" % e)
-            self.logger.info("%s" % pformat(node_default_config_dict))
+            cls.logger.error("Error:%s" % e)
+            cls.logger.info("%s" % pformat(node_default_config_dict))
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
@@ -386,7 +388,7 @@ class Simulation():
                                 for a, n in zip(app, dist)
                                 for i in range(int(n))
                                 ]
-                self.logger.debug("Distributed Applications:%s" % applications)
+                cls.logger.debug("Distributed Applications:%s" % applications)
             else:
                 raise ConfigError(
                     "Application / Distribution mismatch"
@@ -394,7 +396,7 @@ class Simulation():
         else:
             applications = [
                 str(app) for i in range(int(nodes_count - preconfigured_nodes_count))]
-            self.logger.info("Using Application:%s" % applications)
+            cls.logger.info("Using Application:%s" % applications)
 
         #
         # Check and generate behaviour distribution
@@ -405,8 +407,8 @@ class Simulation():
             dist = node_default_config_dict.Behaviour.distribution
             nodes_count = config_dict.Node.count
         except AttributeError as e:
-            self.logger.error("Error:%s" % e)
-            self.logger.info("%s" % pformat(node_default_config_dict))
+            cls.logger.error("Error:%s" % e)
+            cls.logger.info("%s" % pformat(node_default_config_dict))
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
@@ -418,7 +420,7 @@ class Simulation():
                               for a, n in zip(bev, dist)
                               for i in range(int(n))
                               ]
-                self.logger.debug("Distributed behaviours:%s" % behaviours)
+                cls.logger.debug("Distributed behaviours:%s" % behaviours)
             else:
                 raise ConfigError(
                     "Application / Distribution mismatch"
@@ -426,7 +428,7 @@ class Simulation():
         else:
             behaviours = [
                 str(bev) for i in range(int(nodes_count - preconfigured_nodes_count))]
-            self.logger.info("Using Behaviour:%s" % behaviours)
+            cls.logger.info("Using Behaviour:%s" % behaviours)
             #
 
         # Fix MAC Duplication
@@ -446,8 +448,8 @@ class Simulation():
                         macp
                     ))
         except AttributeError as e:
-            self.logger.error("Error:%s" % e)
-            self.logger.info("%s" % pformat(node_default_config_dict))
+            cls.logger.error("Error:%s" % e)
+            cls.logger.info("%s" % pformat(node_default_config_dict))
             raise ConfigError("Something is badly wrong")
 
         # Generate Names for any remaining auto-config nodes
@@ -482,7 +484,9 @@ class Simulation():
         # Confirm
         #
         config_dict.Node.Nodes.update(dotdict(nodes_config))
-        self.logger.debug("Built Config: %s" % pformat(config))
+        if retain_default:
+            config_dict.Node.Nodes['__default__'] = ConfigObj(node_default_config_dict)
+        cls.logger.debug("Built Config: %s" % pformat(config))
         return config_dict
 
     def configureEnvironment(self, env_config):

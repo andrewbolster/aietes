@@ -49,6 +49,7 @@ class Layercake():
         self.channel_event = self.host.simulation.channel_event
         self.logger = host.logger.getChild("%s" % self.__class__.__name__)
         self.sim_duration = host.simulation.duration_intervals
+        self.packet_length = None
         ###
         # App Signal Handlers
         ###
@@ -75,6 +76,7 @@ class Layercake():
         try:
             mac_mod = getattr(MAC, str(config['mac']))
             self.mac = mac_mod(self, config['MAC'])
+            self.packet_length = self.mac.data_packet_length
         # except AttributeError:
         # raise ConfigError("Can't find MAC: %s" % config['mac'])
         except:
