@@ -72,7 +72,6 @@ def getConfig(source_config_file=None, config_spec=_config_spec):
         else:
             raise RuntimeError("Configspec doesn't match given input structure: %s"
                                % source_config_file)
-    #config = Simulation.populateConfig(config, retain_default=True)
     return config
 
 
@@ -108,7 +107,8 @@ class Scenario(object):
         'app_length': ['Application', 'packet_length'],
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, default_config = None, default_config_file = None,
+                 runcount = 1, title= None, *args, **kwargs):
         """
         Builds an initial config and divides it up for convenience later
             Can take default_config = <ConfigObj> or default_config_file = <path>
@@ -120,14 +120,23 @@ class Scenario(object):
             title(str)
         """
 
-        self._default_config = kwargs.get(
-            "default_config",
-            getConfig(kwargs.get(
-                "default_config_file",
-                None)
+        if default_config_file is None and default_config is None:
+            print("Assume that the user wants a generic default")
+            self._default_config = getConfig()
+        elif isinstance(default_config, ConfigObj):
+            print("User provided a (hopefully complete) confobj")
+            self._default_config = default_config
+        elif isinstance(default_config, dotdict):
+            print("User provided a (hopefully complete) dotdict")
+            self._default_config = ConfigObj(default_config)
+        elif default_config_file is not None:
+            print("User provided a config file that we have to interpolate "\
+                  "against the defaults to generate a full config")
+            intermediate_config = getConfig(default_config_file)
+            self._default_config = Simulation.populateConfig(
+                intermediate_config, retain_default=True
             )
-        )
-        if not isinstance(self._default_config, (ConfigObj, dotdict)):
+        else:
             raise RuntimeError(
                 "Given invalid Config of type %s: %s"
                 % (type(self._default_config), self._default_config))
@@ -135,26 +144,36 @@ class Scenario(object):
         if isinstance(self._default_config, ConfigObj):
             self._default_config_dict = self._default_config.dict()
         else:
-            self._default_config_dict = dict(self._default_config)
-        self._default_node_config = self._default_config_dict[
-            'Node']['Nodes'].pop("__default__")
-        self._default_custom_nodes = self._default_config_dict['Node']['Nodes']
-        self.simulation = self._default_sim_config = self._default_config_dict[
-            'Simulation']
-        self.environment = self._default_env_config = self._default_config_dict[
-            'Environment']
-        self._default_run_count = kwargs.get("runcount", 1)
+            self._default_config_dict = ConfigObj(self._default_config)
+        self._default_node_config = ConfigObj(
+            self._default_config_dict['Node']['Nodes'].pop("__default__")
+        )
+        self.simulation = self._default_sim_config = ConfigObj(
+            self._default_config_dict['Simulation']
+        )
+        self.environment = self._default_env_config = ConfigObj(
+            self._default_config_dict['Environment']
+        )
+        self._default_run_count = runcount
         self.node_count = self._default_node_count = self._default_config_dict[
             'Node']['count']
         self.nodes = {}
-        # May be unnecessary
-        # self._default_behaviour_dict = self.getBehaviourDict()
-
-        self.title = kwargs.get("title", "DefaultScenario")
+        self.title = "DefaultScenario" if title is None else title
 
         self.committed = False
 
         self.tweaks = {}
+
+        # Update Nodes List with Custom Nodes if any
+        self._default_custom_nodes = ConfigObj(self._default_config_dict['Node']['Nodes'])
+        for node_name, node_config in self._default_custom_nodes.items():
+            # Casting to ConfigObj is a nasty hack for picklability (i.e. dotdict
+            # subclasses dict but pickle protocol looks after dict natively.
+            self.nodes[node_name]=deepcopy(ConfigObj(node_config))
+
+        # May be unnecessary
+        self._default_behaviour_dict = self.getBehaviourDict()
+
 
     def run(self, runcount=None, runtime=None, *args, **kwargs):
         """
@@ -733,6 +752,26 @@ class ExperimentManager(object):
             s.addCustomNode({variable: v}, count=self.node_count)
             self.scenarios.append(s)
 
+    def addApplicationVariableScenario(self, variable, value_range, title_range = None):
+        """
+        Add a scenario with a range of application/Node configuration values to the
+        experimental run
+
+        This *UPDATES* the default nodes rather than adding custom ones
+
+        Args:
+            variable(str): mutable value description
+            value_range(range or generator): values to be tested against.
+        """
+        if title_range is None:
+            title_range = ["{}({})".format(variable, v) for v in value_range]
+        for i, v in enumerate(value_range):
+            s = Scenario(title=title_range[i],
+                         default_config=self._default_scenario.generateConfigObj())
+            for node, node_config in s.nodes.items():
+                s.updateNode(node_config,variable, v)
+            self.scenarios.append(s)
+
     def addVariableNodeScenario(self, node_range):
         """
         Add a scenario with a range of configuration values to the experimental run
@@ -820,7 +859,6 @@ class ExperimentManager(object):
         for i in range(runcount):
             s = Scenario(default_config=self._default_scenario.generateConfigObj(),
                          title=title if title is not None else "{}({})".format(self.title, i))
-            s.addDefaultNode(self.node_count)
             self.scenarios.append(s)
 
     @staticmethod

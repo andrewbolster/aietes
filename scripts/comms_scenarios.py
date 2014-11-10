@@ -5,6 +5,7 @@ from polybos import ExperimentManager as EXP
 from bounos import Analyses, _metrics
 
 from contextlib import contextmanager
+import numpy as np
 import sys, os
 from subprocess import call
 
@@ -16,33 +17,22 @@ def redirected(stdout):
     sys.stdout = saved_stdout
 
 def set():
-    exp = EXP(node_count=6,
-              title="Comms Behaviour Testing Scenarios",
-              #parallel=True,
-              #future=True,
+    exp = EXP(
+              title="ThroughputTestingScenario",
+              parallel=True,
+              future=True,
               base_config_file='bella_static.conf'
              )
 
-    default_updates = {
-        'behaviour':"StationKeep",
-    }
-    # Set the default behaviour to static
-    exp.updateDefaultNode(default_updates)
     # Scenario 1: All static
-    exp.addDefaultScenario(title="Scenario1")
-    # Scenario 2: 1 mobile
-    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=1,title="Scenario2")
-    # Scenario 3: n-1 mobile
-    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=exp.node_count-1,title="Scenario3")
-    # Scenario 2: n mobile
-    exp.addMinorityNBehaviourSuite(["RandomWalk"], n_minority=exp.node_count,title="Scenario4")
+    #exp.addDefaultScenario(title="Scenario1")
+    exp.addApplicationVariableScenario('app_rate', np.linspace(0.005, 0.05, 10))
     return exp
 
 
 def run(exp):
-    exp.run(title="Mobi-static scenarios",
+    exp.run(title="ThroughputTestingScenario",
             runcount=4,
-            runtime=400,
             dataFile=True)
     return exp
 

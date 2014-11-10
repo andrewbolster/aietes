@@ -334,46 +334,47 @@ class Simulation():
         pre_node_names = []
         nodes_config = {}
         try:
-            node_default_config_dict = dotdict(
-                config['Node']['Nodes'].pop('__default__').dict())
-            config_dict = dotdict(config.dict())
+            node_default_config_dict = ConfigObj(
+                config['Node']['Nodes'].pop('__default__')
+            )
+            config_dict = config.dict()
         except KeyError:
             raise ConfigError("Config has no __default__ node, the may be due to a doubly-configured file. Aborting")
-        node_default_config_dict.update(
-            # TODO import PHY,Behaviour, etc into the node config?
-        )
+        # node_default_config_dict.update(
+        #     # TODO import PHY,Behaviour, etc into the node config?
+        # )
 
         #
         # Check if there are individually configured nodes
-        if isinstance(config_dict.Node.Nodes, dict) and len(config_dict.Node.Nodes) > 0:
+        if isinstance(config_dict['Node']['Nodes'], dict) and len(config_dict['Node']['Nodes']) > 0:
             #
             # There Are Detailed Config Instances
-            preconfigured_nodes_count = len(config_dict.Node.Nodes)
+            preconfigured_nodes_count = len(config_dict['Node']['Nodes'])
             cls.logger.info("Have %d nodes from config: %s" % (
                 preconfigured_nodes_count,
                 nodes_config)
             )
-            pre_node_names = config_dict.Node.Nodes.keys()
+            pre_node_names = config_dict['Node']['Nodes'].keys()
 
         #
         # Check and generate application distribution
         # i.e. app = ["App A","App B"]
         #        dist = [ 4, 5 ]
         try:
-            appp = node_default_config_dict.Application.protocol
-            app = node_default_config_dict.app
+            appp = node_default_config_dict['Application']['protocol']
+            app = node_default_config_dict['app']
 
             if app != appp:
                 if app == "Null":
-                    node_default_config_dict.app = appp
+                    node_default_config_dict['app'] = appp
                 else:
                     raise ConfigError("Conflicting app and Application.Protcols ({},{})".format(
                         app,
                         appp
                     ))
 
-            dist = node_default_config_dict.Application.distribution
-            nodes_count = config_dict.Node.count
+            dist = node_default_config_dict['Application']['distribution']
+            nodes_count = config_dict['Node']['count']
         except AttributeError as e:
             cls.logger.error("Error:%s" % e)
             cls.logger.info("%s" % pformat(node_default_config_dict))
@@ -403,9 +404,9 @@ class Simulation():
         #   i.e. bev = ["Bev A","Bev B"]
         #        dist = [ 4, 5 ]
         try:
-            bev = node_default_config_dict.Behaviour.protocol
-            dist = node_default_config_dict.Behaviour.distribution
-            nodes_count = config_dict.Node.count
+            bev = node_default_config_dict['Behaviour']['protocol']
+            dist = node_default_config_dict['Behaviour']['distribution']
+            nodes_count = config_dict['Node']['count']
         except AttributeError as e:
             cls.logger.error("Error:%s" % e)
             cls.logger.info("%s" % pformat(node_default_config_dict))
@@ -436,12 +437,12 @@ class Simulation():
         # phy/PHY is unnecessary (almost completly actually... #TODO)
         # mac /MAC.protocol
         try:
-            macp = node_default_config_dict.MAC.protocol
-            mac = node_default_config_dict.mac
+            macp = node_default_config_dict['MAC']['protocol']
+            mac = node_default_config_dict['mac']
 
             if mac != macp:
                 if mac == MAC.default:
-                    node_default_config_dict.mac = macp
+                    node_default_config_dict['mac'] = macp
                 else:
                     raise ConfigError("Conflicting mac and MAC.Protcols ({},{})".format(
                         mac,
@@ -455,7 +456,7 @@ class Simulation():
         # Generate Names for any remaining auto-config nodes
         auto_node_names = nameGeneration(
             count=nodes_count - preconfigured_nodes_count,
-            naming_convention=config_dict.Node.naming_convention
+            naming_convention=config_dict['Node']['naming_convention']
         )
         node_names = auto_node_names + pre_node_names
         try:
@@ -472,7 +473,7 @@ class Simulation():
                 nodes_config[node_name]['app'] = str(node_app)
 
             # Overlay Preconfigured with their own settings
-            for node_name, node_config in config_dict.Node.Nodes.items():
+            for node_name, node_config in config_dict['Node']['Nodes'].items():
                 # Import the magic!
                 update(nodes_config[node_name], node_config.copy())
 
@@ -483,9 +484,9 @@ class Simulation():
         #
         # Confirm
         #
-        config_dict.Node.Nodes.update(dotdict(nodes_config))
+        config_dict['Node']['Nodes'].update(ConfigObj(nodes_config))
         if retain_default:
-            config_dict.Node.Nodes['__default__'] = ConfigObj(node_default_config_dict)
+            config_dict['Node']['Nodes']['__default__'] = ConfigObj(node_default_config_dict)
         cls.logger.debug("Built Config: %s" % pformat(config))
         return config_dict
 

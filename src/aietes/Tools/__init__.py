@@ -28,6 +28,8 @@ from operator import itemgetter
 from datetime import datetime as dt
 from time import time
 import pickle
+from gi.repository import Notify
+
 
 import numpy as np
 from numpy.random import poisson
@@ -85,6 +87,10 @@ log_hdl = logging.StreamHandler()
 log_hdl.setFormatter(log_fmt)
 log_hdl.addFilter(SimTimeFilter())
 
+def notify_desktop(message):
+    if not Notify.is_initted():
+        Notify.init ("AIETES Simulation")
+    Notify.Notification.new ("AIETES Simulation",message,"dialog-information").show()
 
 class ConfigError(Exception):
 
