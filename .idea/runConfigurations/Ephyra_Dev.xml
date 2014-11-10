@@ -14,7 +14,6 @@
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/ephyra/__init__.py" />
     <option name="PARAMETERS" value="-o" />
-    <option name="SHOW_COMMAND_LINE" value="false" />
     <RunnerSettings RunnerId="PyDebugRunner" />
     <RunnerSettings RunnerId="PythonCover" />
     <RunnerSettings RunnerId="PythonRunner" />

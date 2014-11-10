@@ -28,7 +28,8 @@ import SimPy.Simulation as Sim
 import random
 from aietes.Layercake import RoutingLayer
 
-from aietes.Tools import broadcast_address, np, debug, distance, FSM
+from aietes.Tools import broadcast_address, np, debug, distance
+from aietes.Tools.FSM import FSM
 
 debug = False
 

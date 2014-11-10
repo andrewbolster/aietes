@@ -13,3 +13,4 @@ oct2py
 seaborn
 natsort
 colorlog
+networkx

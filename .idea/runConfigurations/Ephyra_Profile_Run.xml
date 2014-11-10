@@ -14,7 +14,6 @@
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/ephyra/__init__.py" />
     <option name="PARAMETERS" value="-x -o /dev/shm/dat-2013-01-17-12-41-26.aietes.npz" />
-    <option name="SHOW_COMMAND_LINE" value="false" />
     <RunnerSettings RunnerId="PythonCover" />
     <RunnerSettings RunnerId="PythonRunner" />
     <ConfigurationWrapper RunnerId="PythonCover" />

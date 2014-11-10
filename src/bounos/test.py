@@ -20,11 +20,30 @@ __email__ = "me@andrewbolster.info"
 
 import unittest
 import tempfile
+import os.path
 
 import numpy as np
 
 import bounos
+from aietes.Tools import _results_dir as default_results_dir
 
+class LookupMethods(unittest.TestCase):
+    def testDirSearchOrder(self):
+        """
+        Ensure that npz_in_dir returns in order of modification
+        :return:
+        """
+        file_list = bounos.npz_in_dir(default_results_dir)
+        mtime_list = map(os.path.getmtime,file_list)
+        self.assertTrue(all(x<=y for x, y in zip(mtime_list,mtime_list[1:])), mtime_list)
+
+    def testDirSearchValid(self):
+        """
+        Ensure that npz_in_dir returns only npz files
+        :return:
+        """
+        file_list = bounos.npz_in_dir(default_results_dir)
+        self.assertTrue(all(x.endswith('.npz') for x in file_list))
 
 class DataPackageCreation(unittest.TestCase):
     # TODO TMax testing

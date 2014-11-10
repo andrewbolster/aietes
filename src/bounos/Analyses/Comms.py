@@ -1,4 +1,4 @@
-_#!/usr/bin/env python
+#!/usr/bin/env python
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
