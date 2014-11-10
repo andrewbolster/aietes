@@ -186,7 +186,7 @@ class FSM:
         self.input_symbol = input_symbol
         (action, next_state) = self.get_transition(
             self.input_symbol, self.current_state)
-        # self.logger.info("%s(%s) -> %s" % (self.current_state, input_symbol, next_state))
+        #self.logger.info("%s(%s) -> @%s" % (self.current_state, input_symbol, next_state))
         self.last_state = self.current_state
         self.current_state = next_state
 

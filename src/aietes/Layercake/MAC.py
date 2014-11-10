@@ -28,8 +28,10 @@ import SimPy.Simulation as Sim
 import random
 from aietes.Layercake import RoutingLayer
 
-from aietes.Tools import broadcast_address, np, debug, distance, FSM
+from aietes.Tools import broadcast_address, np, debug, distance
+from aietes.Tools.FSM import FSM
 
+debug = True
 debug = False
 
 default = "ALOHA"
@@ -1755,26 +1757,16 @@ class CSMA:
             "backoff", "WAIT_ACK", self.XOverheard, "BACKOFF")
 
         # Transitions from BACKOFF
-        self.fsm.add_transition(
-            "send_DATA", "BACKOFF", self.QueueData, "BACKOFF")
-        self.fsm.add_transition(
-            "got_RTS", "BACKOFF", self.ProcessRTS, "BACKOFF")
-        # self.fsm.add_transition("got_CTS", "BACKOFF", self.IgnoreCTS,
-        # "BACKOFF")  ### This line is more important that what it seems: if we
-        # Ignore it, we tend to defer all transmissions.
-        # This line is more important that what it seems: if we Accept it, we
-        # tend to make all transmissions.
-        self.fsm.add_transition(
-            "got_CTS", "BACKOFF", self.Transmit, "WAIT_ACK")
-        self.fsm.add_transition(
-            "got_DATA", "BACKOFF", self.CheckPendingData, "BACKOFF")
+        self.fsm.add_transition("send_DATA", "BACKOFF", self.QueueData, "BACKOFF")
+        self.fsm.add_transition("got_RTS", "BACKOFF", self.ProcessRTS, "BACKOFF")
+        # self.fsm.add_transition("got_CTS", "BACKOFF", self.IgnoreCTS,"BACKOFF")  ### This line is more important that what it seems: if we ignore it, we tend to defer all transmissions.
+        self.fsm.add_transition("got_CTS", "BACKOFF", self.Transmit, "WAIT_ACK")        # This line is more important that what it seems: if we Accept it, we tend to make all transmissions.
+        self.fsm.add_transition("got_DATA", "BACKOFF", self.CheckPendingData, "BACKOFF")
         # Be careful with this
-        self.fsm.add_transition(
-            "got_ACK", "BACKOFF", self.CheckPendingACK, "READY_WAIT")
+        self.fsm.add_transition("got_ACK", "BACKOFF", self.CheckPendingACK, "READY_WAIT")
 
         self.fsm.add_transition("got_X", "BACKOFF", self.XOverheard, "BACKOFF")
-        self.fsm.add_transition(
-            "timeout", "BACKOFF", self.OnTimeout, "READY_WAIT")
+        self.fsm.add_transition("timeout", "BACKOFF", self.OnTimeout, "READY_WAIT")
         self.fsm.add_transition("accept", "BACKOFF", self.SendCTS, "WAIT_DATA")
 
     def XOverheard(self):
@@ -2260,8 +2252,6 @@ class CSMA:
             self.TimerRequest.signal((random_delay, "send_DATA"))
 
     def OnTimeout(self):
-        if debug:
-            self.logger.warn("Backoff Timed Out!")
 
         if (len(self.outgoing_packet_queue) > 0):
             random_delay = random.random() * self.max_wait_to_retransmit
@@ -2356,55 +2346,37 @@ class CSMA4FBR(CSMA):
 
         # By MC_RTS we refer to MultiCast RTS packets. We should consider to
         # process them.
-        self.fsm.add_transition(
-            "got_MC_RTS", "READY_WAIT", self.ProcessMCRTS, "AWARE")
-        self.fsm.add_transition(
-            "got_SIL", "READY_WAIT", self.IgnoreSIL, "READY_WAIT")
+        self.fsm.add_transition("got_MC_RTS", "READY_WAIT", self.ProcessMCRTS, "AWARE")
+        self.fsm.add_transition("got_SIL", "READY_WAIT", self.IgnoreSIL, "READY_WAIT")
 
         # Definition of a new state, AWARE, and its transitions
         self.fsm.add_transition("send_CTS", "AWARE", self.SendCTS, "WAIT_DATA")
-        self.fsm.add_transition(
-            "ignore_RTS", "AWARE", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition("ignore_RTS", "AWARE", self.XOverheard, "BACKOFF")
 
         # Now I am receiving several CTS, then, I should just append them
         # Maybe I should tell him to be silent
-        self.fsm.add_transition(
-            "got_MC_RTS", "WAIT_CTS", self.ProcessMCRTS, "WAIT_CTS")
-        self.fsm.add_transition(
-            "got_CTS", "WAIT_CTS", self.AppendCTS, "WAIT_CTS")
-        self.fsm.add_transition(
-            "got_SIL", "WAIT_CTS", self.ProcessSIL, "BACKOFF")
+        self.fsm.add_transition("got_MC_RTS", "WAIT_CTS", self.ProcessMCRTS, "WAIT_CTS")
+        self.fsm.add_transition("got_CTS", "WAIT_CTS", self.AppendCTS, "WAIT_CTS")
+        self.fsm.add_transition("got_SIL", "WAIT_CTS", self.ProcessSIL, "BACKOFF")
 
-        self.fsm.add_transition(
-            "timeout", "WAIT_CTS", self.SelectCTS, "WAIT_CTS")
-        self.fsm.add_transition(
-            "transmit", "WAIT_CTS", self.Transmit, "WAIT_ACK")
-        self.fsm.add_transition(
-            "retransmit", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
-        self.fsm.add_transition(
-            "abort", "WAIT_CTS", self.OnTransmitFail, "READY_WAIT")
-        self.fsm.add_transition(
-            "defer", "WAIT_CTS", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition("timeout", "WAIT_CTS", self.SelectCTS, "WAIT_CTS")
+        self.fsm.add_transition("transmit", "WAIT_CTS", self.Transmit, "WAIT_ACK")
+        self.fsm.add_transition("retransmit", "WAIT_CTS", self.SendRTS, "WAIT_CTS")
+        self.fsm.add_transition("abort", "WAIT_CTS", self.OnTransmitFail, "READY_WAIT")
+        self.fsm.add_transition("defer", "WAIT_CTS", self.XOverheard, "BACKOFF")
 
         # New transition from WAIT_DATA: I have been not selected as the next
         # hop
-        self.fsm.add_transition(
-            "got_MC_RTS", "WAIT_DATA", self.ProcessMCRTS, "WAIT_DATA")
-        self.fsm.add_transition(
-            "ignored", "WAIT_DATA", self.XOverheard, "BACKOFF")
-        self.fsm.add_transition(
-            "got_CTS", "WAIT_DATA", self.IgnoreCTS, "WAIT_DATA")
-        self.fsm.add_transition(
-            "got_SIL", "WAIT_DATA", self.IgnoreSIL, "WAIT_DATA")
+        self.fsm.add_transition("got_MC_RTS", "WAIT_DATA", self.ProcessMCRTS, "WAIT_DATA")
+        self.fsm.add_transition("ignored", "WAIT_DATA", self.XOverheard, "BACKOFF")
+        self.fsm.add_transition("got_CTS", "WAIT_DATA", self.IgnoreCTS, "WAIT_DATA")
+        self.fsm.add_transition("got_SIL", "WAIT_DATA", self.IgnoreSIL, "WAIT_DATA")
 
-        self.fsm.add_transition(
-            "got_MC_RTS", "BACKOFF", self.ProcessMCRTS, "BACKOFF")
-        self.fsm.add_transition(
-            "got_SIL", "BACKOFF", self.IgnoreSIL, "BACKOFF")
+        self.fsm.add_transition("got_MC_RTS", "BACKOFF", self.ProcessMCRTS, "BACKOFF")
+        self.fsm.add_transition("got_SIL", "BACKOFF", self.IgnoreSIL, "BACKOFF")
         self.fsm.add_transition("defer", "BACKOFF", self.XOverheard, "BACKOFF")
 
-        self.fsm.add_transition(
-            "got_MC_RTS", "WAIT_ACK", self.ProcessMCRTS, "WAIT_ACK")
+        self.fsm.add_transition("got_MC_RTS", "WAIT_ACK", self.ProcessMCRTS, "WAIT_ACK")
 
     def IgnoreSIL(self):
         self.logger.debug(

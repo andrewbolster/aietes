@@ -29,6 +29,7 @@ import math
 from copy import deepcopy
 from aietes.Tools import distance, debug
 
+debug = True
 debug = False
 
 
@@ -263,7 +264,7 @@ class Transducer(Sim.Resource):
             if not doomed and Linear2DB(minSIR) >= self.SIR_thresh and arg[1].power >= self.physical_layer.receiving_threshold:
                 # Properly received: enough power, not enough interference
                 self.collision = False
-                #self.logger.debug("received packet {}".format(new_packet))
+                self.logger.debug("received packet {}".format(new_packet))
                 self.on_success(new_packet)
 
             elif arg[1].power >= self.physical_layer.receiving_threshold:
