@@ -114,5 +114,43 @@ def channel_occupancy_distribution(dp):
 
     return f
 
+def combined_trust_observation_summary(dp, target = None):
+    from bounos.Analyses import Trust
+
+    if target is None:
+        target = 'n1'
+
+    f, ax = plt.subplots(len(dp.names),3, sharex=False, figsize=(16, 16))
+    lines=[]
+    trust, trust_inverted= Trust.generate_global_trust_values(dp)
+
+    f.suptitle("Trust overview for target {} (highlighted) in {} model".format(target, dp.title))
+    for i, i_node in enumerate(dp.names):
+        map(lambda (k,v): lines.append(ax[i][0].plot(v,label=k, alpha=0.5 if k!=target else 0.9)), trust_inverted[i_node].items())
+        ax[i][0].legend(loc="lower center", mode="expand", ncol=6)
+        ax[i][0].set_title("Trust Perspective: {}".format(i_node))
+        ax[i][0].set_ylim(0,1)
+
+        ax[i][1].set_title("Distance to {}: {}".format(target,i_node))
+        ax[i][1].plot(np.linalg.norm(dp.p[i,:,::600]-dp.p[dp.names.index(target),:,::600], axis=0))
+        ax[i][1].set_ylim(0,300)
 
 
+        ax[i][2].set_title("Distribution of raw trust values from {}".format(i_node))
+        with np.errstate(invalid='ignore'):
+            sns.boxplot(pd.DataFrame.from_dict({ key: pd.Series(vals) for key,vals in trust_inverted[i_node].items()}), ax=ax[i][2])
+            ax[i][2].legend()
+            ax[i][2].set_ylim(0,1.0)
+
+
+        # Harrang Labels
+        if i+1<dp.n:
+            plt.setp(ax[i][0].get_xticklabels(), visible=False)
+            plt.setp(ax[i][1].get_xticklabels(), visible=False)
+            plt.setp(ax[i][2].get_xticklabels(), visible=False)
+        else:
+            ax[i][0].set_xlabel("Trust Observation Iterations (600s)")
+            ax[i][1].set_xlabel("Trust Observation Iterations (600s)")
+            ax[i][2].set_xlabel("Trust Opinion of node")
+
+    return f

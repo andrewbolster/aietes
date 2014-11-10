@@ -118,7 +118,10 @@ class DataPackage(object):
         """
         try:
             if source is not None:
-                kwargs.update(**np.load(source))
+                if isinstance(source, list):
+                    raise ValueError("Source file shoult be singular, not a list {}".format(source))
+                else:
+                    kwargs.update(**np.load(source))
 
             """ Attempt to fix sink source mapping between file stores and runtime stores"""
             for sink_attrib, source_attrib in self._attrib_map.iteritems():
@@ -748,3 +751,44 @@ class DataPackage(object):
             rx_packet=sorted(packets, key=lambda k: k['time_stamp'])
         pf=pd.DataFrame(packets)
         return pf
+
+    def get_global_trust_logs(self):
+        """
+        Returns the global trust log as a dict of each nodes observations at each time of each other node
+
+        i.e. trust is internally recorded by each node wrt each node [node][t]
+        for god processing it's easier to deal with [t][node]
+
+        :return: trust observations[observer][t][target]
+        """
+        obs={}
+        trust = { node: log['trust'] for node, log in self.comms.tolist()['logs'].items()}
+        for i_node, i_t in trust.items():
+            # first pass to invert the observations
+            if not obs.has_key(i_node):
+                obs[i_node]=[]
+            for j_node, j_t in i_t.items():
+                for o, observation in enumerate(j_t):
+                    while len(obs[i_node])<=(o):
+                        obs[i_node].append({})
+                    obs[i_node][o][j_node]=observation
+        return obs
+
+    def has_comms_data(self):
+        """
+        Bool check if this DataPackage has useful Comms data
+
+        :return bool:
+        """
+
+        return all([v.has_key('tx') and v.has_key('rx') for v in self.comms.tolist()['logs'].values()])
+
+    def has_trust_data(self):
+        """
+        Bool check if this DataPackage has useful Trust data
+
+        Not guaranteed for any edge cases of 'useful' such as incomplete trust data or not all nodes being 'trusty'
+        :return bool:
+        """
+
+        return self.has_comms_data() and all([v.has_key('trust') for v in self.comms.tolist()['logs'].values()])

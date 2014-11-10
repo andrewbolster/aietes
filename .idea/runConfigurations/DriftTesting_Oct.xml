@@ -14,7 +14,6 @@
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" enabled="false" sample_coverage="true" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/src/aietes/__init__.py" />
     <option name="PARAMETERS" value="-dqc ../src/contrib/Ghia/uuv_position_drift_model/driftoct.conf" />
-    <option name="SHOW_COMMAND_LINE" value="false" />
     <RunnerSettings RunnerId="PyDebugRunner" />
     <RunnerSettings RunnerId="PythonRunner" />
     <ConfigurationWrapper RunnerId="PyDebugRunner" />

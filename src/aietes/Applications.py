@@ -22,7 +22,6 @@ from numpy.random import poisson
 import pandas as pd
 
 from collections import Counter, OrderedDict
-import networkx as nx
 
 from aietes.Tools import Sim, debug, randomstr, broadcast_address, ConfigError
 
@@ -253,7 +252,6 @@ class RoutingTest(Application):
         self.sent_counter = Counter()
         self.received_counter = Counter()
         self.total_counter = Counter()
-        self.graph = nx.Graph()
 
     def packetGen(self, period, destination=None, data=None, *args, **kwargs):
         """
@@ -436,16 +434,13 @@ class CommsTrust(RoutingTest):
 
             # TODO NamedTuples for safety
             relevant_packets = []
-            last_relevant_time = Sim.now()-self.trust_assessment_period
+            last_relevant_time = Sim.now()-2*self.trust_assessment_period
             for i,p in enumerate(self.sent_log):
-                if p.has_key('delivered') and p['time_stamp']<last_relevant_time:
-                    try:
-                        relevant_packets.append((i,p['dest'],p['length'], p['delivered']))
-                    except:
-                        self.logger.error("FKSD:{}".format(p))
-                        raise
+                if p.has_key('delivered') and p['time_stamp']>last_relevant_time:
+                    relevant_packets.append((i,p['dest'],p['length'], p['delivered']))
 
             tx_stats = {}
+            # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
             for node in self.trust_assessments.keys():
                 per = nanmean(
                     map(
@@ -459,6 +454,7 @@ class CommsTrust(RoutingTest):
                 # Packet Error Rate (all time)
                 if len(rx_stats[node]):
                     nodestat = append(rx_stats[node],tx_stats[node])
+                    # avg(tx pwr, rx pwr, delay, length), rx throughput, PER
                 else:
                     nodestat = []
                 self.trust_assessments[node].append(nodestat)
