@@ -88,6 +88,40 @@ def source_and_dest_delay_violin_plot(dp):
     return f
 
 
+def source_and_dest_delay_cdf_plot(dp):
+    """
+    Return a plot of the source and destination RX delay CDF as two subplots.
+    :param dp:
+    :return:
+    """
+    assert isinstance(dp, bounos.DataPackage)
+    df = dp.get_global_packet_logs(pkt_type='rx')
+    f, (ax_l, ax_r) = plt.subplots(1, 2, sharey=True, sharex=True,figsize=(12, 4))
+    f.suptitle("Per-Node End-to-End Delay Cumulative Distribution for {} model: average={:.2f}s".format(dp.title,float(df[["delay"]].mean())))
+
+    # Delays groups by source
+    for i, group in df.delay.groupby(df.source):
+        values, base = np.histogram(group, bins=40)
+        #evaluate the cumulative
+        cumulative = np.cumsum(values)
+        # plot the cumulative function
+        ax_l.plot(base[:-1], cumulative, label=i)
+    ax_l.set_title("Source Node")
+    ax_l.set_xlabel("Delay (s)")
+    ax_l.legend(loc="lower right")
+
+    # Delays groups by destination
+    for i, group in df.delay.groupby(df.dest):
+        values, base = np.histogram(group, bins=40)
+        #evaluate the cumulative
+        cumulative = np.cumsum(values)
+        # plot the cumulative function
+        ax_r.plot(base[:-1], cumulative, label=i)
+    ax_r.set_title("Destination Node")
+    ax_r.set_xlabel("Delay (s)")
+    ax_r.legend(loc="lower right")
+
+    return f
 def channel_occupancy_distribution(dp):
     """
     Generates a plot showing the distribution of the number of in-the-air packets at each time step
@@ -138,7 +172,9 @@ def combined_trust_observation_summary(dp, target = None):
 
         ax[i][2].set_title("Distribution of raw trust values from {}".format(i_node))
         with np.errstate(invalid='ignore'):
-            sns.boxplot(pd.DataFrame.from_dict({ key: pd.Series(vals) for key,vals in trust_inverted[i_node].items()}), ax=ax[i][2])
+            sns.boxplot(
+                pd.DataFrame.from_dict({ key: pd.Series(vals) for key,vals in trust_inverted[i_node].items()}),
+                ax=ax[i][2], showmeans=True, showbox=False, widths=0.2, linewidth=2)
             ax[i][2].legend()
             ax[i][2].set_ylim(0,1.0)
 

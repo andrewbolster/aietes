@@ -9,3 +9,6 @@ import os
 
 from bounos import DataPackage
 
+from comms_scenarios import set_run as perform_experiment
+
+def load_experiment(exp_file):

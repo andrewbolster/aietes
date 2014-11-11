@@ -37,7 +37,7 @@ import numpy as np
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded as ParSim
-from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict
+from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop
 from bounos import DataPackage, printAnalysis
 from contrib.Ghia.ecea.data_grapher import data_grapher
 
@@ -125,10 +125,10 @@ class Scenario(object):
             self._default_config = getConfig()
         elif isinstance(default_config, ConfigObj):
             print("User provided a (hopefully complete) confobj")
-            self._default_config = default_config
+            self._default_config = deepcopy(default_config)
         elif isinstance(default_config, dotdict):
             print("User provided a (hopefully complete) dotdict")
-            self._default_config = ConfigObj(default_config)
+            self._default_config = deepcopy(ConfigObj(default_config))
         elif default_config_file is not None:
             print("User provided a config file that we have to interpolate "\
                   "against the defaults to generate a full config")
@@ -169,7 +169,8 @@ class Scenario(object):
         for node_name, node_config in self._default_custom_nodes.items():
             # Casting to ConfigObj is a nasty hack for picklability (i.e. dotdict
             # subclasses dict but pickle protocol looks after dict natively.
-            self.nodes[node_name]=deepcopy(ConfigObj(node_config))
+            if node_name != "__default__":
+                self.nodes[node_name]=deepcopy(ConfigObj(node_config))
 
         # May be unnecessary
         self._default_behaviour_dict = self.getBehaviourDict()
@@ -402,7 +403,7 @@ class Scenario(object):
         config['Simulation'] = self.simulation
         config['Environment'] = self.environment
         config['Node'] = {'Nodes': self.nodes,
-                          'count': len(self.nodes.keys())}
+                          'count': len([name for name in self.nodes.keys() if name != "__default__"])}
         return config
 
     def generateConfigObj(self):
@@ -580,7 +581,7 @@ class Scenario(object):
 class ExperimentManager(object):
 
     def __init__(self,
-                 node_count=4,
+                 node_count=None,
                  title=None, parallel=False, future=True, retain_data=True,
                  base_config_file=None, *args, **kwargs
     ):
@@ -589,7 +590,7 @@ class ExperimentManager(object):
             multiple experimental input. (Number of nodes, ratio of behaviours, etc)
         The purpose of this manager is to abstract the per scenario setup
         Args:
-            node_count(int): Define the standard fleet size (4)
+            node_count(int): Define the standard fleet size (Infer from Config)
             title(str): define a title for this experiment, to be used for file and folder naming,
                 if not set, this defaults to a timecode and initialisation (not execution)
             retain_data(bool): Decides wether the scenario state data is maintained or allowed to be GC's
@@ -599,12 +600,18 @@ class ExperimentManager(object):
         self.scenarios = []
         self._default_scenario = Scenario(title="__default__",
                                           default_config_file=base_config_file)
-        self.node_count = node_count
+
+        if not kwargs.get("no_time", False):
+            title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+        self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
         if title is None:
             self.title = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         else:
             self.title = title
-        self._default_scenario.setNodeCount(self.node_count)
+        if node_count is None:
+            self._default_scenario.setNodeCount(self._default_scenario.node_count)
+        else:
+            self._default_scenario.setNodeCount(node_count)
         self.parallel = parallel
         self.retain_data = retain_data
         self.future = future
@@ -639,15 +646,10 @@ class ExperimentManager(object):
         """
         Construct an execution environment and farm off simulation to scenarios
         Args:
-            title(str): Update the experiment name
             runtime(int): Override simulation duration (normally inherited from config)
             runcount(int): Number of repeated executions of this scenario; this value overrides the
                 value set on init
         """
-        title = kwargs.get("title", self.title)
-        if not kwargs.get("no_time", False):
-            title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
         self.orig_path = os.path.abspath(_results_dir)
         self.runcount = kwargs.get("runcount", 1)
         kwargs.update(
@@ -687,7 +689,10 @@ class ExperimentManager(object):
                 ParSim.kill()
             print("Experimental results stored in %s" % self.exp_path)
         self.runtime = time.time() - start
-        print("Runtime:{}".format(secondsToStr(self.runtime)))
+        msg="Runtime:{}".format(secondsToStr(self.runtime))
+        notify_desktop(msg)
+        print(msg)
+
 
     def generateSimulationStats(self):
         """

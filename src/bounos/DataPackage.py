@@ -151,6 +151,9 @@ class DataPackage(object):
         if isinstance(self.names, np.ndarray):
             self.names = self.names.tolist()
 
+        if self.comms and isinstance(self.comms, np.ndarray):
+            self.comms = self.comms.tolist()
+
         # Convoluted logic to by DEFAULT assume drifting, unless it's set by
         # the failing case in _handle
         if not hasattr(self, 'drifting'):
@@ -746,10 +749,10 @@ class DataPackage(object):
             raise ValueError("No such packet classification {}, valid choices are {}".format(pkt_type, valid_types))
 
         packets=[]
-        _ =[ packets.extend(nlog[pkt_type]) for nlog in self.comms.tolist()['logs'].values()]
+        _ =[ packets.extend(nlog[pkt_type]) for nlog in self.comms['logs'].values()]
         if sorted is not None and sorted:
             rx_packet=sorted(packets, key=lambda k: k['time_stamp'])
-        pf=pd.DataFrame(packets)
+        pf=pd.DataFrame(rx_packet)
         return pf
 
     def get_global_trust_logs(self):
@@ -762,7 +765,7 @@ class DataPackage(object):
         :return: trust observations[observer][t][target]
         """
         obs={}
-        trust = { node: log['trust'] for node, log in self.comms.tolist()['logs'].items()}
+        trust = { node: log['trust'] for node, log in self.comms['logs'].items()}
         for i_node, i_t in trust.items():
             # first pass to invert the observations
             if not obs.has_key(i_node):
@@ -781,7 +784,7 @@ class DataPackage(object):
         :return bool:
         """
 
-        return all([v.has_key('tx') and v.has_key('rx') for v in self.comms.tolist()['logs'].values()])
+        return all([v.has_key('tx') and v.has_key('rx') for v in self.comms['logs'].values()])
 
     def has_trust_data(self):
         """
@@ -791,4 +794,4 @@ class DataPackage(object):
         :return bool:
         """
 
-        return self.has_comms_data() and all([v.has_key('trust') for v in self.comms.tolist()['logs'].values()])
+        return self.has_comms_data() and all([v.has_key('trust') for v in self.comms['logs'].values()])

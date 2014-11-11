@@ -16,7 +16,7 @@ def redirected(stdout):
     yield
     sys.stdout = saved_stdout
 
-def set():
+def setup():
     exp = EXP(
               title="ThroughputTestingScenario",
               parallel=True,
@@ -26,35 +26,27 @@ def set():
 
     # Scenario 1: All static
     #exp.addDefaultScenario(title="Scenario1")
-    exp.addApplicationVariableScenario('app_rate', np.linspace(0.005, 0.05, 10))
+    exp.addApplicationVariableScenario('app_rate', np.linspace(0.005, 0.1, 20))
     return exp
 
 
 def run(exp):
     exp.run(title="ThroughputTestingScenario",
-            runcount=4,
+            runcount=8,
             dataFile=True)
     return exp
 
 
 def set_run():
-    return run(set())
+    return run(setup())
 
 if __name__ == "__main__":
-    exp = set()
+    exp = setup()
     exp = run(exp)
     logpath = "{path}/{title}.log".format(path=exp.exp_path,title=exp.title.replace(' ','_'))
     exp.dump_self()
-    #exp.dump_analysis()
 
-    #with redirected(stdout=logpath):
-    #    EXP.printStats(exp, verbose=True)
-
-    with open(logpath, 'r') as fin:
-        print fin.read()
-
-    print("Saved detection stats to {}".format(logpath))
+    print("Saved detection stats to {}".format(exp.exp_path))
     os.chdir(exp.exp_path)
-    #call(['bounos','-M'])
 
 
