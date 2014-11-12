@@ -86,16 +86,25 @@ class BounosModel(DataPackage):
 args = None
 
 
-def load_sources(sources):
+def load_sources(sources, comms_only=False):
     """
     From a given list of DataPackage-able sources, parallelize their instantiation as a names dict based on their d.title
 
     :param sources:
+    :param comms_only: Only return the comms substructure rather than the full datapackage
     :return data:
     """
+
     data = collections.OrderedDict()
-    datasets = Parallel(n_jobs=-1)(delayed(DataPackage)(source)
-                                   for source in sources)
+    def grab_comms(s):
+        dp = DataPackage(s)
+        return dp.comms
+    if comms_only:
+        datasets = Parallel(n_jobs=-1)(delayed(grab_comms)(source)
+                                       for source in sources)
+    else:
+        datasets = Parallel(n_jobs=-1)(delayed(DataPackage)(source)
+                                       for source in sources)
     for d in datasets:
         data[d.title.tostring()] = d
     return data

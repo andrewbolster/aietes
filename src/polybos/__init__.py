@@ -26,6 +26,7 @@ import logging
 from copy import deepcopy
 from datetime import datetime
 from pprint import pformat
+from natsort import natsorted
 import pickle
 import time
 import collections
@@ -37,8 +38,8 @@ import numpy as np
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded as ParSim
-from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf
-from bounos import DataPackage, printAnalysis
+from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf, is_valid_aietes_datafile
+from bounos import DataPackage, printAnalysis, load_sources, npz_in_dir
 from contrib.Ghia.ecea.data_grapher import data_grapher
 
 _config_spec = '%s/configs/default.conf' % _ROOT
@@ -48,6 +49,9 @@ _results_dir = '%s/../../results/' % _ROOT
 # Mask in-sim progress display and let joblib do it's... job...
 progress_display = False
 
+PseudoScenario = collections.namedtuple("PseudoScenario",
+                                        ["title", "datarun"]
+)
 
 def getConfig(source_config_file=None, config_spec=_config_spec):
     """
@@ -697,7 +701,6 @@ class ExperimentManager(object):
         notify_desktop(msg)
         print(msg)
 
-
     def generateSimulationStats(self):
         """
         Returns:
@@ -890,9 +893,6 @@ class ExperimentManager(object):
                 and all([isinstance(entry, DataPackage) for entry in experiment]):
             # Have been given list of DataPackage entities in a single
             # 'scenario', treat as single virtual scenario
-            PseudoScenario = collections.NamedTuple("PseudoScenario",
-                                                    ["title", "datarun"]
-                                                    )
             scenario_dict = {dp.title: PseudoScenario(dp.title, dp) for dp in experiment}
         else:
             raise RuntimeWarning("Cannot validate experiment structure")
@@ -1066,3 +1066,39 @@ class ExperimentManager(object):
         :param experiment:
         :return:
         """
+
+class RecoveredExperiment(ExperimentManager):
+    """
+    SubClass to recover a partially executed experiment from an experiment directory.
+
+    Not guaranteed to work in any way what so ever.
+    :param dirpath:
+    :return:
+    """
+
+    _shelf_name="ScenarioDB.shelf"
+    def __init__(self,dirpath):
+        self.exp_path=os.path.abspath(dirpath)
+        self.title =  os.path.basename(dirpath)
+        self.scenarios_file = os.path.join(dirpath, self._shelf_name)
+        if os.path.isfile(self.scenarios_file):
+            self.scenarios = AutoSyncShelf(self.scenarios_file)
+        else:
+            self.scenarios, self.scenarios_file = self.walk_dir(dirpath)
+
+    @classmethod
+    def walk_dir(cls, path):
+        subdirs=filter(os.path.isdir,
+                       map(lambda p: os.path.join(path,p),
+                           os.listdir(path)
+                       )
+                )
+        scenarios_file=os.path.join(path,cls._shelf_name)
+        scenarios=AutoSyncShelf(scenarios_file)
+        for subdir in natsorted(subdirs):
+            title = os.path.basename(subdir)
+            sources = npz_in_dir(subdir)
+            scenarios[subdir]= PseudoScenario(subdir, load_sources(sources, comms_only=True))
+
+        return scenarios, scenarios_file
+

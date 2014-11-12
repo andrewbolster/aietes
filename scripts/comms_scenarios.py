@@ -26,13 +26,13 @@ def setup():
 
     # Scenario 1: All static
     #exp.addDefaultScenario(title="Scenario1")
-    exp.addApplicationVariableScenario('app_rate', np.linspace(0.005, 0.1, 20))
+    exp.addApplicationVariableScenario('app_rate', np.linspace(0.015, 0.035, 20))
     return exp
 
 
 def run(exp):
     exp.run(title="ThroughputTestingScenario",
-            runcount=4,
+            runcount=8,
             runtime=200,
             dataFile=True)
     return exp
