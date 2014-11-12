@@ -37,7 +37,7 @@ import numpy as np
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded as ParSim
-from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop
+from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf
 from bounos import DataPackage, printAnalysis
 from contrib.Ghia.ecea.data_grapher import data_grapher
 
@@ -593,17 +593,25 @@ class ExperimentManager(object):
             node_count(int): Define the standard fleet size (Infer from Config)
             title(str): define a title for this experiment, to be used for file and folder naming,
                 if not set, this defaults to a timecode and initialisation (not execution)
-            retain_data(bool): Decides wether the scenario state data is maintained or allowed to be GC's
+            retain_data(bool/str): Decides wether the scenario state data is maintained or allowed to be GC'd
+                    can be one of [True,'file','additional_only']
             future(bool): option to maintain datapackages created in memory or not (default True)
             base_config_file (str->FQPath): aietes config file to base the default scenario off of.
         """
-        self.scenarios = []
         self._default_scenario = Scenario(title="__default__",
                                           default_config_file=base_config_file)
 
         if not kwargs.get("no_time", False):
             title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
+        try:
+            if not os.path.isdir(self.exp_path):
+                os.mkdir(self.exp_path)
+        except:
+            self.exp_path = tempfile.mkdtemp()
+            print("Filepath collision, using %s" % self.exp_path)
+        self.scenarios_file = os.path.join(self.exp_path, "ScenarioDB.shelf")
+        self.scenarios = AutoSyncShelf(self.scenarios_file)
         if title is None:
             self.title = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         else:
@@ -612,6 +620,7 @@ class ExperimentManager(object):
             self._default_scenario.setNodeCount(self._default_scenario.node_count)
         else:
             self._default_scenario.setNodeCount(node_count)
+        self.node_count = self._default_scenario.node_count
         self.parallel = parallel
         self.retain_data = retain_data
         self.future = future
@@ -656,14 +665,8 @@ class ExperimentManager(object):
             {"basepath": self.exp_path, "retain_data": self.retain_data})
         start = time.time()
         try:
-            if not os.path.isdir(self.exp_path):
-                os.mkdir(self.exp_path)
-        except:
-            self.exp_path = tempfile.mkdtemp()
-            print("Filepath collision, using %s" % self.exp_path)
-        try:
             os.chdir(self.exp_path)
-            for scenario in self.scenarios:
+            for scenario_title, scenario in self.scenarios.items():
                 scenario.commit()
                 if self.parallel:
                     if self.future:
@@ -672,6 +675,7 @@ class ExperimentManager(object):
                         scenario.run_parallel(**kwargs)
                 else:
                     scenario.run(**kwargs)
+                self.scenarios[scenario_title]=scenario
 
         except ConfigError as e:
             print("Caught Configuration error %s on scenario config \n%s" %
@@ -699,25 +703,17 @@ class ExperimentManager(object):
         Returns:
             List of scenario stats (i.e. list of lists of run statistics dicts)
         """
-        return [s.generateRunStats() for s in self.scenarios]
+        return {t: s.generateRunStats() for t,s in self.scenarios.items()}
 
     def updateNodeCounts(self, new_count):
         """
-        Updates the node-count makeup.
-
-        If new_count is a list and that list length matches the number of currently
-            configured scenarios, those scenarios have their nodecounts updated on the
-            basis of the new_count list index
+        Updates the node-count across all scenarios
 
         Args:
-            new_count(list or int):new values to be used across scenarios
+            new_count(int):new value to be used across scenarios
         """
-        if isinstance(new_count, list) and len(new_count) == len(self.scenarios):
-            for i, s in enumerate(self.scenarios):
-                s.updateNodeCounts(new_count[i])
-        else:
-            for s in self.scenarios:
-                s.updateNodeCounts(new_count)
+        for t in self.scenarios.keys():
+            self.scenarios[t].updateNodeCounts(new_count)
 
     def updateDuration(self, tmax):
         """
@@ -725,8 +721,8 @@ class ExperimentManager(object):
         Args:
             tmax(int): update experiment simulation duration for all scenarios
         """
-        for s in self.scenarios:
-            s.setDuration(tmax)
+        for t in self.scenarios.keys():
+            self.scenarios[t].setDuration(tmax)
 
     def updateEnvironment(self, environment):
         """
@@ -735,8 +731,8 @@ class ExperimentManager(object):
             environment([int,int,int]): update experiment simulation environment for all scenarios
         """
         if isinstance(environment, np.ndarray) and environment.shape == (3,):
-            for s in self.scenarios:
-                s.setEnvironment(environment)
+            for t in self.scenarios.items():
+                self.scenarios[t].setEnvironment(environment)
         else:
             raise ValueError(
                 "Incorrect Environment Type given:{}{}".format(environment, type(environment)))
@@ -755,7 +751,7 @@ class ExperimentManager(object):
             s = Scenario(title=title_range[i],
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({variable: v}, count=self.node_count)
-            self.scenarios.append(s)
+            self.scenarios[s.title]=s
 
     def addApplicationVariableScenario(self, variable, value_range, title_range = None):
         """
@@ -775,7 +771,7 @@ class ExperimentManager(object):
                          default_config=self._default_scenario.generateConfigObj())
             for node, node_config in s.nodes.items():
                 s.updateNode(node_config,variable, v)
-            self.scenarios.append(s)
+            self.scenarios[s.title]=s
 
     def addVariableNodeScenario(self, node_range):
         """
@@ -789,7 +785,7 @@ class ExperimentManager(object):
             s = Scenario(title="{}({})".format("Nodes", node_count),
                          default_config=self._default_scenario.generateConfigObj())
             s.addDefaultNode(node_count)
-            self.scenarios.append(s)
+            self.scenarios[s.title]=s
 
     def addMinorityNBehaviourSuite(self, behaviour_list, n_minority=1, title="Behaviour"):
         """
@@ -804,7 +800,7 @@ class ExperimentManager(object):
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({"behaviour": v}, count=n_minority)
             s.addDefaultNode(count=self.node_count - n_minority)
-            self.scenarios.append(s)
+            self.scenarios[s.title]=s
 
     def addVariable2RangeScenarios(self, v_dict):
         """
@@ -830,7 +826,7 @@ class ExperimentManager(object):
             s = Scenario(title=str(["%s(%f)" % (variable, v) for variable, v in d.iteritems()]),
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode(d, count=self.node_count)
-            self.scenarios.append(s)
+            self.scenarios[s.title]=s
 
     def addRatioScenarios(self, badbehaviour, goodbehaviour=None):
         """
@@ -855,7 +851,7 @@ class ExperimentManager(object):
                 s.addCustomNode({"behaviour": goodbehaviour}, count=invcount)
             else:
                 s.addDefaultNode(count=invcount)
-            self.scenarios.append(s)
+            self.scenarios[s.title]=s
 
     def addDefaultScenario(self, runcount=1, title=None):
         """
@@ -864,7 +860,7 @@ class ExperimentManager(object):
         for i in range(runcount):
             s = Scenario(default_config=self._default_scenario.generateConfigObj(),
                          title=title if title is not None else "{}({})".format(self.title, i))
-            self.scenarios.append(s)
+            self.scenarios[s.title]=s
 
     @staticmethod
     def printStats(experiment, verbose=False):
@@ -881,12 +877,15 @@ class ExperimentManager(object):
         if isinstance(experiment, ExperimentManager):
             # Running as proper experiment Manager instance, no modification
             # required
-            scenario_iterable = experiment.scenarios
+            if hasattr(experiment,'scenarios'):
+                scenario_dict = experiment.scenarios
+            elif hasattr(experiment,'scenarios_file'):
+                scenario_dict = AutoSyncShelf(experiment.scenarios_file)
         elif isinstance(experiment, list) \
                 and all([isinstance(entry, Scenario) for entry in experiment]):
             # Have been given list of Scenarios entities in a single
             # 'scenario', treat as normalo
-            scenario_iterable = experiment
+            scenario_dict = {s.title: s for s in experiment}
         elif isinstance(experiment, list) \
                 and all([isinstance(entry, DataPackage) for entry in experiment]):
             # Have been given list of DataPackage entities in a single
@@ -894,7 +893,7 @@ class ExperimentManager(object):
             PseudoScenario = collections.NamedTuple("PseudoScenario",
                                                     ["title", "datarun"]
                                                     )
-            scenario_iterable = [PseudoScenario("PseudoScenario", experiment)]
+            scenario_dict = {dp.title: PseudoScenario(dp.title, dp) for dp in experiment}
         else:
             raise RuntimeWarning("Cannot validate experiment structure")
 
@@ -920,8 +919,8 @@ class ExperimentManager(object):
         correctness_stats = {}
         print(
             "Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\tCorrect/Confident\tSuspect ")
-        for s in scenario_iterable:
-            correctness_stats[s.title] = []
+        for t,s in scenario_dict.items():
+            correctness_stats[t] = []
             stats = [d.package_statistics() for d in s.datarun]
             #stats = temp_pool.map(lambda d: d.package_statistics(),s.datarun)
             suspects = []
@@ -934,14 +933,14 @@ class ExperimentManager(object):
                 for _, nodelist in suspect_behaviour_list:
                     for node in nodelist:
                         suspects.append(node)
-            print("%s,%s" % (s.title, suspects))
+            print("%s,%s" % (t, suspects))
 
             for i, r in enumerate(stats):
                 analysis = printAnalysis(s.datarun[i])
                 confident = analysis['trust_stdev'] > 100
                 correct_detection = (not bool(suspects) and not confident) or analysis[
                     'suspect_name'] in suspects
-                correctness_stats[s.title].append(
+                correctness_stats[t].append(
                     (correct_detection, confident))
                 if verbose:
                     print("%d\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%) %s, %s, %.2f, %.2f, %s" % (
@@ -993,7 +992,7 @@ class ExperimentManager(object):
         incorrect = nct + nnt
         unconfident = cnt + nnt
         total = correct + incorrect
-        n_scenarios = len(scenario_iterable)
+        n_scenarios = len(scenario_dict)
 
         print("Detection Accuracy pct with {} runs: {:.2%}".format(
             total, correct / total
@@ -1011,25 +1010,11 @@ class ExperimentManager(object):
             total, (cnt - (total * (1 / n_scenarios))) / total
         ))
 
-    def dump(self):
-        """
-        Dump scenarios into the exp_path directory
-        """
-        s_paths = [None for _ in xrange(len(self.scenarios))]
-
-        for i, s in enumerate(self.scenarios):
-            start = time.clock()
-            s_paths[i] = os.path.abspath(
-                os.path.join(self.exp_path, s.title + ".pkl"))
-            print("Writing %s to %s" % (s.title, s_paths[i]))
-            pickle.dump(s, open(s_paths[i], "wb"))
-            print("Done in %f seconds" % (time.clock() - start))
-
     def dump_dataruns(self):
         """
         Dump scenarios into the exp_path directory
         """
-        for s in self.scenarios:
+        for s in self.scenarios.values():
             s.write()
 
         data_grapher(dir=self.exp_path, title=self.title)
@@ -1043,6 +1028,9 @@ class ExperimentManager(object):
                 os.path.join(self.exp_path, self.title + ".exp"))
             start = time.clock()
             print("Writing Experiment to {}".format(dumppath))
+            # Scenarios have their own storage in self.scenarios_file
+            self.scenarios.close()
+            del self.scenarios
             pickle.dump(self, open(dumppath, 'wb'))
             print("Done in %f seconds" % (time.clock() - start))
         except Exception:
@@ -1056,15 +1044,15 @@ class ExperimentManager(object):
         """
         s_paths = [None for _ in xrange(len(self.scenarios))]
 
-        for i, s in enumerate(self.scenarios):
+        for t, s in self.scenarios.items():
             start = time.clock()
-            s_paths[i] = os.path.abspath(
+            s_path = os.path.abspath(
                 os.path.join(self.exp_path, s.title + ".anl"))
-            print("Writing analysis %s to %s" % (s.title, s_paths[i]))
+            print("Writing analysis %s to %s" % (s.title, s_path))
             stats = [dict(
                 printAnalysis(d).items() + d.package_statistics().items()) for d in s.datarun]
 
-            pickle.dump(stats, open(s_paths[i], "wb"))
+            pickle.dump(stats, open(s_path, "wb"))
             print("Done in %f seconds" % (time.clock() - start))
 
     @classmethod

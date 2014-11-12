@@ -23,7 +23,7 @@ __author__ = 'andrewbolster'
 import numpy as np
 from pandas.stats.moments import ewma
 
-from DataPackage import DataPackage
+from bounos import DataPackage
 from aietes.Tools import mkpickle
 
 

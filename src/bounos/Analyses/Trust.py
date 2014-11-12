@@ -142,3 +142,15 @@ def generate_global_trust_values(dp):
     }
     return trust_perspectives, inverted_trust_perspectives
 
+def dev_to_trust(per_metric_deviations):
+    # rotate pmdev to node-primary ([node,metric])
+    per_node_deviations = np.rollaxis(per_metric_deviations, 0, 3)
+    GRC_t = grc_factory()
+    grcs = map(GRC_t, per_node_deviations)
+    grgs = map(GRG_t, grcs)
+    trust_values = np.asarray([
+        np.asarray([
+            T_kt(interval) for interval in node
+        ]) for node in grgs
+    ])
+    return trust_values

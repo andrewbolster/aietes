@@ -32,7 +32,8 @@ def setup():
 
 def run(exp):
     exp.run(title="ThroughputTestingScenario",
-            runcount=8,
+            runcount=4,
+            runtime=200,
             dataFile=True)
     return exp
 

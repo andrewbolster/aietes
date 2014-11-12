@@ -33,9 +33,7 @@ import pandas as pd
 from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig, results_file
 from configobj import ConfigObj
 
-
 class DataPackage(object):
-
     """
     Data Store for simulation results
     Replicates a Numpy Array as is directly accessible as an n-vector

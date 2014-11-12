@@ -46,6 +46,7 @@ from joblib import Memory
 from tempfile import mkdtemp
 
 from colorlog import ColoredFormatter
+from shelve import DbfilenameShelf
 
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
@@ -555,6 +556,24 @@ class map_entry():
     def __repr__(self):
         return "%s:%s:%s" % (self.object_id, self.position, self.time)
 
+class AutoSyncShelf(DbfilenameShelf):
+    # default to newer pickle protocol and writeback=True
+    def __init__(self, filename, protocol=2, writeback=True):
+        DbfilenameShelf.__init__(self, filename, protocol=protocol, writeback=writeback)
+    def __setitem__(self, key, value):
+        if isinstance(key, int):
+            key=str(key)
+        DbfilenameShelf.__setitem__(self, key, value)
+        self.sync()
+    def __getitem__(self,key):
+        if isinstance(key, int):
+            key=str(key)
+        return DbfilenameShelf.__getitem__(self, key)
+    def __delitem__(self, key):
+        if isinstance(key, int):
+            key=str(key)
+        DbfilenameShelf.__delitem__(self, key)
+        self.sync()
 
 def fudge_normal(value, stdev):
     # Override

@@ -83,8 +83,9 @@ class Application(Sim.Process):
 
     def activate(self):
 
-        self.layercake.tx_good_signal_hdlrs.append(self.signal_good_tx)
-        self.layercake.tx_lost_signal_hdlrs.append(self.signal_lost_tx)
+        if self.HAS_LAYERCAKE:
+            self.layercake.tx_good_signal_hdlrs.append(self.signal_good_tx)
+            self.layercake.tx_lost_signal_hdlrs.append(self.signal_lost_tx)
 
         Sim.activate(self, self.lifecycle())
 
@@ -163,55 +164,61 @@ class Application(Sim.Process):
 
     def dump_stats(self):
 
-        total_bits_in = total_bits_out = 0
-        for pkt in self.received_log:
-            total_bits_in += pkt['length']
+        if self.HAS_LAYERCAKE:
+            total_bits_in = total_bits_out = 0
+            for pkt in self.received_log:
+                total_bits_in += pkt['length']
 
-        for pkt in self.sent_log:
-            total_bits_out += pkt['length']
+            for pkt in self.sent_log:
+                total_bits_out += pkt['length']
 
-        throughput = total_bits_in / Sim.now() * self.stats['packets_hops']
-        offeredload = total_bits_out / Sim.now() * self.stats['packets_hops']
-        try:
-            avg_length = total_bits_in / self.stats['packets_received']
-            average_rx_delay = self.stats[
-                'packets_time'] / self.stats['packets_received']
-        except ZeroDivisionError:
-            if self.stats['packets_received'] == 0:
-                avg_length = 0
-                average_rx_delay = inf
-            else:
-                raise RuntimeError("Got a zero in a weird place: {}/{}".format(
-                    total_bits_in,
-                    self.stats['packets_received']
-                ))
+            throughput = total_bits_in / Sim.now() * self.stats['packets_hops']
+            offeredload = total_bits_out / Sim.now() * self.stats['packets_hops']
+            try:
+                avg_length = total_bits_in / self.stats['packets_received']
+                average_rx_delay = self.stats[
+                    'packets_time'] / self.stats['packets_received']
+            except ZeroDivisionError:
+                if self.stats['packets_received'] == 0:
+                    avg_length = 0
+                    average_rx_delay = inf
+                else:
+                    raise RuntimeError("Got a zero in a weird place: {}/{}".format(
+                        total_bits_in,
+                        self.stats['packets_received']
+                    ))
 
-        left_in_q = len(self.layercake.mac.outgoing_packet_queue)
+            left_in_q = len(self.layercake.mac.outgoing_packet_queue)
 
-        app_stats = {
-            "rx_counts": self.stats['packets_received'],
-            "tx_counts": self.stats['packets_sent'],
-            "average_rx_delay": average_rx_delay,
-            "delay": self.stats['packets_time'],
-            "hops": self.stats['packets_hops'],
-            "dhops": self.stats['packets_dhops'],
-            "average_length": avg_length,
-            "throughput": throughput,
-            "offeredload": offeredload,
-            "enqueued": left_in_q
-        }
-        app_stats.update(self.layercake.phy.dump_stats())
+            app_stats = {
+                "rx_counts": self.stats['packets_received'],
+                "tx_counts": self.stats['packets_sent'],
+                "average_rx_delay": average_rx_delay,
+                "delay": self.stats['packets_time'],
+                "hops": self.stats['packets_hops'],
+                "dhops": self.stats['packets_dhops'],
+                "average_length": avg_length,
+                "throughput": throughput,
+                "offeredload": offeredload,
+                "enqueued": left_in_q
+            }
+            app_stats.update(self.layercake.phy.dump_stats())
+        else:
+            app_stats = {}
         return app_stats
 
     def dump_logs(self):
         """
         Return the packet tx/rx logs
         """
-        return {
-            'tx': self.sent_log,
-            'rx': self.received_log,
-            'tx_queue': self.layercake.mac.outgoing_packet_queue
-        }
+        if self.HAS_LAYERCAKE:
+            return {
+                'tx': self.sent_log,
+                'rx': self.received_log,
+                'tx_queue': self.layercake.mac.outgoing_packet_queue
+            }
+        else:
+            return {}
 
     def packetGen(self, period, destination, *args, **kwargs):
         """
@@ -552,6 +559,7 @@ class CommsTrustRoundRobin(CommsTrust):
 
 class Null(Application):
     HAS_LAYERCAKE = False
+    default_destination = None
 
     def packetGen(self, period, destination, data=None, *args, **kwargs):
         """
@@ -560,5 +568,4 @@ class Null(Application):
         return None, 1
 
     def packetRecv(self, packet):
-        assert isinstance(packet, AppPacket)
         del packet

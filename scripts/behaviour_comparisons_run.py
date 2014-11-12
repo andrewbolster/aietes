@@ -40,7 +40,6 @@ if __name__ == "__main__":
     exp = set()
     exp = run(exp)
     logpath = "{path}/{title}.log".format(path=exp.exp_path,title=exp.title.replace(' ','_'))
-    exp.dump_self()
     exp.dump_analysis()
 
     with redirected(stdout=logpath):
@@ -50,6 +49,7 @@ if __name__ == "__main__":
         print fin.read()
 
     print("Saved detection stats to {}".format(logpath))
+    exp.dump_self()
     os.chdir(exp.exp_path)
     call(['bounos','-M'])
 

@@ -34,7 +34,8 @@ import numpy as np
 import pandas as pd
 
 import Metrics
-import Analyses
+import Analyses.Behaviour
+import Analyses.Trust
 from DataPackage import DataPackage
 
 from aietes.Tools import list_functions, mkpickle
@@ -153,7 +154,8 @@ def multirun(args, basedir=os.curdir):
         # execute_generator = lambda d: delayed(detect_and_identify(d))
         result_generator = (execute_generator(d) for d in data.itervalues())
         # result_generator = Parallel(n_jobs=-1)(execute_generator)
-        # TODO This is amazingly wasteful
+        # TODO This is amazingly wasteful, also there appears to be a nasty but here for
+        # "argument after * must be a sequence, not a generator"
         _, _, _, identification_list = zip(*result_generator)
 
         # Write a standard fusion run back to the source dir. This might be
@@ -332,7 +334,7 @@ def plot_detections(ax, metric, orig_data,
 
     import Analyses
 
-    results = Analyses.Detect_Misbehaviour(data=orig_data,
+    results = Analyses.Behaviour.Detect_Misbehaviour(data=orig_data,
                                            metric=metric.__class__.__name__,
                                            stddev_frac=2)
     detections = results['detections']
@@ -384,11 +386,11 @@ def plot_detections(ax, metric, orig_data,
 
 
 def detect_and_identify(d):
-    per_metric_deviations, deviation_windowed = Analyses.Combined_Detection_Rank(d,
+    per_metric_deviations, deviation_windowed = Analyses.Behaviour.Combined_Detection_Rank(d,
                                                                                  _metrics,
                                                                                  stddev_frac=2)
-    trust_values = Analyses.dev_to_trust(per_metric_deviations)
-    identification_dict = Analyses.behaviour_identification(per_metric_deviations, deviation_windowed, _metrics,
+    trust_values = Analyses.Trust.dev_to_trust(per_metric_deviations)
+    identification_dict = Analyses.Behaviour.behaviour_identification(per_metric_deviations, deviation_windowed, _metrics,
                                                             names=d.names,
                                                             verbose=False)
     return trust_values, per_metric_deviations, deviation_windowed, identification_dict
@@ -689,7 +691,7 @@ def run_overlay(data, args=None):
 
     pl.rc('font', **font)
 
-    analysis = getattr(Analyses, args.analysis[0])
+    analysis = getattr(Analyses.Behaviour, args.analysis[0])
     try:
         analysis_args = literal_eval(args.analysis_args)
     except ValueError as exp:
@@ -774,9 +776,9 @@ def global_adjust(figure, axes, scale=2):
 
 
 def printAnalysis(d):
-    deviation, trust = Analyses.Combined_Detection_Rank(
+    deviation, trust = Analyses.Behaviour.Combined_Detection_Rank(
         d, _metrics, stddev_frac=2)
-    result_dict = Analyses.behaviour_identification(
+    result_dict = Analyses.Behaviour.behaviour_identification(
         deviation, trust, _metrics, names=d.names)
     return result_dict
 
