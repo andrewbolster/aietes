@@ -31,6 +31,7 @@ import pandas as pd
 
 
 from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig, results_file
+import Analyses.Trust
 from configobj import ConfigObj
 
 class DataPackage(object):
@@ -762,18 +763,7 @@ class DataPackage(object):
 
         :return: trust observations[observer][t][target]
         """
-        obs={}
-        trust = { node: log['trust'] for node, log in self.comms['logs'].items()}
-        for i_node, i_t in trust.items():
-            # first pass to invert the observations
-            if not obs.has_key(i_node):
-                obs[i_node]=[]
-            for j_node, j_t in i_t.items():
-                for o, observation in enumerate(j_t):
-                    while len(obs[i_node])<=(o):
-                        obs[i_node].append({})
-                    obs[i_node][o][j_node]=observation
-        return obs
+        return Analyses.Trust.generate_trust_logs_from_comms_logs(self.comms['logs'])
 
     def has_comms_data(self):
         """

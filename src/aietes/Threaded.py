@@ -18,17 +18,18 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
 
-from multiprocessing import Process, JoinableQueue, cpu_count
 from multiprocessing.process import current_process
+from joblib import Parallel, delayed
 import struct
 import os
 import logging
 import gc
+from time import gmtime, strftime
 
 import numpy as np
 
 from aietes import Simulation
-from aietes.Tools import try_x_times
+
 
 
 def sim_mask(args):
@@ -73,35 +74,15 @@ def sim_mask(args):
                 del sim
         gc.collect()
 
-
-def consumer(w_queue, r_queue):
-    # Properly Parallel
-    # http://stackoverflow.com/questions/444591/convert-a-string-of-bytes-into-an-int-python
-    myid = current_process()._identity[0]
-    np.random.seed(myid ^ struct.unpack("<L", os.urandom(4))[0])
-    while True:
-        try:
-            uuid, simargs, postargs = w_queue.get()
-            protected_run = try_x_times(5, RuntimeError,
-                                        RuntimeError(
-                                            "Attempted two runs, both failed"),
-                                        sim_mask)
-            sim_results = protected_run((simargs, postargs))
-        except Exception as e:
-            sim_results = e
-        finally:
-            r_queue.put((uuid, sim_results))
-            w_queue.task_done()
-            print "Done %s" % uuid
-
-
-def futures_version(arglist):
+def parallel_sim(arglist):
     import logging
 
-    logging.basicConfig(level=logging.ERROR)
-    from joblib import Parallel, delayed
+    logging.basicConfig(level=logging.DEBUG)
 
     results = []
+    print "Beginning Parallel Run of {runcount} at {t}".format(
+        runcount=len(arglist),t=strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
+    )
     try:
         results = Parallel(
             n_jobs=-1, verbose=10)(delayed(sim_mask)(args) for args in arglist)
@@ -112,32 +93,3 @@ def futures_version(arglist):
 
     return results
 
-
-work_queue = JoinableQueue()
-result_queue = JoinableQueue()
-cores = cpu_count()
-running = False
-workers = []
-
-
-def boot():
-    global running, workers
-    workers = [Process(target=consumer, args=(work_queue, result_queue))
-               for i in range(cores)]
-    for worker in workers:
-        worker.start()
-    print "started"
-    running = True
-
-
-def kill():
-    global running, workers
-    print "joining for death"
-    work_queue.join()
-    print "joined "
-    for worker in workers:
-        worker.terminate()
-        del worker
-    workers = []
-    print "killed"
-    running = False

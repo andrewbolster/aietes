@@ -90,10 +90,13 @@ def generate_node_trust_perspective(node_observations, metric_weights=None, n_me
         # indexes
         g=np.array([np.inf for _ in range(n_metrics)])
         b=np.zeros_like(g)
-        for j_node, j_obs in t_obs.items():
-            if len(j_obs):
-                g=np.min([j_obs,g], axis=0)
-                b=np.max([j_obs,b], axis=0)
+        try:
+            for j_node, j_obs in t_obs.items():
+                if len(j_obs):
+                    g=np.min([j_obs,g], axis=0)
+                    b=np.max([j_obs,b], axis=0)
+        except:
+            print("")
         # Now that we have the best reference sequences
 
         # Inherit lasst trust values for missing trusts
@@ -141,6 +144,28 @@ def generate_global_trust_values(dp):
         for node, node_perspective in trust_perspectives.items()
     }
     return trust_perspectives, inverted_trust_perspectives
+
+def generate_trust_logs_from_comms_logs(comms_logs):
+    """
+    Returns the global trust log as a dict of each nodes observations at each time of each other node
+
+    i.e. trust is internally recorded by each node wrt each node [node][t]
+    for god processing it's easier to deal with [t][node]
+
+    :return: trust observations[observer][t][target]
+    """
+    obs={}
+    trust = { node: log['trust'] for node, log in comms_logs.items()}
+    for i_node, i_t in trust.items():
+        # first pass to invert the observations
+        if not obs.has_key(i_node):
+            obs[i_node]=[]
+        for j_node, j_t in i_t.items():
+            for o, observation in enumerate(j_t):
+                while len(obs[i_node])<=(o):
+                    obs[i_node].append({})
+                obs[i_node][o][j_node]=observation
+    return obs
 
 def dev_to_trust(per_metric_deviations):
     # rotate pmdev to node-primary ([node,metric])

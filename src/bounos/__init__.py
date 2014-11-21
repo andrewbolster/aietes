@@ -95,18 +95,24 @@ def load_sources(sources, comms_only=False):
     :return data:
     """
 
-    data = collections.OrderedDict()
-    def grab_comms(s):
-        dp = DataPackage(s)
-        return dp.comms
+    data = {}
+
+    # You have already tried parallelising this but since it's mostly disk-reliant, it's really not worth it at all
+    # In fact the joblib implemetations (even using a generator function for the loading with pre-dispatch) was
+    # slower than just a regular boring map
+    datasets = map(DataPackage, sources)
+    datasets = []
+    for source in sources:
+        try:
+            datasets.append(DataPackage(source))
+        except:
+            pass
     if comms_only:
-        datasets = Parallel(n_jobs=-1)(delayed(grab_comms)(source)
-                                       for source in sources)
+        for d in datasets:
+            data[d.title.tostring()] = d.comms
     else:
-        datasets = Parallel(n_jobs=-1)(delayed(DataPackage)(source)
-                                       for source in sources)
-    for d in datasets:
-        data[d.title.tostring()] = d
+        for d in datasets:
+            data[d.title.tostring()] = d
     return data
 
 
@@ -160,11 +166,8 @@ def multirun(args, basedir=os.curdir):
         name = os.path.split(sourcedir)[-1]
         data = load_sources(npz_in_dir(sourcedir))
         execute_generator = lambda d: detect_and_identify(d)
-        # execute_generator = lambda d: delayed(detect_and_identify(d))
         result_generator = (execute_generator(d) for d in data.itervalues())
-        # result_generator = Parallel(n_jobs=-1)(execute_generator)
         # TODO This is amazingly wasteful, also there appears to be a nasty but here for
-        # "argument after * must be a sequence, not a generator"
         _, _, _, identification_list = zip(*result_generator)
 
         # Write a standard fusion run back to the source dir. This might be

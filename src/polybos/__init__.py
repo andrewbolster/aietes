@@ -19,6 +19,7 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import os
+import gc
 import sys
 import tempfile
 from uuid import uuid4 as get_uuid
@@ -37,7 +38,7 @@ import numpy as np
 
 # Must use the aietes path to get the config files
 from aietes import Simulation
-import aietes.Threaded as ParSim
+import aietes.Threaded
 from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf, is_valid_aietes_datafile
 from bounos import DataPackage, printAnalysis, load_sources, npz_in_dir
 from contrib.Ghia.ecea.data_grapher import data_grapher
@@ -184,9 +185,9 @@ class Scenario(object):
         """
         Offload this to AIETES
         Args:
-            runcoun(int): Number of repeated executions of this scenario; this value overrides the
+            :param runcount(int): Number of repeated executions of this scenario; this value overrides the
                 value set on init
-            runtime(int): Override simulation duration (normally inherited from config)
+            :param runtime(int): Override simulation duration (normally inherited from config)
         """
         if runcount is None:
             runcount = self._default_run_count
@@ -245,73 +246,6 @@ class Scenario(object):
                 value set on init
             runtime(int): Override simulation duration (normally inherited from config)
         """
-        if runcount is None:
-            runcount = self._default_run_count
-
-        self.mypath = os.path.join(
-            kwargs.get("basepath", tempfile.mkdtemp()), self.title)
-        os.mkdir(self.mypath)
-        if not ParSim.running:
-            raise RuntimeError("Attempted parrallel without booting, breaking")
-
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get(
-            "dataFile", True), 'outputPath': self.mypath}
-        self.datarun = [None for _ in range(runcount)]
-        uuids = [get_uuid() for _ in range(runcount)]
-        for run in range(runcount):
-            if runcount > 1:
-                pp_defaults.update(
-                    {'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
-            sys.stdout.write("%s," % pp_defaults['outputFile'])
-            sys.stdout.flush()
-            try:
-                title = self.title + "-%s" % run
-                ParSim.work_queue.put(
-                    (
-                        uuids[run],
-                        kwarger(config=self.config,
-                                title=title,
-                                logtofile=os.path.join(
-                                    self.mypath, "%s.log" % title),
-                                logtoconsole=logging.ERROR,
-                                progress_display=progress_display,
-                                sim_time=runtime),
-                        pp_defaults
-                    ), 10
-                )
-            except Exception:
-                raise
-        print "Joining"
-        ParSim.work_queue.join()
-        print "Joined"
-        while not ParSim.result_queue.empty() or any(r is None for r in self.datarun):
-            uuid, response = ParSim.result_queue.get(1)
-            if isinstance(response, Exception):
-                raise response
-            else:
-                try:
-                    if kwargs.get("retain_data"):
-                        self.datarun[uuids.index(uuid)] = response
-                    else:
-                        self.datarun[run] = True
-                except ValueError:
-                    print("Tripped over old hash?:%s" % uuid)
-                    pass
-        assert all(
-            r is not None for r in self.datarun), "All dataruns should be completed by now"
-        print "Got responses"
-
-        print("done %d runs in parallel" % (runcount))
-
-    def run_future(self, runcount=None, runtime=None, *args, **kwargs):
-        """
-        Offload this to AIETES multiprocessing queue
-
-        Args:
-            runcount(int): Number of repeated executions of this scenario; this value overrides the
-                value set on init
-            runtime(int): Override simulation duration (normally inherited from config)
-        """
         self.mypath = os.path.join(
             kwargs.get("basepath", tempfile.mkdtemp()), self.title)
         os.mkdir(self.mypath)
@@ -343,7 +277,7 @@ class Scenario(object):
                 )
             except Exception:
                 raise
-        self.datarun = ParSim.futures_version(self.runlist)
+        self.datarun = aietes.Threaded.parallel_sim(self.runlist)
         assert all(
             r is not None for r in self.datarun), "All dataruns should be completed by now"
         print "Got responses"
@@ -586,7 +520,7 @@ class ExperimentManager(object):
 
     def __init__(self,
                  node_count=None,
-                 title=None, parallel=False, future=True, retain_data=True,
+                 title=None, parallel=False,
                  base_config_file=None, *args, **kwargs
     ):
         """
@@ -594,13 +528,11 @@ class ExperimentManager(object):
             multiple experimental input. (Number of nodes, ratio of behaviours, etc)
         The purpose of this manager is to abstract the per scenario setup
         Args:
-            node_count(int): Define the standard fleet size (Infer from Config)
-            title(str): define a title for this experiment, to be used for file and folder naming,
+            :param node_count(int): Define the standard fleet size (Infer from Config)
+            :param title(str): define a title for this experiment, to be used for file and folder naming,
                 if not set, this defaults to a timecode and initialisation (not execution)
-            retain_data(bool/str): Decides wether the scenario state data is maintained or allowed to be GC'd
-                    can be one of [True,'file','additional_only']
-            future(bool): option to maintain datapackages created in memory or not (default True)
-            base_config_file (str->FQPath): aietes config file to base the default scenario off of.
+            :param base_config_file (str->FQPath): aietes config file to base the default scenario off of.
+
         """
         self._default_scenario = Scenario(title="__default__",
                                           default_config_file=base_config_file)
@@ -614,8 +546,7 @@ class ExperimentManager(object):
         except:
             self.exp_path = tempfile.mkdtemp()
             print("Filepath collision, using %s" % self.exp_path)
-        self.scenarios_file = os.path.join(self.exp_path, "ScenarioDB.shelf")
-        self.scenarios = AutoSyncShelf(self.scenarios_file)
+        self.scenarios = {}
         if title is None:
             self.title = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
         else:
@@ -626,17 +557,6 @@ class ExperimentManager(object):
             self._default_scenario.setNodeCount(node_count)
         self.node_count = self._default_scenario.node_count
         self.parallel = parallel
-        self.retain_data = retain_data
-        self.future = future
-        if self.parallel and not self.future:
-            ParSim.boot()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, traceback):
-        if self.parallel and not self.future:
-            ParSim.kill()
 
     def updateDefaultNode(self, config_dict):
         """
@@ -655,31 +575,35 @@ class ExperimentManager(object):
         """
         self._default_scenario.updateDefaultNode('behaviour', behaviour)
 
-    def run(self, **kwargs):
+    def run(self, runtime=None, runcount=None, retain_data=True, **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
         Args:
             runtime(int): Override simulation duration (normally inherited from config)
             runcount(int): Number of repeated executions of this scenario; this value overrides the
                 value set on init
+            retain_data(bool/str): Decides wether the scenario state data is maintained or allowed to be GC'd
+                    can be one of [True,'file','additional_only']
         """
         self.orig_path = os.path.abspath(_results_dir)
-        self.runcount = kwargs.get("runcount", 1)
+        self.runcount = runcount
+        self.retain_data = retain_data
         kwargs.update(
-            {"basepath": self.exp_path, "retain_data": self.retain_data})
+            {"basepath": self.exp_path,
+             "retain_data": self.retain_data,
+             "runcount": self.runcount})
         start = time.time()
         try:
             os.chdir(self.exp_path)
+            # Q: Is this acting on the reference to scenario or the item in scenarios?
             for scenario_title, scenario in self.scenarios.items():
                 scenario.commit()
                 if self.parallel:
-                    if self.future:
-                        scenario.run_future(**kwargs)
-                    else:
-                        scenario.run_parallel(**kwargs)
+                    scenario.run_parallel(**kwargs)
                 else:
                     scenario.run(**kwargs)
                 self.scenarios[scenario_title]=scenario
+                gc.collect()
 
         except ConfigError as e:
             print("Caught Configuration error %s on scenario config \n%s" %
@@ -693,8 +617,6 @@ class ExperimentManager(object):
             finally:
                 os.chdir(self.orig_path)
 
-            if self.parallel:
-                ParSim.kill()
             print("Experimental results stored in %s" % self.exp_path)
         self.runtime = time.time() - start
         msg="Runtime:{}".format(secondsToStr(self.runtime))

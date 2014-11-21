@@ -20,13 +20,12 @@ def setup():
     exp = EXP(
               title="ThroughputTestingScenario",
               parallel=True,
-              future=True,
               base_config_file='bella_static.conf'
              )
 
     # Scenario 1: All static
     #exp.addDefaultScenario(title="Scenario1")
-    exp.addApplicationVariableScenario('app_rate', np.linspace(0.015, 0.035, 20))
+    exp.addApplicationVariableScenario('app_rate', np.linspace(0.015, 0.035, 5))
     return exp
 
 
@@ -34,7 +33,8 @@ def run(exp):
     exp.run(title="ThroughputTestingScenario",
             runcount=8,
             runtime=200,
-            dataFile=True)
+            retain_data=False,
+    )
     return exp
 
 
