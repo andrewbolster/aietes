@@ -99,8 +99,7 @@ def load_sources(sources, comms_only=False):
 
     # You have already tried parallelising this but since it's mostly disk-reliant, it's really not worth it at all
     # In fact the joblib implemetations (even using a generator function for the loading with pre-dispatch) was
-    # slower than just a regular boring map
-    datasets = map(DataPackage, sources)
+    # slower than just a regular boring map, and that doesn't let you avoid disasters
     datasets = []
     for source in sources:
         try:
@@ -114,6 +113,26 @@ def load_sources(sources, comms_only=False):
         for d in datasets:
             data[d.title.tostring()] = d
     return data
+
+def generate_sources(sources, comms_only=False):
+    """
+    From a given list of DataPackage-able sources, yield a title/content tuple based on their d.title
+
+    :param sources:
+    :param comms_only: Only return the comms substructure rather than the full datapackage
+    :return data:
+    """
+
+    # You have already tried parallelising this but since it's mostly disk-reliant, it's really not worth it at all
+    # In fact the joblib implemetations (even using a generator function for the loading with pre-dispatch) was
+    # slower than just a regular boring map
+    for source in sources:
+        try:
+            d = DataPackage(source)
+        except:
+            continue
+        yield (d.title.tostring(), d.comms if comms_only else d)
+        del d
 
 
 def npz_in_dir(path):

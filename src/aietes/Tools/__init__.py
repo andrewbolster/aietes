@@ -27,7 +27,7 @@ from itertools import groupby
 from operator import itemgetter
 from datetime import datetime as dt
 from time import time
-import pickle
+import pickle, cPickle
 from gi.repository import Notify
 
 
@@ -736,12 +736,21 @@ def unext(filename):
 def kwarger(**kwargs):
     return kwargs
 
+def unCpickle(filename):
+    with open(filename, 'rb') as f:
+        data = cPickle.load(f)
+    return data
+
+def mkCpickle(filename, object):
+    with open(filename, 'wb') as f:
+        data = cPickle.dump(object, f)
+    return f
+
 
 def unpickle(filename):
     with open(filename, 'rb') as f:
         data = pickle.load(f)
     return data
-
 
 def mkpickle(filename, object):
     with open(filename, 'wb') as f:
@@ -895,22 +904,26 @@ def _VmB(VmKey):
     if len(v) < 3:
         return 0.0  # invalid format?
         # convert Vm value to bytes
-    return float(v[1]) * _scale[v[2]]
+    return float(v[1]) * _scale[v[2]] / (1024*1024)
 
 
 def memory(since=0.0):
-    '''Return memory usage in bytes.
+    '''Return memory usage in Megabytes.
     '''
     return _VmB('VmSize:') - since
 
+def swapsize(since=0.0):
+    '''Return memory usage in Megabytes.
+    '''
+    return _VmB('VmSwap:') - since
 
 def resident(since=0.0):
-    '''Return resident memory usage in bytes.
+    '''Return resident memory usage in Megabytes.
     '''
     return _VmB('VmRSS:') - since
 
 
 def stacksize(since=0.0):
-    '''Return stack size in bytes.
+    '''Return stack size in Megabytes.
     '''
     return _VmB('VmStk:') - since

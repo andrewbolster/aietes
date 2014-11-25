@@ -59,7 +59,7 @@ def GRG_t(c_intervals, weights=None):
     :param grcs:
     :return:
     """
-    return np.average(c_intervals, axis=1, weights=None)
+    return np.average(c_intervals, axis=1, weights=weights)
 
 def T_kt(interval):
     """
