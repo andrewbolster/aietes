@@ -190,3 +190,5 @@ def combined_trust_observation_summary(dp, target = None):
             ax[i][2].set_xlabel("Trust Opinion of node")
 
     return f
+
+
