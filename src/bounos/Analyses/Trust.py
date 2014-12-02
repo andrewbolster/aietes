@@ -22,6 +22,18 @@ import pandas as pd
 
 from copy import deepcopy
 
+# THESE LAMBDAS PERFORM GRAY CLASSIFICATION BASED ON GUO
+# Still have no idea where sigma comes into it but that's life
+_white_fs=[lambda x : -x + 1,
+           lambda x : -2*x +2 if x>0.5 else 2*x,
+           lambda x : x
+]
+_white_sigmas=[0.0,0.5,1.0]
+
+_gray_whitenized=lambda x : map(lambda f: f(x), _white_fs)
+_gray_class = lambda x: (_gray_whitenized(x).index(max(_gray_whitenized(x))))
+
+
 def grc_factory(rho=0.5):
     """
     Factory function for generating Grey Relational Coeffiecient functions
@@ -181,7 +193,7 @@ def generate_trust_logs_from_comms_logs(comms_logs):
 
 def generate_trust_values_from_trust_log(df, metric_weights=None, n_metrics=6):
     """
-    Given a trust log dataframe
+    Given a trust log dataframe, return the metric weighted Gray Theoretic trust perspectives as a dataframe
     :param df:
     :param metric_weights:
     :param n_metrics:
@@ -200,6 +212,82 @@ def generate_trust_values_from_trust_log(df, metric_weights=None, n_metrics=6):
     trust_frame.columns.names=['target']
     return trust_frame
 
+def explode_metrics_from_trust_log(df, metrics_string=None):
+    """
+    This method presents an exploded view of the trust log where the individual metrics are column-wise with the
+    per-node indexes shifted from the col space to the row-multiindex space
+
+    tldr: turns the list-oriented value space in trust logs into a columular format.
+    :param df:
+    :return tf:
+    """
+    tf=pd.DataFrame.from_dict({k:v for k,v in df.iterkv()}, orient='index')
+    if metrics_string is None:
+        metrics_string="ATXP,ARXP,ADelay,ALength,Throughput,PLR"
+    tf.columns=[metrics_string.split(',')]
+    tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var','run','observer','t','target'])
+    tf.index=tf.index.set_levels([
+        tf.index.levels[0].astype(np.float64),
+        tf.index.levels[1].astype(np.int32),
+        tf.index.levels[2],
+        tf.index.levels[3].astype(np.int32),
+        tf.index.levels[4]
+    ])
+    tf.sort(inplace=True)
+    return tf
+
+
+def network_trust_dict(trust_run, observer='n0', recommendation_nodes = ['n2','n3'], target = 'n1', indirect_nodes = ['n4','n5']):
+    """
+    Take an individual simulation run and get a dict of the standard network perspectives across given recommenders and indirect nodes
+    (you could probably cludge together a few runs and the data format would still be ok, but I wouldn't try plotting it directly)
+    :param trust_run:
+    :param observer:
+    :param recommendation_nodes:
+    :param target:
+    :param indirect_nodes:
+    :return:
+    """
+    t_direct = lambda x: 0.5 * max(_gray_whitenized(x)) * x
+    t_recommend = lambda x: 0.5 * (\
+            2*len(recommendation_nodes) \
+            /(2.0*len(recommendation_nodes)+len(indirect_nodes))) * max(_gray_whitenized(x)) * x
+    t_indirect = lambda x: 0.5 * (\
+            2*len(indirect_nodes) \
+            /(2.0*len(recommendation_nodes)+len(indirect_nodes))) * max(_gray_whitenized(x)) * x
+
+    def total_trust(t):
+        Td = t_direct(trust_run[observer][target][t])
+        Tr = np.average([t_recommend(trust_run[recommender][target][t]) for recommender in recommendation_nodes])
+        Ti = np.average([t_indirect(trust_run[indirecter][target][t]) for indirecter in indirect_nodes])
+        return sum((Td,Tr,Ti))
+
+    network_list = [observer] + recommendation_nodes + indirect_nodes
+
+    T_network = trust_run.unstack('observer').xs(target, level='target',axis=1)[network_list].mean(axis=1)
+    T_direct = trust_run.xs('n0', level='observer')['n1'].apply(t_direct)
+    T_recommend= trust_run.unstack('observer').xs(target, level='target',axis=1)[recommendation_nodes].applymap(t_recommend).mean(axis=1)
+    T_indirect = trust_run.unstack('observer').xs(target, level='target',axis=1)[indirect_nodes].applymap(t_indirect).mean(axis=1)
+    T_total=pd.DataFrame.from_dict({
+        'Direct': T_direct,
+        'Recommend': T_recommend,
+        'Indirect': T_indirect
+    })
+
+
+    # The driving philosophy of the following apparrant mess is that explicit is better that implicit;
+    # If I screw up the data structure later; pandas will not forgive me.
+
+    _d=pd.DataFrame.from_dict(
+    {"t10": trust_run.xs(observer, level='observer')[target],
+    "t12": trust_run.xs('n2', level='observer')[target],
+    "t13": trust_run.xs('n3', level='observer')[target],
+    "t14": trust_run.xs('n4', level='observer')[target],
+    "t15": trust_run.xs('n5', level='observer')[target],
+    "t10-5": T_total.sum(axis=1),
+    "t10-net": pd.Series(T_network)
+    })
+    return _d
 
 def dev_to_trust(per_metric_deviations):
     # rotate pmdev to node-primary ([node,metric])

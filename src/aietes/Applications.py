@@ -354,6 +354,7 @@ class CommsTrust(RoutingTest):
     test_stream_length = 6
     stream_period_ratio = 0.1
     trust_assessment_period = 600
+    metrics_string="ATXP,ARXP,ADelay,ALength,Throughput,PLR"
 
     def activate(self):
 
