@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
 #paths = ["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-12-50-42"]
-paths =["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-17-14-31",
-       "/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-12-17-50-11"]
+#paths =["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-17-14-31",
+#       "/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-12-17-50-11"]
 
 import os
 import logging
@@ -98,7 +98,7 @@ def dump_trust_logs_and_stats_from_exp_paths(paths):
                                                  keys=iv.keys()
                                        )
                                        for ik, iv in v.iteritems()],
-                                   keys=[ik for ik, iv in v.iteritems()],
+                                   keys=v.keys(),
                                    names=['var', 'run', 'node', 'n']
                 )
             else:
@@ -123,4 +123,4 @@ def dump_trust_logs_and_stats_from_exp_paths(paths):
 
 
 if __name__ == "__main__":
-    dump_trust_logs_and_stats_from_exp_paths(paths)
+    dump_trust_logs_and_stats_from_exp_paths([os.curdir])

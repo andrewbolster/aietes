@@ -7,7 +7,9 @@ from bounos import Analyses, _metrics
 from contextlib import contextmanager
 import numpy as np
 import sys, os
-from subprocess import call
+
+from bounos.multi_loader import dump_trust_logs_and_stats_from_exp_paths
+
 
 @contextmanager
 def redirected(stdout):
@@ -25,29 +27,27 @@ def setup():
 
     # Scenario 1: All static
     #exp.addDefaultScenario(title="Scenario1")
-    exp.addApplicationVariableScenario('app_rate', np.linspace(0.015, 0.035, 5))
+    exp.addApplicationVariableScenario('app_rate', np.linspace(0.01, 0.06, 20))
     return exp
 
 
 def run(exp):
     exp.run(title="ThroughputTestingScenario",
-            runcount=8,
-            runtime=200,
+            runcount=4,
             retain_data=False,
     )
     return exp
 
 
-def set_run():
-    return run(setup())
 
 if __name__ == "__main__":
-    exp = setup()
-    exp = run(exp)
+    exp = set(run())
     logpath = "{path}/{title}.log".format(path=exp.exp_path,title=exp.title.replace(' ','_'))
     exp.dump_self()
+    path = exp.exp_path
+
 
     print("Saved detection stats to {}".format(exp.exp_path))
-    os.chdir(exp.exp_path)
+    dump_trust_logs_and_stats_from_exp_paths([path])
 
 

@@ -78,25 +78,37 @@ def T_kt(interval):
 def generate_node_trust_perspective(node_observations, metric_weights=None, n_metrics=6):
     """
     Generate Trust Values based on each nodes trust log (dp.get_global_trust_logs[observer])
+    Will also accept a selectively filtered trust log for an individual run
+    i.e node_trust where node_trust is the inner result of:
+        trust.groupby(level=['var','run','node'])
     :param node_observations: node observations [t][target][x,x,x,x,x,x]
     :param metric_weights: per-metric weighting array (default None)
     :param n_metrics: number of metrics assessed in each observation
     :return:
     """
+    def strip_leading_iterators(tup):
+        for (_,_,_,t),t_obs in tup():
+            yield t,t_obs
+
     trust=[]
     grc=grc_factory(0.5)
-    for t, t_obs in enumerate(node_observations):
+    if not isinstance(node_observations,list):
+        assert isinstance(node_observations, pd.DataFrame)
+        node_obs_gen = strip_leading_iterators(node_observations.dropna(axis=1).iterrows)
+    elif isinstance(node_observations,list):
+        node_obs_gen = enumerate(node_observations)
+    for t, t_obs in node_obs_gen:
         #Sweep across the nodes observed in this time and take the g/b
         # indexes
         g=np.array([np.inf for _ in range(n_metrics)])
         b=np.zeros_like(g)
         try:
-            for j_node, j_obs in t_obs.items():
+            for j_node, j_obs in t_obs.iteritems():
                 if len(j_obs):
                     g=np.min([j_obs,g], axis=0)
                     b=np.max([j_obs,b], axis=0)
         except:
-            print("")
+            raise
         # Now that we have the best reference sequences
 
         # Inherit lasst trust values for missing trusts
@@ -106,7 +118,7 @@ def generate_node_trust_perspective(node_observations, metric_weights=None, n_me
             td=deepcopy(trust[-1])
 
         # Perform Grey Relational Trust Calculation
-        for j_node, j_obs in t_obs.items():
+        for j_node, j_obs in t_obs.iteritems():
             if len(j_obs):
                 t_val = T_kt(
                     GRG_t(
@@ -134,14 +146,14 @@ def invert_node_trust_perspective(node_trust_perspective):
 
     return trust_inverted
 
-def generate_global_trust_values(dp):
+def generate_global_trust_values(trust_logs):
     trust_perspectives={
         node: generate_node_trust_perspective(node_observations)
-        for node, node_observations in dp.get_global_trust_logs().items()
+        for node, node_observations in trust_logs.iteritems()
     }
     inverted_trust_perspectives={
         node: invert_node_trust_perspective(node_perspective)
-        for node, node_perspective in trust_perspectives.items()
+        for node, node_perspective in trust_perspectives.iteritems()
     }
     return trust_perspectives, inverted_trust_perspectives
 
@@ -166,6 +178,28 @@ def generate_trust_logs_from_comms_logs(comms_logs):
                     obs[i_node].append({})
                 obs[i_node][o][j_node]=observation
     return obs
+
+def generate_trust_values_from_trust_log(df, metric_weights=None, n_metrics=6):
+    """
+    Given a trust log dataframe
+    :param df:
+    :param metric_weights:
+    :param n_metrics:
+    :return:
+    """
+    _temp_frame = df.groupby(level=['var','run','node']).apply(lambda x: generate_node_trust_perspective(x, metric_weights=metric_weights, n_metrics=n_metrics))
+    trust_frame = pd.concat(
+        # Join all Runs into a Single Var
+        [pd.concat(
+            # Join all perspectives into a single run
+            [pd.DataFrame(trusts) for trusts in val],
+            keys=val.keys()
+        ) for grp, val in _temp_frame.groupby(level=['var','run'])]
+    )
+    trust_frame.index.names=['var','run','observer','t']
+    trust_frame.columns.names=['target']
+    return trust_frame
+
 
 def dev_to_trust(per_metric_deviations):
     # rotate pmdev to node-primary ([node,metric])

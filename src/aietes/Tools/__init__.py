@@ -89,9 +89,13 @@ log_hdl.setFormatter(log_fmt)
 log_hdl.addFilter(SimTimeFilter())
 
 def notify_desktop(message):
-    if not Notify.is_initted():
-        Notify.init ("AIETES Simulation")
-    Notify.Notification.new ("AIETES Simulation",message,"dialog-information").show()
+    try:
+        if not Notify.is_initted():
+            Notify.init ("AIETES Simulation")
+        Notify.Notification.new ("AIETES Simulation",message,"dialog-information").show()
+    except:
+        pass
+
 
 class ConfigError(Exception):
 

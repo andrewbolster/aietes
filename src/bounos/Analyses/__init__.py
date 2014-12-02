@@ -18,6 +18,9 @@ __email__ = "me@andrewbolster.info"
 
 import logging
 import pandas as pd
+import os
+import errno
+import bounos.ChartBuilders as CB
 
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,
@@ -55,6 +58,40 @@ def get_valid_metric(metric):
         raise ValueError("No Metric! Cannot Contine")
     return metric
 
+def hdf_process_kickstart(logstore, directory, keys):
+    """
+    Helper Function for HDF processing methods providing
+        a: It's own key (self awareness is great) (first if multiple)
+        b: A dataframe/dir or frames associated with a particular key/keys
+        c: a fully set up path to somewhere to go depending on what directory it's been given
+
+    :param logstore:
+    :param directory:
+    :return: keystring, df, path
+    """
+
+    if isinstance(keys, list):
+        keystring = keys[0]
+    else:
+        keystring = keys
+
+    if directory:
+        #base path already exists so subdir
+        path = os.path.join(directory,keystring)
+        os.makedirs(path, exist_ok=True)
+    else:
+        # Spam all the directories
+        path = keystring
+        os.makedirs(path, exist_ok=True)
+
+    with pd.get_store as store:
+        if isinstance(keys, list):
+            df = {k:store.get(k) for k in keys}
+        else:
+            df = store.get(keys)
+
+    return keystring, df, path
+
 def process_all_logstore_graphics(logstore, title, directory=None):
     """
     Coordinate large-run processing for memory efficiency (i.e. all trust at once, all tx/rx at once, etc
@@ -62,7 +99,7 @@ def process_all_logstore_graphics(logstore, title, directory=None):
     ['/rx', '/stats', '/trust', '/trust_accessories', '/tx', '/tx_queue']
     :param logstore: str
     :param title: str
-    :param directory:
+    :param directory: assumes pwd if not given AND valid
     :return:
     """
     processes = [
@@ -86,11 +123,12 @@ def process_stats_logstore_graphics(logstore,title,directory=None):
     ['/stats']
     :param logstore: str
     :param title: str
-    :param directory:
+    :param directory: assumes pwd if not given AND valid
     :return:
     """
-    with pd.get_store(logstore) as store:
-        stats = store.get('stats')
+    keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
+
+    CB.performance_summary_for_variable_packet_rates(df)
 
 def process_rx_logstore_graphics(logstore, title, directory=None):
     """
@@ -99,11 +137,10 @@ def process_rx_logstore_graphics(logstore, title, directory=None):
     ['/rx']
     :param logstore: str
     :param title: str
-    :param directory:
+    :param directory: assumes pwd if not given AND valid
     :return:
     """
-    with pd.get_store(logstore) as store:
-        rx = store.get('rx')
+    keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
 
 def process_tx_logstore_graphics(logstore, title, directory=None):
     """
@@ -112,11 +149,11 @@ def process_tx_logstore_graphics(logstore, title, directory=None):
     ['/tx']
     :param logstore: str
     :param title: str
-    :param directory:
+    :param directory: assumes pwd if not given AND valid
     :return:
     """
-    with pd.get_store(logstore) as store:
-        tx = store.get('tx')
+    keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
+    CB.lost_packets_by_sender_reciever(df)
 
 def process_tx_queue_logstore_graphics(logstore, title, directory=None):
     """
@@ -125,11 +162,10 @@ def process_tx_queue_logstore_graphics(logstore, title, directory=None):
     ['/tx_queue']
     :param logstore: str
     :param title: str
-    :param directory:
+    :param directory: assumes pwd if not given AND valid
     :return:
     """
-    with pd.get_store(logstore) as store:
-        tx_queue = store.get('tx_queue')
+    keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
 
 def process_trust_logstore_graphics(logstore, title, directory=None):
     """
@@ -138,9 +174,7 @@ def process_trust_logstore_graphics(logstore, title, directory=None):
     ['/trust', '/trust_accessories']
     :param logstore: str
     :param title: str
-    :param directory:
+    :param directory: assumes pwd if not given AND valid
     :return:
     """
-    with pd.get_store(logstore) as store:
-        trust = store.get('trust')
-        trust_accessories = store.get('trust_accessories')
+    keystring, dfs, path = hdf_process_kickstart(logstore, directory, ['trust','trust_associates'])
