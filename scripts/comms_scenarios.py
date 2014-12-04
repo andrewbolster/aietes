@@ -48,11 +48,10 @@ if __name__ == "__main__":
     for base_scenario in base_scenarios:
         exp = exec_comms_range(base_scenario)
         logpath = "{path}/{title}.log".format(path=exp.exp_path,title=exp.title.replace(' ','_'))
-        exp.dump_self()
         path = exp.exp_path
 
 
         print("Saved detection stats to {}".format(exp.exp_path))
-        dump_trust_logs_and_stats_from_exp_paths([path])
+        dump_trust_logs_and_stats_from_exp_paths([path], title=base_scenario.split('.')[0])
 
 

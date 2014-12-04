@@ -142,6 +142,51 @@ def generate_node_trust_perspective(node_observations, metric_weights=None, n_me
         trust.append(td)
     return trust
 
+
+def generate_node_trust_perspective_from_trust_frame(tf, metric_weights=None, n_metrics=6):
+    """
+    Generate Trust Values based on a big trust_log frame (as acquired from multi_loader or from explode_metrics_...
+    Will also accept a selectively filtered trust log for an individual run
+    i.e node_trust where node_trust is the inner result of:
+        trust.groupby(level=['var','run','node'])
+    :param node_observations: node observations [t][target][x,x,x,x,x,x]
+    :param metric_weights: per-metric weighting array (default None)
+    :param n_metrics: number of metrics assessed in each observation
+    :return:
+    """
+    assert isinstance(tf, pd.DataFrame)
+    trusts={}
+    grc=grc_factory(0.5)
+    for k,g in tf.dropna().groupby(level=['var','run','observer']):
+        for ki, gi in g.groupby(level='t'):
+            gb=gi.max()
+            gg=gi.min()
+            for n,o in gi.iterrows():
+                trusts[n]=T_kt(
+                    GRG_t(
+                        np.asarray(map(grc,[o-gg,o-gb])),
+                        weights=metric_weights)
+                )
+
+    tf=pd.DataFrame.from_dict(trusts, orient='index')
+    tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var','run','observer','t','target'])
+    tf.index=tf.index.set_levels([
+        tf.index.levels[0].astype(np.float64),#Var
+        tf.index.levels[1].astype(np.int32),#Run
+        tf.index.levels[2],#Node
+        tf.index.levels[3].astype(np.int32),#Target (should really be a time)
+        tf.index.levels[4]  #Target
+    ])
+    tf.sort(inplace=True)
+
+    # The following:
+    #   Transforms the target id into the column space,
+    #   Groups each nodes independent observations together
+    #   Fills in the gaps IN EACH ASSESSMENT with the previous assessment of that node by that node at the previous time
+
+    tf = tf.unstack('target').groupby(level=['var','run','observer']).apply(lambda x: x.fillna(method='ffill'))
+    return tf
+
 def invert_node_trust_perspective(node_trust_perspective):
     """
     Invert Node Trust Records to unify against time, i.e. [observer][t][target]
@@ -158,9 +203,9 @@ def invert_node_trust_perspective(node_trust_perspective):
 
     return trust_inverted
 
-def generate_global_trust_values(trust_logs):
+def generate_global_trust_values(trust_logs, metric_weights=None):
     trust_perspectives={
-        node: generate_node_trust_perspective(node_observations)
+        node: generate_node_trust_perspective(node_observations, metric_weights=metric_weights)
         for node, node_observations in trust_logs.iteritems()
     }
     inverted_trust_perspectives={
@@ -199,7 +244,7 @@ def generate_trust_values_from_trust_log(df, metric_weights=None, n_metrics=6):
     :param n_metrics:
     :return:
     """
-    _temp_frame = df.groupby(level=['var','run','node']).apply(lambda x: generate_node_trust_perspective(x, metric_weights=metric_weights, n_metrics=n_metrics))
+    _temp_frame = df.groupby(level=['var','run','observer']).apply(lambda x: generate_node_trust_perspective(x, metric_weights=metric_weights, n_metrics=n_metrics))
     trust_frame = pd.concat(
         # Join all Runs into a Single Var
         [pd.concat(

@@ -111,7 +111,7 @@ class Simulation():
             else:
                 raise ConfigError(
                     "Cannot open given config file:%s" % self.config_file)
-        if "__default__" in self.config.Node.Nodes.keys():
+        if "__default__" in self.config['Node']['Nodes'].keys():
             raise RuntimeError("Dun fucked up: __default__ node detected")
 
         # Once Validated we've got no reason to hold on to the configobj
@@ -308,8 +308,16 @@ class Simulation():
                        for node in self.nodes if node.app}
         comms_logs = {node.name: node.app.dump_logs()
                       for node in self.nodes if node.app}
+        comms_pos = pd.concat({
+                                  n:pd.DataFrame(p, index=['x','y','z'])
+                                  for n,p in zip(names, state['p'])
+                              }, names=['node','dim']
+        ).T
+        comms_pos.index = pd.to_datetime(comms_pos.index, unit='s')
+
         comms = {
             'stats': pd.DataFrame.from_dict(comms_stats, orient='index'),
+            'positions': comms_pos.stack(level='node'),
             'logs': comms_logs
         }
         state.update({'comms': comms})
@@ -488,7 +496,7 @@ class Simulation():
         if retain_default:
             config_dict['Node']['Nodes']['__default__'] = ConfigObj(node_default_config_dict)
         cls.logger.debug("Built Config: %s" % pformat(config))
-        return config_dict
+        return dotdict(config_dict)
 
     def configureEnvironment(self, env_config):
         """

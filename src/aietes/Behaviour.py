@@ -62,18 +62,18 @@ class Behaviour(object):
             # self.logger.setLevel(logging.DEBUG)
         self.update_rate = 1
         self.memory = {}
-        self.behaviours = []
+        self.behaviours = [self.avoidWall]
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
         self.n_nearest_neighbours = listfix(
-            int, self.bev_config.nearest_neighbours)
+            int, self.bev_config['nearest_neighbours'])
         self.neighbourhood_max_rad = listfix(
-            int, self.bev_config.neighbourhood_max_rad)
+            int, self.bev_config['neighbourhood_max_rad'])
         self.neighbour_min_rad = listfix(
-            int, self.bev_config.neighbourhood_min_rad)
+            int, self.bev_config['neighbourhood_min_rad'])
         self.positional_accuracy = listfix(
-            float, self.bev_config.positional_accuracy)
+            float, self.bev_config['positional_accuracy'])
         self.horizon = 200
 
     def _start_log(self, parent):
@@ -208,33 +208,30 @@ class Behaviour(object):
                 "Attraction to %s: %s, at range of %s" % (forceVector, attractive_position, distanceVal))
         return forceVector
 
-    def avoidWall(self, position, velocity, forceVector):
+    def avoidWall(self, position, velocity):
         """
         Called by responseVector to avoid walls to a distance of half min distance
         """
-        response = np.zeros(shape=forceVector.shape)
-        min_dist = self.neighbour_min_rad * 2
+        response = np.array([0, 0, 0], dtype=np.float)
+        min_dist = self.neighbourhood_max_rad/2.0
         avoid = False
-        avoiding_position = None
+        avoiding_position = position.copy()
         if np.any((np.zeros(3) + min_dist) > position):
             if self.debug:
                 self.logger.debug(
                     "Too Close to the Origin-surfaces: %s" % position)
             offending_dim = position.argmin()
-            avoiding_position = position.copy()
             avoiding_position[offending_dim] = float(0.0)
             avoid = True
-        elif np.any(position > (self.env_shape - min_dist)):
+
+        if np.any(position > (self.env_shape - min_dist)):
             if self.debug:
                 self.logger.debug(
                     "Too Close to the Upper-surfaces: %s" % position)
             offending_dim = position.argmax()
-            avoiding_position = position.copy()
             avoiding_position[offending_dim] = float(
                 self.env_shape[offending_dim])
             avoid = True
-        else:
-            response = forceVector
 
         if avoid:
             # response = 0.5 * (position-avoiding_position)
@@ -247,7 +244,10 @@ class Behaviour(object):
                     "Crashed out of environment with given position:{}, wall position:{}".format(position,
                                                                                                  avoiding_position))
                 # response = (avoiding_position-position)
-            self.logger.error("Wall Avoidance:%s" % response)
+            self.logger.debug("Wall Avoidance:%s" % response)
+            if hasattr(self,'my_direction'):
+                # Something planned to go this way, lets stop that and hope it chooses a better direction
+                self.my_direction = unit(response)
 
         return response
 
@@ -280,14 +280,14 @@ class RandomFlatWalk(Behaviour):
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
         self.behaviours.append(self.randomWalk)
-        self.wallCheckDisabled = True
-        self.my_random_direction = random_xy_vector()
+        self.wallCheckDisabled = False
+        self.my_direction = random_xy_vector()
 
     def randomWalk(self, position, velocity):
         # Roughly 6 degrees or pi/32 rad
-        if angle_between(velocity, self.my_random_direction) < 0.2:
-            self.my_random_direction = random_xy_vector()
-        return np.asarray(self.my_random_direction)
+        if angle_between(velocity, self.my_direction) < 0.2:
+            self.my_direction = random_xy_vector()
+        return np.asarray(self.my_direction)
 
 class RandomFlatCentredWalk(RandomFlatWalk):
 
@@ -325,13 +325,13 @@ class Flock(Behaviour):
 
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
-        self.clumping_factor = self.bev_config.clumping_factor
+        self.clumping_factor = self.bev_config['clumping_factor']
         self.repulsive_factor = listfix(
-            float, self.bev_config.repulsive_factor)
+            float, self.bev_config['repulsive_factor'])
         self.schooling_factor = listfix(
-            float, self.bev_config.schooling_factor)
+            float, self.bev_config['schooling_factor'])
         self.collision_avoidance_d = listfix(
-            float, self.bev_config.collision_avoidance_d)
+            float, self.bev_config['collision_avoidance_d'])
 
         self.behaviours.append(self.clumpingVector)
         self.behaviours.append(self.repulsiveVector)
@@ -464,7 +464,7 @@ class WaypointMixin():
     """
 
     def __init__(self, *args, **kwargs):
-        self.waypoint_factor = listfix(float, self.bev_config.waypoint_factor)
+        self.waypoint_factor = listfix(float, self.bev_config['waypoint_factor'])
         self.waypoints = []
         self.nextwaypoint = None
         self.waypointloop = True
@@ -472,11 +472,11 @@ class WaypointMixin():
         self.behaviours.append(self.waypointVector)
 
     def activate(self, *args, **kwargs):
-        if not hasattr(self, str(self.bev_config.waypoint_style)):
+        if not hasattr(self, str(self.bev_config['waypoint_style'])):
             raise ConfigError(
-                "Cannot generate using waypoint definition:%s" % self.bev_config.waypoint_style)
+                "Cannot generate using waypoint definition:%s" % self.bev_config['waypoint_style'])
         else:
-            generator = attrgetter(str(self.bev_config.waypoint_style))
+            generator = attrgetter(str(self.bev_config['waypoint_style']))
             g = generator(self)
             if self.debug:
                 self.logger.debug("Generating waypoints: %s" % g.__name__)
@@ -595,11 +595,11 @@ class FleetLawnmower(Flock, WaypointMixin):
         WaypointMixin.__init__(self, *args, **kwargs)
         self.waypointloop = False
         self.n_nearest_neighbours = listfix(
-            int, self.bev_config.nearest_neighbours)
+            int, self.bev_config['nearest_neighbours'])
         self.repulsive_factor = listfix(
-            float, self.bev_config.repulsive_factor)
+            float, self.bev_config['repulsive_factor'])
         self.collision_avoidance_d = listfix(
-            float, self.bev_config.collision_avoidance_d)
+            float, self.bev_config['collision_avoidance_d'])
 
         self.behaviours.append(self.boresight)
         self.behaviours.append(self.tracked_avoidance)

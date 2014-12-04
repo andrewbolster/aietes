@@ -53,11 +53,15 @@ class Application(Sim.Process):
         self.sim_duration = node.simulation.config.Simulation.sim_duration
         if self.HAS_LAYERCAKE:
             self.packet_length = layercake.packet_length
+            try:
+                packet_rate = self.config['packet_rate']
+                packet_count = self.config['packet_count']
+            except:
+                self.logger.error(config)
+                raise
 
-            packet_rate = getattr(config, 'packet_rate')
-            packet_count = getattr(config, 'packet_count')
             if packet_rate > 0 and packet_count == 0:
-                self.packet_rate = getattr(config, 'packet_rate')
+                self.packet_rate = packet_rate
                 if debug:
                     self.logger.debug(
                         "Taking Packet_Rate from config: %s" % self.packet_rate)

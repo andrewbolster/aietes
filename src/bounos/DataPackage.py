@@ -727,8 +727,11 @@ class DataPackage(object):
 
 
         ax1.set_title("X-Y (Top)")
+        ax1.set_aspect('equal', adjustable='datalim')
         ax2.set_title("Y-Z (Side)")
+        ax2.set_aspect('equal', adjustable='datalim')
         ax3.set_title("X-Z (Front)")
+        ax3.set_aspect('equal', adjustable='datalim')
         ax4.set_title("Distance from initial position (m)")
         ax4.legend(loc='upper center', ncol=3)
 
