@@ -373,8 +373,6 @@ def trust_perspectives_wrt_observers(trust_frame,title=None):
     ), fontsize=24)
     return f
 
-
-
 def trust_perspectives_wrt_targets(trust_frame):
     """
     Generates a 'matrix' of trust assessments of each nodes perspective from every other one, grouped by 'var'

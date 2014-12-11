@@ -32,7 +32,11 @@ _white_fs=[lambda x : -x + 1,
 _white_sigmas=[0.0,0.5,1.0]
 
 _gray_whitenized=lambda x : map(lambda f: f(x), _white_fs)
-_gray_class = lambda x: (_gray_whitenized(x).index(max(_gray_whitenized(x))))
+def _gray_class(x):
+    try:
+        return _gray_whitenized(x).index(max(_gray_whitenized(x)))
+    except ValueError:
+        return np.nan
 
 
 def T_kt(interval):
@@ -44,9 +48,21 @@ def T_kt(interval):
     """
     # good, bad
     theta, sigma = interval
-    return 1.0 / (
-        1.0 + (sigma*sigma) / (theta*theta)
-    )
+    with np.errstate(divide='ignore'):
+        return 1.0 / (
+            1.0 + (sigma*sigma) / (theta*theta)
+        )
+
+def weight_calculator(metric_index, ignore=None):
+    """
+    Helper function to take a given Pandas index and return an ordered ndarray vector of balanced (currently)
+    weights to apply to the node trust value
+    :param metric_index: (i.e. df.keys())
+    :param ignore: list of strings of index keys to ignore (i.e. ['blah']
+    :return:
+    """
+    bin_weight = np.asarray(map(lambda k:int(k not in ignore), metric_index))
+    return bin_weight/float(np.sum(bin_weight))
 
 def generate_single_run_trust_perspective(gf, metric_weights=None, flip_metrics=None, rho=0.5):
     trusts=[]
@@ -54,15 +70,16 @@ def generate_single_run_trust_perspective(gf, metric_weights=None, flip_metrics=
         gmx=gi.max()
         gmn=gi.min()
         width=gmx-gmn
+        with np.errstate(invalid='ignore'):
+            good=gi.apply(
+                lambda o:(0.75*np.divide((width),(np.abs(o-gmn))+rho*(width))-0.5).fillna(1),
+                axis=1
+            )
+            bad=gi.apply(
+                lambda o:(0.75*np.divide((width),(np.abs(o-gmx))+rho*(width))-0.5).fillna(1),
+                axis=1
+            )
 
-        good=gi.apply(
-            lambda o:(0.75*np.divide((width),(np.abs(o-gmn))+rho*(width))-0.5).fillna(1),
-            axis=1
-        )
-        bad=gi.apply(
-            lambda o:(0.75*np.divide((width),(np.abs(o-gmx))+rho*(width))-0.5).fillna(1),
-            axis=1
-        )
         if flip_metrics:
             good[flip_metrics],bad[flip_metrics]=bad[flip_metrics],good[flip_metrics]
 
@@ -221,32 +238,28 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes = ['n2','n
     :param indirect_nodes:
     :return:
     """
-    t_direct = lambda x: 0.5 * max(_gray_whitenized(x)) * x
+    t_whitenized = lambda x: max(_gray_whitenized(x)) * x       # Maps to max_s{f_s(T_{Bi})})T_{Bi}
+    t_direct = lambda x: 0.5 * t_whitenized(x)
     t_recommend = lambda x: 0.5 * (\
             2*len(recommendation_nodes) \
-            /(2.0*len(recommendation_nodes)+len(indirect_nodes))) * max(_gray_whitenized(x)) * x
+            /(2.0*len(recommendation_nodes)+len(indirect_nodes))) * t_whitenized(x)
     t_indirect = lambda x: 0.5 * (\
-            2*len(indirect_nodes) \
-            /(2.0*len(recommendation_nodes)+len(indirect_nodes))) * max(_gray_whitenized(x)) * x
-
-    def total_trust(t):
-        Td = t_direct(trust_run[observer][target][t])
-        Tr = np.average([t_recommend(trust_run[recommender][target][t]) for recommender in recommendation_nodes])
-        Ti = np.average([t_indirect(trust_run[indirecter][target][t]) for indirecter in indirect_nodes])
-        return sum((Td,Tr,Ti))
+            len(indirect_nodes) \
+            /(2.0*len(recommendation_nodes)+len(indirect_nodes))) * t_whitenized(x)
 
     network_list = [observer] + recommendation_nodes + indirect_nodes
 
-    T_network = trust_run.unstack('observer').xs(target, level='target',axis=1)[network_list].mean(axis=1)
+    T_avg = trust_run.unstack('observer').xs(target, level='target',axis=1)[network_list].mean(axis=1)
+    T_network = trust_run.unstack('observer').xs(target, level='target',axis=1)[network_list].applymap(t_whitenized).mean(axis=1)
     T_direct = trust_run.xs('n0', level='observer')['n1'].apply(t_direct)
     T_recommend= trust_run.unstack('observer').xs(target, level='target',axis=1)[recommendation_nodes].applymap(t_recommend).mean(axis=1)
     T_indirect = trust_run.unstack('observer').xs(target, level='target',axis=1)[indirect_nodes].applymap(t_indirect).mean(axis=1)
+
     T_total=pd.DataFrame.from_dict({
         'Direct': T_direct,
         'Recommend': T_recommend,
         'Indirect': T_indirect
     })
-
 
     # The driving philosophy of the following apparrant mess is that explicit is better that implicit;
     # If I screw up the data structure later; pandas will not forgive me.
@@ -257,7 +270,10 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes = ['n2','n
         ("t13", trust_run.xs('n3', level='observer')[target]),
         ("t14", trust_run.xs('n4', level='observer')[target]),
         ("t15", trust_run.xs('n5', level='observer')[target]),
-        ("t10-5", T_total.sum(axis=1)),
-        ("t10-net", pd.Series(T_network))
+        ("t1-route_net", T_total.sum(axis=1)),      # Eq 4.7 guo; Takes relationships into account
+        ("t1-white_net", pd.Series(T_network)),     # Eq 4.8 guo: Blind Whitenised Trust
+        ("t1-avg", pd.Series(T_avg))                # Simple Average
     )))
+    assert any(_d>1), "All Resultantant Trust Values should be less than 1"
+    assert any(0>_d), "All Resultantant Trust Values should be greater than 0"
     return _d
