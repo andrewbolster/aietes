@@ -39,13 +39,9 @@ import numpy as np
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded
-from aietes.Tools import _ROOT, nameGeneration, updateDict, kwarger, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf, is_valid_aietes_datafile
+from aietes.Tools import _config_spec, _config_dir, _results_dir, nameGeneration, updateDict, kwarger, getConfig, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf, is_valid_aietes_datafile
 from bounos import DataPackage, printAnalysis, load_sources, npz_in_dir
 from contrib.Ghia.ecea.data_grapher import data_grapher
-
-_config_spec = '%s/configs/default.conf' % _ROOT
-_config_dir = "%s/configs/" % _ROOT
-_results_dir = '%s/../../results/' % _ROOT
 
 # Mask in-sim progress display and let joblib do it's... job...
 progress_display = False
@@ -53,31 +49,6 @@ progress_display = False
 PseudoScenario = collections.namedtuple("PseudoScenario",
                                         ["title", "datarun"]
 )
-
-def getConfig(source_config_file=None, config_spec=_config_spec):
-    """
-    Get a configuration, either using default values from aietes.configs or
-        by taking a configobj compatible file path
-    """
-    # If file is defined but not a file then something is wrong
-    if source_config_file and not os.path.isfile(source_config_file):
-        if os.path.isfile(os.path.join(_config_dir,source_config_file)):
-            source_config_file = os.path.join(_config_dir, source_config_file)
-        else:
-            raise ConfigError("Given Source File {} is not present in {}".format(
-                source_config_file, _config_dir
-            ))
-    config = ConfigObj(source_config_file,
-                       configspec=config_spec,
-                       stringify=True, interpolation=True)
-    config_status = config.validate(validate.Validator(), copy=True)
-    if not config_status:
-        if source_config_file is None:
-            raise RuntimeError("Configspec is Broken: %s" % config_spec)
-        else:
-            raise RuntimeError("Configspec doesn't match given input structure: %s"
-                               % source_config_file)
-    return config
 
 
 class Scenario(object):
@@ -536,6 +507,7 @@ class ExperimentManager(object):
         """
         self._default_scenario = Scenario(title="__default__",
                                           default_config_file=base_config_file)
+        self._base_config_file = base_config_file
 
         if not kwargs.get("no_time", False):
             title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
@@ -786,6 +758,39 @@ class ExperimentManager(object):
             s = Scenario(default_config=self._default_scenario.generateConfigObj(),
                          title=title if title is not None else "{}({})".format(self.title, i))
             self.scenarios[s.title]=s
+
+    def addPositionScalingRange(self, scale_range, title=None, basis_node_name='n1'):
+        """
+        Using the base_config_file, generate a range of scaled positions for nodes that are
+        manually set (i.e. operates only on the 'initial_position' value
+
+        ONLY DEALS IN 2D AND ASSUMES ALL Z-VALUES ARE THE SAME
+        :param range:
+        :param title:
+        :return:
+        """
+        base_config = getConfig(self._base_config_file)
+        env_shape = np.asarray(base_config['Environment']['shape'])
+        node_positions = { k:np.asarray(v['initial_position'], dtype=float)
+                           for k,v in base_config['Node']['Nodes'].items()
+                           if v.has_key('initial_position') #This filters out any semi-defined nodes
+        }
+        node_centroids = { k: np.append((v[0:2]-env_shape[0:2]/2),0.0) for k,v in node_positions.items()}
+        delta = np.asarray(node_positions[basis_node_name])
+        for scale in scale_range:
+            new_positions = {k:v*scale+delta for k,v in node_centroids.items()}
+
+            if np.all(0<new_positions.values()<env_shape):
+                new_config = deepcopy(base_config)
+                for k,v in new_positions.items():
+                    new_config['Node']['Nodes'][k]['initial_position'] = list(v) #ndarrays make literal_eval cry
+
+                s = Scenario(default_config=Simulation.populateConfig(new_config, retain_default=True),
+                             title="{}({:.2f})".format(self.title,scale)
+                )
+                self.scenarios[s.title] = s
+            else:
+                raise ConfigError("Scale {} is outside the defined environment: {}".format(scale, new_positions))
 
     @staticmethod
     def printStats(experiment, verbose=False):

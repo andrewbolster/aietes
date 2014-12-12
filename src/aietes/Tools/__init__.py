@@ -48,6 +48,8 @@ from tempfile import mkdtemp
 from colorlog import ColoredFormatter
 from shelve import DbfilenameShelf
 
+from ast import literal_eval
+
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
 np.seterr(all='raise', under='warn')
@@ -59,7 +61,7 @@ _ROOT = os.path.abspath(os.path.dirname(__file__) + '/../')
 
 _config_spec = '%s/configs/default.conf' % _ROOT
 _results_dir = '%s/../../results/' % _ROOT
-
+_config_dir = "%s/configs/" % _ROOT
 
 class SimTimeFilter(logging.Filter):
 
@@ -778,6 +780,30 @@ def results_file(proposed_name):
         proposed_name = os.path.join(_results_dir, proposed_name)
     return proposed_name
 
+def getConfig(source_config_file=None, config_spec=_config_spec):
+    """
+    Get a configuration, either using default values from aietes.configs or
+        by taking a configobj compatible file path
+    """
+    # If file is defined but not a file then something is wrong
+    if source_config_file and not os.path.isfile(source_config_file):
+        if os.path.isfile(os.path.join(_config_dir,source_config_file)):
+            source_config_file = os.path.join(_config_dir, source_config_file)
+        else:
+            raise ConfigError("Given Source File {} is not present in {}".format(
+                source_config_file, _config_dir
+            ))
+    config = ConfigObj(source_config_file,
+                       configspec=config_spec,
+                       stringify=True, interpolation=True)
+    config_status = config.validate(validate.Validator(), copy=True)
+    if not config_status:
+        if source_config_file is None:
+            raise RuntimeError("Configspec is Broken: %s" % config_spec)
+        else:
+            raise RuntimeError("Configspec doesn't match given input structure: %s"
+                               % source_config_file)
+    return config
 
 def validateConfig(config=None, final_check=False):
     """
@@ -890,7 +916,6 @@ _proc_status = '/proc/%d/status' % os.getpid()
 _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
           'KB': 1024.0, 'MB': 1024.0 * 1024.0}
 
-
 def _VmB(VmKey):
     '''Private.
     '''
@@ -931,3 +956,34 @@ def stacksize(since=0.0):
     '''Return stack size in Megabytes.
     '''
     return _VmB('VmStk:') - since
+
+
+def literal_eval_walk(node,tabs=0):
+    for key, item in node.items():
+        if isinstance(item,dict):
+            try:
+                literal_eval(str(item))
+            except:
+                print '*'*tabs,key
+                tabs+=1
+                literal_eval_walk(item,tabs)
+                tabs-=1
+        else:
+            try:
+                literal_eval(str(item))
+
+            except:
+                print '*'*tabs,key,"EOL FAIL"
+
+
+from cStringIO import StringIO
+import sys
+
+class Capturing(list):
+    def __enter__(self):
+        self._stdout = sys.stdout
+        sys.stdout = self._stringio = StringIO()
+        return self
+    def __exit__(self, *args):
+        self.extend(self._stringio.getvalue().splitlines())
+        sys.stdout = self._stdout

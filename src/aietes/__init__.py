@@ -33,7 +33,6 @@ from Tools.humanize_time import secondsToStr
 
 import pandas as pd
 
-
 np.set_printoptions(precision=3)
 
 
@@ -182,6 +181,7 @@ class Simulation():
         """
         self.logger.info("Initialising Simulation %s, to run for %s steps" % (
             self.title, self.duration_intervals))
+
         starttime = time()
         for fleet in self.fleets:
             fleet.activate()

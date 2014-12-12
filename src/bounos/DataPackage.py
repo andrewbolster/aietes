@@ -29,7 +29,6 @@ from ast import literal_eval
 import numpy as np
 import pandas as pd
 
-
 from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig, results_file
 import Analyses.Trust
 from configobj import ConfigObj
