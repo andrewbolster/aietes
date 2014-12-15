@@ -1,11 +1,12 @@
 #! /usr/bin/env python
 
 #paths = ["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-12-50-42"]
-#paths =["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-17-14-31",
-#       "/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-12-17-50-11"]
+paths =["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-17-14-31",
+       "/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-12-17-50-11"]
 
 import os
 import logging
+import argparse
 import warnings
 from collections import OrderedDict
 import re
@@ -131,11 +132,11 @@ def generate_dataframes_from_inverted_log(tup):
         if k=='stats':
             df.drop(['total_counts', u'sent_counts', 'received_counts'], axis=1, inplace=True)
         if k=='trust':
-            df=Trust.explode_metrics_from_trust_log(df.stack())
+            df=Trust.explode_metrics_from_trust_log(df)
 
     except:
-        log.info("{k} didn't work".format(k=k))
-        raise
+        log.exception("{k} didn't work".format(k=k))
+
     return (k,df)
 
 def dump_trust_logs_and_stats_from_exp_paths(paths,title=None):
@@ -158,4 +159,7 @@ def dump_trust_logs_and_stats_from_exp_paths(paths,title=None):
 
 
 if __name__ == "__main__":
-    dump_trust_logs_and_stats_from_exp_paths([os.curdir])
+    parser=argparse.ArgumentParser(description="Load multiple scenarios or experiments into a single output hdfstore")
+    parser.add_argument('paths', metavar='P', type=str, nargs='+', default=[os.curdir], help="List of directories to walk for dataruns")
+    args=parser.parse_args()
+    dump_trust_logs_and_stats_from_exp_paths(args.paths)

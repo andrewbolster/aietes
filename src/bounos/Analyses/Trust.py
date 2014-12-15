@@ -211,7 +211,7 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     :param df:
     :return tf:
     """
-    tf=pd.DataFrame.from_dict({k:v for k,v in df.stack().iterkv()}, orient='index')
+    tf=pd.DataFrame.from_dict({k:pd.Series(v) for k,v in df.stack().iterkv()}, orient='index')
     if metrics_string is None:
         metrics_string="ATXP,ARXP,ADelay,ALength,Throughput,PLR"
     tf.columns=[metrics_string.split(',')]

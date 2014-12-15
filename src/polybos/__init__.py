@@ -492,7 +492,8 @@ class ExperimentManager(object):
     def __init__(self,
                  node_count=None,
                  title=None, parallel=False,
-                 base_config_file=None, *args, **kwargs
+                 base_config_file=None,
+                 base_exp_path=None, *args, **kwargs
     ):
         """
         The Experiment Manager Object deals with multiple scenarios build around a single or
@@ -511,7 +512,13 @@ class ExperimentManager(object):
 
         if not kwargs.get("no_time", False):
             title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        self.exp_path = os.path.abspath(os.path.join(_results_dir, title))
+
+        self.exp_path = os.path.abspath(
+            os.path.join(
+                _results_dir if base_exp_path is None else base_exp_path,
+                title
+            )
+        )
         try:
             if not os.path.isdir(self.exp_path):
                 os.mkdir(self.exp_path)

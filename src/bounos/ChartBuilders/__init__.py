@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
+from scipy.spatial.distance import pdist, squareform
 
 import bounos
 
@@ -33,21 +34,35 @@ _boxplot_kwargs = {
     'linewidth':2
 }
 
-def lost_packet_distribution(dp):
+def lost_packet_distribution(dp=None, tx=None, title=None):
     """
     Return a dist+rug plot of lost packets for the given DataPackage
     :param dp: bounos.DataPackage
     :return f: plt.figure
     """
-    assert isinstance(dp, bounos.DataPackage)
+    # Fancy XOR - http://stackoverflow.com/questions/432842/how-do-you-get-the-logical-xor-of-two-variables-in-python
+    if (dp is None) == (tx is None):
+        raise ValueError("Need either dp={} or rx={}, not both".format(
+            type(bounos.DataPackage),
+            type(pd.DataFrame)
+        ))
+    elif tx is None:
+        assert isinstance(dp, bounos.DataPackage)
+        df = dp.get_global_packet_logs(pkt_type='tx')
+        title = dp.title
+        tmax = dp.tmax
+    elif dp is None:
+        df = tx
+        title = "FIXME" if title is None else title
+        tmax = int(np.ceil(tx.time_stamp.max()/3600)*3600) # assume we're not masochists and it's rounded up to an hour within
+    else:
+        raise ValueError("I've got no idea how you got here...")
 
-    df = dp.get_global_packet_logs(pkt_type='tx')
-
-    died = df[df.delivered == False].count().max()
+    died = df[df.delivered != True].count().max()
     all_pkts = df.count().max()
 
     f, ax = plt.subplots(figsize=(13, 7))
-    ax.set_title("Distribution of lost packets over time for {} model: total={:.2%} of {}".format(dp.title,died/float(all_pkts), all_pkts))
+    ax.set_title("Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title,died/float(all_pkts), all_pkts))
     ax.set_ylabel("Count (n)")
     ax.set_xlabel("Simulation Time (s)")
     sns.distplot(df.time_stamp[df.delivered == False], kde=False, rug=True, bins=10, ax=ax)
@@ -275,7 +290,7 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
 
     return f
 
-def performance_summary_for_variable_packet_rates(stats, title=None):
+def performance_summary_for_var(stats, title=None, var='Packet Rates'):
 
     f, ax = plt.subplots(1,1, figsize=(16, 13))
     grp=stats.groupby(level='var')[['collisions','tx_counts','rx_counts','enqueued']].mean()
@@ -283,7 +298,7 @@ def performance_summary_for_variable_packet_rates(stats, title=None):
     grp.plot(ax=ax,
         secondary_y=['collisions'],#subplots=True,
         grid='on',
-        title="Performance Comparison of Varying Packet Period Rates {} \n(general counts on left, collision counts on right)".format(':'+title if title is not None else title)
+        title="Performance Comparison of Varying {},{} \n(general counts on left, collision counts on right)".format(var,(':'+title if title is not None else title))
     )
     maxes= stats.groupby(level='var')['rx_counts'].max()
     maxes.index = maxes.index.astype(np.float64)
@@ -473,3 +488,67 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
     ax4.legend(loc='upper center', ncol=3)
     return f
 
+def plot_positions(d, bounds = None):
+    """
+    d as a dict of x,y,z positions (list or ndarray)
+    bounds as x,y,z extent of the environment
+    :param d:
+    :param bounds:
+    :return:
+    """
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16,12))
+    my_d={}
+    for name,pos in d.items():
+        x,y,z=initial=pos
+
+        ax1.annotate(name, xy=(x, y), xytext=(-10,5),textcoords='offset points', ha='center', va='bottom',\
+            bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),\
+            arrowprops=dict(arrowstyle='->', \
+                            color='red')
+            )
+        ax1.scatter(x,y)
+        ax2.scatter(y,z)
+        ax3.scatter(x,z)
+        my_d[name]=initial
+
+    if bounds is not None:
+        from matplotlib.patches import Rectangle
+        x,y,z = bounds
+        ax1.add_patch(Rectangle((0,0), x, y, facecolor="grey", alpha=0.2))
+        ax2.add_patch(Rectangle((0,0), y, z, facecolor="grey", alpha=0.2))
+        ax3.add_patch(Rectangle((0,0), x, y, facecolor="grey", alpha=0.2))
+
+    ax1.set_ylim((-50,y+50))
+    ax2.set_ylim((-50,z+50))
+    ax2.invert_yaxis()
+    ax3.set_ylim((-50,y+50))
+    ax3.invert_yaxis()
+
+    ax1.set_xlim((-50,x+50))
+    ax2.set_xlim((-50,y+50))
+    ax3.set_xlim((-50,x+50))
+
+    ax4.set_visible(False)
+
+    area = area_of_centroid(my_d)
+    avg_dist = avg_range(my_d)
+    f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(avg_dist,area), fontsize=18)
+    ax1.set_title("X-Y (Top)")
+    ax1.set_aspect('equal', adjustable='datalim')
+    ax2.set_title("Y-Z (Side)")
+    ax2.set_aspect('equal', adjustable='datalim')
+    ax3.set_title("X-Z (Front)")
+    ax3.set_aspect('equal', adjustable='datalim')
+
+    return f
+
+def area_of_centroid(d):
+    df=pd.DataFrame.from_dict({k:v for k,v in d.items()}, orient='index')
+    extent=abs(df.min()-df.max())
+    if extent[0]<0:
+        return np.prod(extent.values)
+    else:
+        return np.prod(extent.values[0:2])
+
+def avg_range(d):
+    return np.average(squareform(pdist(np.asarray(d.values()))))
