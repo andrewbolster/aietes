@@ -240,7 +240,7 @@ class Simulation():
         achievements = []
         for node in self.nodes:
             # Universal Stats
-            vec = node.vec_log[:, :Sim.now()]
+            vec = node.vec_log[:, :int(Sim.now())]
             vec = vec[np.isfinite(vec)].reshape(3, -1)
 
             vectors.append(vec)

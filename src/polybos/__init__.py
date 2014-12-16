@@ -49,6 +49,8 @@ progress_display = False
 PseudoScenario = collections.namedtuple("PseudoScenario",
                                         ["title", "datarun"]
 )
+logging.basicConfig()
+log=logging.getLogger(__name__)
 
 
 class Scenario(object):
@@ -97,16 +99,16 @@ class Scenario(object):
         """
 
         if default_config_file is None and default_config is None:
-            print("Assume that the user wants a generic default")
+            logging.info("Assume that the user wants a generic default")
             self._default_config = getConfig()
         elif isinstance(default_config, ConfigObj):
-            print("User provided a (hopefully complete) confobj")
+            logging.info("User provided a (hopefully complete) confobj")
             self._default_config = deepcopy(default_config)
         elif isinstance(default_config, dotdict):
-            print("User provided a (hopefully complete) dotdict")
+            logging.info("User provided a (hopefully complete) dotdict")
             self._default_config = deepcopy(ConfigObj(default_config))
         elif default_config_file is not None:
-            print("User provided a config file that we have to interpolate "\
+            logging.info("User provided a config file that we have to interpolate "\
                   "against the defaults to generate a full config")
             intermediate_config = getConfig(default_config_file)
             self._default_config = Simulation.populateConfig(
@@ -200,13 +202,13 @@ class Scenario(object):
                     self.datarun[run] = sim.generateDataPackage().write(title)
                 else:
                     self.datarun[run] = return_dict
-                print("%s(%s):%f%%"
+                log.info("%s(%s):%f%%"
                       % (run, return_dict['data_file'],
                          100.0 * float(sim_time) / prep_stats['sim_time']))
 
             except Exception:
                 raise
-        print("done %d runs for %d each" % (runcount, sim_time))
+        log.info("done %d runs for %d each" % (runcount, sim_time))
 
     def run_parallel(self, runcount=None, runtime=None, *args, **kwargs):
         """
@@ -251,7 +253,7 @@ class Scenario(object):
         self.datarun = aietes.Threaded.parallel_sim(self.runlist)
         assert all(
             r is not None for r in self.datarun), "All dataruns should be completed by now"
-        print "Got responses"
+        log.info("Got responses")
 
         print("done %d runs in parallel" % (runcount))
 

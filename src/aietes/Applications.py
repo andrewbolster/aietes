@@ -454,14 +454,16 @@ class CommsTrust(RoutingTest):
             tx_stats = {}
             # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
             for node in self.trust_assessments.keys():
-                per = nanmean(
-                    map(
+                per = map(
                         lambda p: float(not p[3]),
                         filter(
                             lambda p: p[1]==node,
                             relevant_packets)
-                    )
                 )
+                if per:
+                    per=nanmean(per)
+                else:
+                    per=nan
                 tx_stats[node]=[per if not isnan(per) else 0.0]
                 # Packet Error Rate (all time)
                 if len(rx_stats[node]):
