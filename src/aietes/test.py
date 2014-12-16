@@ -34,7 +34,6 @@ class DefaultBehaviour(unittest.TestCase):
 
     def setUp(self):
         """Aietes should simulate fine with no input by pulling in from default values"""
-        count = 4
         self.run_time = 100
         try:
             self.simulation = aietes.Simulation(

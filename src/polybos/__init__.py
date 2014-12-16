@@ -510,13 +510,19 @@ class ExperimentManager(object):
                                           default_config_file=base_config_file)
         self._base_config_file = base_config_file
 
+
+        if title is None:
+            self.title = "Default"
+        else:
+            self.title = title
+
         if not kwargs.get("no_time", False):
-            title += "-%s" % datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+            self.title = "{}-{}".format(self.title, datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
 
         self.exp_path = os.path.abspath(
             os.path.join(
                 _results_dir if base_exp_path is None else base_exp_path,
-                title
+                self.title
             )
         )
         try:
@@ -526,10 +532,7 @@ class ExperimentManager(object):
             self.exp_path = tempfile.mkdtemp()
             print("Filepath collision, using %s" % self.exp_path)
         self.scenarios = {}
-        if title is None:
-            self.title = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-        else:
-            self.title = title
+
         if node_count is None:
             self._default_scenario.setNodeCount(self._default_scenario.node_count)
         else:
@@ -570,7 +573,8 @@ class ExperimentManager(object):
         kwargs.update(
             {"basepath": self.exp_path,
              "retain_data": self.retain_data,
-             "runcount": self.runcount})
+             "runcount": self.runcount,
+             "runtime": runtime})
         start = time.time()
         try:
             os.chdir(self.exp_path)

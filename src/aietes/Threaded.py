@@ -44,7 +44,7 @@ def sim_mask(args):
 
     lives = 10
     kwargs, pp_defaults, retain_data = args
-    sim_time = kwargs.pop("runtime", None)
+    sim_time = kwargs.pop("sim_time", None)
     while True:
         try:
             sim = Simulation(**kwargs)
