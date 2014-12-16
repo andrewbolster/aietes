@@ -32,7 +32,11 @@ from aietes.Tools.Memoize import lru_cache
 from aietes.Environment import Environment
 
 # FIXME
-from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex
+try:
+    from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex
+    ghia=True
+except ImportError:
+    ghia=False
 #####
 
 
@@ -272,6 +276,8 @@ class Fleet(Sim.Process):
         """
         latest_positions = self.nodeCheatPositions()
         if guess_index > 0:
+            if not ghia:
+                raise NotImplementedError("This functionality requires the Ghia module")
             tof = timeOfFlightMatrix_Complex(
                 latest_positions, self.environment.shape[2], guess_index)
         else:
