@@ -20,6 +20,7 @@ __author__ = 'andrewbolster'
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -290,15 +291,15 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
 
     return f
 
-def performance_summary_for_var(stats, title=None, var='Packet Rates'):
+def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=(16,13)):
 
-    f, ax = plt.subplots(1,1, figsize=(16, 13))
+    f, ax = plt.subplots(1,1, figsize=figsize)
     grp=stats.groupby(level='var')[['collisions','tx_counts','rx_counts','enqueued']].mean()
     grp.index=grp.index.astype(np.float64)
     grp.plot(ax=ax,
         secondary_y=['collisions'],#subplots=True,
         grid='on',
-        title="Performance Comparison of Varying {},{} \n(general counts on left, collision counts on right)".format(var,(':'+title if title is not None else title))
+        title="Performance Comparison of Varying {},{} \n(general counts on left, collision counts on right)".format(var,(':'+title if title is not None else ""))
     )
     maxes= stats.groupby(level='var')['rx_counts'].max()
     maxes.index = maxes.index.astype(np.float64)
@@ -310,6 +311,23 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates'):
     ax.axvline(maxmax, alpha=0.2, linestyle=':')
     ax.text(maxmax,maxes.mean()/2,'RX Max @ {:.4f}'.format(maxmax), rotation=90)
     return f
+
+def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize=(16,13)):
+
+
+    f, ax = plt.subplots(1,1, figsize=figsize)
+    packet_error_rates=(stats.rx_counts/stats.tx_counts).groupby(level='var').mean()
+    ax.scatter(list(packet_error_rates.index), packet_error_rates.values)
+    ax.set_ylabel("Probability of Timely Arrival")
+    ax.set_xlabel(var)
+    ax.set_ylim(0,1)
+    ax.set_title("Probability of Timely Arrival of Varying {},{}".format(var,(':'+title if title is not None else "")))
+
+    ax.xaxis.set_minor_locator(MultipleLocator(0.005))
+    ax.xaxis.set_major_locator(MultipleLocator(0.01))
+    ax.grid(True,which='both')
+    return f
+
 
 def lost_packets_by_sender_reciever(tx, figsize=(16,13)):
     """
@@ -363,7 +381,7 @@ def lost_packets_by_sender_reciever(tx, figsize=(16,13)):
 
     return f
 
-def trust_perspectives_wrt_observers(trust_frame,title=None):
+def trust_perspectives_wrt_observers(trust_frame,title=None, figsize=(16,2)):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
     :param trust_frame:
@@ -372,7 +390,7 @@ def trust_perspectives_wrt_observers(trust_frame,title=None):
     groups = trust_frame.groupby(level=['var'])
     n_nodes = trust_frame.shape[1]
 
-    f, ax = plt.subplots(len(groups), n_nodes, figsize=(16,2*len(groups)), sharey=True)
+    f, ax = plt.subplots(len(groups), n_nodes, figsize=(figsize[0],figsize[1]*len(groups)), sharey=True)
     plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
     for i,(var, group) in enumerate(groups):
         for j, (jvar,jgroup) in enumerate(group.groupby(level='observer')):

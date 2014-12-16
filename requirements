@@ -14,5 +14,5 @@ seaborn
 natsort
 colorlog
 networkx
-nose==1.3.3
+nose
 nosexcover
