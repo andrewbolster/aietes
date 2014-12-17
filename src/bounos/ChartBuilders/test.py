@@ -21,7 +21,6 @@ __email__ = "me@andrewbolster.info"
 import unittest
 import tempfile
 
-import numpy as np
 from matplotlib.figure import Figure
 
 import aietes

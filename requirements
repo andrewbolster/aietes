@@ -16,3 +16,4 @@ colorlog
 networkx
 nose
 nosexcover
+nose-exclude
