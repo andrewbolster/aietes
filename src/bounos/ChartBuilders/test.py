@@ -24,6 +24,7 @@ import tempfile
 import numpy as np
 from matplotlib.figure import Figure
 
+import aietes
 import bounos
 import bounos.ChartBuilders
 from aietes.Tools import _results_dir as default_results_dir
@@ -35,8 +36,14 @@ class ChartBuilders(unittest.TestCase):
         Load the most recent results file
         :return:
         """
-        last_results_file = bounos.npz_in_dir(default_results_dir)[-1]
-        self.dp = bounos.DataPackage(last_results_file)
+        # Make up a datapackage and hope for the best
+        sim = aietes.Simulation(title=self.__class__.__name__,
+                                config_file=aietes.Tools.getConfigFile('bella_static.conf'),
+                                progress_display=False)
+        sim.prepare(sim_time=1000)
+        sim.simulate()
+        self.dp=sim.generateDataPackage()
+
 
     def test_lost_packet_distribution(self):
         """
@@ -82,6 +89,7 @@ class ChartBuilders(unittest.TestCase):
         test_figure = bounos.ChartBuilders.channel_occupancy_distribution(self.dp)
         self.assertIsInstance(test_figure, Figure)
 
+    @unittest.skip('This Graph is Deprecated')
     def test_combined_trust_observation_summary(self):
         """
         Ensure combined_trust_observation_summary doesn't crash

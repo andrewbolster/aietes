@@ -15,11 +15,11 @@
     <option name="METHOD_NAME" value="" />
     <option name="FOLDER_NAME" value="$PROJECT_DIR$" />
     <option name="TEST_TYPE" value="TEST_FOLDER" />
-    <option name="PATTERN" value="^(?!.*Ghia*$).*$" />
+    <option name="PATTERN" value="" />
     <option name="USE_PATTERN" value="false" />
     <option name="PUREUNITTEST" value="true" />
-    <option name="PARAMS" value="" />
-    <option name="USE_PARAM" value="false" />
+    <option name="PARAMS" value="-e='*Ghia*'" />
+    <option name="USE_PARAM" value="true" />
     <RunnerSettings RunnerId="PythonCover" />
     <RunnerSettings RunnerId="PythonRunner" />
     <ConfigurationWrapper RunnerId="PythonCover" />

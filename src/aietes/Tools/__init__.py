@@ -22,6 +22,7 @@ import random
 import logging
 import re
 import os
+import errno
 from inspect import getmembers, isfunction
 from itertools import groupby
 from operator import itemgetter
@@ -787,19 +788,31 @@ def results_file(proposed_name, results_dir=None):
     return proposed_name
 
 
-def getConfig(source_config_file=None, config_spec=_config_spec):
+def getConfigFile(config):
+    """
+    Return the full path to a config of a given filename if its in the default config path
+    :param config:
+    :return:
+    """
+    # If file is defined but not a file then something is wrong
+    config = os.path.abspath(os.path.join(_config_dir, config))
+    if not os.path.isfile(config):
+        raise OSError(errno.ENOENT,"Given Source File {} is not present in {}".format(
+            config, _config_dir
+        ),config)
+
+    return config
+
+def getConfig(source_config=None, config_spec=_config_spec):
     """
     Get a configuration, either using default values from aietes.configs or
         by taking a configobj compatible file path
     """
-    # If file is defined but not a file then something is wrong
-    if source_config_file and not os.path.isfile(source_config_file):
-        if os.path.isfile(os.path.join(_config_dir, source_config_file)):
-            source_config_file = os.path.join(_config_dir, source_config_file)
-        else:
-            raise ConfigError("Given Source File {} is not present in {}".format(
-                source_config_file, _config_dir
-            ))
+
+    if source_config and not os.path.isfile(source_config):
+        source_config_file = getConfigFile(source_config)
+    else:
+        source_config_file = source_config
     config = ConfigObj(source_config_file,
                        configspec=config_spec,
                        stringify=True, interpolation=True)

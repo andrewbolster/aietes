@@ -166,6 +166,16 @@ def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12, 4)
 
     return f
 
+def _channel_occupancy_calc(df):
+    tx = pd.DataFrame(index=df.time_stamp)
+    rx = pd.DataFrame(index=df.received)
+    tx['p'] = 1  # adding a packet
+    rx['p'] = -1  # receiving a packet
+
+    # create the time series here
+    t = pd.concat([tx, rx])
+    t.index = pd.to_datetime(t.index, unit='s')  #to convert from nanoseconds to seconds
+    return t.resample('s', how='sum').cumsum().fillna(0)
 
 def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)):
     """
@@ -179,17 +189,6 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
     :param dp:
     :return: f plt.figure
     """
-
-    def channel_occupancy_calc(df):
-        tx = pd.DataFrame(index=df.time_stamp)
-        rx = pd.DataFrame(index=df.received)
-        tx['p'] = 1  # adding a packet
-        rx['p'] = -1  # receiving a packet
-
-        # create the time series here
-        t = pd.concat([tx, rx])
-        t.index = pd.to_datetime(t.index, unit='s')  #to convert from nanoseconds to seconds
-        return t.resample('s', how='sum').cumsum().fillna(0)
 
     # Fancy XOR - http://stackoverflow.com/questions/432842/how-do-you-get-the-logical-xor-of-two-variables-in-python
     if (dp is None) == (rx is None):
@@ -215,11 +214,12 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
         ))
 
     if 'run' in df.index.names:
-        channel_occupancy = df.groupby(level=['var', 'run']).apply(channel_occupancy_calc).unstack('run').sum(axis=1)
+        channel_occupancy = df.groupby(level=['var', 'run']).apply(_channel_occupancy_calc).unstack('run').sum(axis=1)
     else:
-        channel_occupancy = channel_occupancy_calc(df)  # should work fine for a single run
+        channel_occupancy = _channel_occupancy_calc(df).p  # should work fine for a single run
     f, ax = plt.subplots(figsize=figsize)
-    ax.set_title("In-The-Air packets for {} model: Channel Use={:.2%}".format(title, sum(channel_occupancy > 0) / float(channel_occupancy.size)))
+    ax.set_title("In-The-Air packets for {} model: Channel Use={:.2%}".format(
+        title, sum(channel_occupancy > 0) / float(channel_occupancy.size)))
     ax.set_ylabel("Percentage of Runtime (%)")
     ax.set_xlabel("Number of packets in the medium (n)")
     channel_occupancy.hist()
