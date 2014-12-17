@@ -36,7 +36,7 @@ class LookupMethods(unittest.TestCase):
         :return:
         """
         self.run_time = 100
-        self.simulation = aietes.Simluation(logtoconsole=logging.ERROR, progress_display=False)
+        self.simulation = aietes.Simulation(logtoconsole=logging.ERROR, progress_display=False)
         self.prep_dict = self.simulation.prepare(sim_time=self.run_time)
         self.sim_time = self.simulation.simulate()
 
