@@ -37,7 +37,6 @@ np.set_printoptions(precision=3)
 
 
 class Simulation():
-
     """
     Defines a single simulation
     Keyword Arguments:
@@ -261,7 +260,7 @@ class Simulation():
                  'config': self.config,
                  'title': self.title,
                  'tmax': self.duration_intervals
-                 }
+        }
 
         # 'Quirky' Optional State Info
 
@@ -309,9 +308,9 @@ class Simulation():
         comms_logs = {node.name: node.app.dump_logs()
                       for node in self.nodes if node.app}
         comms_pos = pd.concat({
-                                  n:pd.DataFrame(p, index=['x','y','z'])
-                                  for n,p in zip(names, state['p'])
-                              }, names=['node','dim']
+                                  n: pd.DataFrame(p, index=['x', 'y', 'z'])
+                                  for n, p in zip(names, state['p'])
+                              }, names=['node', 'dim']
         ).T
         comms_pos.index = pd.to_datetime(comms_pos.index, unit='s')
 
@@ -349,7 +348,7 @@ class Simulation():
         except KeyError:
             raise ConfigError("Config has no __default__ node, the may be due to a doubly-configured file. Aborting")
         # node_default_config_dict.update(
-        #     # TODO import PHY,Behaviour, etc into the node config?
+        # # TODO import PHY,Behaviour, etc into the node config?
         # )
 
         #
@@ -396,7 +395,7 @@ class Simulation():
                 applications = [str(a)
                                 for a, n in zip(app, dist)
                                 for i in range(int(n))
-                                ]
+                ]
                 cls.logger.debug("Distributed Applications:%s" % applications)
             else:
                 raise ConfigError(
@@ -428,7 +427,7 @@ class Simulation():
                 behaviours = [str(a)
                               for a, n in zip(bev, dist)
                               for i in range(int(n))
-                              ]
+                ]
                 cls.logger.debug("Distributed behaviours:%s" % behaviours)
             else:
                 raise ConfigError(
@@ -618,7 +617,7 @@ class Simulation():
 # try:
 # readline.read_history_file(histfile)
 # except IOError:
-#    pass
+# pass
 # atexit.register(readline.write_history_file, histfile)
 
 
@@ -635,7 +634,7 @@ def go(options, args=None):
                      logger=None,
                      logtoconsole=logtoconsole,
                      progress_display=not options.quiet
-                     )
+    )
 
     if options.input is None:
         sim.prepare(sim_time=options.sim_time)

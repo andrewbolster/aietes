@@ -26,7 +26,6 @@ from aietes.Tools import *
 
 
 class Node(Sim.Process):
-
     """
     Generic Representation of a network node
     """
@@ -304,7 +303,7 @@ class Node(Sim.Process):
             new_velocity = np.zeros(3)
         else:
             new_velocity = self.velocity + \
-                ((self.acceleration_force * dT) / self.mass)
+                           ((self.acceleration_force * dT) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruiseControl(new_velocity, self.velocity)
             if debug:
@@ -406,7 +405,7 @@ class Node(Sim.Process):
                     drifted_deltas = drifted_positions - last_drifted_positions
                     last_true_positions = self.fleet.nodeCheatPositionsAt(
                         last_index)  # True Delta since last
-                    #true_deltas = true_positions-last_true_positions
+                    # true_deltas = true_positions-last_true_positions
 
                 if self.ecea.type == SIMPLE:
                     error_estimates = self.fleet.nodePositionErrors(

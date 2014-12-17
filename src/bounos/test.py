@@ -28,8 +28,8 @@ import aietes
 import bounos
 from aietes.Tools import _results_dir as default_results_dir
 
-class LookupMethods(unittest.TestCase):
 
+class LookupMethods(unittest.TestCase):
     def setUp(self):
         """
         Populate the generated results dir with a basic simulation
@@ -46,8 +46,8 @@ class LookupMethods(unittest.TestCase):
         :return:
         """
         file_list = bounos.npz_in_dir(default_results_dir)
-        mtime_list = map(os.path.getmtime,file_list)
-        self.assertTrue(all(x<=y for x, y in zip(mtime_list,mtime_list[1:])), mtime_list)
+        mtime_list = map(os.path.getmtime, file_list)
+        self.assertTrue(all(x <= y for x, y in zip(mtime_list, mtime_list[1:])), mtime_list)
 
     def testDirSearchValid(self):
         """
@@ -60,7 +60,7 @@ class LookupMethods(unittest.TestCase):
     def testDirSearchValidOnEmpty(self):
         empty_dir = tempfile.mkdtemp()
         sources = bounos.npz_in_dir(empty_dir)
-        self.assertIsInstance(sources,list, 'Sources should be list type:{}'.format(type(sources)))
+        self.assertIsInstance(sources, list, 'Sources should be list type:{}'.format(type(sources)))
         self.assertItemsEqual(sources, [], 'Sources should be empty for empty dir: {}'.format(sources))
 
     def testDirSearchInvalidOnNonExist(self):
@@ -68,14 +68,14 @@ class LookupMethods(unittest.TestCase):
         os.rmdir(fake_dir)
         self.assertRaises(OSError, bounos.npz_in_dir, fake_dir)
 
-class DataPackageCreation(unittest.TestCase):
 
+class DataPackageCreation(unittest.TestCase):
     def testSourceParsing(self):
         """ Ensure that DataPackage is correctly created by using a sourcefile: 
             does NOT test numerical validitity of anything
         """
         # Use tempfile to make up an arbitrary name, which is then automatically
-        #  suffixed with .npz
+        # suffixed with .npz
         source_file_obj = tempfile.NamedTemporaryFile(delete=False)
         source_file = source_file_obj.name
         source_file_obj.close()
@@ -91,7 +91,7 @@ class DataPackageCreation(unittest.TestCase):
             names.append("testname")
 
         contributions = [
-            [None for _ in range(s_tmax)] for _ in range(s_n_nodes)],
+                            [None for _ in range(s_tmax)] for _ in range(s_n_nodes)],
         achievements = [[] for _ in range(s_n_nodes)]
         environment = np.empty(3, dtype=int),
         config = {'testconfig': True},
@@ -106,7 +106,7 @@ class DataPackageCreation(unittest.TestCase):
                  environment=environment,
                  config=config,
                  title=title
-                 )
+        )
         dp = bounos.DataPackage(source=source_file + '.npz')
         print dp.p.shape
         self.assertEqual(dp.title, title)

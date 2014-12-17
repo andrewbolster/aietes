@@ -181,7 +181,6 @@ class PhysicalLayer():
 
 
 class Transducer(Sim.Resource):
-
     """Transducer:  Uses a SimPy Resource model.
     --Incoming packets (from the channel): can request the resource
     and are allowed to interfere with one another.
@@ -302,7 +301,6 @@ class Transducer(Sim.Resource):
 
 
 class IncomingPacket(Sim.Process):
-
     """IncomingPacket: A small class to represent a message being received
         by the transducer.  It keeps track of signal power as well as the
         maximum interference that occurs over its lifetime (worst case scenario).
@@ -318,7 +316,7 @@ class IncomingPacket(Sim.Process):
         self.MaxInterference = 1
 
         # Need to add this info in for higher layers
-        self.packet['rx_pwr_db']=Linear2DB(self.power)
+        self.packet['rx_pwr_db'] = Linear2DB(self.power)
 
         if debug:
             self.physical_layer.logger.debug("Packet {id} from {src} to {dest} recieved with power {pwr}".format(
@@ -351,7 +349,6 @@ class IncomingPacket(Sim.Process):
 
 
 class OutgoingPacket(Sim.Process):
-
     """OutgoingPacket: A small class to represent a message being transmitted
         by the transducer.  It establishes the packet duration according to
         the bandwidth.
@@ -388,7 +385,7 @@ class OutgoingPacket(Sim.Process):
             ))
 
         # Need to add this info in for higher layers
-        packet['tx_pwr_db']=(power)
+        packet['tx_pwr_db'] = (power)
 
         self.physical_layer.transducer.channel_event.signal({"pos": self.physical_layer.layercake.get_real_current_position,
                                                              "power": power, "duration": duration, "frequency": self.physical_layer.freq,
@@ -412,7 +409,6 @@ class OutgoingPacket(Sim.Process):
 #####################################################################
 
 class AcousticEventListener(Sim.Process):
-
     """AcousticEventListener: No physical analog.
     Waits for another node to send something and then activates
     an Arrival Scheduler instance.
@@ -436,7 +432,6 @@ class AcousticEventListener(Sim.Process):
 #####################################################################
 
 class ArrivalScheduler(Sim.Process):
-
     """ArrivalScheduler class: simulates the transit time of a message
     """
 
@@ -445,7 +440,7 @@ class ArrivalScheduler(Sim.Process):
 
         if distance_to > 0.01:  # I should not receive my own transmissions
             receive_power = params["power"] - \
-                Attenuation(params["frequency"], distance_to)
+                            Attenuation(params["frequency"], distance_to)
             # Speed of sound in water = 1482.0 m/s
             travel_time = distance_to / transducer.physical_layer.medium_speed
 
@@ -485,7 +480,7 @@ def Attenuation(f, d):
     # the frequency
     if f > 1:
         absorption_coeff = 0.11 * \
-            (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
+                           (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
     else:
         absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
 

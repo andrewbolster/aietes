@@ -30,7 +30,6 @@ debug = False
 
 
 class Application(Sim.Process):
-
     """
     Generic Class for top level application layers
     """
@@ -45,7 +44,7 @@ class Application(Sim.Process):
                       'packets_time': 0,
                       'packets_hops': 0,
                       'packets_dhops': 0,
-                      }
+        }
         self.received_log = []
         self.sent_log = []
         self.config = config
@@ -94,15 +93,15 @@ class Application(Sim.Process):
         Sim.activate(self, self.lifecycle())
 
 
-    def signal_good_tx(self,packetid):
+    def signal_good_tx(self, packetid):
         for sent in self.sent_log:
-            if sent['ID']==packetid:
-                sent['delivered']=True
+            if sent['ID'] == packetid:
+                sent['delivered'] = True
 
-    def signal_lost_tx(self,packetid):
+    def signal_lost_tx(self, packetid):
         for sent in self.sent_log:
-            if sent['ID']==packetid:
-                sent['delivered']=False
+            if sent['ID'] == packetid:
+                sent['delivered'] = False
 
     def tick(self):
         """ Method called at each simulation instance"""
@@ -181,7 +180,7 @@ class Application(Sim.Process):
             try:
                 avg_length = total_bits_in / self.stats['packets_received']
                 average_rx_delay = self.stats[
-                    'packets_time'] / self.stats['packets_received']
+                                       'packets_time'] / self.stats['packets_received']
             except ZeroDivisionError:
                 if self.stats['packets_received'] == 0:
                     avg_length = 0
@@ -332,7 +331,7 @@ class RoutingTest(Application):
             self.sent_counter[n] = 0
         for n in learned_and_implied_nodes:
             self.total_counter[n] = self.sent_counter[
-                n] + self.received_counter[n]
+                                        n] + self.received_counter[n]
         if not_in_rx or not_in_tx or not_in_tot:
             self.logger.info("Synchronising counters: {} not in rx and {} not in tx, {} not in total".format(
                 not_in_rx, not_in_tx, not_in_tot))
@@ -348,7 +347,6 @@ class RoutingTest(Application):
 
 
 class CommsTrust(RoutingTest):
-
     """
     Vaguely Emulated Bellas Traffic Scenario
     Trust Values retained per interval:
@@ -358,7 +356,7 @@ class CommsTrust(RoutingTest):
     test_stream_length = 6
     stream_period_ratio = 0.1
     trust_assessment_period = 600
-    metrics_string="ATXP,ARXP,ADelay,ALength,Throughput,PLR"
+    metrics_string = "ATXP,ARXP,ADelay,ALength,Throughput,PLR"
 
     def activate(self):
 
@@ -367,11 +365,10 @@ class CommsTrust(RoutingTest):
         self.last_accessed_rx_packet = None
         self.last_accessed_tx_packet = None
 
-        self.trust_assessments = {} # My generated trust metrics, [node][t][n_observation_arrays]
-        self.trust_accessories = {} # Extra information that might be interesting in the longer term.
-        self.trust_accessories['queue_length']=[]
-        self.trust_accessories['collisions']=[]
-
+        self.trust_assessments = {}  # My generated trust metrics, [node][t][n_observation_arrays]
+        self.trust_accessories = {}  # Extra information that might be interesting in the longer term.
+        self.trust_accessories['queue_length'] = []
+        self.trust_accessories['collisions'] = []
 
         self.forced_nodes = self.layercake.host.fleet.nodeNames()
         if self.forced_nodes:
@@ -395,7 +392,7 @@ class CommsTrust(RoutingTest):
         :param packet:
         :return:
         """
-        pkt_indexes = ['tx_pwr_db','rx_pwr_db', 'delay', 'length']
+        pkt_indexes = ['tx_pwr_db', 'rx_pwr_db', 'delay', 'length']
         return [packet[_] for _ in pkt_indexes]
 
     def get_metrics_from_batch(self, batch):
@@ -407,15 +404,15 @@ class CommsTrust(RoutingTest):
         """
 
         nodepktstats = []
-        throughput = 0 # SUM Length
+        throughput = 0  # SUM Length
 
         for j_pkt, pkt in enumerate(batch):
             nodepktstats.append(self.get_metrics_from_packet(pkt))
-            throughput+=pkt['length']
+            throughput += pkt['length']
 
         if throughput:
             try:
-                return append(average(nodepktstats, axis=0),[throughput])
+                return append(average(nodepktstats, axis=0), [throughput])
             except:
                 self.logger.error("PKTS:{},TP:{},NANMEAN:{}".format(
                     nodepktstats, throughput, nanmean(nodepktstats, axis=0)
@@ -437,7 +434,7 @@ class CommsTrust(RoutingTest):
             relevant_packets = self.received_log[self.last_accessed_rx_packet:]
             self.last_accessed_rx_packet = len(self.received_log)
 
-            rx_stats={}
+            rx_stats = {}
             for node in self.trust_assessments.keys():
                 pkt_batch = [packet for packet in relevant_packets if packet['source'] == node]
                 rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
@@ -446,33 +443,32 @@ class CommsTrust(RoutingTest):
 
             # TODO NamedTuples for safety
             relevant_packets = []
-            last_relevant_time = Sim.now()-2*self.trust_assessment_period
-            for i,p in enumerate(self.sent_log):
-                if p.has_key('delivered') and p['time_stamp']>last_relevant_time:
-                    relevant_packets.append((i,p['dest'],p['length'], p['delivered']))
+            last_relevant_time = Sim.now() - 2 * self.trust_assessment_period
+            for i, p in enumerate(self.sent_log):
+                if p.has_key('delivered') and p['time_stamp'] > last_relevant_time:
+                    relevant_packets.append((i, p['dest'], p['length'], p['delivered']))
 
             tx_stats = {}
             # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
             for node in self.trust_assessments.keys():
                 per = map(
-                        lambda p: float(not p[3]),
-                        filter(
-                            lambda p: p[1]==node,
-                            relevant_packets)
+                    lambda p: float(not p[3]),
+                    filter(
+                        lambda p: p[1] == node,
+                        relevant_packets)
                 )
                 if per:
-                    per=nanmean(per)
+                    per = nanmean(per)
                 else:
-                    per=nan
-                tx_stats[node]=[per if not isnan(per) else 0.0]
+                    per = nan
+                tx_stats[node] = [per if not isnan(per) else 0.0]
                 # Packet Error Rate (all time)
                 if len(rx_stats[node]):
-                    nodestat = append(rx_stats[node],tx_stats[node])
+                    nodestat = append(rx_stats[node], tx_stats[node])
                     # avg(tx pwr, rx pwr, delay, length), rx throughput, PER
                 else:
                     nodestat = []
                 self.trust_assessments[node].append(nodestat)
-
 
             self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))
             self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
@@ -506,7 +502,7 @@ class CommsTrust(RoutingTest):
                 [n
                  for n, c in most_common
                  if c == most_common[-1][1]
-                 ]
+                ]
             )
 
         destination = self.current_target
@@ -541,8 +537,6 @@ class CommsTrust(RoutingTest):
         self.received_counter[packet['source']] += 1
         self.result_packet_dl[packet['source']].append(packet['data'])
 
-
-
         if not (packet['data'] + 1) % self.test_stream_length:
             if debug:
                 self.logger.info("Got Stream {count} from {src} after {delay}".format(
@@ -559,6 +553,7 @@ class CommsTrust(RoutingTest):
             'trust_accessories': self.trust_accessories
         })
         return initial
+
 
 class CommsTrustRoundRobin(CommsTrust):
     test_stream_length = 1

@@ -64,13 +64,13 @@ def callsuper(method):
             if not supermethod:
                 raise
             return supermethod(self, *exc.args, **exc.kwargs)
+
     callsuper_wrapper.__name__ = method.__name__
     callsuper_wrapper.__doc__ = method.__doc__
     return callsuper_wrapper
 
 
 class MetricView():
-
     """
     This Class is a plotable view of the Metric class availiable from Bounos.
     It is instantiated with the representative Bounos.Metric base metric
@@ -147,7 +147,6 @@ class MetricView():
 
 
 class Arrow3D(FancyArrowPatch):
-
     def __init__(self, xs, ys, zs, *args, **kwargs):
         FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
@@ -160,7 +159,6 @@ class Arrow3D(FancyArrowPatch):
 
 
 class GenericFrame(wx.Frame):
-
     def __init__(self, controller, *args, **kw):
         wx.Frame.__init__(
             self, None, title=EphyraNotebook.description, *args, **kw)
@@ -181,7 +179,6 @@ from ephyra.Views.Simulator import Simulator
 
 
 class EphyraNotebook(wx.Frame):
-
     def __init__(self, controller, *args, **kw):
         wx.Frame.__init__(self, None, title="Ephyra")
         self.log = logging.getLogger(self.__module__)
@@ -306,7 +303,7 @@ class EphyraNotebook(wx.Frame):
         dlg = wx.MessageDialog(self,
                                message="This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
                                style=wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
-                               )
+        )
         result = dlg.ShowModal()
         dlg.Destroy()
         if result == wx.ID_OK:

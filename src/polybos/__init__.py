@@ -14,6 +14,7 @@
  *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
 from __future__ import division
+
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
@@ -42,11 +43,13 @@ from aietes import Simulation
 import aietes.Threaded
 from aietes.Tools import _config_spec, _config_dir, _results_dir, nameGeneration, updateDict, kwarger, getConfig, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf, is_valid_aietes_datafile
 from bounos import DataPackage, printAnalysis, load_sources, npz_in_dir
+
 try:
     from contrib.Ghia.ecea.data_grapher import data_grapher
-    ghia=True
+
+    ghia = True
 except ImportError:
-    ghia=False
+    ghia = False
 
 # Mask in-sim progress display and let joblib do it's... job...
 progress_display = False
@@ -55,11 +58,10 @@ PseudoScenario = collections.namedtuple("PseudoScenario",
                                         ["title", "datarun"]
 )
 logging.basicConfig()
-log=logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class Scenario(object):
-
     """ Scenario Object
 
     The Scenario Object deals with config management and passthrough, as well as some optional
@@ -83,15 +85,15 @@ class Scenario(object):
         'drift_gyro_scale': ['drift_scales', 'gyro'],
         'tof_type': ['tof_type'],
         'drift_noises': ['drift_noises'],
-        'net': ['Network','protocol'],
-        'mac': ['MAC','protocol'],
-        'app': ['Application','protocol'],
+        'net': ['Network', 'protocol'],
+        'mac': ['MAC', 'protocol'],
+        'app': ['Application', 'protocol'],
         'app_rate': ['Application', 'packet_rate'],
         'app_length': ['Application', 'packet_length'],
     }
 
-    def __init__(self, default_config = None, default_config_file = None,
-                 runcount = 1, title= None, *args, **kwargs):
+    def __init__(self, default_config=None, default_config_file=None,
+                 runcount=1, title=None, *args, **kwargs):
         """
         Builds an initial config and divides it up for convenience later
             Can take default_config = <ConfigObj> or default_config_file = <path>
@@ -113,8 +115,8 @@ class Scenario(object):
             logging.info("User provided a (hopefully complete) dotdict")
             self._default_config = deepcopy(ConfigObj(default_config))
         elif default_config_file is not None:
-            logging.info("User provided a config file that we have to interpolate "\
-                  "against the defaults to generate a full config")
+            logging.info("User provided a config file that we have to interpolate " \
+                         "against the defaults to generate a full config")
             intermediate_config = getConfig(default_config_file)
             self._default_config = Simulation.populateConfig(
                 intermediate_config, retain_default=True
@@ -153,7 +155,7 @@ class Scenario(object):
             # Casting to ConfigObj is a nasty hack for picklability (i.e. dotdict
             # subclasses dict but pickle protocol looks after dict natively.
             if node_name != "__default__":
-                self.nodes[node_name]=deepcopy(ConfigObj(node_config))
+                self.nodes[node_name] = deepcopy(ConfigObj(node_config))
 
         # May be unnecessary
         self._default_behaviour_dict = self.getBehaviourDict()
@@ -190,7 +192,7 @@ class Scenario(object):
                                      self.mypath, "%s.log" % title),
                                  logtoconsole=logging.ERROR,
                                  progress_display=progress_display
-                                 )
+                )
                 prep_stats = sim.prepare(sim_time=runtime)
                 protected_run = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
                                             sim.simulate)
@@ -208,8 +210,8 @@ class Scenario(object):
                 else:
                     self.datarun[run] = return_dict
                 log.info("%s(%s):%f%%"
-                      % (run, return_dict['data_file'],
-                         100.0 * float(sim_time) / prep_stats['sim_time']))
+                         % (run, return_dict['data_file'],
+                            100.0 * float(sim_time) / prep_stats['sim_time']))
 
             except Exception:
                 raise
@@ -228,7 +230,7 @@ class Scenario(object):
             kwargs.get("basepath", tempfile.mkdtemp()), self.title)
         try:
             os.mkdir(self.mypath)
-        except OSError,e :
+        except OSError, e:
             if e.errno == errno.EEXIST and os.path.isdir(self.mypath):
                 pass
             else:
@@ -501,7 +503,6 @@ class Scenario(object):
 
 
 class ExperimentManager(object):
-
     def __init__(self,
                  node_count=None,
                  title=None, parallel=False,
@@ -522,7 +523,6 @@ class ExperimentManager(object):
         self._default_scenario = Scenario(title="__default__",
                                           default_config_file=base_config_file)
         self._base_config_file = base_config_file
-
 
         if title is None:
             self.title = "Default"
@@ -598,7 +598,7 @@ class ExperimentManager(object):
                     scenario.run_parallel(**kwargs)
                 else:
                     scenario.run(**kwargs)
-                self.scenarios[scenario_title]=scenario
+                self.scenarios[scenario_title] = scenario
                 gc.collect()
 
         except ConfigError as e:
@@ -615,7 +615,7 @@ class ExperimentManager(object):
 
             print("Experimental results stored in %s" % self.exp_path)
         self.runtime = time.time() - start
-        msg="Runtime:{}".format(secondsToStr(self.runtime))
+        msg = "Runtime:{}".format(secondsToStr(self.runtime))
         notify_desktop(msg)
         print(msg)
 
@@ -624,7 +624,7 @@ class ExperimentManager(object):
         Returns:
             List of scenario stats (i.e. list of lists of run statistics dicts)
         """
-        return {t: s.generateRunStats() for t,s in self.scenarios.items()}
+        return {t: s.generateRunStats() for t, s in self.scenarios.items()}
 
     def updateNodeCounts(self, new_count):
         """
@@ -672,9 +672,9 @@ class ExperimentManager(object):
             s = Scenario(title=title_range[i],
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({variable: v}, count=self.node_count)
-            self.scenarios[s.title]=s
+            self.scenarios[s.title] = s
 
-    def addApplicationVariableScenario(self, variable, value_range, title_range = None):
+    def addApplicationVariableScenario(self, variable, value_range, title_range=None):
         """
         Add a scenario with a range of application/Node configuration values to the
         experimental run
@@ -691,8 +691,8 @@ class ExperimentManager(object):
             s = Scenario(title=title_range[i],
                          default_config=self._default_scenario.generateConfigObj())
             for node, node_config in s.nodes.items():
-                s.updateNode(node_config,variable, v)
-            self.scenarios[s.title]=s
+                s.updateNode(node_config, variable, v)
+            self.scenarios[s.title] = s
 
     def addVariableNodeScenario(self, node_range):
         """
@@ -706,7 +706,7 @@ class ExperimentManager(object):
             s = Scenario(title="{}({})".format("Nodes", node_count),
                          default_config=self._default_scenario.generateConfigObj())
             s.addDefaultNode(node_count)
-            self.scenarios[s.title]=s
+            self.scenarios[s.title] = s
 
     def addMinorityNBehaviourSuite(self, behaviour_list, n_minority=1, title="Behaviour"):
         """
@@ -721,7 +721,7 @@ class ExperimentManager(object):
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode({"behaviour": v}, count=n_minority)
             s.addDefaultNode(count=self.node_count - n_minority)
-            self.scenarios[s.title]=s
+            self.scenarios[s.title] = s
 
     def addVariable2RangeScenarios(self, v_dict):
         """
@@ -747,7 +747,7 @@ class ExperimentManager(object):
             s = Scenario(title=str(["%s(%f)" % (variable, v) for variable, v in d.iteritems()]),
                          default_config=self._default_scenario.generateConfigObj())
             s.addCustomNode(d, count=self.node_count)
-            self.scenarios[s.title]=s
+            self.scenarios[s.title] = s
 
     def addRatioScenarios(self, badbehaviour, goodbehaviour=None):
         """
@@ -772,7 +772,7 @@ class ExperimentManager(object):
                 s.addCustomNode({"behaviour": goodbehaviour}, count=invcount)
             else:
                 s.addDefaultNode(count=invcount)
-            self.scenarios[s.title]=s
+            self.scenarios[s.title] = s
 
     def addDefaultScenario(self, runcount=1, title=None):
         """
@@ -781,7 +781,7 @@ class ExperimentManager(object):
         for i in range(runcount):
             s = Scenario(default_config=self._default_scenario.generateConfigObj(),
                          title=title if title is not None else "{}({})".format(self.title, i))
-            self.scenarios[s.title]=s
+            self.scenarios[s.title] = s
 
     def addPositionScalingRange(self, scale_range, title=None, basis_node_name='n1'):
         """
@@ -795,22 +795,22 @@ class ExperimentManager(object):
         """
         base_config = getConfig(self._base_config_file)
         env_shape = np.asarray(base_config['Environment']['shape'])
-        node_positions = { k:np.asarray(v['initial_position'], dtype=float)
-                           for k,v in base_config['Node']['Nodes'].items()
-                           if v.has_key('initial_position') #This filters out any semi-defined nodes
+        node_positions = {k: np.asarray(v['initial_position'], dtype=float)
+                          for k, v in base_config['Node']['Nodes'].items()
+                          if v.has_key('initial_position')  # This filters out any semi-defined nodes
         }
-        node_centroids = { k: np.append((v[0:2]-env_shape[0:2]/2),0.0) for k,v in node_positions.items()}
+        node_centroids = {k: np.append((v[0:2] - env_shape[0:2] / 2), 0.0) for k, v in node_positions.items()}
         delta = np.asarray(node_positions[basis_node_name])
         for scale in scale_range:
-            new_positions = {k:v*scale+delta for k,v in node_centroids.items()}
+            new_positions = {k: v * scale + delta for k, v in node_centroids.items()}
 
-            if np.all(0<new_positions.values()<env_shape):
+            if np.all(0 < new_positions.values() < env_shape):
                 new_config = deepcopy(base_config)
-                for k,v in new_positions.items():
-                    new_config['Node']['Nodes'][k]['initial_position'] = list(v) #ndarrays make literal_eval cry
+                for k, v in new_positions.items():
+                    new_config['Node']['Nodes'][k]['initial_position'] = list(v)  # ndarrays make literal_eval cry
 
                 s = Scenario(default_config=Simulation.populateConfig(new_config, retain_default=True),
-                             title="{}({:.2f})".format(self.title,scale)
+                             title="{}({:.2f})".format(self.title, scale)
                 )
                 self.scenarios[s.title] = s
             else:
@@ -831,9 +831,9 @@ class ExperimentManager(object):
         if isinstance(experiment, ExperimentManager):
             # Running as proper experiment Manager instance, no modification
             # required
-            if hasattr(experiment,'scenarios'):
+            if hasattr(experiment, 'scenarios'):
                 scenario_dict = experiment.scenarios
-            elif hasattr(experiment,'scenarios_file'):
+            elif hasattr(experiment, 'scenarios_file'):
                 scenario_dict = AutoSyncShelf(experiment.scenarios_file)
         elif isinstance(experiment, list) \
                 and all([isinstance(entry, Scenario) for entry in experiment]):
@@ -870,10 +870,10 @@ class ExperimentManager(object):
         correctness_stats = {}
         print(
             "Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\tCorrect/Confident\tSuspect ")
-        for t,s in scenario_dict.items():
+        for t, s in scenario_dict.items():
             correctness_stats[t] = []
             stats = [d.package_statistics() for d in s.datarun]
-            #stats = temp_pool.map(lambda d: d.package_statistics(),s.datarun)
+            # stats = temp_pool.map(lambda d: d.package_statistics(),s.datarun)
             suspects = []
             if isinstance(s, Scenario):
                 # Running on a real scenario so use information we shouldn't
@@ -890,7 +890,7 @@ class ExperimentManager(object):
                 analysis = printAnalysis(s.datarun[i])
                 confident = analysis['trust_stdev'] > 100
                 correct_detection = (not bool(suspects) and not confident) or analysis[
-                    'suspect_name'] in suspects
+                                                                                  'suspect_name'] in suspects
                 correctness_stats[t].append(
                     (correct_detection, confident))
                 if verbose:
@@ -987,6 +987,7 @@ class ExperimentManager(object):
             print("Done in %f seconds" % (time.clock() - start))
         except Exception:
             import traceback
+
             print traceback.format_exc()
             print "Pickle Failed Miserably"
 
@@ -1019,6 +1020,7 @@ class ExperimentManager(object):
         :return:
         """
 
+
 class RecoveredExperiment(ExperimentManager):
     """
     SubClass to recover a partially executed experiment from an experiment directory.
@@ -1028,10 +1030,11 @@ class RecoveredExperiment(ExperimentManager):
     :return:
     """
 
-    _shelf_name="ScenarioDB.shelf"
-    def __init__(self,dirpath):
-        self.exp_path=os.path.abspath(dirpath)
-        self.title =  os.path.basename(dirpath)
+    _shelf_name = "ScenarioDB.shelf"
+
+    def __init__(self, dirpath):
+        self.exp_path = os.path.abspath(dirpath)
+        self.title = os.path.basename(dirpath)
         self.scenarios_file = os.path.join(dirpath, self._shelf_name)
         if os.path.isfile(self.scenarios_file):
             self.scenarios = AutoSyncShelf(self.scenarios_file)
@@ -1040,17 +1043,17 @@ class RecoveredExperiment(ExperimentManager):
 
     @classmethod
     def walk_dir(cls, path):
-        subdirs=filter(os.path.isdir,
-                       map(lambda p: os.path.join(path,p),
-                           os.listdir(path)
-                       )
-                )
-        scenarios_file=os.path.join(path,cls._shelf_name)
-        scenarios=AutoSyncShelf(scenarios_file)
+        subdirs = filter(os.path.isdir,
+                         map(lambda p: os.path.join(path, p),
+                             os.listdir(path)
+                         )
+        )
+        scenarios_file = os.path.join(path, cls._shelf_name)
+        scenarios = AutoSyncShelf(scenarios_file)
         for subdir in natsorted(subdirs):
             title = os.path.basename(subdir)
             sources = npz_in_dir(subdir)
-            scenarios[subdir]= PseudoScenario(subdir, load_sources(sources, comms_only=True))
+            scenarios[subdir] = PseudoScenario(subdir, load_sources(sources, comms_only=True))
 
         return scenarios, scenarios_file
 

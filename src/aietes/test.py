@@ -25,6 +25,7 @@ import tempfile
 from pprint import pformat
 
 import matplotlib
+
 matplotlib.use("Agg")
 
 from aietes.Tools import dotdictify, _results_dir
@@ -37,11 +38,10 @@ datapackage_per_node_members = [
 
 
 class DefaultBehaviour(unittest.TestCase):
-
     def setUp(self):
         """Aietes should simulate fine with no input by pulling in from default values"""
         self.run_time = 100
-        self.title=self.__class__.__name__
+        self.title = self.__class__.__name__
         try:
             self.simulation = aietes.Simulation(
                 title=self.title,
@@ -77,10 +77,10 @@ class DefaultBehaviour(unittest.TestCase):
                                                   dataFile=True)
         expected_filename = "{}.aietes".format(self.__class__.__name__)
         expected_path = os.path.join(empty_dir, expected_filename)
-        self.assertEqual(output_dict['data_file'],expected_path+'.npz',"DataFile Paths don't match {}:{}".format(output_dict['data_file'],expected_path+'.npz'))
-        self.assertEqual(output_dict['config_file'],expected_path+'.conf',"ConfigFile Paths don't match {}:{}".format(output_dict['config_file'],expected_path+'.npz'))
-        self.assertTrue(os.path.isfile(expected_path+'.npz'),"Didn't store datapackage in generated temp directory {}".format(expected_path))
-        self.assertTrue(os.path.isfile(expected_path+'.conf'), "Didn't store conf file in generated temp directory {}".format(expected_path))
+        self.assertEqual(output_dict['data_file'], expected_path + '.npz', "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
+        self.assertEqual(output_dict['config_file'], expected_path + '.conf', "ConfigFile Paths don't match {}:{}".format(output_dict['config_file'], expected_path + '.npz'))
+        self.assertTrue(os.path.isfile(expected_path + '.npz'), "Didn't store datapackage in generated temp directory {}".format(expected_path))
+        self.assertTrue(os.path.isfile(expected_path + '.conf'), "Didn't store conf file in generated temp directory {}".format(expected_path))
         shutil.rmtree(empty_dir)
 
     def testDefaultDataPackageDestination(self):
@@ -89,16 +89,15 @@ class DefaultBehaviour(unittest.TestCase):
                                                   dataFile=True)
         expected_filename = "{}.aietes".format(self.__class__.__name__)
         expected_path = os.path.join(_results_dir, expected_filename)
-        self.assertEqual(output_dict['data_file'],expected_path+'.npz',"DataFile Paths don't match {}:{}".format(output_dict['data_file'],expected_path+'.npz'))
-        self.assertEqual(output_dict['config_file'],expected_path+'.conf',"ConfigFile Paths don't match {}:{}".format(output_dict['config_file'],expected_path+'.npz'))
-        self.assertTrue(os.path.isfile(expected_path+'.npz'),"Didn't store datapackage in generated temp directory {}".format(expected_path))
-        self.assertTrue(os.path.isfile(expected_path+'.conf'), "Didn't store conf file in generated temp directory {}".format(expected_path))
-        os.remove(expected_path+'.npz')
-        os.remove(expected_path+'.conf')
+        self.assertEqual(output_dict['data_file'], expected_path + '.npz', "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
+        self.assertEqual(output_dict['config_file'], expected_path + '.conf', "ConfigFile Paths don't match {}:{}".format(output_dict['config_file'], expected_path + '.npz'))
+        self.assertTrue(os.path.isfile(expected_path + '.npz'), "Didn't store datapackage in generated temp directory {}".format(expected_path))
+        self.assertTrue(os.path.isfile(expected_path + '.conf'), "Didn't store conf file in generated temp directory {}".format(expected_path))
+        os.remove(expected_path + '.npz')
+        os.remove(expected_path + '.conf')
 
 
 class ConfigBehaviour(unittest.TestCase):
-
     @unittest.skip("Reminder for later")
     def testZeroFleetCreation(self):
         """Ensure failure on launching fleet with 0 nodes"""
@@ -108,11 +107,10 @@ class ConfigBehaviour(unittest.TestCase):
 
 @unittest.skip("Broken but should be revisited: Subprocess bug in matplotlib")
 class OutputBehaviour(unittest.TestCase):
-
     def testGifGeneration(self):
         """Ensure nothing goes too wrong with gif generation"""
         options = aietes.option_parser().defaults
-        options.update({'gif': True, 'quiet': False, 'sim_time': 100, 'outputPath':tempfile.mkdtemp()})
+        options.update({'gif': True, 'quiet': False, 'sim_time': 100, 'outputPath': tempfile.mkdtemp()})
         options = dotdictify(options)
         try:
             print(pformat(options))
@@ -123,7 +121,7 @@ class OutputBehaviour(unittest.TestCase):
     def testMovieGeneration(self):
         """Ensure nothing goes too wrong with movie generation"""
         options = aietes.option_parser().defaults
-        options.update({'movie': True, 'quiet': False, 'sim_time': 100, 'outputPath':tempfile.mkdtemp()})
+        options.update({'movie': True, 'quiet': False, 'sim_time': 100, 'outputPath': tempfile.mkdtemp()})
         options = dotdictify(options)
         print(pformat(options))
         aietes.go(options)

@@ -58,7 +58,6 @@ def check_model():
 
 
 class EphyraController():
-
     def __init__(self, *args, **kw):
         self.model = BounosModel()
         self.view = None
@@ -243,20 +242,20 @@ class EphyraController():
         stddev_head = np.std(_distances_from_avg_head)
 
         return dict({'positions':
-                     {
-                         'pernode': positions,
-                         'avg': avg_pos,
-                         'stddev': stddev_pos,
-                         'delta_avg': _distances_from_avg_pos
-                     },
+                         {
+                             'pernode': positions,
+                             'avg': avg_pos,
+                             'stddev': stddev_pos,
+                             'delta_avg': _distances_from_avg_pos
+                         },
                      'headings':
                          {
                              'pernode': headings,
                              'avg': avg_head,
                              'stddev': stddev_head,
                              'delta_avg': _distances_from_avg_head
-                     }
-                     })
+                         }
+        })
 
     def get_heading_mag_max_min(self):
         mags = self.model.heading_mag_range()
@@ -304,7 +303,7 @@ class EphyraController():
         elif source == "intent":
             source = self.model.intent_positions
         else:
-            raise(ValueError("Unknown 3D Drift Source"))
+            raise (ValueError("Unknown 3D Drift Source"))
         time_start = time_start if time_start is not None else self.get_final_tmax()
         time_end = max(0 if length is None else (time_start - length), 0)
 

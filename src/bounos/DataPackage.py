@@ -33,6 +33,7 @@ from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig, results
 import Analyses.Trust
 from configobj import ConfigObj
 
+
 class DataPackage(object):
     """
     Data Store for simulation results
@@ -58,7 +59,7 @@ class DataPackage(object):
                    'ecea_positions': 'ecea_positions',
                    'additional': 'additional',
                    'comms': 'comms'
-                   }
+    }
 
     version = 1.0
 
@@ -129,12 +130,12 @@ class DataPackage(object):
                     self._handle_mapping_exceptions_(
                         sink_attrib, source_attrib, "kwargs", exp)
         except (AttributeError, KeyError) as exp:
-            raise ValueError("Inappropriate / incomplete source of type {} : {} missing" .format(
+            raise ValueError("Inappropriate / incomplete source of type {} : {} missing".format(
                 type(source),
                 str([attr for attr in self._attrib_map.keys()
                      if not kwargs.has_key(attr)])
             )
-            ),  None, traceback.print_tb(sys.exc_info()[2])
+            ), None, traceback.print_tb(sys.exc_info()[2])
 
         self.tmax = int(kwargs.get("tmax", len(self.p[0][0])))
         self.n = len(self.p)
@@ -207,7 +208,7 @@ class DataPackage(object):
 
         np.savez(filename,
                  **(data)
-                 )
+        )
         co = ConfigObj(self.config, list_values=False)
         co.filename = "%s.conf" % filename
         co.write()
@@ -382,7 +383,7 @@ class DataPackage(object):
         """
         magnitudes = [sum(map(mag, self.heading_slice(time))) / self.n
                       for time in range(self.tmax)
-                      ]
+        ]
         return magnitudes
 
     def average_heading_mag_range(self):
@@ -393,7 +394,7 @@ class DataPackage(object):
         """
         magnitudes = [mag(self.average_heading(time))
                       for time in range(self.tmax)
-                      ]
+        ]
         return magnitudes
 
     def heading_stddev_range(self):
@@ -404,7 +405,7 @@ class DataPackage(object):
         deviations = [np.std(
             self.deviation_from_at(self.average_heading(time), time)
         )
-            for time in range(self.tmax)
+                      for time in range(self.tmax)
         ]
         return deviations
 
@@ -587,6 +588,7 @@ class DataPackage(object):
         """
 
         from scipy.io import savemat
+
         if filename is None:
             filename = self.title
         path = "{}.track".format(filename)
@@ -698,32 +700,32 @@ class DataPackage(object):
         :return: f
         """
         import matplotlib.pyplot as plt
+
         f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
         f.suptitle("Node Layout and mobility for {}".format(self.title))
         for n, node_p in enumerate(self.p):
-            x,y,z=node_p[:,0]
+            x, y, z = node_p[:, 0]
 
-            ax1.annotate(self.names[n], xy=(x, y), xytext=(-20,5),textcoords='offset points', ha='center', va='bottom',\
-                bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),\
-                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
-                                color='red')
-                )
-            ax1.scatter(x,y)
-            ax2.scatter(y,z)
-            ax3.scatter(x,z)
+            ax1.annotate(self.names[n], xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom', \
+                         bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3), \
+                         arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
+                                         color='red')
+            )
+            ax1.scatter(x, y)
+            ax2.scatter(y, z)
+            ax3.scatter(x, z)
 
-            xs=node_p[0,::res]
-            ys=node_p[1,::res]
-            zs=node_p[2,::res]
-            ax1.plot(xs,ys, alpha=0.6)
-            ax2.plot(ys,zs, alpha=0.6)
-            ax3.plot(xs,zs, alpha=0.6)
+            xs = node_p[0, ::res]
+            ys = node_p[1, ::res]
+            zs = node_p[2, ::res]
+            ax1.plot(xs, ys, alpha=0.6)
+            ax2.plot(ys, zs, alpha=0.6)
+            ax3.plot(xs, zs, alpha=0.6)
             ax4.plot(
-                np.abs(np.linalg.norm(node_p[:,:], axis=0)-np.linalg.norm(node_p[:,0])),
+                np.abs(np.linalg.norm(node_p[:, :], axis=0) - np.linalg.norm(node_p[:, 0])),
                 label=self.names[n],
                 alpha=0.6
             )
-
 
         ax1.set_title("X-Y (Top)")
         ax1.set_aspect('equal', adjustable='datalim')
@@ -745,15 +747,15 @@ class DataPackage(object):
         :param sorted: None, or Bool
         :return DataFrame:
         """
-        valid_types = ['rx','tx']
+        valid_types = ['rx', 'tx']
         if pkt_type not in valid_types:
             raise ValueError("No such packet classification {}, valid choices are {}".format(pkt_type, valid_types))
 
-        packets=[]
-        _ =[ packets.extend(nlog[pkt_type]) for nlog in self.comms['logs'].values()]
+        packets = []
+        _ = [packets.extend(nlog[pkt_type]) for nlog in self.comms['logs'].values()]
         if sorted is not None and sorted:
-            rx_packet=sorted(packets, key=lambda k: k['time_stamp'])
-        pf=pd.DataFrame(rx_packet)
+            rx_packet = sorted(packets, key=lambda k: k['time_stamp'])
+        pf = pd.DataFrame(rx_packet)
         return pf
 
     def get_global_trust_logs(self):

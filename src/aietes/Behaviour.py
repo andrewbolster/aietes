@@ -44,7 +44,6 @@ waypoint = namedtuple("waypoint", ['position', 'prox'])
 
 
 class Behaviour(object):
-
     """
     Generic Representation of a Nodes behavioural characteristics
     #TODO should be a state machine?
@@ -167,10 +166,10 @@ class Behaviour(object):
                                               distance=self.node.distance_to(
                                                   value.position)
 
-                                              ) for key, value in self.neighbours.items()]
+        ) for key, value in self.neighbours.items()]
         # self.logger.debug("Got Distances: %s"%neighbours_with_distance)
         nearest_neighbours = sorted(neighbours_with_distance, key=attrgetter('distance')
-                                    )
+        )
         # Select N neighbours in order
         # self.logger.debug("Nearest Neighbours:%s"%nearest_neighbours)
         if n_neighbours is not None:
@@ -181,7 +180,7 @@ class Behaviour(object):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         distanceVal = distance(position, repulsive_position)
         forceVector = unit(position - repulsive_position) * \
-            d_limit / float(min(distanceVal, self.neighbourhood_max_rad))
+                      d_limit / float(min(distanceVal, self.neighbourhood_max_rad))
 
         if distanceVal < 1:
             raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
@@ -192,7 +191,7 @@ class Behaviour(object):
                                     self.getNearestNeighbours(repulsive_position)[0].velocity),
                                 self.node.position,
                                 sixvec(self.node.velocity)
-                                ))
+                               ))
         if self.debug:
             self.logger.debug(
                 "Repulsion from %s: %s, at range of %s" % (forceVector, repulsive_position, distanceVal))
@@ -202,7 +201,7 @@ class Behaviour(object):
         forceVector = np.array([0, 0, 0], dtype=np.float)
         distanceVal = distance(position, attractive_position)
         forceVector = unit(attractive_position - position) * \
-            (min(distanceVal, self.neighbourhood_max_rad) / float(d_limit))
+                      (min(distanceVal, self.neighbourhood_max_rad) / float(d_limit))
         if self.debug:
             self.logger.debug(
                 "Attraction to %s: %s, at range of %s" % (forceVector, attractive_position, distanceVal))
@@ -213,7 +212,7 @@ class Behaviour(object):
         Called by responseVector to avoid walls to a distance of half min distance
         """
         response = np.array([0, 0, 0], dtype=np.float)
-        min_dist = self.neighbourhood_max_rad/2.0
+        min_dist = self.neighbourhood_max_rad / 2.0
         avoid = False
         avoiding_position = position.copy()
         if np.any((np.zeros(3) + min_dist) > position):
@@ -245,7 +244,7 @@ class Behaviour(object):
                                                                                                  avoiding_position))
                 # response = (avoiding_position-position)
             self.logger.debug("Wall Avoidance:%s" % response)
-            if hasattr(self,'my_direction'):
+            if hasattr(self, 'my_direction'):
                 # Something planned to go this way, lets stop that and hope it chooses a better direction
                 self.my_direction = unit(response)
 
@@ -253,7 +252,6 @@ class Behaviour(object):
 
 
 class RandomWalk(Behaviour):
-
     """
     Generic Wandering Behaviour
     """
@@ -272,7 +270,6 @@ class RandomWalk(Behaviour):
 
 
 class RandomFlatWalk(Behaviour):
-
     """
     Generic Wandering Behaviour on a plane
     """
@@ -289,23 +286,21 @@ class RandomFlatWalk(Behaviour):
             self.my_direction = random_xy_vector()
         return np.asarray(self.my_direction)
 
-class RandomFlatCentredWalk(RandomFlatWalk):
 
+class RandomFlatCentredWalk(RandomFlatWalk):
     # Should probably add some intelligence in here to select a random point within the environment to head towards
     # rather than picking a random direction....
     def __init__(self, *args, **kwargs):
-        super(RandomFlatCentredWalk,self).__init__(*args, **kwargs)
+        super(RandomFlatCentredWalk, self).__init__(*args, **kwargs)
         self.wallCheckDisabled = False
         self.original_position = self.node.getPos()
         self.behaviours.append(self.attractToOrigin)
 
     def attractToOrigin(self, position, velocity):
-        return np.asarray(self.attractToPosition(position, self.original_position))*0.01
-
+        return np.asarray(self.attractToPosition(position, self.original_position)) * 0.01
 
 
 class Nothing(Behaviour):
-
     """
     Do Nothing
     """
@@ -315,7 +310,6 @@ class Nothing(Behaviour):
 
 
 class Flock(Behaviour):
-
     """
     Flocking Behaviour as modelled by three rules:
         Short Range Repulsion
@@ -424,7 +418,6 @@ class Flock(Behaviour):
 
 
 class AlternativeFlockMixin():
-
     def __init__(self, *args, **kwargs):
         self.behaviours.remove(self.clumpingVector)
         self.behaviours.remove(self.repulsiveVector)
@@ -451,14 +444,12 @@ class AlternativeFlockMixin():
 
 
 class AlternativeFlock(Flock, AlternativeFlockMixin):
-
     def __init__(self, *args, **kwargs):
         Flock.__init__(self, *args, **kwargs)
         AlternativeFlockMixin.__init__(self, *args, **kwargs)
 
 
 class WaypointMixin():
-
     """
     Waypoint MixIn Class defines the general waypoint behaviour and includes the inner 'waypoint' object class.
     """
@@ -543,28 +534,24 @@ class WaypointMixin():
 
 
 class Waypoint(Flock, WaypointMixin):
-
     def __init__(self, *args, **kwargs):
         Flock.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
 class AlternativeWaypoint(AlternativeFlock, Waypoint):
-
     def __init__(self, *args, **kwargs):
         AlternativeFlock.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
 class SoloWaypoint(Nothing, WaypointMixin):
-
     def __init__(self, *args, **kwargs):
         Nothing.__init__(self, *args, **kwargs)
         WaypointMixin.__init__(self, *args, **kwargs)
 
 
 class StationKeep(Nothing):
-
     """
     Simple behaviour that represents a station-keeping state / buoy.
     """
@@ -574,7 +561,6 @@ class StationKeep(Nothing):
 
 
 class FleetLawnmower(Flock, WaypointMixin):
-
     """
     Repeating Lawnmower Behaviour across a 2D slice of the environment extent
         Subdivides environment into N-Overlapping patterns based on fleet size
@@ -782,14 +768,12 @@ class FleetLawnmower(Flock, WaypointMixin):
 
 
 class FleetLawnmowerLoop(FleetLawnmower):
-
     def __init__(self, *args, **kwargs):
         super(FleetLawnmowerLoop, self).__init__(*args, **kwargs)
         self.waypointloop = True
 
 
 class Tail(Flock):
-
     """
     This behaviour gives the desire to be at the back of the fleet.
     This is accomplished by taking the incident angle between the clumping centre and the heading vector and taking the
@@ -812,7 +796,6 @@ class Tail(Flock):
 
 
 class SlowCoach(Flock):
-
     """
     This behaviour gives the desire to be clow.
     This is accomplished by the opposite of the last velocity
@@ -835,5 +818,5 @@ class SlowCoach(Flock):
 ####
 
 # In the general case where everyone else is waypointing, the untargeted Flock behaviour is analogous
-#   to a un-initiated node 'shadowing' the fleet.
+# to a un-initiated node 'shadowing' the fleet.
 Shadow = Flock

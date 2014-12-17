@@ -24,7 +24,6 @@ from aietes.Tools import mag
 
 
 class Metric(object):
-
     """
     This superclass provides abstracted methods for generating, updating and presenting
         simulation data
@@ -94,7 +93,6 @@ class Metric(object):
 
 
 class StdDev_of_Distance(Metric):
-
     """
     Measures the level of variation (stddev) of the distance between each node and the centre of
         the fleet
@@ -106,7 +104,6 @@ class StdDev_of_Distance(Metric):
 
 
 class StdDev_of_Heading(Metric):
-
     """
     Measures the level of variation (stddev) of the mag of the heading distance from fleet
         average heading
@@ -117,7 +114,6 @@ class StdDev_of_Heading(Metric):
 
 
 class Avg_Mag_of_Heading(Metric):
-
     """
     Measures the average node speed in the fleet across time
     """
@@ -127,7 +123,6 @@ class Avg_Mag_of_Heading(Metric):
 
 
 class Deviation_Of_Heading(Metric):
-
     """
     Measured the per node deviation from the fleet path, therefore the 'average' is zero
     However, since INHD is unsigned, this isn're really the case, so take the avg of the vals
@@ -180,9 +175,10 @@ class ECEA_Error(Metric):
     def generator(self, data):
         self.highlight_data = data.drift_RMS(source="intent")
         return data.drift_error(source="intent").swapaxes(0, 1)
+
 #
 # class Packet_Loss_Rate(Metric):
-#     label = "Packet Loss Rate (%p\%%)"
+# label = "Packet Loss Rate (%p\%%)"
 #     signed = False
 #
 #     def generator(self, data):

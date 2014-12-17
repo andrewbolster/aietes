@@ -31,7 +31,6 @@ import numpy as np
 from aietes import Simulation
 
 
-
 def sim_mask(args):
     # Properly Parallel
     # http://stackoverflow.com/questions/444591/convert-a-string-of-bytes-into-an-int-python
@@ -74,6 +73,7 @@ def sim_mask(args):
                 del sim
         gc.collect()
 
+
 def parallel_sim(arglist):
     import logging
 
@@ -81,7 +81,7 @@ def parallel_sim(arglist):
 
     results = []
     print "Beginning Parallel Run of {runcount} at {t}".format(
-        runcount=len(arglist),t=strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
+        runcount=len(arglist), t=strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
     )
     try:
         results = Parallel(

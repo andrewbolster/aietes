@@ -28,7 +28,6 @@ from aietes.Behaviour import Behaviour
 
 
 class Configurator(wx.Panel):
-
     """
     The Configurator panel allows the user to generate aietes-compatible configurations
 
@@ -72,7 +71,7 @@ class Configurator(wx.Panel):
                    "Cruising Speed": 1.4,
                    "Max Turn Rate": 4.5,
                    "Initial Position": {"X": 0.0, "Y": 1.0, "Z": 2.0}
-                   }
+        }
     }
     behaviour_default = {
         "Config": {"Protocol": [cls.__name__ for cls in itersubclasses(Behaviour)],
@@ -85,7 +84,7 @@ class Configurator(wx.Panel):
                    "Repulsive Factor": 0.01,
                    "Waypoint Factor*": 0.01,
                    "Update Rate": 0.3
-                   }
+        }
     }
 
     def __init__(self, parent, frame, *args, **kw):
@@ -162,7 +161,7 @@ class Configurator(wx.Panel):
                 self.tree.SetItemText(ni, s.GetLabel())
                 self.tree.SetPyData(ni, s)
                 # for wx 2.2.1
-                #self.tree.SetItemData( ni, wxTreeItemData( s ) )
+                # self.tree.SetItemData( ni, wxTreeItemData( s ) )
                 self.tree.SetItemHasChildren(ni, len(s))
                 if len(s) and recurse:
                     self.update_tree(ni, recurse)
@@ -345,13 +344,13 @@ class Configurator(wx.Panel):
                 logging.error("%s: %s" % (E, name))
                 raise E
 
+
 ##########################
 # Configurator Helpers
 ##########################
 
 
 class TreeNode:
-
     def __len__(self):
         return 0
 
@@ -366,7 +365,6 @@ class TreeNode:
 
 
 class ListNode:
-
     def __init__(self, title, children=None, data=None):
         self._nl = []
         if children is not None:

@@ -115,6 +115,7 @@ def load_sources(sources, comms_only=False):
             data[d.title.tostring()] = d
     return data
 
+
 def generate_sources(sources, comms_only=False):
     """
     From a given list of DataPackage-able sources, yield a title/content tuple based on their d.title
@@ -373,8 +374,8 @@ def plot_detections(ax, metric, orig_data,
     import Analyses
 
     results = Analyses.Behaviour.Detect_Misbehaviour(data=orig_data,
-                                           metric=metric.__class__.__name__,
-                                           stddev_frac=2)
+                                                     metric=metric.__class__.__name__,
+                                                     stddev_frac=2)
     detections = results['detections']
     detection_vals = results['detection_envelope']
     detection_dict = results['suspicions']
@@ -425,12 +426,12 @@ def plot_detections(ax, metric, orig_data,
 
 def detect_and_identify(d):
     per_metric_deviations, deviation_windowed = Analyses.Behaviour.Combined_Detection_Rank(d,
-                                                                                 _metrics,
-                                                                                 stddev_frac=2)
+                                                                                           _metrics,
+                                                                                           stddev_frac=2)
     trust_values = Analyses.Trust.dev_to_trust(per_metric_deviations)
     identification_dict = Analyses.Behaviour.behaviour_identification(per_metric_deviations, deviation_windowed, _metrics,
-                                                            names=d.names,
-                                                            verbose=False)
+                                                                      names=d.names,
+                                                                      verbose=False)
     return trust_values, per_metric_deviations, deviation_windowed, identification_dict
 
 

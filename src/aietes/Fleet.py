@@ -33,9 +33,10 @@ from aietes.Environment import Environment
 
 try:
     from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex
-    ghia=True
+
+    ghia = True
 except ImportError:
-    ghia=False
+    ghia = False
 
 
 # Local Debug
@@ -43,7 +44,6 @@ debug = False
 
 
 class Fleet(Sim.Process):
-
     """
     Fleets act initially as traffic managers for Nodes
     """

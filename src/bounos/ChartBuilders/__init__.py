@@ -29,11 +29,12 @@ from scipy.spatial.distance import pdist, squareform
 import bounos
 
 _boxplot_kwargs = {
-    'showmeans':True,
-    'showbox':False,
-    'widths':0.2,
-    'linewidth':2
+    'showmeans': True,
+    'showbox': False,
+    'widths': 0.2,
+    'linewidth': 2
 }
+
 
 def lost_packet_distribution(dp=None, tx=None, title=None):
     """
@@ -55,7 +56,7 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
     elif dp is None:
         df = tx
         title = "FIXME" if title is None else title
-        tmax = int(np.ceil(tx.time_stamp.max()/3600)*3600) # assume we're not masochists and it's rounded up to an hour within
+        tmax = int(np.ceil(tx.time_stamp.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
     else:
         raise ValueError("I've got no idea how you got here...")
 
@@ -63,11 +64,12 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
     all_pkts = df.count().max()
 
     f, ax = plt.subplots(figsize=(13, 7))
-    ax.set_title("Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title,died/float(all_pkts), all_pkts))
+    ax.set_title("Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title, died / float(all_pkts), all_pkts))
     ax.set_ylabel("Count (n)")
     ax.set_xlabel("Simulation Time (s)")
     sns.distplot(df.time_stamp[df.delivered == False], kde=False, rug=True, bins=10, ax=ax)
     return f
+
 
 def end_to_end_delay_distribution(dp):
     """
@@ -79,16 +81,17 @@ def end_to_end_delay_distribution(dp):
     df = dp.get_global_packet_logs(pkt_type='rx')
 
     f, ax = plt.subplots(figsize=(13, 7))
-    nsources=len(df.source.unique())
-    c = sns.color_palette("Set1",nsources)
-    ax.set_title("End-To-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title,float(df[["delay"]].mean())))
+    nsources = len(df.source.unique())
+    c = sns.color_palette("Set1", nsources)
+    ax.set_title("End-To-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title, float(df[["delay"]].mean())))
 
-    for i,source in enumerate(sorted(df.source.unique())):
+    for i, source in enumerate(sorted(df.source.unique())):
         sns.distplot(df[df.source == source]['delay'], color=c[i], ax=ax, label=source, kde=False)
     ax.set_ylabel("Count (n)")
     ax.set_xlabel("Delay (s)")
     plt.legend()
     return f
+
 
 def source_and_dest_delay_violin_plot(dp):
     """
@@ -98,11 +101,11 @@ def source_and_dest_delay_violin_plot(dp):
     """
     assert isinstance(dp, bounos.DataPackage)
     df = dp.get_global_packet_logs(pkt_type='rx')
-    f, (ax_l, ax_r) = plt.subplots(1, 2, sharey=True, sharex=True,figsize=(12, 4))
+    f, (ax_l, ax_r) = plt.subplots(1, 2, sharey=True, sharex=True, figsize=(12, 4))
     sns.violinplot(df.delay, df.source, color="Paired", ax=ax_l)
     sns.violinplot(df.delay, df.dest, color="Paired", ax=ax_r)
 
-    f.suptitle("Per-Node End-to-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title,float(df[["delay"]].mean())))
+    f.suptitle("Per-Node End-to-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title, float(df[["delay"]].mean())))
 
     ax_l.set_xlabel("Source Node")
     ax_r.set_xlabel("Destination Node")
@@ -111,7 +114,7 @@ def source_and_dest_delay_violin_plot(dp):
     return f
 
 
-def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12,4)):
+def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12, 4)):
     """
     Return a plot of the source and destination RX delay CDF as two subplots.
     :param dp:
@@ -131,17 +134,17 @@ def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12,4))
     elif dp is None:
         df = rx
         title = "FIXME" if title is None else title
-        tmax = int(np.ceil(rx.received.max()/3600)*3600) # assume we're not masochists and it's rounded up to an hour within
+        tmax = int(np.ceil(rx.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
     else:
         raise ValueError("I've got no idea how you got here...")
 
-    f, (ax_l, ax_r) = plt.subplots(1, 2, sharey=True, sharex=True,figsize=figsize)
-    f.suptitle("Per-Node End-to-End Delay Cumulative Distribution for {} model: average={:.2f}s".format(title,float(df[["delay"]].mean())))
+    f, (ax_l, ax_r) = plt.subplots(1, 2, sharey=True, sharex=True, figsize=figsize)
+    f.suptitle("Per-Node End-to-End Delay Cumulative Distribution for {} model: average={:.2f}s".format(title, float(df[["delay"]].mean())))
 
     # Delays groups by source
     for i, group in df.delay.groupby(df.source):
         values, base = np.histogram(group, bins=40)
-        #evaluate the cumulative
+        # evaluate the cumulative
         cumulative = np.cumsum(values)
         # plot the cumulative function
         ax_l.plot(base[:-1], cumulative, label=i)
@@ -153,7 +156,7 @@ def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12,4))
     # Delays groups by destination
     for i, group in df.delay.groupby(df.dest):
         values, base = np.histogram(group, bins=40)
-        #evaluate the cumulative
+        # evaluate the cumulative
         cumulative = np.cumsum(values)
         # plot the cumulative function
         ax_r.plot(base[:-1], cumulative, label=i)
@@ -161,10 +164,10 @@ def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12,4))
     ax_r.set_xlabel("Delay (s)")
     ax_r.legend(loc="lower right")
 
-
     return f
 
-def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13,7)):
+
+def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)):
     """
     Generates a plot showing the distribution of the number of in-the-air packets at each time step
 
@@ -176,15 +179,16 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13,7))
     :param dp:
     :return: f plt.figure
     """
+
     def channel_occupancy_calc(df):
         tx = pd.DataFrame(index=df.time_stamp)
         rx = pd.DataFrame(index=df.received)
-        tx['p'] = 1   #adding a packet
-        rx['p'] = -1  #receiving a packet
+        tx['p'] = 1  # adding a packet
+        rx['p'] = -1  # receiving a packet
 
-        #create the time series here
+        # create the time series here
         t = pd.concat([tx, rx])
-        t.index = pd.to_datetime(t.index, unit='s') #to convert from nanoseconds to seconds
+        t.index = pd.to_datetime(t.index, unit='s')  #to convert from nanoseconds to seconds
         return t.resample('s', how='sum').cumsum().fillna(0)
 
     # Fancy XOR - http://stackoverflow.com/questions/432842/how-do-you-get-the-logical-xor-of-two-variables-in-python
@@ -201,21 +205,21 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13,7))
     elif dp is None:
         df = rx
         title = "FIXME" if title is None else title
-        tmax = int(np.ceil(rx.received.max()/3600)*3600) # assume we're not masochists and it's rounded up to an hour within
+        tmax = int(np.ceil(rx.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
     else:
         raise ValueError("I've got no idea how you got here...")
 
-    if 'var' in df.index.names and len(df.groupby(level='var'))>1:
+    if 'var' in df.index.names and len(df.groupby(level='var')) > 1:
         raise ValueError("It's really not a good idea for multiple var's to go into this; groupby-apply this instead {}".format(
             len(df.index.levels[df.index.names.index('var')])
         ))
 
     if 'run' in df.index.names:
-        channel_occupancy = df.groupby(level=['var','run']).apply(channel_occupancy_calc).unstack('run').sum(axis=1)
+        channel_occupancy = df.groupby(level=['var', 'run']).apply(channel_occupancy_calc).unstack('run').sum(axis=1)
     else:
-        channel_occupancy = channel_occupancy_calc(df) # should work fine for a single run
+        channel_occupancy = channel_occupancy_calc(df)  # should work fine for a single run
     f, ax = plt.subplots(figsize=figsize)
-    ax.set_title("In-The-Air packets for {} model: Channel Use={:.2%}".format(title, sum(channel_occupancy>0)/float(channel_occupancy.size)))
+    ax.set_title("In-The-Air packets for {} model: Channel Use={:.2%}".format(title, sum(channel_occupancy > 0) / float(channel_occupancy.size)))
     ax.set_ylabel("Percentage of Runtime (%)")
     ax.set_xlabel("Number of packets in the medium (n)")
     channel_occupancy.hist()
@@ -224,7 +228,8 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13,7))
 
     return f
 
-def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, target = None, title=None, sampleperiod=None, metric_weights=None):
+
+def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, target=None, title=None, sampleperiod=None, metric_weights=None):
     from bounos.Analyses import Trust
 
     # TODO THIS HAS NOT BEEN FIXED FOR DATAFRAME MGMT
@@ -247,40 +252,38 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
         assert isinstance(trust_log, pd.DataFrame)
         assert isinstance(pos_log, pd.DataFrame)
         title = "FIXME" if title is None else title
-        tmax = int(np.ceil(trust_log.received.max()/3600)*3600) # assume we're not masochists and it's rounded up to an hour within
+        tmax = int(np.ceil(trust_log.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
     else:
         raise ValueError("I've got no idea how you got here...")
 
     if target is None:
         target = 'n1'
 
-    f, ax = plt.subplots(len(names),3, sharex=False, figsize=(16, 16))
-    lines=[]
-
+    f, ax = plt.subplots(len(names), 3, sharex=False, figsize=(16, 16))
+    lines = []
 
     f.suptitle("Trust overview for target {} (highlighted) in {} model".format(target, dp.title))
     for i, i_node in enumerate(names):
-        map(lambda (k,v): lines.append(ax[i][0].plot(v,label=k, alpha=0.5 if k!=target else 0.9)), trust[i_node].items())
+        map(lambda (k, v): lines.append(ax[i][0].plot(v, label=k, alpha=0.5 if k != target else 0.9)), trust[i_node].items())
         ax[i][0].legend(loc="lower center", mode="expand", ncol=6)
         ax[i][0].set_title("Trust Perspective: {}".format(i_node))
-        ax[i][0].set_ylim(0,1)
+        ax[i][0].set_ylim(0, 1)
 
-        ax[i][1].set_title("Distance to {}: {}".format(target,i_node))
-        ax[i][1].plot(np.linalg.norm(dp.p[i,:,::600]-dp.p[dp.names.index(target),:,::600], axis=0))
-        ax[i][1].set_ylim(0,300)
-
+        ax[i][1].set_title("Distance to {}: {}".format(target, i_node))
+        ax[i][1].plot(np.linalg.norm(dp.p[i, :, ::600] - dp.p[dp.names.index(target), :, ::600], axis=0))
+        ax[i][1].set_ylim(0, 300)
 
         ax[i][2].set_title("Distribution of raw trust values from {}".format(i_node))
         with np.errstate(invalid='ignore'):
             sns.boxplot(
-                pd.DataFrame.from_dict({ key: pd.Series(vals) for key,vals in trust[i_node].items()}),
+                pd.DataFrame.from_dict({key: pd.Series(vals) for key, vals in trust[i_node].items()}),
                 ax=ax[i][2], showmeans=True, showbox=False, widths=0.2, linewidth=2)
             ax[i][2].legend()
-            ax[i][2].set_ylim(0,1.0)
+            ax[i][2].set_ylim(0, 1.0)
 
 
         # Harrang Labels
-        if i+1<dp.n:
+        if i + 1 < dp.n:
             plt.setp(ax[i][0].get_xticklabels(), visible=False)
             plt.setp(ax[i][1].get_xticklabels(), visible=False)
             plt.setp(ax[i][2].get_xticklabels(), visible=False)
@@ -291,45 +294,44 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
 
     return f
 
-def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=(16,13)):
 
-    f, ax = plt.subplots(1,1, figsize=figsize)
-    grp=stats.groupby(level='var')[['collisions','tx_counts','rx_counts','enqueued']].mean()
-    grp.index=grp.index.astype(np.float64)
+def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=(16, 13)):
+    f, ax = plt.subplots(1, 1, figsize=figsize)
+    grp = stats.groupby(level='var')[['collisions', 'tx_counts', 'rx_counts', 'enqueued']].mean()
+    grp.index = grp.index.astype(np.float64)
     grp.plot(ax=ax,
-        secondary_y=['collisions'],#subplots=True,
-        grid='on',
-        title="Performance Comparison of Varying {},{} \n(general counts on left, collision counts on right)".format(var,(':'+title if title is not None else ""))
+             secondary_y=['collisions'],  # subplots=True,
+             grid='on',
+             title="Performance Comparison of Varying {},{} \n(general counts on left, collision counts on right)".format(var, (':' + title if title is not None else ""))
     )
-    maxes= stats.groupby(level='var')['rx_counts'].max()
+    maxes = stats.groupby(level='var')['rx_counts'].max()
     maxes.index = maxes.index.astype(np.float64)
     differential = maxes.diff()
     diffmax = differential.argmax()
     maxmax = maxes.argmax()
     ax.axvline(diffmax, alpha=0.2, linestyle=':')
-    ax.text(diffmax,maxes.mean()/2,'d(RX) Heel @ {:.4f}'.format(diffmax), rotation=90)
+    ax.text(diffmax, maxes.mean() / 2, 'd(RX) Heel @ {:.4f}'.format(diffmax), rotation=90)
     ax.axvline(maxmax, alpha=0.2, linestyle=':')
-    ax.text(maxmax,maxes.mean()/2,'RX Max @ {:.4f}'.format(maxmax), rotation=90)
+    ax.text(maxmax, maxes.mean() / 2, 'RX Max @ {:.4f}'.format(maxmax), rotation=90)
     return f
 
-def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize=(16,13)):
 
-
-    f, ax = plt.subplots(1,1, figsize=figsize)
-    packet_error_rates=(stats.rx_counts/stats.tx_counts).groupby(level='var').mean()
+def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize=(16, 13)):
+    f, ax = plt.subplots(1, 1, figsize=figsize)
+    packet_error_rates = (stats.rx_counts / stats.tx_counts).groupby(level='var').mean()
     ax.scatter(list(packet_error_rates.index), packet_error_rates.values)
     ax.set_ylabel("Probability of Timely Arrival")
     ax.set_xlabel(var)
-    ax.set_ylim(0,1)
-    ax.set_title("Probability of Timely Arrival of Varying {},{}".format(var,(':'+title if title is not None else "")))
+    ax.set_ylim(0, 1)
+    ax.set_title("Probability of Timely Arrival of Varying {},{}".format(var, (':' + title if title is not None else "")))
 
     ax.xaxis.set_minor_locator(MultipleLocator(0.005))
     ax.xaxis.set_major_locator(MultipleLocator(0.01))
-    ax.grid(True,which='both')
+    ax.grid(True, which='both')
     return f
 
 
-def lost_packets_by_sender_reciever(tx, figsize=(16,13)):
+def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
     """
     Can be applied either per var, run, or dataset.
     If Delivered is Nan, the packet is stuck in a tx_queue and they can look after that
@@ -337,16 +339,16 @@ def lost_packets_by_sender_reciever(tx, figsize=(16,13)):
     :param tx:
     :return:
     """
-    f, ax = plt.subplots(1,1, figsize=figsize)
+    f, ax = plt.subplots(1, 1, figsize=figsize)
     total_not_queued = tx.delivered.dropna().shape[0]
-    failed_senders=tx.query('delivered == False').groupby(['source']).size()
-    failed_recievers=tx.query('delivered == False').groupby(['dest']).size()
+    failed_senders = tx.query('delivered == False').groupby(['source']).size()
+    failed_recievers = tx.query('delivered == False').groupby(['dest']).size()
 
     ind = np.arange(len(failed_senders.keys()))  # the x locations for the groups
-    width = 0.35       # the width of the bars
+    width = 0.35  # the width of the bars
 
     rects1 = ax.bar(ind, failed_senders, width, color='r')
-    rects2 = ax.bar(ind+width, failed_recievers, width, color='y')
+    rects2 = ax.bar(ind + width, failed_recievers, width, color='y')
 
     ax.axhline(failed_senders.mean(), color='b', alpha=0.5)
     # http://matplotlib.1069221.n5.nabble.com/Label-for-axhline-td39870.html
@@ -359,21 +361,20 @@ def lost_packets_by_sender_reciever(tx, figsize=(16,13)):
     # add some text for labels, title and axes ticks
     ax.set_ylabel('Packets Not Delivered (% of total transmitted)')
     ax.set_title('Lost Packets by Sender and Recepient')
-    ax.set_xticks(ind+width)
-    ax.set_xticklabels( (failed_senders.keys()) )
+    ax.set_xticks(ind + width)
+    ax.set_xticklabels((failed_senders.keys()))
 
     formatter = lambda f, p: "{:.4%}".format(f / float(total_not_queued))
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
 
-    ax.legend( (rects1[0], rects2[0]), ('Source', 'Destination') )
-
+    ax.legend((rects1[0], rects2[0]), ('Source', 'Destination'))
 
 
     def autolabel(rects):
         # attach some text labels
         for rect in rects:
             height = rect.get_height()
-            ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
+            ax.text(rect.get_x() + rect.get_width() / 2., 1.05 * height, '%d' % int(height),
                     ha='center', va='bottom')
 
     autolabel(rects1)
@@ -381,7 +382,8 @@ def lost_packets_by_sender_reciever(tx, figsize=(16,13)):
 
     return f
 
-def trust_perspectives_wrt_observers(trust_frame,title=None, figsize=(16,2)):
+
+def trust_perspectives_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
     :param trust_frame:
@@ -390,21 +392,22 @@ def trust_perspectives_wrt_observers(trust_frame,title=None, figsize=(16,2)):
     groups = trust_frame.groupby(level=['var'])
     n_nodes = trust_frame.shape[1]
 
-    f, ax = plt.subplots(len(groups), n_nodes, figsize=(figsize[0],figsize[1]*len(groups)), sharey=True)
+    f, ax = plt.subplots(len(groups), n_nodes, figsize=(figsize[0], figsize[1] * len(groups)), sharey=True)
     plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
-    for i,(var, group) in enumerate(groups):
-        for j, (jvar,jgroup) in enumerate(group.groupby(level='observer')):
+    for i, (var, group) in enumerate(groups):
+        for j, (jvar, jgroup) in enumerate(group.groupby(level='observer')):
             sns.boxplot(jgroup, ax=ax[i][j], **_boxplot_kwargs)
-            if not i: #first plot
+            if not i:  # first plot
                 ax[i][j].set_title(jvar)
-        map(lambda a:a.set_xlabel(""), ax[i])
-        if i+1 < len(groups):
+        map(lambda a: a.set_xlabel(""), ax[i])
+        if i + 1 < len(groups):
             ax[i][0].set_xlabel("Target")
         ax[i][0].set_ylabel("{:.4f}".format(float(var)))
     f.suptitle("Plots of Per-Node Subjective Trust Values {}\n(Each sub plot is a single nodes trust viewpoint of other nodes)".format(
-        title if title is None else ": "+title
+        title if title is None else ": " + title
     ), fontsize=24)
     return f
+
 
 def trust_perspectives_wrt_targets(trust_frame):
     """
@@ -415,48 +418,48 @@ def trust_perspectives_wrt_targets(trust_frame):
     groups = trust_frame.unstack('observer').stack('target').groupby(level=['var'])
     n_nodes = trust_frame.shape[1]
 
-    f, ax = plt.subplots(len(groups), n_nodes, figsize=(16,2*len(groups)), sharey=True)
+    f, ax = plt.subplots(len(groups), n_nodes, figsize=(16, 2 * len(groups)), sharey=True)
     plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
-    for i,(var, group) in enumerate(groups):
-        for j, (jvar,jgroup) in enumerate(group.groupby(level='target')):
+    for i, (var, group) in enumerate(groups):
+        for j, (jvar, jgroup) in enumerate(group.groupby(level='target')):
             sns.boxplot(jgroup, ax=ax[i][j], **_boxplot_kwargs)
-            if not i: #first plot
+            if not i:  # first plot
                 ax[i][j].set_title(jvar)
-        map(lambda a:a.set_xlabel(""), ax[i])
-        if i+1 < len(groups):
+        map(lambda a: a.set_xlabel(""), ax[i])
+        if i + 1 < len(groups):
             ax[i][0].set_xlabel("Observer")
         ax[i][0].set_ylabel("{:.4f}".format(float(var)))
     f.suptitle("Plots of Per-Node Objective Trust Values\n(Each sub plot is a nodes trust value from the perspective of other nodes)", fontsize=24)
     return f
 
+
 def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
-    f.suptitle("Node Layout and mobility {}".format("for "+title if title is not None else ""))
+    f.suptitle("Node Layout and mobility {}".format("for " + title if title is not None else ""))
     for n, (name, node_p) in enumerate(df.groupby('source')):
-        node_p=pd.DataFrame.from_records(node_p.source_position.values)
-        x,y,z=initial=node_p.iloc[0]
+        node_p = pd.DataFrame.from_records(node_p.source_position.values)
+        x, y, z = initial = node_p.iloc[0]
 
-        ax1.annotate(name, xy=(x, y), xytext=(-20,5),textcoords='offset points', ha='center', va='bottom',\
-            bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),\
-            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
-                            color='red')
-            )
-        ax1.scatter(x,y)
-        ax2.scatter(y,z)
-        ax3.scatter(x,z)
+        ax1.annotate(name, xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom', \
+                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3), \
+                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
+                                     color='red')
+        )
+        ax1.scatter(x, y)
+        ax2.scatter(y, z)
+        ax3.scatter(x, z)
 
-        xs=node_p[0]
-        ys=node_p[1]
-        zs=node_p[2]
-        ax1.plot(xs,ys, alpha=0.6)
-        ax2.plot(ys,zs, alpha=0.6)
-        ax3.plot(xs,zs, alpha=0.6)
+        xs = node_p[0]
+        ys = node_p[1]
+        zs = node_p[2]
+        ax1.plot(xs, ys, alpha=0.6)
+        ax2.plot(ys, zs, alpha=0.6)
+        ax3.plot(xs, zs, alpha=0.6)
         ax4.plot(
-            np.abs(node_p.apply(np.linalg.norm, axis=1)-np.linalg.norm(initial)),
+            np.abs(node_p.apply(np.linalg.norm, axis=1) - np.linalg.norm(initial)),
             label=name,
             alpha=0.6
         )
-
 
     ax1.set_title("X-Y (Top)")
     ax1.set_aspect('equal', adjustable='datalim')
@@ -467,34 +470,34 @@ def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
     ax4.set_title("Distance from initial position (m)")
     ax4.legend(loc='upper center', ncol=3)
     return f
+
 
 def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
-    f.suptitle("Node Layout and mobility {}".format("for "+title if title is not None else ""))
+    f.suptitle("Node Layout and mobility {}".format("for " + title if title is not None else ""))
     for n, (name, node_p) in enumerate(df.groupby(level='node')):
-        x,y,z=initial=node_p.iloc[0]
+        x, y, z = initial = node_p.iloc[0]
 
-        ax1.annotate(name, xy=(x, y), xytext=(-20,5),textcoords='offset points', ha='center', va='bottom',\
-            bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),\
-            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
-                            color='red')
-            )
-        ax1.scatter(x,y)
-        ax2.scatter(y,z)
-        ax3.scatter(x,z)
+        ax1.annotate(name, xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom', \
+                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3), \
+                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
+                                     color='red')
+        )
+        ax1.scatter(x, y)
+        ax2.scatter(y, z)
+        ax3.scatter(x, z)
 
-        xs=node_p.x
-        ys=node_p.y
-        zs=node_p.z
-        ax1.plot(xs,ys, alpha=0.6)
-        ax2.plot(ys,zs, alpha=0.6)
-        ax3.plot(xs,zs, alpha=0.6)
+        xs = node_p.x
+        ys = node_p.y
+        zs = node_p.z
+        ax1.plot(xs, ys, alpha=0.6)
+        ax2.plot(ys, zs, alpha=0.6)
+        ax3.plot(xs, zs, alpha=0.6)
         ax4.plot(
-            np.abs(node_p.apply(np.linalg.norm, axis=1)-np.linalg.norm(initial)),
+            np.abs(node_p.apply(np.linalg.norm, axis=1) - np.linalg.norm(initial)),
             label=name,
             alpha=0.6
         )
-
 
     ax1.set_title("X-Y (Top)")
     ax1.set_aspect('equal', adjustable='datalim')
@@ -506,7 +509,8 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
     ax4.legend(loc='upper center', ncol=3)
     return f
 
-def plot_positions(d, bounds = None):
+
+def plot_positions(d, bounds=None):
     """
     d as a dict of x,y,z positions (list or ndarray)
     bounds as x,y,z extent of the environment
@@ -514,43 +518,44 @@ def plot_positions(d, bounds = None):
     :param bounds:
     :return:
     """
-    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16,12))
-    my_d={}
-    for name,pos in d.items():
-        x,y,z=initial=pos
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 12))
+    my_d = {}
+    for name, pos in d.items():
+        x, y, z = initial = pos
 
-        ax1.annotate(name, xy=(x, y), xytext=(-10,5),textcoords='offset points', ha='center', va='bottom',\
-            bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),\
-            arrowprops=dict(arrowstyle='->', \
-                            color='red')
-            )
-        ax1.scatter(x,y)
-        ax2.scatter(y,z)
-        ax3.scatter(x,z)
-        my_d[name]=initial
+        ax1.annotate(name, xy=(x, y), xytext=(-10, 5), textcoords='offset points', ha='center', va='bottom', \
+                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3), \
+                     arrowprops=dict(arrowstyle='->', \
+                                     color='red')
+        )
+        ax1.scatter(x, y)
+        ax2.scatter(y, z)
+        ax3.scatter(x, z)
+        my_d[name] = initial
 
     if bounds is not None:
         from matplotlib.patches import Rectangle
-        x,y,z = bounds
-        ax1.add_patch(Rectangle((0,0), x, y, facecolor="grey", alpha=0.2))
-        ax2.add_patch(Rectangle((0,0), y, z, facecolor="grey", alpha=0.2))
-        ax3.add_patch(Rectangle((0,0), x, y, facecolor="grey", alpha=0.2))
 
-    ax1.set_ylim((-50,y+50))
-    ax2.set_ylim((-50,z+50))
+        x, y, z = bounds
+        ax1.add_patch(Rectangle((0, 0), x, y, facecolor="grey", alpha=0.2))
+        ax2.add_patch(Rectangle((0, 0), y, z, facecolor="grey", alpha=0.2))
+        ax3.add_patch(Rectangle((0, 0), x, y, facecolor="grey", alpha=0.2))
+
+    ax1.set_ylim((-50, y + 50))
+    ax2.set_ylim((-50, z + 50))
     ax2.invert_yaxis()
-    ax3.set_ylim((-50,y+50))
+    ax3.set_ylim((-50, y + 50))
     ax3.invert_yaxis()
 
-    ax1.set_xlim((-50,x+50))
-    ax2.set_xlim((-50,y+50))
-    ax3.set_xlim((-50,x+50))
+    ax1.set_xlim((-50, x + 50))
+    ax2.set_xlim((-50, y + 50))
+    ax3.set_xlim((-50, x + 50))
 
     ax4.set_visible(False)
 
     area = area_of_centroid(my_d)
     avg_dist = avg_range(my_d)
-    f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(avg_dist,area), fontsize=18)
+    f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(avg_dist, area), fontsize=18)
     ax1.set_title("X-Y (Top)")
     ax1.set_aspect('equal', adjustable='datalim')
     ax2.set_title("Y-Z (Side)")
@@ -560,13 +565,15 @@ def plot_positions(d, bounds = None):
 
     return f
 
+
 def area_of_centroid(d):
-    df=pd.DataFrame.from_dict({k:v for k,v in d.items()}, orient='index')
-    extent=abs(df.min()-df.max())
-    if extent[0]<0:
+    df = pd.DataFrame.from_dict({k: v for k, v in d.items()}, orient='index')
+    extent = abs(df.min() - df.max())
+    if extent[0] < 0:
         return np.prod(extent.values)
     else:
         return np.prod(extent.values[0:2])
+
 
 def avg_range(d):
     return np.average(squareform(pdist(np.asarray(d.values()))))

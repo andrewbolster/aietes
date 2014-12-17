@@ -25,7 +25,6 @@ import RoutingLayer as Net
 
 
 class Layercake():
-
     """
     Defines the Four relevant network layers for a given node
     PHY,MAC,Network,Application
@@ -53,8 +52,8 @@ class Layercake():
         ###
         # App Signal Handlers
         ###
-        self.tx_good_signal_hdlrs=[]
-        self.tx_lost_signal_hdlrs=[]
+        self.tx_good_signal_hdlrs = []
+        self.tx_lost_signal_hdlrs = []
 
         ##############################
         # PHY
@@ -89,7 +88,7 @@ class Layercake():
         net_mod = getattr(Net, str(config['net']))
         self.net = net_mod(self, config['Network'])
         # except AttributeError as e:
-        #    raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
+        # raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
 
     def activate(self, rx_handler=None):
         """

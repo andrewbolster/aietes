@@ -25,16 +25,15 @@ import polybos
 
 
 class ExperimentGeneration(unittest.TestCase):
-
     def testRatioExperimentGeneration(self):
         """Basic tests of polybos experiment generation"""
         count = 4
         behaviour = "Flock"
-        e=polybos.ExperimentManager(node_count=count)
+        e = polybos.ExperimentManager(node_count=count)
         e.addRatioScenarios(behaviour)
         self.assertEqual(len(e.scenarios), count + 1)
-        v,s = e.scenarios.items()[count / 2]
-        self.assertEqual(len(s.getBehaviourDict()[behaviour]), int(count*float(re.split('\(|\)|\%',v)[1])/100.0))
+        v, s = e.scenarios.items()[count / 2]
+        self.assertEqual(len(s.getBehaviourDict()[behaviour]), int(count * float(re.split('\(|\)|\%', v)[1]) / 100.0))
 
     def testRuntimeModification(self):
         """Ensure that polybos appropriatly propogates simulation time using the run method"""
@@ -42,15 +41,15 @@ class ExperimentGeneration(unittest.TestCase):
         runcount = 1
         runtime = 10
         behaviour = "Flock"
-        e=polybos.ExperimentManager(node_count=count)
+        e = polybos.ExperimentManager(node_count=count)
         e.addRatioScenarios(behaviour)
         e.run(runcount=runcount,
               runtime=runtime,
               retain_data=True)
-        for k,v in e.scenarios.items():
-            self.assertEqual(v.datarun[0].tmax,runtime,
+        for k, v in e.scenarios.items():
+            self.assertEqual(v.datarun[0].tmax, runtime,
                              "Simulation time ({}) should match requested time ({})".format(
-                                 v.datarun[0].tmax,runtime))
+                                 v.datarun[0].tmax, runtime))
 
     def testRuntimeModificationParallel(self):
         """Ensure that polybos appropriatly propogates simulation time using the run method"""
@@ -58,24 +57,24 @@ class ExperimentGeneration(unittest.TestCase):
         runcount = 1
         runtime = 10
         behaviour = "Flock"
-        e=polybos.ExperimentManager(node_count=count, parallel=True)
+        e = polybos.ExperimentManager(node_count=count, parallel=True)
         e.addRatioScenarios(behaviour)
         e.run(runcount=runcount,
               runtime=runtime,
               retain_data=True)
-        for k,v in e.scenarios.items():
-            self.assertEqual(v.datarun[0].tmax,runtime,
+        for k, v in e.scenarios.items():
+            self.assertEqual(v.datarun[0].tmax, runtime,
                              "Simulation time ({}) should match requested time ({})".format(
-                                 v.datarun[0].tmax,runtime))
+                                 v.datarun[0].tmax, runtime))
 
-    #@unittest.skipIf(os.name == 'nt', "Skipping MultiCore test as it appears to be broken under Windows...")
+    # @unittest.skipIf(os.name == 'nt', "Skipping MultiCore test as it appears to be broken under Windows...")
     def testParSim(self):
         """ Test Multiprocessing Execution """
         count = 4
         runcount = 4
         runtime = 10
         behaviour = "Flock"
-        e=polybos.ExperimentManager(node_count=count, parallel=True)
+        e = polybos.ExperimentManager(node_count=count, parallel=True)
         e.addRatioScenarios(behaviour)
         e.run(runcount=runcount,
               runtime=runtime)
@@ -83,16 +82,16 @@ class ExperimentGeneration(unittest.TestCase):
         self.assertEqual(len(e.scenarios), count + 1,
                          "Scenarios count for behaviour ratio should be node_count ({}) + 1, is {}".format(
                              count, len(e.scenarios)))
-        self.assertIsInstance(multistats,dict,
+        self.assertIsInstance(multistats, dict,
                               "MultiStats should be a Dict, is type {}".format(
                                   type(multistats)))
         self.assertEqual(len(multistats), len(e.scenarios),
                          "Multistats({}) should be same length as scenarios({})".format(
                              len(multistats), len(e.scenarios)))
-        for runname,stats in multistats.iteritems():
+        for runname, stats in multistats.iteritems():
             self.assertEqual(len(stats), runcount,
                              "N of stats for {} ({}) should match runcount ({})".format(
-                                 runname,len(stats),runcount))
+                                 runname, len(stats), runcount))
 
     def testSimulationStatsQuery(self):
         """ Test that generateSimulationStats does single and multiple query responses based on data"""
@@ -100,7 +99,7 @@ class ExperimentGeneration(unittest.TestCase):
         runcount = 2
         runtime = 10
         behaviour = "Flock"
-        e=polybos.ExperimentManager(node_count=count)
+        e = polybos.ExperimentManager(node_count=count)
         e.addRatioScenarios(behaviour)
         e.run(runcount=runcount,
               runtime=runtime)

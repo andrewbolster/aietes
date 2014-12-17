@@ -30,6 +30,7 @@ logging.basicConfig(format=FORMAT,
 
 log = logging.getLogger()
 
+
 def get_valid_metric(metric):
     """
     Returns an instantiated, valid, metric if possible.
@@ -58,6 +59,7 @@ def get_valid_metric(metric):
         raise ValueError("No Metric! Cannot Contine")
     return metric
 
+
 def hdf_process_kickstart(logstore, directory, keys):
     """
     Helper Function for HDF processing methods providing
@@ -76,8 +78,8 @@ def hdf_process_kickstart(logstore, directory, keys):
         keystring = keys
 
     if directory:
-        #base path already exists so subdir
-        path = os.path.join(directory,keystring)
+        # base path already exists so subdir
+        path = os.path.join(directory, keystring)
         os.makedirs(path, exist_ok=True)
     else:
         # Spam all the directories
@@ -86,11 +88,12 @@ def hdf_process_kickstart(logstore, directory, keys):
 
     with pd.get_store as store:
         if isinstance(keys, list):
-            df = {k:store.get(k) for k in keys}
+            df = {k: store.get(k) for k in keys}
         else:
             df = store.get(keys)
 
     return keystring, df, path
+
 
 def process_all_logstore_graphics(logstore, title, directory=None):
     """
@@ -116,7 +119,8 @@ def process_all_logstore_graphics(logstore, title, directory=None):
         except:
             log.exception("Failed on {}".format(process.__name__))
 
-def process_stats_logstore_graphics(logstore,title,directory=None):
+
+def process_stats_logstore_graphics(logstore, title, directory=None):
     """
     Coordinate large-run processing for memory efficiency (i.e. all trust at once, all tx/rx at once, etc
     Targeted at the HDFstore log storage containing
@@ -130,6 +134,7 @@ def process_stats_logstore_graphics(logstore,title,directory=None):
 
     CB.performance_summary_for_variable_packet_rates(df)
 
+
 def process_rx_logstore_graphics(logstore, title, directory=None):
     """
     Coordinate large-run processing for memory efficiency (i.e. all trust at once, all tx/rx at once, etc
@@ -141,6 +146,7 @@ def process_rx_logstore_graphics(logstore, title, directory=None):
     :return:
     """
     keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
+
 
 def process_tx_logstore_graphics(logstore, title, directory=None):
     """
@@ -155,6 +161,7 @@ def process_tx_logstore_graphics(logstore, title, directory=None):
     keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
     CB.lost_packets_by_sender_reciever(df)
 
+
 def process_tx_queue_logstore_graphics(logstore, title, directory=None):
     """
     Coordinate large-run processing for memory efficiency (i.e. all trust at once, all tx/rx at once, etc
@@ -167,6 +174,7 @@ def process_tx_queue_logstore_graphics(logstore, title, directory=None):
     """
     keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
 
+
 def process_trust_logstore_graphics(logstore, title, directory=None):
     """
     Coordinate large-run processing for memory efficiency (i.e. all trust at once, all tx/rx at once, etc
@@ -177,4 +185,4 @@ def process_trust_logstore_graphics(logstore, title, directory=None):
     :param directory: assumes pwd if not given AND valid
     :return:
     """
-    keystring, dfs, path = hdf_process_kickstart(logstore, directory, ['trust','trust_associates'])
+    keystring, dfs, path = hdf_process_kickstart(logstore, directory, ['trust', 'trust_associates'])

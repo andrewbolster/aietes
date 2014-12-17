@@ -28,6 +28,7 @@ import bounos
 import bounos.ChartBuilders
 from aietes.Tools import _results_dir as default_results_dir
 
+
 class ChartBuilders(unittest.TestCase):
     def setUp(self):
         """
@@ -89,6 +90,6 @@ class ChartBuilders(unittest.TestCase):
         if not self.dp.has_trust_data():
             raise unittest.SkipTest("Latest DataPackage has no Trust data: {}".format(self.dp.title))
 
-        test_figure = bounos.ChartBuilders.combined_trust_observation_summary(self.dp, target = self.dp.names[1])
+        test_figure = bounos.ChartBuilders.combined_trust_observation_summary(self.dp, target=self.dp.names[1])
         self.assertIsInstance(test_figure, Figure)
 

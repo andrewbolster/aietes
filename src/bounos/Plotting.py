@@ -17,6 +17,7 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import matplotlib
+
 matplotlib.warn = False
 # matplotlib.use('module://mplh5canvas.backend_h5canvas')
 import matplotlib.backends.backend_wxagg
@@ -39,7 +40,7 @@ def interactive_plot(data):
     gs = GridSpec(9, 16)
     ax = plt.subplot(gs[:-1, 1:], projection='3d')
     axH = plt.subplot(gs[:, 0])
-    #    axB = plt.subplot(gs[-1,1:])
+    # axB = plt.subplot(gs[-1,1:])
 
     # Find initial display state for viewport
     lines = [ax.plot(xs, ys, zs)[0] for xs, ys, zs in data.p]
@@ -179,7 +180,7 @@ def KF_metric_plot(metric):
     # You can use the Kalman Filter immediately without fitting, but its estimates
     # may not be as good as if you fit first.
 
-    #states_pred = kf.em(observations, n_iter=data.tmax).smooth(observations)
+    # states_pred = kf.em(observations, n_iter=data.tmax).smooth(observations)
     # print 'fitted model: %s' % (kf,)
 
     # Plot lines for the observations without noise, the estimated position of the

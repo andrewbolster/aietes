@@ -30,7 +30,6 @@ from time import time
 import pickle, cPickle
 from gi.repository import Notify
 
-
 import numpy as np
 from numpy.random import poisson
 from configobj import ConfigObj
@@ -63,8 +62,8 @@ _config_spec = '%s/configs/default.conf' % _ROOT
 _results_dir = '%s/../../results/' % _ROOT
 _config_dir = "%s/configs/" % _ROOT
 
-class SimTimeFilter(logging.Filter):
 
+class SimTimeFilter(logging.Filter):
     """
     Brings Sim.now() into usefulness
     """
@@ -90,17 +89,17 @@ log_hdl = logging.StreamHandler()
 log_hdl.setFormatter(log_fmt)
 log_hdl.addFilter(SimTimeFilter())
 
+
 def notify_desktop(message):
     try:
         if not Notify.is_initted():
-            Notify.init ("AIETES Simulation")
-        Notify.Notification.new ("AIETES Simulation",message,"dialog-information").show()
+            Notify.init("AIETES Simulation")
+        Notify.Notification.new("AIETES Simulation", message, "dialog-information").show()
     except:
         pass
 
 
 class ConfigError(Exception):
-
     """
     Raised when a configuration cannot be validated through ConfigObj/Validator
     Contains a 'status' with the boolean dict representation of the error
@@ -336,7 +335,7 @@ def Attenuation(f, d):
     # the frequency
     if f > 1:
         absorption_coeff = 0.11 * \
-            (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
+                           (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
     else:
         absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
 
@@ -517,7 +516,6 @@ class dotdictify(dict):
 
 
 class dotdict(dict):
-
     def __init__(self, arg, **kwargs):
         super(dotdict, self).__init__(**kwargs)
         for k in arg.keys():
@@ -537,7 +535,6 @@ class dotdict(dict):
 
 
 class memory_entry():
-
     def __init__(self, object_id, position, velocity, distance=None, name=None):
         self.object_id = object_id
         self.name = name
@@ -550,7 +547,6 @@ class memory_entry():
 
 
 class map_entry():
-
     def __init__(self, object_id, position, velocity, name=None, distance=None):
         self.object_id = object_id
         self.position = position
@@ -562,24 +558,29 @@ class map_entry():
     def __repr__(self):
         return "%s:%s:%s" % (self.object_id, self.position, self.time)
 
+
 class AutoSyncShelf(DbfilenameShelf):
     # default to newer pickle protocol and writeback=True
     def __init__(self, filename, protocol=2, writeback=True):
         DbfilenameShelf.__init__(self, filename, protocol=protocol, writeback=writeback)
+
     def __setitem__(self, key, value):
         if isinstance(key, int):
-            key=str(key)
+            key = str(key)
         DbfilenameShelf.__setitem__(self, key, value)
         self.sync()
-    def __getitem__(self,key):
+
+    def __getitem__(self, key):
         if isinstance(key, int):
-            key=str(key)
+            key = str(key)
         return DbfilenameShelf.__getitem__(self, key)
+
     def __delitem__(self, key):
         if isinstance(key, int):
-            key=str(key)
+            key = str(key)
         DbfilenameShelf.__delitem__(self, key)
         self.sync()
+
 
 def fudge_normal(value, stdev):
     # Override
@@ -742,10 +743,12 @@ def unext(filename):
 def kwarger(**kwargs):
     return kwargs
 
+
 def unCpickle(filename):
     with open(filename, 'rb') as f:
         data = cPickle.load(f)
     return data
+
 
 def mkCpickle(filename, object):
     with open(filename, 'wb') as f:
@@ -757,6 +760,7 @@ def unpickle(filename):
     with open(filename, 'rb') as f:
         data = pickle.load(f)
     return data
+
 
 def mkpickle(filename, object):
     with open(filename, 'wb') as f:
@@ -782,6 +786,7 @@ def results_file(proposed_name, results_dir=None):
         proposed_name = os.path.join(results_dir, proposed_name)
     return proposed_name
 
+
 def getConfig(source_config_file=None, config_spec=_config_spec):
     """
     Get a configuration, either using default values from aietes.configs or
@@ -789,7 +794,7 @@ def getConfig(source_config_file=None, config_spec=_config_spec):
     """
     # If file is defined but not a file then something is wrong
     if source_config_file and not os.path.isfile(source_config_file):
-        if os.path.isfile(os.path.join(_config_dir,source_config_file)):
+        if os.path.isfile(os.path.join(_config_dir, source_config_file)):
             source_config_file = os.path.join(_config_dir, source_config_file)
         else:
             raise ConfigError("Given Source File {} is not present in {}".format(
@@ -806,6 +811,7 @@ def getConfig(source_config_file=None, config_spec=_config_spec):
             raise RuntimeError("Configspec doesn't match given input structure: %s"
                                % source_config_file)
     return config
+
 
 def validateConfig(config=None, final_check=False):
     """
@@ -918,6 +924,7 @@ _proc_status = '/proc/%d/status' % os.getpid()
 _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
           'KB': 1024.0, 'MB': 1024.0 * 1024.0}
 
+
 def _VmB(VmKey):
     '''Private.
     '''
@@ -935,7 +942,7 @@ def _VmB(VmKey):
     if len(v) < 3:
         return 0.0  # invalid format?
         # convert Vm value to bytes
-    return float(v[1]) * _scale[v[2]] / (1024*1024)
+    return float(v[1]) * _scale[v[2]] / (1024 * 1024)
 
 
 def memory(since=0.0):
@@ -943,10 +950,12 @@ def memory(since=0.0):
     '''
     return _VmB('VmSize:') - since
 
+
 def swapsize(since=0.0):
     '''Return memory usage in Megabytes.
     '''
     return _VmB('VmSwap:') - since
+
 
 def resident(since=0.0):
     '''Return resident memory usage in Megabytes.
@@ -960,32 +969,34 @@ def stacksize(since=0.0):
     return _VmB('VmStk:') - since
 
 
-def literal_eval_walk(node,tabs=0):
+def literal_eval_walk(node, tabs=0):
     for key, item in node.items():
-        if isinstance(item,dict):
+        if isinstance(item, dict):
             try:
                 literal_eval(str(item))
             except:
-                print '*'*tabs,key
-                tabs+=1
-                literal_eval_walk(item,tabs)
-                tabs-=1
+                print '*' * tabs, key
+                tabs += 1
+                literal_eval_walk(item, tabs)
+                tabs -= 1
         else:
             try:
                 literal_eval(str(item))
 
             except:
-                print '*'*tabs,key,"EOL FAIL"
+                print '*' * tabs, key, "EOL FAIL"
 
 
 from cStringIO import StringIO
 import sys
+
 
 class Capturing(list):
     def __enter__(self):
         self._stdout = sys.stdout
         sys.stdout = self._stringio = StringIO()
         return self
+
     def __exit__(self, *args):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout

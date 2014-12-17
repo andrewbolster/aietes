@@ -38,7 +38,6 @@ from aietes.Tools import timeit, mag
 
 # noinspection PyStringFormat
 class VisualNavigator(wx.Panel):
-
     @timeit()
     def __init__(self, parent, frame, *args, **kw):
         wx.Panel.__init__(self, parent, *args, **kw)
@@ -411,7 +410,7 @@ class VisualNavigator(wx.Panel):
                                                                     alpha=self.sphere_opacity,
                                                                     color=self.plot_sphere_cm(
                                                                         colorval)
-                                                                    )
+        )
 
     def redraw_fleet_heading_vectors(self):
         self._remove_vectors(self.node_vector_collections)
@@ -693,7 +692,6 @@ class VisualNavigator(wx.Panel):
 
 
 class DriftingNavigator(VisualNavigator):
-
     def initialise_3d_plot(self):
         VisualNavigator.initialise_3d_plot(self)
         # Get Drift Plot info

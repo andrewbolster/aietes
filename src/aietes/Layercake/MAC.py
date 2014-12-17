@@ -55,7 +55,6 @@ def SetupMAC(node, config):
 
 
 class ALOHA:
-
     """ALOHA:  A very simple MAC Algorithm
     """
 
@@ -263,7 +262,7 @@ class ALOHA:
         self.level = self.outgoing_packet_queue[0]["level"]
         self.T = self.layercake.phy.level2delay(self.level)
         self.t_data = self.outgoing_packet_queue[0][
-            "length"] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                          "length"] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         self.timeout = 2 * self.T + 2 * self.t_data
 
         # Before transmitting, we check if the channel is idle
@@ -293,7 +292,6 @@ class ALOHA:
 
 
 class ALOHA4FBR(ALOHA):
-
     """ CS-ALOHA adapted for the FBR protocol.
     """
 
@@ -419,7 +417,7 @@ class ALOHA4FBR(ALOHA):
 
             if debug:
                 self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[
-                                  0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
+                    0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
 
             self.layercake.phy.TransmitPacket(RTSPacket)
 
@@ -487,9 +485,9 @@ class ALOHA4FBR(ALOHA):
         The routing layer decides.
         """
         self.valid_candidates[self.incoming_packet["through"]] = (
-            Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+                                                                     Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
         self.logger.debug("Appending CTS to " + self.incoming_packet[
-                          "source"] + " coming from " + self.incoming_packet["through"])
+            "source"] + " coming from " + self.incoming_packet["through"])
         self.layercake.net.AddNode(
             self.incoming_packet["through"], self.incoming_packet["through_position"])
 
@@ -540,7 +538,7 @@ class ALOHA4FBR(ALOHA):
         """ Real Transmission of the Packet.
         """
         self.layercake.net.Update(self.outgoing_packet_queue[0]["dest"], self.outgoing_packet_queue[0][
-                                  "dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
+            "dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
         ALOHA.Transmit(self)
 
     def CanIHelp(self, packet):
@@ -586,7 +584,6 @@ class ALOHA4FBR(ALOHA):
 
 
 class DACAP:
-
     """DACAP : Distance Aware Collision Avoidance Protocol coupled with power control
     """
 
@@ -625,7 +622,7 @@ class DACAP:
         self.Tw_min = config["twminper"]
 
         self.t_control = self.rts_packet_length / \
-            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                         (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
         self.deltaTData = config["deltatdata"]
         self.deltaD = config["deltadt"]
@@ -840,7 +837,7 @@ class DACAP:
         self.last_packet = self.incoming_packet
 
         self.t_data = self.incoming_packet[
-            'length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                          'length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         T = self.layercake.phy.level2delay(self.incoming_packet['level'])
 
         # If I am here, that means that I already was in the backoff state. I
@@ -932,7 +929,7 @@ class DACAP:
 
             if debug:
                 self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[
-                                  0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
+                    0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
 
             self.level = self.outgoing_packet_queue[0]["level"]
             self.T = self.layercake.phy.level2delay(self.level)
@@ -1025,7 +1022,7 @@ class DACAP:
         """ The CTS has been received.
         """
         self.logger.debug("CTS from " + self.incoming_packet[
-                          "source"] + " coming from " + self.incoming_packet["through"] + " properly received.")
+            "source"] + " coming from " + self.incoming_packet["through"] + " properly received.")
 
         # Update the timer: 1.-Stop, 2.-Restart
         p = Sim.Process()
@@ -1273,7 +1270,7 @@ class DACAP:
 
     def Transmit(self):
         self.logger.debug("Transmit to " + self.outgoing_packet_queue[0][
-                          "dest"] + " through " + self.outgoing_packet_queue[0]["through"])
+            "dest"] + " through " + self.outgoing_packet_queue[0]["through"])
         self.layercake.phy.TransmitPacket(self.outgoing_packet_queue[0])
 
         timeout = self.TimeOut("ACK", self.T)
@@ -1284,7 +1281,6 @@ class DACAP:
 
 
 class DACAP4FBR(DACAP):
-
     """DACAP for FBR: adaptation of DACAP with power control to couple it with FBR
     """
 
@@ -1441,9 +1437,9 @@ class DACAP4FBR(DACAP):
         The routing layer decides.
         """
         self.valid_candidates[self.incoming_packet["through"]] = (
-            Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+                                                                     Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
         self.logger.debug("Appending CTS to " + self.incoming_packet[
-                          "source"] + " coming from " + self.incoming_packet["through"])
+            "source"] + " coming from " + self.incoming_packet["through"])
         self.layercake.net.AddNode(
             self.incoming_packet["through"], self.incoming_packet["through_position"])
 
@@ -1510,7 +1506,7 @@ class DACAP4FBR(DACAP):
         """ Real Transmission of the Packet.
         """
         self.layercake.net.Update(self.outgoing_packet_queue[0]["dest"], self.outgoing_packet_queue[0][
-                                  "dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
+            "dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
         DACAP.Transmit(self)
 
     def OverHearing(self):
@@ -1615,7 +1611,6 @@ class DACAP4FBR(DACAP):
 
 
 class CSMA:
-
     """CSMA: Carrier Sensing Multiple Access - Something between ALOHA and DACAP
 
     This implementation is extremely close to MACA (Karn 1990)
@@ -1654,9 +1649,9 @@ class CSMA:
         # Timing parameters
         self.T = 0  # It will be adapted according to the transmission range
         self.t_data = self.data_packet_length / \
-            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                      (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         self.t_control = self.rts_packet_length / \
-            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                         (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
     def activate(self):
         Sim.activate(self.timer, self.timer.Lifecycle(self.TimerRequest))
@@ -1760,7 +1755,7 @@ class CSMA:
         self.fsm.add_transition("send_DATA", "BACKOFF", self.QueueData, "BACKOFF")
         self.fsm.add_transition("got_RTS", "BACKOFF", self.ProcessRTS, "BACKOFF")
         # self.fsm.add_transition("got_CTS", "BACKOFF", self.IgnoreCTS,"BACKOFF")  ### This line is more important that what it seems: if we ignore it, we tend to defer all transmissions.
-        self.fsm.add_transition("got_CTS", "BACKOFF", self.Transmit, "WAIT_ACK")        # This line is more important that what it seems: if we Accept it, we tend to make all transmissions.
+        self.fsm.add_transition("got_CTS", "BACKOFF", self.Transmit, "WAIT_ACK")  # This line is more important that what it seems: if we Accept it, we tend to make all transmissions.
         self.fsm.add_transition("got_DATA", "BACKOFF", self.CheckPendingData, "BACKOFF")
         # Be careful with this
         self.fsm.add_transition("got_ACK", "BACKOFF", self.CheckPendingACK, "READY_WAIT")
@@ -1992,7 +1987,7 @@ class CSMA:
         """ The CTS has been received.
         """
         self.logger.debug("CTS from " + self.incoming_packet[
-                          "source"] + " coming from " + self.incoming_packet["through"] + " properly received.")
+            "source"] + " coming from " + self.incoming_packet["through"] + " properly received.")
 
         # Update the timer: 1.-Stop, 2.-Restart
         p = Sim.Process()
@@ -2282,7 +2277,6 @@ class CSMA:
 
 
 class FAMA(CSMA):
-
     """
     Floor Acquisition Multiple Access
 
@@ -2329,7 +2323,6 @@ class FAMA(CSMA):
 
 
 class CSMA4FBR(CSMA):
-
     """CSMA for FBR: adaptation of CSMA with power control to couple it with FBR
     """
 
@@ -2437,7 +2430,7 @@ class CSMA4FBR(CSMA):
         The routing layer decides.
         """
         self.valid_candidates[self.incoming_packet["through"]] = (
-            Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+                                                                     Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
         if debug > 1:
             self.logger.debug("Appending CTS to {src} coming from {thru}@{pos}".format(
                 src=self.incoming_packet["source"],
@@ -2511,7 +2504,7 @@ class CSMA4FBR(CSMA):
                     id=self.outgoing_packet_queue[0]['ID'],
                     dest=self.outgoing_packet_queue[0]['dest'],
                     dist=distance(self.outgoing_packet_queue[0][
-                        'dest_position'], self.layercake.get_current_position()),
+                                      'dest_position'], self.layercake.get_current_position()),
                 ))
             self.fsm.process("retransmit")
 

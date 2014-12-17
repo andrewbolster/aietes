@@ -29,7 +29,6 @@ Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
 
 
 class Environment():
-
     """
     Environment Class representing the physical environment inc any objects
     / activities within that environment that are not controlled by the
@@ -149,13 +148,13 @@ class Environment():
             raise RuntimeError("Invalid Position Update from {name}@{time}:{pos}".format(name=object_name,
                                                                                          time=t,
                                                                                          pos=position)
-                               )
+            )
 
         # debug=True
         if t < self.simulation.duration_intervals:
             try:
                 assert self.map[
-                    object_id].position is not position, "Attempted direct obj=obj comparison"
+                           object_id].position is not position, "Attempted direct obj=obj comparison"
                 update_distance = distance(
                     self.map[object_id].position, position)
                 if debug:
@@ -176,7 +175,7 @@ class Environment():
                                     position=position,
                                     object_id=object_id,
                                     time=t
-                                    ))
+            ))
         else:
             self.logger.debug(
                 "Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t, t, t + 1))

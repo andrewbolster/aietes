@@ -18,8 +18,6 @@ __email__ = "me@andrewbolster.info"
 
 __author__ = 'andrewbolster'
 
-
-
 import numpy as np
 from pandas.stats.moments import ewma
 
@@ -237,7 +235,7 @@ def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs)
             for culprit, times in misbehavors.iteritems():
                 deviance_accumulator[m, np.array(times), culprit] = (
                     np.abs(np.divide(deviance[np.array(times), culprit], stddev[
-                           np.array(times)].clip(min=np.finfo(np.float64).eps)))
+                        np.array(times)].clip(min=np.finfo(np.float64).eps)))
                 )
         else:
             for culprit in xrange(n_nodes):
@@ -281,12 +279,12 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
             print("Untrustworthy behaviour detected")
             if names is None:
                 print("\n".join(["%s:%d(%f)" % (metrics[i].label, m_subtot, detection_totals[
-                      i]) for i, m_subtot in enumerate(detection_subtot)]))
+                    i]) for i, m_subtot in enumerate(detection_subtot)]))
                 print("Prime Suspect:%s:%s" % (
                     prime_distrusted_node, str(trust_average[prime_distrusted_node])))
             else:
                 print("\n".join(["%s:%s(%f)" % (metrics[i].label, names[
-                      m_subtot], detection_totals[i]) for i, m_subtot in enumerate(detection_subtot)]))
+                    m_subtot], detection_totals[i]) for i, m_subtot in enumerate(detection_subtot)]))
                 print("Prime Suspect:%s:%s" % (
                     names[prime_distrusted_node], str(trust_average[prime_distrusted_node])))
     result = {"suspect": prime_distrusted_node,

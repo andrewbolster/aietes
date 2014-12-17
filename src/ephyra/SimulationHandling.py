@@ -27,7 +27,6 @@ from threading import *
 
 
 class WorkerThread(Thread):
-
     """Worker Thread Class."""
 
     def __init__(self, notify_window):

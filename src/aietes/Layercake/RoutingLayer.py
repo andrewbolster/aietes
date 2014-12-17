@@ -44,7 +44,6 @@ def SetupRouting(node, config):
 
 
 class SimpleRoutingTable(dict):
-
     def __init__(self, layercake, config):
         dict.__init__(self)
         self.layercake = layercake
@@ -132,7 +131,6 @@ RoutingEntry = collections.namedtuple("RoutingEntry",
 
 
 class DSDV(SimpleRoutingTable):
-
     """
     Destination Sequenced Discance Vector protocol uses the Bellnman Ford Algo. to calculate paths based on hop-lengths
 
@@ -215,7 +213,6 @@ class DSDV(SimpleRoutingTable):
 
 
 class Static(SimpleRoutingTable):
-
     ''' Note that it has not sense to use static routes when the network has mobile nodes. For MAC, CS-ALOHA or DACAP should be used.
         Variation 0: approximation to the transmission cone
         Variation 1: approximation to the receiver cone
@@ -649,7 +646,6 @@ class Static(SimpleRoutingTable):
 
 
 class FBR(SimpleRoutingTable):
-
     ''' In this case, DACAP4FBR should be selected as MAC protocol.
         Variation 0: Transmission cone
         Variation 1: Reception cone (transmission cone with big apperture)
@@ -722,7 +718,7 @@ class FBR(SimpleRoutingTable):
                 self.layercake.phy.level2delay(self.incoming_packet['level'])
             except KeyError:
                 self.logger.debug("WARNING: route to destination " + self.incoming_packet[
-                                  "dest"] + " not specified for " + self.layercake.hostname + ". Starting Discovery Process")
+                    "dest"] + " not specified for " + self.layercake.hostname + ". Starting Discovery Process")
                 self.incoming_packet["through"] = "ANY0"
                 self.incoming_packet["through_position"] = 0
                 self.incoming_packet["level"] = 0
@@ -770,8 +766,6 @@ class FBR(SimpleRoutingTable):
                 new_level = level
 
         return new_level
-
-
 
 
     def CloserSink(self):
@@ -912,7 +906,7 @@ class FBR(SimpleRoutingTable):
             for name, de in candidates.iteritems():
                 if ener[max_ee] > 0:
                     score[name] = dist[name] / dist[max_dd] + \
-                        ener[name] / ener[max_ee]
+                                  ener[name] / ener[max_ee]
                 else:
                     score[name] = dist[name] / dist[max_dd]
 
