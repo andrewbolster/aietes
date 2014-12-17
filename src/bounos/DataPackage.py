@@ -104,7 +104,7 @@ class DataPackage(object):
             self.additional = None
         # This method may fail miserable is sink and source are named
         # differently
-        elif sink in ['data_rate', 'plr', 'delay', 'rssi']:
+        elif sink in ['comms', 'data_rate', 'plr', 'delay', 'rssi']:
             setattr(self, sink, None)
 
         else:
@@ -197,9 +197,9 @@ class DataPackage(object):
         self.tmax = len(self.p[0][0])
         self.n = len(self.p)
 
-    def write(self, filename=None, track_mat=False):
+    def write(self, filename=None, results_dir=None, track_mat=False):
         logging.info(
-            "Writing datafile to {}.npz".format(results_file(filename)))
+            "Writing datafile to {}.npz".format(results_file(filename, results_dir=results_dir)))
 
         data = {i: self.__dict__[
             i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}

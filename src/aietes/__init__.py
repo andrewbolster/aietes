@@ -587,9 +587,7 @@ class Simulation():
         dp = DataPackage(**(self.currentState()))
 
         filename = outputFile if outputFile is not None else dp.title
-        if outputPath is not None:
-            filename = os.path.join(outputPath, filename)
-        filename = "%s.aietes" % results_file(filename)
+        filename = "%s.aietes" % results_file(filename, results_dir=outputPath)
         return_dict = {}
 
         if movieFile or plot or gif:
@@ -651,7 +649,7 @@ def go(options, args=None):
     if options.movie or options.data or options.gif:
         print("Storing output in %s" % sim.title)
         sim.postProcess(inputFile=options.input, outputFile=sim.title, dataFile=options.data,
-                        movieFile=options.movie, gif=options.gif, fps=options.fps)
+                        movieFile=options.movie, gif=options.gif, fps=options.fps, outputPath=options.outputPath)
 
     if options.plot:
         sim.postProcess(

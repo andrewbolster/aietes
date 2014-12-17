@@ -17,17 +17,29 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 """Unit tests for bounos"""
-
+import logging
 import unittest
 import tempfile
 import os.path
 
 import numpy as np
 
+import aietes
 import bounos
 from aietes.Tools import _results_dir as default_results_dir
 
 class LookupMethods(unittest.TestCase):
+
+    def setUp(self):
+        """
+        Populate the generated results dir with a basic simulation
+        :return:
+        """
+        self.run_time = 100
+        self.simulation = aietes.Simluation(logtoconsole=logging.ERROR, progress_display=False)
+        self.prep_dict = self.simulation.prepare(sim_time=self.run_time)
+        self.sim_time = self.simulation.simulate()
+
     def testDirSearchOrder(self):
         """
         Ensure that npz_in_dir returns in order of modification
@@ -45,8 +57,18 @@ class LookupMethods(unittest.TestCase):
         file_list = bounos.npz_in_dir(default_results_dir)
         self.assertTrue(all(x.endswith('.npz') for x in file_list))
 
+    def testDirSearchValidOnEmpty(self):
+        empty_dir = tempfile.mkdtemp()
+        sources = bounos.npz_in_dir(empty_dir)
+        self.assertIsInstance(sources,list, 'Sources should be list type:{}'.format(type(sources)))
+        self.assertItemsEqual(sources, [], 'Sources should be empty for empty dir: {}'.format(sources))
+
+    def testDirSearchInvalidOnNonExist(self):
+        fake_dir = tempfile.mkdtemp()
+        os.rmdir(fake_dir)
+        self.assertRaises(OSError, bounos.npz_in_dir, fake_dir)
+
 class DataPackageCreation(unittest.TestCase):
-    # TODO TMax testing
 
     def testSourceParsing(self):
         """ Ensure that DataPackage is correctly created by using a sourcefile: 

@@ -774,10 +774,12 @@ def log_level_lookup(log_level):
                 return k
 
 
-def results_file(proposed_name):
+def results_file(proposed_name, results_dir=None):
     if os.path.dirname(proposed_name) is not None:
         # Have not been given a FQN Path: Assume to use the results directory
-        proposed_name = os.path.join(_results_dir, proposed_name)
+        if results_dir is None:
+            results_dir = _results_dir
+        proposed_name = os.path.join(results_dir, proposed_name)
     return proposed_name
 
 def getConfig(source_config_file=None, config_spec=_config_spec):

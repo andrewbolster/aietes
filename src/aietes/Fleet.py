@@ -31,13 +31,11 @@ from aietes.Tools.ProgressBar import ProgressBar
 from aietes.Tools.Memoize import lru_cache
 from aietes.Environment import Environment
 
-# FIXME
 try:
     from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex
     ghia=True
 except ImportError:
     ghia=False
-#####
 
 
 # Local Debug

@@ -20,6 +20,7 @@ __email__ = "me@andrewbolster.info"
 
 import os
 import gc
+import errno
 import sys
 import tempfile
 from uuid import uuid4 as get_uuid
@@ -41,7 +42,11 @@ from aietes import Simulation
 import aietes.Threaded
 from aietes.Tools import _config_spec, _config_dir, _results_dir, nameGeneration, updateDict, kwarger, getConfig, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf, is_valid_aietes_datafile
 from bounos import DataPackage, printAnalysis, load_sources, npz_in_dir
-from contrib.Ghia.ecea.data_grapher import data_grapher
+try:
+    from contrib.Ghia.ecea.data_grapher import data_grapher
+    ghia=True
+except ImportError:
+    ghia=False
 
 # Mask in-sim progress display and let joblib do it's... job...
 progress_display = False
@@ -221,7 +226,13 @@ class Scenario(object):
         """
         self.mypath = os.path.join(
             kwargs.get("basepath", tempfile.mkdtemp()), self.title)
-        os.mkdir(self.mypath)
+        try:
+            os.mkdir(self.mypath)
+        except OSError,e :
+            if e.errno == errno.EEXIST and os.path.isdir(self.mypath):
+                pass
+            else:
+                raise
         if runcount is None:
             runcount = self._default_run_count
 
@@ -957,7 +968,8 @@ class ExperimentManager(object):
         for s in self.scenarios.values():
             s.write()
 
-        data_grapher(dir=self.exp_path, title=self.title)
+        if ghia:
+            data_grapher(dir=self.exp_path, title=self.title)
 
     def dump_self(self):
         """

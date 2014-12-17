@@ -22,6 +22,7 @@ BOUNOS - Heir to the Kingdom of AIETES
 
 import sys
 import os
+import errno
 import argparse
 from argparse import RawTextHelpFormatter
 from math import ceil
@@ -141,9 +142,15 @@ def npz_in_dir(path):
     :param path:
     :return sources:
     """
-    sources = map(lambda f: os.path.join(os.path.abspath(path), f), filter(
-        lambda s: s.endswith('.npz'), os.listdir(path)))
-    sources.sort(key=lambda x: os.path.getmtime(x))
+    try:
+        sources = map(lambda f: os.path.join(os.path.abspath(path), f), filter(
+            lambda s: s.endswith('.npz'), os.listdir(path)))
+        sources.sort(key=lambda x: os.path.getmtime(x))
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            raise
+        else:
+            sources = []
     return sources
 
 
