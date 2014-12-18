@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -19,7 +20,6 @@ __email__ = "me@andrewbolster.info"
 """Unit tests for ChartBuilders"""
 
 import unittest
-import tempfile
 
 from matplotlib.figure import Figure
 

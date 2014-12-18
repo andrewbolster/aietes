@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -16,9 +17,7 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-
 import numpy as np
-from pandas.stats.moments import ewma
 
 from bounos import DataPackage, Analyses
 from aietes.Tools import mkpickle
@@ -149,7 +148,6 @@ def Deviation(data, *args, **kwargs):
             'metrics': as metric.data
                 Raw metric data
     """
-    import bounos.Metrics
 
     metric_arg = kwargs.get("metric", "PerNode_Internode_Distance_Avg")
     metric = get_valid_metric(metric_arg)

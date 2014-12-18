@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -12,15 +13,17 @@
  * Contributors:
  *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
+from pprint import pformat
+
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-import sys
 import traceback
 import optparse
 import cProfile
-import collections
+
+import pandas as pd
 
 from Layercake import MAC
 from Environment import Environment
@@ -31,7 +34,6 @@ from bounos.DataPackage import DataPackage
 from Tools import *
 from Tools.humanize_time import secondsToStr
 
-import pandas as pd
 
 np.set_printoptions(precision=3)
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -17,13 +18,13 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 from multiprocessing.process import current_process
-from joblib import Parallel, delayed
 import struct
 import os
 import logging
 import gc
 from time import gmtime, strftime
 
+from joblib import Parallel, delayed
 import numpy as np
 
 from aietes import Simulation

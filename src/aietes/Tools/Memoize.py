@@ -1,3 +1,4 @@
+# coding=utf-8
 # {{{ http://code.activestate.com/recipes/498245/ (r6)
 import collections
 import functools

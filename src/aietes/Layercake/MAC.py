@@ -1,3 +1,4 @@
+# coding=utf-8
 ###########################################################################
 #
 # Copyright (C) 2007 by Justin Eskesen and Josep Miquel Jornet Montana
@@ -23,12 +24,14 @@
 #
 ###########################################################################
 
-import SimPy.Simulation as Sim
 import random
-from aietes.Layercake import RoutingLayer
 
+import SimPy.Simulation as Sim
+
+from aietes.Layercake import RoutingLayer
 from aietes.Tools import broadcast_address, DEBUG, distance
 from aietes.Tools.FSM import FSM
+
 
 DEBUG = False
 

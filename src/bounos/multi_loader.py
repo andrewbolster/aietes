@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# coding=utf-8
 
 # paths = ["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-12-50-42"]
 paths = ["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-17-14-31",
@@ -17,6 +18,7 @@ import pandas as pd
 from bounos import npz_in_dir, load_sources, generate_sources
 from bounos.Analyses import Trust
 from aietes.Tools import memory, swapsize
+
 
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -28,27 +29,23 @@ from itertools import groupby
 from operator import itemgetter
 from datetime import datetime as dt
 from time import time
-import pickle, cPickle
-from gi.repository import Notify
+import pickle
+import cPickle
+import collections
+import weakref
+import notify2
+from tempfile import mkdtemp
+from shelve import DbfilenameShelf
+from ast import literal_eval
 
 import numpy as np
-from numpy.random import poisson
 from configobj import ConfigObj
 import validate
 from SimPy import SimulationStep as Sim
-from pprint import pformat
-import collections
-import weakref
+from joblib import Memory
+from colorlog import ColoredFormatter
 
 from aietes.Tools.humanize_time import secondsToStr
-
-from joblib import Memory
-from tempfile import mkdtemp
-
-from colorlog import ColoredFormatter
-from shelve import DbfilenameShelf
-
-from ast import literal_eval
 
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
@@ -98,9 +95,9 @@ def notify_desktop(message):
     :return:
     """
     try:
-        if not Notify.is_initted():
-            Notify.init("AIETES Simulation")
-        Notify.Notification.new("AIETES Simulation", message, "dialog-information").show()
+        if not notify2.is_initted():
+            notify2.init("AIETES Simulation")
+        notify2.Notification.new("AIETES Simulation", message, "dialog-information").show()
     except:
         pass
 

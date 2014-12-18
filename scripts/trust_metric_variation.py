@@ -1,3 +1,4 @@
+# coding=utf-8
 __author__ = 'bolster'
 import numpy as np
 import matplotlib.pyplot as plt

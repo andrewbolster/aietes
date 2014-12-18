@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -26,9 +27,6 @@ import errno
 import argparse
 from argparse import RawTextHelpFormatter
 from math import ceil
-from joblib import Parallel, delayed
-from natsort import natsorted
-import collections
 from copy import deepcopy
 
 import numpy as np
@@ -38,10 +36,8 @@ import Metrics
 import Analyses.Behaviour
 import Analyses.Trust
 from DataPackage import DataPackage
-
 from aietes.Tools import list_functions, mkpickle
 
-from pprint import pformat
 
 font = {'family': 'normal',
         'weight': 'normal',

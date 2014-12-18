@@ -1,3 +1,4 @@
+# coding=utf-8
 __author__ = 'bolster'
 import bounos.Analyses.Trust
 import aietes.Tools as Tools

@@ -1,4 +1,4 @@
-INSTALLATION
+# INSTALLATION
 ============
 All distutils-able requirements *should* be satisifed by the build script. If not, please let the maintainers know.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -17,11 +18,12 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 n_metrics = 6
 
+from collections import OrderedDict
+
 import numpy as np
 import pandas as pd
-
-from collections import OrderedDict
 from joblib import Parallel, delayed
+
 
 # THESE LAMBDAS PERFORM GRAY CLASSIFICATION BASED ON GUO
 # Still have no idea where sigma comes into it but that's life

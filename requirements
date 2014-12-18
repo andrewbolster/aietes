@@ -1,3 +1,5 @@
+ZODB
+notify2
 BTrees
 transaction
 persistent

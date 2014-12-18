@@ -95,7 +95,7 @@ class MetricView(object):
         self.ax.set_ylabel(self.label)
         self.ax.get_xaxis().set_visible(True)
 
-        if all(wanted == True) or self.ndim == 1:
+        if all(wanted is True) or self.ndim == 1:
             self.ax.plot(self.data, alpha=0.3)
         else:
             logging.info("Printing %s with Wanted:%s" % (self, wanted))

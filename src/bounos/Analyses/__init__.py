@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -17,10 +18,12 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import logging
-import pandas as pd
 import os
-import errno
+
+import pandas as pd
+
 import bounos.ChartBuilders as CB
+
 
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,

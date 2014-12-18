@@ -19,17 +19,15 @@ __email__ = "me@andrewbolster.info"
 
 import sys
 import traceback
+from operator import attrgetter
 
 import numpy as np
 from scipy.spatial.distance import squareform, pdist
 
-from operator import attrgetter
-from itertools import combinations
-
 from aietes.Tools import Sim, distance, mag, secondsToStr
 from aietes.Tools.ProgressBar import ProgressBar
-from aietes.Tools.Memoize import lru_cache
 from aietes.Environment import Environment
+
 
 try:
     from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex

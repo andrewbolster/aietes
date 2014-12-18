@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -24,6 +25,7 @@ from collections import namedtuple
 import numpy as np
 
 from aietes.Tools import map_entry, distance, fudge_normal, DEBUG, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
+
 
 DEBUG = True
 

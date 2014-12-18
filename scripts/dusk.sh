@@ -6,15 +6,15 @@ MYDIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 #Check Package Requirements
 PACKAGES="libxmu-dev libx11-dev libxt-dev gfortran subversion automake1.10"
-dpkg -s $PACKAGES
+dpkg -s ${PACKAGES}
 if [[ $? -ne 0 ]]; then
   echo "Some Libraries are not installed. Lets fix that shall we?"
-  apt-get install -y $PACKAGES
+  apt-get install -y ${PACKAGES}
 fi
 
 
 PREFIX="/dev/shm/ns"
-if [ $VERSION == 35 ]; then
+if [ ${VERSION} == 35 ]; then
 TCLVER=8.5.10
 TKVER=8.5.10
 OTCLVER=1.14
@@ -25,7 +25,7 @@ XGRAPHVER=12.2
 ZLIBVER=1.2.3
 DEI80211MRVER=1.1.4
 
-elif [ $VERSION == 33 ]; then
+elif [ ${VERSION} == 33 ]; then
 
 TCLVER=8.4.18
 TKVER=8.4.18
@@ -37,7 +37,7 @@ XGRAPHVER=12.1
 ZLIBVER=1.2.3
 DEI80211MRVER=1.1.4
 
-elif [ $VERSION == 34 ]; then
+elif [ ${VERSION} == 34 ]; then
 
 TCLVER=8.4.18
 TKVER=8.4.18
@@ -95,34 +95,34 @@ mkdir -p ${PREFIX}
 #rm /etc/ld.so.conf.d/sunset.conf /etc/profile.d/sunset.conf
 
 cat > /etc/ld.so.conf.d/sunset.conf << END
-$PREFIX/SUNSET_v$SUNSETVER/sunset_lib/lib
-$PREFIX/ns-allinone-$NSVER/otcl-$OTCLVER
-$PREFIX/ns-allinone-$NSVER/lib
-$PREFIX/lib
+${PREFIX}/SUNSET_v${SUNSETVER}/sunset_lib/lib
+${PREFIX}/ns-allinone-${NSVER}/otcl-${OTCLVER}
+${PREFIX}/ns-allinone-${NSVER}/lib
+${PREFIX}/lib
 END
 
 cat > /etc/profile.d/sunset.sh << END
-export PATH="$PREFIX/ns-allinone-$NSVER/bin:$PREFIX/ns-allinone-$NSVER/tcl$TCLVER/unix:$PREFIX/ns-allinone-2.35/tk$TKVER/unix:\$PATH"
-export TCL_LIBRARY="$PREFIX/ns-allinone-$NSVER/tcl$TCLVER/library,\$TCL_LIBRARY"
-export SUNSET_PATH="$PREFIX/SUNSET_v$SUNSETVER"
+export PATH="${PREFIX}/ns-allinone-${NSVER}/bin:${PREFIX}/ns-allinone-${NSVER}/tcl${TCLVER}/unix:${PREFIX}/ns-allinone-2.35/tk${TKVER}/unix:\$PATH"
+export TCL_LIBRARY="${PREFIX}/ns-allinone-${NSVER}/tcl${TCLVER}/library,\$TCL_LIBRARY"
+export SUNSET_PATH="${PREFIX}/SUNSET_v${SUNSETVER}"
 END
 
 # Get NS Allinone and Install
-if [ ! -x $PREFIX/ns-allinone-$NSVER/bin/ns ]; then 
-  if [ ! -f $PREFIX/ns-ai1-$NSVER.tgz ]; then
-    wget -q http://downloads.sourceforge.net/project/nsnam/allinone/ns-allinone-$NSVER/ns-allinone-$NSVER.tar.gz -O $PREFIX/ns-ai1-$NSVER.tgz 
-    if [ ! -f $PREFIX/ns-ai1-$NSVER.tgz ]; then
+if [ ! -x ${PREFIX}/ns-allinone-${NSVER}/bin/ns ]; then
+  if [ ! -f ${PREFIX}/ns-ai1-${NSVER}.tgz ]; then
+    wget -q http://downloads.sourceforge.net/project/nsnam/allinone/ns-allinone-${NSVER}/ns-allinone-${NSVER}.tar.gz -O ${PREFIX}/ns-ai1-${NSVER}.tgz
+    if [ ! -f ${PREFIX}/ns-ai1-${NSVER}.tgz ]; then
       echo "FUCKED!"
       exit 1
     fi
   fi  
-  rm -rf $PREFIX/ns-allinone-$NSVER
-  tar -xzf $PREFIX/ns-ai1-$NSVER.tgz -C $PREFIX
+  rm -rf ${PREFIX}/ns-allinone-${NSVER}
+  tar -xzf ${PREFIX}/ns-ai1-${NSVER}.tgz -C ${PREFIX}
   # Check if OTCL is less that 1.14 and if so try and apply patch from 'http://nsnam.isi.edu/nsnam/index.php/User_Information#Ubuntu_Installation_Guide'
-  vercomp $OTCLVER 1.14
+  vercomp ${OTCLVER} 1.14
   if [[ $? == 2 ]]; then #lessthan
     echo "Patching OTcl version $OTCLVER"
-    cd $PREFIX/ns-allinone-$NSVER/otcl-$OTCLVER/
+    cd ${PREFIX}/ns-allinone-${NSVER}/otcl-${OTCLVER}/
     patch << HERE
 --- configure
 +++ configure.new
@@ -138,11 +138,11 @@ if [ ! -x $PREFIX/ns-allinone-$NSVER/bin/ns ]; then
 HERE
   fi
   # Check if ns is less that 2.35 and if so try and apply the ranvar.cc patch from 'http://wirelesscafe.wordpress.com/2009/05/28/error-with-ns2-installations-%E2%80%93-ns2-revisited/'
-  vercomp $NSVER 2.35
+  vercomp ${NSVER} 2.35
   comparator=$?
-  if [[ $comparator == 2 ]]; then #lessthan
+  if [[ ${comparator} == 2 ]]; then #lessthan
     echo "Patching NS version $NSVER for ranvar.cc"
-    cd $PREFIX/ns-allinone-$NSVER/ns-$NSVER/tools/
+    cd ${PREFIX}/ns-allinone-${NSVER}/ns-${NSVER}/tools/
     patch --ignore-whitespace << HERE
 --- ranvar.cc
 +++ ranvar.cc.new
@@ -157,7 +157,7 @@ HERE
   double x, v, u;
 HERE
     echo "Patching NS version $NSVER for mac-802_11Ext.h"
-    cd $PREFIX/ns-allinone-$NSVER/ns-$NSVER/mac/
+    cd ${PREFIX}/ns-allinone-${NSVER}/ns-${NSVER}/mac/
     patch --ignore-whitespace << HERE
 --- mac-802_11Ext.h
 +++ mac-802_11Ext.h.new
@@ -171,7 +171,7 @@ HERE
  #define GET_ETHER_TYPE(x)    GET2BYTE((x))
 HERE
     echo "Patching NS version $NSVER for nakagami.cc"
-    cd $PREFIX/ns-allinone-$NSVER/ns-$NSVER/mobile/
+    cd ${PREFIX}/ns-allinone-${NSVER}/ns-${NSVER}/mobile/
 patch --ignore-whitespace << HERE
 --- nakagami.cc
 +++ nakagami.cc.new
@@ -189,9 +189,9 @@ patch --ignore-whitespace << HERE
  }
 HERE
 
-  elif [[ $comparator -eq 0 ]]; then # Equal To
+  elif [[ ${comparator} -eq 0 ]]; then # Equal To
     #TODO Test if this is required for later versions
-    cd $PREFIX/ns-allinone-$NSVER/ns-$NSVER/linkstate/
+    cd ${PREFIX}/ns-allinone-${NSVER}/ns-${NSVER}/linkstate/
 patch --ignore-whitespace << HERE
 --- ls.h
 +++ ls.h.new
@@ -207,19 +207,19 @@ patch --ignore-whitespace << HERE
 HERE
 
   fi
-  cd $PREFIX/ns-allinone-$NSVER/
+  cd ${PREFIX}/ns-allinone-${NSVER}/
     
   ./install || exit 1
   ldconfig
 fi
 
-if [ ! -x $PREFIX/ns-allinone-$NSVER/bin/ns ]; then
+if [ ! -x ${PREFIX}/ns-allinone-$NSVER/bin/ns ]; then
   echo "Can't find ns executable after ns creation; installation probably failed in some weird and wonderful way..."
   exit 1
 fi
 # NS-Miracles 
-if [ ! -d $PREFIX/nsmiracle-trunk ]; then
-  svn co --username nsmiracle-dev-guest --password nsmiracleguest https://telecom.dei.unipd.it:/tlcrepos/nsmiracle-dev/trunk $PREFIX/nsmiracle-trunk
+if [ ! -d ${PREFIX}/nsmiracle-trunk ]; then
+  svn co --username nsmiracle-dev-guest --password nsmiracleguest https://telecom.dei.unipd.it:/tlcrepos/nsmiracle-dev/trunk ${PREFIX}/nsmiracle-trunk
   # Patching based on Roberto's November work
   cd $PREFIX/nsmiracle-trunk
     for patchfile in $MYDIR/patches/nsmiracle-trunk-fix-*.patch; 
@@ -258,7 +258,7 @@ if [ ! -d ${PREFIX}/WOSS/at ]; then
   echo Downloading Bellhop Acoustic Toolbox
   wget -q -O - "http://oalib.hlsresearch.com/Modes/AcousticsToolbox/atLinux.tar.gz" | tar -xzf - -C $PREFIX/WOSS/
   cd $PREFIX/WOSS/at
-  sed -i "s|/home/porter/at|/$PREFIX/WOSS/at|g" Makefile
+  sed -i "s|/home/porter/at|/${PREFIX}/WOSS/at|g" Makefile
   make clean
   make --quiet install || exit 1
   ldconfig
@@ -266,7 +266,7 @@ fi
 
 if [ ! -d $PREFIX/WOSS/woss ]; then
   echo Downloading WOSS proper
-  wget -q -O - "http://telecom.dei.unipd.it/ns/woss/files/WOSS-v$WOSSVER.tar.gz" | tar -xzf - -C $PREFIX/WOSS/
+  wget -q -O - "http://telecom.dei.unipd.it/ns/woss/files/WOSS-v${WOSSVER}.tar.gz" | tar -xzf - -C $PREFIX/WOSS/
   cd $PREFIX/WOSS/
 #fix based on http://devgurus.amd.com/thread/159578
 patch -p 1 --ignore-whitespace << HERE
@@ -293,17 +293,17 @@ fi
 #SUNSET
 if [ ! -d $PREFIX/SUNSET_v$SUNSETVER/sunset_core ]; then
   echo Downloading SUNSET Core
-  wget -q -O - "http://reti.dsi.uniroma1.it/UWSN_Group/framework/download/SUNSET_v$SUNSETVER.tar.gz" | tar -xzf - -C $PREFIX/
+  wget -q -O - "http://reti.dsi.uniroma1.it/UWSN_Group/framework/download/SUNSET_v${SUNSETVER}.tar.gz" | tar -xzf - -C $PREFIX/
   cd $PREFIX/SUNSET_v$SUNSETVER/
   patch --ignore-whitespace -p1 < $MYDIR/patches/patch_sunset_core.patch
-  sed -i "s|NS_PATH=\"/home/example/\"|NS_PATH=\"$PREFIX/ns-allinone-$NSVER/\"|g" install_*.sh
-  sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"$PREFIX/nsmiracle-trunk/main/\"|g" install_*.sh
-  #sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"$PREFIX/lib/\"|g" install_*.sh
+  sed -i "s|NS_PATH=\"/home/example/\"|NS_PATH=\"${PREFIX}/ns-allinone-$NSVER/\"|g" install_*.sh
+  sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"${PREFIX}/nsmiracle-trunk/main/\"|g" install_*.sh
+  #sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"${PREFIX}/lib/\"|g" install_*.sh
   ./install_all.sh || exit 1
-  sed -i "s|pathMiracle \"insert_miracle_libraries_path_here\"|pathMiracle \"$PREFIX/nsmiracle-trunk/main/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
-  sed -i "s|pathMiracle \"insert_miracle_libraries_path_here\"|pathMiracle \"$PREFIX/lib/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
-  sed -i "s|pathWOSS \"insert_woss_libraries_path_here\"|pathWOSS \"$PREFIX/WOSS/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
-  sed -i "s|pathSUNSET \"insert_sunset_libraries_path_here\"|pathSUNSET \"$PREFIX/lib\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
+  sed -i "s|pathMiracle \"insert_miracle_libraries_path_here\"|pathMiracle \"${PREFIX}/nsmiracle-trunk/main/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
+  sed -i "s|pathMiracle \"insert_miracle_libraries_path_here\"|pathMiracle \"${PREFIX}/lib/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
+  sed -i "s|pathWOSS \"insert_woss_libraries_path_here\"|pathWOSS \"${PREFIX}/WOSS/\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
+  sed -i "s|pathSUNSET \"insert_sunset_libraries_path_here\"|pathSUNSET \"${PREFIX}/lib\"|g" $PREFIX/SUNSET_v${SUNSETVER}/samples/*.tcl
 fi
 
 if [ ! -d $PREFIX/SUNSET_v$SUNSETVER/sunset_addon ]; then
@@ -312,9 +312,9 @@ if [ ! -d $PREFIX/SUNSET_v$SUNSETVER/sunset_addon ]; then
   cd $PREFIX/SUNSET_v$SUNSETVER/
   wget -q -O - "http://reti.dsi.uniroma1.it/UWSN_Group/framework/download/SUNSETAddOn_v1.0.tar.gz" | tar -xzf - -C $PREFIX/SUNSET_v$SUNSETVER --strip-components 1
   patch --ignore-whitespace -p1 < $MYDIR/patches/patch_sunset_addon.patch
-  sed -i "s|NS_PATH=\"/home/example/\"|NS_PATH=\"$PREFIX/ns-allinone-$NSVER\"|g" install_sunset_addon.sh
-  sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"$PREFIX/nsmiracle-trunk/main\"|g" install_sunset_addon.sh 
-  sed -i "s|SUNSET_PATH=\"\$CURRDIR\"|NS_PATH=\"$PREFIX/SUNSET_v${SUNSETVER}\"|g" install_sunset_addon.sh
+  sed -i "s|NS_PATH=\"/home/example/\"|NS_PATH=\"${PREFIX}/ns-allinone-$NSVER\"|g" install_sunset_addon.sh
+  sed -i "s|MIRACLE_PATH=\"/home/example/\"|MIRACLE_PATH=\"${PREFIX}/nsmiracle-trunk/main\"|g" install_sunset_addon.sh
+  sed -i "s|SUNSET_PATH=\"\$CURRDIR\"|NS_PATH=\"${PREFIX}/SUNSET_v${SUNSETVER}\"|g" install_sunset_addon.sh
   ./install_sunset_addon.sh || (make clean && exit 1)
 
   #Test must be run in the samples director due to local dependencies

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 __author__ = 'andrewbolster'
 
 from polybos import ExperimentManager as EXP

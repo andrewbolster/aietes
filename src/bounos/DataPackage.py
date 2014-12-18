@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -21,6 +22,7 @@ import traceback
 import logging
 
 from scipy.spatial.distance import pdist, squareform
+
 
 # used to reconstitute config from NP object
 from ast import literal_eval

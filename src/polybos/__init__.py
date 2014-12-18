@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework
  *  (https://github.com/andrewbolster/aietes)
@@ -24,7 +25,6 @@ import gc
 import errno
 import sys
 import tempfile
-from uuid import uuid4 as get_uuid
 import logging
 from copy import deepcopy
 from datetime import datetime
@@ -35,13 +35,12 @@ import time
 import collections
 
 from configobj import ConfigObj
-import validate
 import numpy as np
 
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded
-from aietes.Tools import _config_spec, _config_dir, _results_dir, nameGeneration, updateDict, kwarger, getConfig, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf, is_valid_aietes_datafile
+from aietes.Tools import _results_dir, nameGeneration, updateDict, kwarger, getConfig, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf
 from bounos import DataPackage, printAnalysis, load_sources, npz_in_dir
 
 try:

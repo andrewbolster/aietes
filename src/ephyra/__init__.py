@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -37,7 +38,8 @@ _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 class EventLoggingApp(wx.PySimpleApp):
-    def FilterEvent(self, evt, *args, **kwargs):
+    @staticmethod
+    def FilterEvent(evt, *args, **kwargs):
         logging.info(evt)
         return -1
 

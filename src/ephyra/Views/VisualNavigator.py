@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -21,6 +22,8 @@ __author__ = 'andrewbolster'
 WIDTH, HEIGHT = 16, 9
 SIDEBAR_WIDTH = 8
 
+import logging
+
 import numpy as np
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -29,11 +32,10 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.colors import Normalize
 from matplotlib import cm
 
-import logging
-
 from ephyra import wx
 from ephyra.Views import MetricView, Arrow3D
 from aietes.Tools import timeit, mag
+
 
 
 # noinspection PyStringFormat

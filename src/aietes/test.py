@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -25,6 +26,7 @@ import tempfile
 from pprint import pformat
 
 import matplotlib
+
 
 matplotlib.use("Agg")
 
@@ -147,9 +149,6 @@ class Tools(unittest.TestCase):
     def testGetConfig_Default(self):
         config = aietes.Tools.getConfig()
         self.assertIsNotNone(config)
-
-
-
 
 if __name__ == "__main__":
     unittest.main()

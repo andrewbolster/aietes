@@ -1,6 +1,3 @@
+# coding=utf-8
 __author__ = 'bolster'
 
-import pickle
-import aietes.Tools as Tools
-import DataPackage
-import Analyses

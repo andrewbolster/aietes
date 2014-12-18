@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.co/andrewbolster/aietes)
  *
@@ -17,7 +18,6 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import uuid
-import sys
 
 from Layercake import Layercake
 import Behaviour

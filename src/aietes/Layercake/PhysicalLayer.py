@@ -23,11 +23,13 @@
 # along with AUVNetSim.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###########################################################################
-import SimPy.Simulation as Sim
 import math
-
 from copy import deepcopy
+
+import SimPy.Simulation as Sim
+
 from aietes.Tools import distance, DEBUG
+
 
 DEBUG = True
 DEBUG = False

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -16,12 +17,10 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
+from collections import Counter
+
 from numpy import *
 from numpy.random import poisson
-
-import pandas as pd
-
-from collections import Counter, OrderedDict
 
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 

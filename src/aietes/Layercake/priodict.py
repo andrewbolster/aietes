@@ -1,3 +1,4 @@
+# coding=utf-8
 # python
 # vim:ts=4:sw=4:softtabstop=4:smarttab:expandtab
 #

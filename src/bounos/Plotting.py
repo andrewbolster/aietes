@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -20,7 +21,6 @@ import matplotlib
 
 matplotlib.warn = False
 # matplotlib.use('module://mplh5canvas.backend_h5canvas')
-import matplotlib.backends.backend_wxagg
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.widgets import Slider, Button
