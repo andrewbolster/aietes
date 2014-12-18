@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.widgets import Slider, Button
 
-from __init__ import Metric
+from bounos.Metrics import Metric
 
 import numpy as np
 
@@ -33,13 +33,14 @@ import numpy as np
 def interactive_plot(data):
     """
     Generate the MPL data browser for the flock data
+    :param data:
     """
     # Generate Arrangements for viewport + accessory views
     plt.close('all')
     fig = plt.figure()
     gs = GridSpec(9, 16)
     ax = plt.subplot(gs[:-1, 1:], projection='3d')
-    axH = plt.subplot(gs[:, 0])
+    axh = plt.subplot(gs[:, 0])
     # axB = plt.subplot(gs[-1,1:])
 
     # Find initial display state for viewport
@@ -62,10 +63,10 @@ def interactive_plot(data):
     width = 0.11
 
     global rectX, rectY, rectZ
-    rectX = axH.barh(ind, tuple([vec[0] for vec in vectors]), width, color='r')
-    rectY = axH.barh(
+    rectX = axh.barh(ind, tuple([vec[0] for vec in vectors]), width, color='r')
+    rectY = axh.barh(
         ind + width, tuple([vec[1] for vec in vectors]), width, color='g')
-    rectZ = axH.barh(
+    rectZ = axh.barh(
         ind + 2 * width, tuple([vec[2] for vec in vectors]), width, color='b')
 
     def press(event):
@@ -93,17 +94,17 @@ def interactive_plot(data):
         Update Vector Heading display across time
         """
         vectors = data.heading_slice(timeslider.val)
-        axH.cla()
-        rectX = axH.barh(
+        axh.cla()
+        rectX = axh.barh(
             ind, tuple([vec[0] for vec in vectors]), width, color='r')
-        rectY = axH.barh(
+        rectY = axh.barh(
             ind + width, tuple([vec[1] for vec in vectors]), width, color='g')
-        rectZ = axH.barh(
+        rectZ = axh.barh(
             ind + 2 * width, tuple([vec[2] for vec in vectors]), width, color='b')
 
-        axH.set_ylabel("Vector")
-        axH.set_yticks(ind + width)
-        axH.set_yticklabels(data.names)
+        axh.set_ylabel("Vector")
+        axh.set_yticks(ind + width)
+        axh.set_yticklabels(data.names)
 
     def update(val):
         if timeslider.val > data.tmax:
@@ -132,7 +133,7 @@ def interactive_plot(data):
     plt.show()
 
 
-def KF_metric_plot(metric):
+def kf_metric_plot(metric):
     assert isinstance(metric, Metric), "Not a metric: %s" % metric
     assert hasattr(metric, 'data'), "No Data"
 

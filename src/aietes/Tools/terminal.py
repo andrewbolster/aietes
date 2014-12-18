@@ -49,17 +49,17 @@ def setup():
     curses.setupterm()
     # Get the color escape sequence template or '' if not supported
     # setab and setaf are for ANSI escape sequences
-    bgColorSeq = curses.tigetstr('setab') or curses.tigetstr('setb') or ''
-    fgColorSeq = curses.tigetstr('setaf') or curses.tigetstr('setf') or ''
+    bg_color_seq = curses.tigetstr('setab') or curses.tigetstr('setb') or ''
+    fg_color_seq = curses.tigetstr('setaf') or curses.tigetstr('setf') or ''
 
     for color in COLORS:
         # Get the color index from curses
-        colorIndex = getattr(curses, 'COLOR_%s' % color)
+        color_index = getattr(curses, 'COLOR_%s' % color)
         # Set the color escape sequence after filling the template with index
-        setattr(MODULE, color, curses.tparm(fgColorSeq, colorIndex))
+        setattr(MODULE, color, curses.tparm(fg_color_seq, color_index))
         # Set background escape sequence
         setattr(
-            MODULE, 'BG_%s' % color, curses.tparm(bgColorSeq, colorIndex)
+            MODULE, 'BG_%s' % color, curses.tparm(bg_color_seq, color_index)
         )
     for control in CONTROLS:
         # Set the control escape sequence

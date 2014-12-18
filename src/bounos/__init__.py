@@ -66,8 +66,8 @@ class BounosModel(DataPackage):
         self.is_ready = False
         self.is_simulating = None
 
-    def import_datafile(self, file):
-        super(BounosModel, self).__init__(source=file)
+    def import_datafile(self, filename):
+        super(BounosModel, self).__init__(source=filename)
         self.is_ready = True
         self.is_simulating = False
 
@@ -154,6 +154,12 @@ def npz_in_dir(path):
 
 def custom_fusion_run(args, data, title):
     # Write intermediate fusion graphs into directories for funzies
+    """
+
+    :param args:
+    :param data:
+    :param title:
+    """
     subgraphargs = deepcopy(args)
     subgraphargs.output = 'png'
     subgraphargs.title = title
@@ -163,6 +169,12 @@ def custom_fusion_run(args, data, title):
 
 def custom_metric_run(args, data, title):
     # Write intermediate fusion graphs into directories for funzies
+    """
+
+    :param args:
+    :param data:
+    :param title:
+    """
     subgraphargs = deepcopy(args)
     subgraphargs.output = 'png'
     subgraphargs.title = title
@@ -172,6 +184,8 @@ def custom_metric_run(args, data, title):
 
 def multirun(args, basedir=os.curdir):
     """
+
+    :param basedir:
     :param args:
     :return:
     """
@@ -234,6 +248,11 @@ def multirun(args, basedir=os.curdir):
 
 
 def custom_parser():
+    """
+
+
+    :return:
+    """
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description="Simulation Visualisation and Analysis Suite for AIETES",
@@ -358,6 +377,12 @@ def plot_detections(ax, metric, orig_data,
 
     Will attempt heuristic analysis of 'real' culprit from DataPackage behaviour records
 
+    :param ax:
+    :param metric:
+    :param orig_data:
+    :param shade_region:
+    :param real_culprits:
+    :param good_behaviour:
     Args:
         ax(axes): plot to operate on
         metric(Metric): metric to use for detection
@@ -370,7 +395,7 @@ def plot_detections(ax, metric, orig_data,
 
     import Analyses
 
-    results = Analyses.Behaviour.Detect_Misbehaviour(data=orig_data,
+    results = Analyses.Behaviour.detect_misbehaviour(data=orig_data,
                                                      metric=metric.__class__.__name__,
                                                      stddev_frac=2)
     detections = results['detections']
@@ -395,18 +420,18 @@ def plot_detections(ax, metric, orig_data,
     print real_culprits
 
     for culprit, detections in detection_dict.iteritems():
-        for (min, max) in range_grouper(detections):
-            if max - min > 20:
-                _x = range(min, max)
+        for (min_detected, max_detected) in range_grouper(detections):
+            if max_detected - min_detected > 20:
+                _x = range(min_detected, max_detected)
                 if metric.signed is not False:
                     # Negative Detection: Scan from the top
                     _y1 = np.asarray([np.max(metric.data)] * len(_x))
                 else:
                     # Positive or Unsigned: Scan from Bottom
                     _y1 = np.asarray([0] * len(_x))
-                _y2 = metric.data[min:max, culprit]
+                _y2 = metric.data[min_detected:max_detected, culprit]
                 print("%s:%s:%s" %
-                      (orig_data.names[culprit], str((min, max)), str(max - min)))
+                      (orig_data.names[culprit], str((min_detected, max_detected)), str(max_detected - min_detected)))
                 if real_culprits is not []:
                     ax.fill_between(_x, _y1, _y2, alpha=0.1,
                                     facecolor='red' if culprit not in real_culprits else 'green')
@@ -422,6 +447,11 @@ def plot_detections(ax, metric, orig_data,
 
 
 def detect_and_identify(d):
+    """
+
+    :param d:
+    :return:
+    """
     per_metric_deviations, deviation_windowed = Analyses.Behaviour.Combined_Detection_Rank(d,
                                                                                            _metrics,
                                                                                            stddev_frac=2)
@@ -436,6 +466,8 @@ def run_detection_fusion(data, args=None):
     """
     Generate a trust fusion across available metrics, and plot both the metric deviations,
         per-metric detections, and the trust fusion per node, per dataset
+    :param data:
+    :param args:
     Args:
         data(list of DataPackage): datasets to plot horizontally
         args(argparse.NameSpace): formatting and option arguments (optional)
@@ -582,6 +614,12 @@ def run_detection_fusion(data, args=None):
 
 
 def add_achievements(ax, d, annotate_achievements=False):
+    """
+
+    :param ax:
+    :param d:
+    :param annotate_achievements:
+    """
     if hasattr(d, "achievements"):
 
         for achievement in d.achievements.nonzero()[1]:
@@ -600,6 +638,8 @@ def run_metric_comparison(data, args=None):
     """
     Generate available metrics, and plot both the metric values,
         per-metric detections, per dataset
+    :param data:
+    :param args:
     Args:
         data(list of DataPackage): datasets to plot horizontally
         args(argparse.NameSpace): formatting and option arguments (optional)
@@ -718,6 +758,10 @@ def run_metric_comparison(data, args=None):
 def run_overlay(data, args=None):
     # TODO Documentation
     """
+
+
+    :param data:
+    :param args:
     Args:
         data(list of DataPackage): datasets to plot horizontally
         args(argparse.NameSpace): formatting and option arguments (optional)
@@ -787,6 +831,12 @@ def run_overlay(data, args=None):
 
 def global_adjust(figure, axes, scale=2):
     """
+
+
+
+    :param figure:
+    :param axes:
+    :param scale:
     General Figure adjustments:
         Subplot-spacing adjustments
         Figure sizing/scaling
@@ -796,6 +846,12 @@ def global_adjust(figure, axes, scale=2):
     """
 
     def math_formatter(x, pos):
+        """
+
+        :param x:
+        :param pos:
+        :return:
+        """
         return "$%s$" % x
 
     for axe in axes:
@@ -812,6 +868,11 @@ def global_adjust(figure, axes, scale=2):
 
 
 def printAnalysis(d):
+    """
+
+    :param d:
+    :return:
+    """
     deviation, trust = Analyses.Behaviour.Combined_Detection_Rank(
         d, _metrics, stddev_frac=2)
     result_dict = Analyses.Behaviour.behaviour_identification(

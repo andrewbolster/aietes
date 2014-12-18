@@ -1,26 +1,22 @@
 # coding=utf-8
 __author__ = 'bolster'
+import os
+from collections import OrderedDict
+
 import numpy as np
 import matplotlib.pyplot as plt
-import polybos
-
-reload(polybos)
-from bounos import DataPackage, npz_in_dir, load_sources, generate_sources
-import os, gc
 from natsort import natsorted
-from copy import deepcopy
-import bounos.Analyses.Trust as Trust
-import seaborn as sns
-
-from aietes.Tools import unpickle, is_valid_aietes_datafile, mkpickle, mkCpickle, unCpickle
-from collections import OrderedDict
 import pandas as pd
-import re
-# exp = polybos.RecoveredExperiment.walk_dir(path)
+
+from bounos import DataPackage, npz_in_dir, load_sources, generate_sources
+import bounos.Analyses.Trust as Trust
+from aietes.Tools import unCpickle
+
 
 def grab_comms(s):
     dp = DataPackage(s)
     return dp.comms
+
 
 def map_paths(paths):
     subdirs = reduce(list.__add__, [filter(os.path.isdir,
@@ -29,6 +25,7 @@ def map_paths(paths):
                                            )
     ) for path in paths])
     return subdirs
+
 
 def scenarios_comms(paths, generator=False):
     subdirs = natsorted(map_paths(paths))
@@ -41,6 +38,7 @@ def scenarios_comms(paths, generator=False):
         else:
             yield (subdir, load_sources(sources, comms_only=True))
 
+
 def hdfstore(filename, obj):
     print("Storing into {}.h5".format(filename))
     store = pd.HDFStore("{}.h5".format(filename), mode='w')
@@ -49,15 +47,17 @@ def hdfstore(filename, obj):
     finally:
         store.close()
 
+
 logs = unCpickle('trust_logs.pkl')
 logs = OrderedDict(sorted(logs.iteritems(), key=lambda k: k))
+
 
 def network_trust_dict(trust_inverted):
     fs = [lambda x: -x + 1,
           lambda x: -2 * x + 2 if x > 0.5 else 2 * x,
           lambda x: x]
     sigmas = [0.0, 0.5, 1.0]
-    whitenized = lambda x: map(lambda f: f(x), fs)
+    whitenized = lambda x: map(lambda _f: _f(x), fs)
     white_class = lambda x: (whitenized(x).index(max(whitenized(x))))
 
     observer = 'n0'
@@ -98,6 +98,7 @@ def network_trust_dict(trust_inverted):
     )
     return _d
 
+
 def generate_trust_perspectives_from_logs(logs, metric_weights=None):
     rate_collector = []
     for rate, sim_runs in logs.iteritems():
@@ -115,13 +116,14 @@ def generate_trust_perspectives_from_logs(logs, metric_weights=None):
         rate_collector.append((rate, pd.concat(run_collector, names=['run'])))
     return trust_perspectives, inverted_trust_perspectives, rate_collector
 
+
 import itertools
 
 trust_metrics = np.asarray("ATXP,ARXP,ADelay,ALength,Throughput,PLR".split(','))
 trust_combinations = []
 map(trust_combinations.extend, np.asarray([itertools.combinations(trust_metrics, i) for i in range(2, len(trust_metrics))]))
 trust_combinations = np.asarray(trust_combinations)
-#print trust_combinations
+# print trust_combinations
 trust_metric_selections = np.asarray([map(lambda m: float(m in trust_combination), trust_metrics) for trust_combination in trust_combinations])
 trust_metric_weights = map(lambda s: s / sum(s), trust_metric_selections)
 
@@ -130,7 +132,7 @@ def gen_trust_plots_for_weights(metric_weight=None):
     trust_perspectives, inverted_trust_perspectives, rate_collector = generate_trust_perspectives_from_logs(logs, metric_weights=metric_weight)
 
     rate_frame = pd.concat([v for _, v in rate_collector], keys=[v for v, _ in rate_collector], names=['variable', 't'])
-    #sns.boxplot(rate_frame,showmeans=True, showbox=False, widths = 0.2, linewidth=2)
+    # sns.boxplot(rate_frame,showmeans=True, showbox=False, widths = 0.2, linewidth=2)
     #rate_frame.reset_index(level=['variable'],inplace=True)
     f, ax = plt.subplots()
     f.set_size_inches(13, 6)
@@ -147,7 +149,7 @@ def gen_trust_plots_for_weights(metric_weight=None):
 
 
 for w in trust_metric_weights[0:10:2]:
-    f=gen_trust_plots_for_weights(metric_weight=w)
+    f = gen_trust_plots_for_weights(metric_weight=w)
     plt.draw()
 plt.show()
 

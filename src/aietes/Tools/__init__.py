@@ -45,7 +45,7 @@ from SimPy import SimulationStep as Sim
 from joblib import Memory
 from colorlog import ColoredFormatter
 
-from aietes.Tools.humanize_time import secondsToStr
+from aietes.Tools.humanize_time import seconds_to_str
 
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
@@ -177,7 +177,9 @@ def angle_between(v1, v2):
 
 
 def bearing(v):
-    """radian angle between a given vector and 'north'"""
+    """radian angle between a given vector and 'north'
+    :param v:
+    """
     if np.all(v == 0):
         return 0.0
     else:
@@ -187,6 +189,9 @@ def bearing(v):
 def distance(pos_a, pos_b, scale=1):
     """
     Return the distance between two positions
+    :param pos_a:
+    :param pos_b:
+    :param scale:
     """
     try:
         return mag(pos_a - pos_b) * scale
@@ -201,6 +206,7 @@ def mag(vector):
     Return the magnitude of a given vector
     %timeit np.sqrt((uu1[0]-uu2[0])**2 +(uu1[1]-uu2[1])**2 +(uu1[2]-uu2[2])**2)-> 7.08us,
     %timeit np.linalg.norm(uu1-uu2) -> 11.7us.
+    :param vector:
     """
     # FIXME  Might be faster unrolled
     return np.linalg.norm(vector)
@@ -209,6 +215,7 @@ def mag(vector):
 def unit(vector):
     """
     Return the unit vector
+    :param vector:
     """
     if mag(vector) == 0.0:
         return np.zeros_like(vector)
@@ -267,6 +274,11 @@ def random_xy_vector():
 
 
 def sixvec(xyz):
+    """
+
+    :param xyz:
+    :return:
+    """
     ptsnew = np.hstack((xyz, np.zeros(xyz.shape)))
     xy = xyz[0] ** 2 + xyz[1] ** 2
     ptsnew[3] = np.sqrt(xy + xyz[2] ** 2)
@@ -277,10 +289,22 @@ def sixvec(xyz):
 
 
 def spherical_distance(sixvec_a, sixvec_b):
+    """
+
+    :param sixvec_a:
+    :param sixvec_b:
+    :return:
+    """
     return np.arccos(np.dot(sixvec_a, sixvec_b))
 
 
 def add_ndarray_to_set(ndarray, list):
+    """
+
+    :param ndarray:
+    :param list:
+    :return:
+    """
     in_list = False
     for element in list:
         if np.linalg.norm(ndarray - element) < 0.1:
@@ -298,19 +322,40 @@ def add_ndarray_to_set(ndarray, list):
 
 
 def recordsCheck(pos_log):
+    """
+
+    :param pos_log:
+    :return:
+    """
     return [len([entry.time for entry in pos_log if entry.name == superentry.name]) for superentry in pos_log if
             superentry.time == 0]
 
 
 def namedLog(pos_log):
+    """
+
+    :param pos_log:
+    :return:
+    """
     return [objectLog(pos_log, object_id) for object_id in nodeIDs(pos_log)]
 
 
 def nodeIDs(pos_log):
+    """
+
+    :param pos_log:
+    :return:
+    """
     return (entry.object_id for entry in pos_log)
 
 
 def objectLog(pos_log, object_id):
+    """
+
+    :param pos_log:
+    :param object_id:
+    :return:
+    """
     return [(entry.time, entry.position) for entry in pos_log if entry.object_id == object_id]
 
 
@@ -329,6 +374,8 @@ def Attenuation(f, d):
     d - Distance in m
 
     SHOULD RETURN DB
+    :param f:
+    :param d:
     """
 
     f2 = f ** 2
@@ -349,10 +396,20 @@ def Attenuation(f, d):
 
 
 def DB2Linear(dB):
+    """
+
+    :param dB:
+    :return:
+    """
     return 10.0 ** (dB / 10.0)
 
 
 def Linear2DB(Linear):
+    """
+
+    :param Linear:
+    :return:
+    """
     return 10.0 * math.log10(Linear + 0.0)
 
 
@@ -362,6 +419,12 @@ def Linear2DB(Linear):
 
 
 class dotdictify(dict):
+    """
+
+    :param value:
+    :param kwargs:
+    :raise TypeError:
+    """
     marker = object()
 
     def __init__(self, value=None, **kwargs):
@@ -431,6 +494,12 @@ class dotdictify(dict):
 
 
 class dotdict(dict):
+    """
+
+    :param arg:
+    :param kwargs:
+    """
+
     def __init__(self, arg, **kwargs):
         super(dotdict, self).__init__(**kwargs)
         for k in arg.keys():
@@ -450,6 +519,15 @@ class dotdict(dict):
 
 
 class memory_entry(object):
+    """
+
+    :param object_id:
+    :param position:
+    :param velocity:
+    :param distance:
+    :param name:
+    """
+
     def __init__(self, object_id, position, velocity, distance=None, name=None):
         self.object_id = object_id
         self.name = name
@@ -462,6 +540,15 @@ class memory_entry(object):
 
 
 class map_entry(object):
+    """
+
+    :param object_id:
+    :param position:
+    :param velocity:
+    :param name:
+    :param distance:
+    """
+
     def __init__(self, object_id, position, velocity, name=None, distance=None):
         self.object_id = object_id
         self.position = position
@@ -476,6 +563,13 @@ class map_entry(object):
 
 class AutoSyncShelf(DbfilenameShelf):
     # default to newer pickle protocol and writeback=True
+    """
+
+    :param filename:
+    :param protocol:
+    :param writeback:
+    """
+
     def __init__(self, filename, protocol=2, writeback=True):
         DbfilenameShelf.__init__(self, filename, protocol=protocol, writeback=writeback)
 
@@ -499,6 +593,12 @@ class AutoSyncShelf(DbfilenameShelf):
 
 def fudge_normal(value, stdev):
     # Override
+    """
+
+    :param value:
+    :param stdev:
+    :return: :raise ValueError:
+    """
     if not FUDGED:
         return value
 
@@ -520,6 +620,11 @@ def fudge_normal(value, stdev):
 
 
 def randomstr(length):
+    """
+
+    :param length:
+    :return:
+    """
     word = ''
     for i in range(length):
         word += random.choice(
@@ -528,6 +633,13 @@ def randomstr(length):
 
 
 def nameGeneration(count, naming_convention=None, existing_names=None):
+    """
+
+    :param count:
+    :param naming_convention:
+    :param existing_names:
+    :return: :raise ConfigError:
+    """
     if naming_convention is None:
         naming_convention = DEFAULT_CONVENTION
 
@@ -553,6 +665,12 @@ def nameGeneration(count, naming_convention=None, existing_names=None):
 
 
 def listfix(list_type, value):
+    """
+
+    :param list_type:
+    :param value:
+    :return:
+    """
     if isinstance(value, list):
         return list_type(value[0])
     else:
@@ -560,10 +678,20 @@ def listfix(list_type, value):
 
 
 def timestamp():
+    """
+
+
+    :return:
+    """
     return dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
 
 
 def grouper(data):
+    """
+
+    :param data:
+    :return:
+    """
     ranges = []
     for key, group in groupby(enumerate(data), lambda (index, item): index - item):
         group = map(itemgetter(1), group)
@@ -575,6 +703,11 @@ def grouper(data):
 
 
 def range_grouper(data):
+    """
+
+    :param data:
+    :return:
+    """
     ranges = []
     data = filter(lambda (x): x is not None, data)
     for k, g in groupby(enumerate(data), lambda (i, x): i - x):
@@ -591,6 +724,8 @@ def itersubclasses(cls, _seen=None):
 
     >>> list(itersubclasses(int)) == [bool]
     True
+    :param cls:
+    :param _seen:
     >>> class A(object): pass
     >>> class B(A): pass
     >>> class C(A): pass
@@ -616,7 +751,7 @@ def itersubclasses(cls, _seen=None):
     try:
         subs = cls.__subclasses__()
     except TypeError:  # fails only when cls is type
-        subs = cls.__subclasses__(cls)
+        subs = cls.__subclasses__()
     for sub in subs:
         if sub not in _seen:
             _seen.add(sub)
@@ -626,6 +761,9 @@ def itersubclasses(cls, _seen=None):
 
 
 class KeepRefs(object):
+    """
+
+    """
     __refs__ = collections.defaultdict(list)
 
     def __init__(self):
@@ -633,6 +771,10 @@ class KeepRefs(object):
 
     @classmethod
     def get_instances(cls):
+        """
+
+
+        """
         for inst_ref in cls.__refs__[cls]:
             inst = inst_ref()
             if inst is not None:
@@ -640,6 +782,14 @@ class KeepRefs(object):
 
 
 def updateDict(d, keys, value, safe=False):
+    """
+
+    :param d:
+    :param keys:
+    :param value:
+    :param safe:
+    :raise KeyError:
+    """
     for key in keys[:-1]:
         if not d.has_key(key) and safe:
             raise KeyError("Attempting to update uninstantiated key")
@@ -648,42 +798,84 @@ def updateDict(d, keys, value, safe=False):
 
 
 def list_functions(module):
+    """
+
+    :param module:
+    :return:
+    """
     return [o for o in getmembers(module) if isfunction(o[1])]
 
 
 def unext(filename):
+    """
+
+    :param filename:
+    :return:
+    """
     return os.path.splitext(os.path.basename(filename))[0]
 
 
 def kwarger(**kwargs):
+    """
+
+    :param kwargs:
+    :return:
+    """
     return kwargs
 
 
 def unCpickle(filename):
+    """
+
+    :param filename:
+    :return:
+    """
     with open(filename, 'rb') as f:
         data = cPickle.load(f)
     return data
 
 
-def mkCpickle(filename, object):
+def mkCpickle(filename, thing):
+    """
+
+    :param filename:
+    :param thing:
+    :return:
+    """
     with open(filename, 'wb') as f:
-        data = cPickle.dump(object, f)
+        data = cPickle.dump(thing, f)
     return f
 
 
 def unpickle(filename):
+    """
+
+    :param filename:
+    :return:
+    """
     with open(filename, 'rb') as f:
         data = pickle.load(f)
     return data
 
 
-def mkpickle(filename, object):
+def mkpickle(filename, thing):
+    """
+
+    :param filename:
+    :param thing:
+    :return:
+    """
     with open(filename, 'wb') as f:
-        data = pickle.dump(object, f)
+        data = pickle.dump(thing, f)
     return f
 
 
 def log_level_lookup(log_level):
+    """
+
+    :param log_level:
+    :return:
+    """
     if isinstance(log_level, str):
         return LOGLEVELS[log_level]
     else:
@@ -694,6 +886,12 @@ def log_level_lookup(log_level):
 
 
 def results_file(proposed_name, results_dir=None):
+    """
+
+    :param proposed_name:
+    :param results_dir:
+    :return:
+    """
     if os.path.dirname(proposed_name) is not None:
         # Have not been given a FQN Path: Assume to use the results directory
         if results_dir is None:
@@ -721,6 +919,8 @@ def getConfig(source_config=None, config_spec=_config_spec):
     """
     Get a configuration, either using default values from aietes.configs or
         by taking a configobj compatible file path
+    :param source_config:
+    :param config_spec:
     """
 
     if source_config and not os.path.isfile(source_config):
@@ -745,6 +945,8 @@ def validateConfig(config=None, final_check=False):
     Generate valid confobj configuration information by interpolating a given config
     file with the defaults
 
+    :param config:
+    :param final_check:
     NOTE: This does not verify if any of the functionality requested in the config is THERE
     Only that the config 'makes sense' as requested.
 
@@ -770,8 +972,23 @@ def validateConfig(config=None, final_check=False):
 
 
 def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
+    """
+
+    :param x:
+    :param exceptions_to_catch:
+    :param exception_to_raise:
+    :param fn:
+    :return: :raise exception_to_raise:
+    """
+
     @functools.wraps(fn)  # keeps name and docstring of old function
     def new_fn(*args, **kwargs):
+        """
+
+        :param args:
+        :param kwargs:
+        :return: :raise exception_to_raise:
+        """
         for i in xrange(x):
             try:
                 return fn(*args, **kwargs)
@@ -783,8 +1000,21 @@ def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
 
 
 def try_forever(exceptions_to_catch, fn):
+    """
+
+    :param exceptions_to_catch:
+    :param fn:
+    :return:
+    """
+
     @functools.wraps(fn)  # keeps name and docstring of old function
     def new_fn(*args, **kwargs):
+        """
+
+        :param args:
+        :param kwargs:
+        :return:
+        """
         count = 0
         while True:
             try:
@@ -797,9 +1027,27 @@ def try_forever(exceptions_to_catch, fn):
 
 
 def timeit():
+    """
+
+
+    :return:
+    """
+
     def decorator(func):
+        """
+
+        :param func:
+        :return:
+        """
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
+            """
+
+            :param args:
+            :param kwargs:
+            :return:
+            """
             start = time()
             res = func(*args, **kwargs)
             logging.info("%s (%s)" % (func.__name__, time() - start))
@@ -813,6 +1061,7 @@ def timeit():
 def are_equal_waypoints(wps):
     """Compare Waypoint Objects as used by WaypointMixin ([pos],prox)
         Will exclude 'None' records in wps and only compare valid waypoint lists
+    :param wps:
     """
     poss = [[w.position for w in wp] for wp in wps if wp is not None]
     proxs = [[w.prox for w in wp] for wp in wps if wp is not None]
@@ -826,8 +1075,13 @@ def are_equal_waypoints(wps):
     return True
 
 
-def get_latest_aietes_datafile(dir=None):
-    fqp = os.getcwd() if dir is None else dir
+def get_latest_aietes_datafile(base_dir=None):
+    """
+
+    :param base_dir:
+    :return: :raise ValueError:
+    """
+    fqp = os.getcwd() if base_dir is None else base_dir
     candidate_data_files = os.listdir(fqp)
     candidate_data_files = [
         f for f in candidate_data_files if is_valid_aietes_datafile(f)]
@@ -838,10 +1092,15 @@ def get_latest_aietes_datafile(dir=None):
     return os.path.join(fqp, candidate_data_files[0])
 
 
-def is_valid_aietes_datafile(file):
+def is_valid_aietes_datafile(filename):
     # TODO This isn't a very good test...
+    """
+
+    :param filename:
+    :return:
+    """
     test = re.compile(".npz$")
-    return test.search(file)
+    return test.search(filename)
 
 
 import os
@@ -874,29 +1133,38 @@ def _VmB(VmKey):
 
 def memory(since=0.0):
     """Return memory usage in Megabytes.
+    :param since:
     """
     return _VmB('VmSize:') - since
 
 
 def swapsize(since=0.0):
     """Return memory usage in Megabytes.
+    :param since:
     """
     return _VmB('VmSwap:') - since
 
 
 def resident(since=0.0):
     """Return resident memory usage in Megabytes.
+    :param since:
     """
     return _VmB('VmRSS:') - since
 
 
 def stacksize(since=0.0):
     """Return stack size in Megabytes.
+    :param since:
     """
     return _VmB('VmStk:') - since
 
 
 def literal_eval_walk(node, tabs=0):
+    """
+
+    :param node:
+    :param tabs:
+    """
     for key, item in node.items():
         if isinstance(item, dict):
             try:

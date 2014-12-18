@@ -28,14 +28,14 @@ import math
 import collections
 import operator
 
-from aietes.Layercake.priodict import priorityDictionary
+from aietes.Layercake.priodict import PriorityDictionary
 from aietes.Tools import distance, broadcast_address, DEBUG
 
 
 DEBUG = False
 
 
-def SetupRouting(node, config):
+def setup_routing(node, config):
     if config["Algorithm"] == "FBR":
         return FBR(node, config)
     elif config["Algorithm"] == "Static":
@@ -164,6 +164,10 @@ class DSDV(SimpleRoutingTable):
             operator.xor, map(ord, self.layercake.hostname)) * 100
 
     def push_up(self, packet):
+        """
+
+        :param packet:
+        """
         if hasattr(packet, 'table'):
             self.process_update_from_packet(packet)
         else:
@@ -171,6 +175,10 @@ class DSDV(SimpleRoutingTable):
 
     def SendPacket(self, packet):
 
+        """
+
+        :param packet:
+        """
         self.seq_no += 2
         tx_table = [RoutingEntry(self.layercake.hostname, 0, self.seq_no)]
         for dest, entry in self.items():
@@ -241,6 +249,10 @@ class Static(SimpleRoutingTable):
         # if this is the final destination of the packet,
         # pass it to the application layer
         # otherwise, send it on...
+        """
+
+        :param packet:
+        """
         if not self.IsDuplicated(packet):
             self.packets.add(packet["ID"])
             if packet["through"] == packet["dest"]:
@@ -250,6 +262,10 @@ class Static(SimpleRoutingTable):
                 self.SendPacket(packet)
 
     def SendPacket(self, packet):
+        """
+
+        :param packet:
+        """
         self.incoming_packet = packet
         self.incoming_packet["route"].append(
             (self.layercake.hostname, self.layercake.get_current_position()))
@@ -288,6 +304,12 @@ class Static(SimpleRoutingTable):
         self.layercake.mac.InitiateTransmission(self.incoming_packet)
 
     def NeedExplicitACK(self, current_level, destination):
+        """
+
+        :param current_level:
+        :param destination:
+        :return:
+        """
         if self.layercake.hostname == destination:
             return True
 
@@ -307,6 +329,11 @@ class Static(SimpleRoutingTable):
         return False
 
     def CloserSink(self):
+        """
+
+
+        :return:
+        """
         self.logger.debug("Looking for the closest Sink.")
         for name_item, pos_item in nodes_geo.iteritems():
             if name_item[0:4] == "Sink":
@@ -319,6 +346,11 @@ class Static(SimpleRoutingTable):
         return min_key
 
     def GetLevel(self, destination):
+        """
+
+        :param destination:
+        :return:
+        """
         levels = self.layercake.phy.level2distance
 
         for level, distance in levels.iteritems():
@@ -326,6 +358,13 @@ class Static(SimpleRoutingTable):
                 return level
 
     def Update(self, dest, dest_pos, through, through_pos):
+        """
+
+        :param dest:
+        :param dest_pos:
+        :param through:
+        :param through_pos:
+        """
         pass
 
     def BuildRoutingTable0(self):
@@ -407,6 +446,10 @@ class Static(SimpleRoutingTable):
 
     def BuildRoutingTable1(self):
         # Reception Cone
+        """
+
+
+        """
         self.logger.debug(
             "Building routing table for node " + self.layercake.hostname)
         self.nodes_rel_pos = {}
@@ -516,6 +559,10 @@ class Static(SimpleRoutingTable):
 
     def BuildRoutingTable2(self):
         # Shortest path with level constraints
+        """
+
+
+        """
         self.logger.debug(
             "Building optimal routing table for node " + self.layercake.hostname)
 
@@ -538,6 +585,11 @@ class Static(SimpleRoutingTable):
                 print i, self[i]
 
     def BuildGraph(self):
+        """
+
+
+        :return:
+        """
         levels = self.layercake.phy.level2distance
         graph = {}
         for fname, fpos in nodes_geo.iteritems():
@@ -554,9 +606,14 @@ class Static(SimpleRoutingTable):
         return graph
 
     def GetLevelFT(self, d):
+        """
+
+        :param d:
+        :return:
+        """
         levels = self.layercake.phy.level2distance
-        for level, distance in levels.iteritems():
-            if d <= distance:
+        for level, tx_range in levels.iteritems():
+            if d <= tx_range:
                 return level
 
     @staticmethod
@@ -566,6 +623,9 @@ class Static(SimpleRoutingTable):
         vertices nearer than or equal to the end.
 
         The input graph G is assumed to have the following
+        :param G:
+        :param start:
+        :param end:
         representation: A vertex can be any object that can
         be used as an index into a dictionary.  G is a
         dictionary, indexed by vertices.  For any vertex v,
@@ -604,7 +664,7 @@ class Static(SimpleRoutingTable):
         """
         D = {}  # dictionary of final distances
         P = {}  # dictionary of predecessors
-        Q = priorityDictionary()  # est.dist. of non-final vert.
+        Q = PriorityDictionary()  # est.dist. of non-final vert.
         Q[start] = 0
 
         for v in Q:
@@ -630,6 +690,8 @@ class Static(SimpleRoutingTable):
         The input has the same conventions as Dijkstra().
         The output is a list of the vertices in order along
         the shortest path.
+        :param start:
+        :param end:
         """
         G = self.BuildGraph()
 
@@ -644,6 +706,10 @@ class Static(SimpleRoutingTable):
         return Path
 
     def NodesPos2Str(self):
+        """
+
+
+        """
         print self.nodes_pos
 
 
@@ -669,6 +735,11 @@ class FBR(SimpleRoutingTable):
         # If this is the final destination of the packet,
         # pass it to the application layer
         # otherwise, send it on.
+        """
+
+        :param packet:
+        :return:
+        """
         if not self.IsDuplicated(packet):
             self.packets.add(packet["ID"])
             self.logger.debug("Processing packet with ID: " + packet["ID"])
@@ -681,6 +752,10 @@ class FBR(SimpleRoutingTable):
                 return False
 
     def SendPacket(self, packet):
+        """
+
+        :param packet:
+        """
         self.incoming_packet = packet
         self.incoming_packet["route"].append(
             (self.layercake.hostname, self.layercake.get_real_current_position()))
@@ -728,15 +803,32 @@ class FBR(SimpleRoutingTable):
         self.layercake.mac.InitiateTransmission(self.incoming_packet)
 
     def IsReachable(self, current_level, dest_pos):
+        """
+
+        :param current_level:
+        :param dest_pos:
+        :return:
+        """
         if self.GetLevel(dest_pos) is None:
             return False
         else:
             return self.GetLevel(dest_pos) <= current_level
 
     def IsNeighbor(self, dest_pos):
+        """
+
+        :param dest_pos:
+        :return:
+        """
         return self.IsReachable(0, dest_pos)
 
     def NeedExplicitACK(self, current_level, destination):
+        """
+
+        :param current_level:
+        :param destination:
+        :return:
+        """
         if self.layercake.hostname == destination:
             return True
 
@@ -756,6 +848,11 @@ class FBR(SimpleRoutingTable):
 
     def GetLevel(self, destination):
         # Defaults to None for Reachablility assessment
+        """
+
+        :param destination:
+        :return:
+        """
         new_level = None
 
         # ANY0/ANY1 etc
@@ -771,6 +868,11 @@ class FBR(SimpleRoutingTable):
 
 
     def CloserSink(self):
+        """
+
+
+        :return:
+        """
         self.logger.debug("Looking for the closest Sink.")
         self.nodes_rel_pos = {}
         for name_item, pos_item in nodes_geo.iteritems():
@@ -783,6 +885,11 @@ class FBR(SimpleRoutingTable):
         return min_key
 
     def ImAValidCandidate(self, packet):
+        """
+
+        :param packet:
+        :return:
+        """
         if packet["dest"] == self.layercake.hostname:
             return True
         elif self.rx_cone == 0:
@@ -829,13 +936,30 @@ class FBR(SimpleRoutingTable):
                 # neighbor
 
     def AddNode(self, name, pos):
+        """
+
+        :param name:
+        :param pos:
+        """
         self.nodes_pos[name] = pos
 
     def Update(self, dest, dest_pos, through, through_pos):
+        """
+
+        :param dest:
+        :param dest_pos:
+        :param through:
+        :param through_pos:
+        """
         self[dest] = through
         self.nodes_pos[dest] = dest_pos
 
     def IsDuplicated(self, packet):
+        """
+
+        :param packet:
+        :return:
+        """
         if packet["ID"] in self.packets:
             # This packet was already received, I should directly acknowledge
             # it
@@ -846,6 +970,14 @@ class FBR(SimpleRoutingTable):
         return False
 
     def SelectRoute(self, candidates, current_through, attemps, destination):
+        """
+
+        :param candidates:
+        :param current_through:
+        :param attemps:
+        :param destination:
+        :return:
+        """
         dist = {}
         ener = {}
         score = {}

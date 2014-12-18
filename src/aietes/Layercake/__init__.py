@@ -17,7 +17,7 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-import PhysicalLayer as PHY
+import PhysicalLayer as Phy
 import MAC
 import RoutingLayer as Net
 
@@ -25,7 +25,7 @@ import RoutingLayer as Net
 class Layercake(object):
     """
     Defines the Four relevant network layers for a given node
-    PHY,MAC,Network,Application
+    Phy,MAC,Network,Application
     """
 
     def __init__(self, host, config):
@@ -54,15 +54,15 @@ class Layercake(object):
         self.tx_lost_signal_hdlrs = []
 
         ##############################
-        # PHY
+        # Phy
         ##############################
         try:
-            phy_mod = getattr(PHY, str(config['phy']))
+            phy_mod = getattr(Phy, str(config['phy']))
             self.phy = phy_mod(self,
                                self.config['PHY'],
                                self.channel_event)
         # except AttributeError:
-        # raise ConfigError("Can't find PHY: %s" % config['phy'])
+        # raise ConfigError("Can't find Phy: %s" % config['Phy'])
         #
         except:
             raise
@@ -123,11 +123,11 @@ class Layercake(object):
         Host position as far as it's concerned (unless overridden with 'true' which will return the real physical location
         :return:
         """
-        return self.host.getPos()
+        return self.host.get_pos()
 
     def get_real_current_position(self):
         """
         Host position as far as it's concerned (unless overridden with 'true' which will return the real physical location
         :return:
         """
-        return self.host.getPos(True)
+        return self.host.get_pos(True)

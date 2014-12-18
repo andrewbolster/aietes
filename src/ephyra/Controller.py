@@ -152,9 +152,19 @@ class EphyraController(object):
 
     @check_model()
     def get_vector_names(self, i=None):
+        """
+
+        :param i:
+        :return:
+        """
         return self.model.names if i is None else self.model.names[i]
 
     def get_n_vectors(self):
+        """
+
+
+        :return:
+        """
         try:
             return self.model.n
         except AttributeError:
@@ -162,10 +172,20 @@ class EphyraController(object):
 
     @check_model()
     def get_model_title(self):
+        """
+
+
+        :return:
+        """
         return self.model.title
 
     @check_model()
     def get_extent(self):
+        """
+
+
+        :return:
+        """
         return self.model.environment
 
     @check_model()
@@ -181,6 +201,12 @@ class EphyraController(object):
     @check_model()
     def get_3D_trail(self, node=None, time_start=None, length=None):
         """
+
+
+
+        :param node:
+        :param time_start:
+        :param length:
         Return the [X:][Y:][Z:] trail for a given node from time_start backwards to
         a given length
 
@@ -196,12 +222,28 @@ class EphyraController(object):
 
     @check_model()
     def get_fleet_positions(self, time):
+        """
+
+        :param time:
+        :return:
+        """
         return self.model.position_slice(time)
 
     def get_fleet_headings(self, time):
+        """
+
+        :param time:
+        :return:
+        """
         return self.model.heading_slice(time)
 
     def get_node_contribs(self, node, time=None):
+        """
+
+        :param node:
+        :param time:
+        :return:
+        """
         return self.model.contribution_slice(node, time)
 
     def get_max_node_contribs(self):
@@ -211,15 +253,30 @@ class EphyraController(object):
         return max(len(c) for c in self.model.contributions[:, 0])
 
     def get_contrib_keys(self):
+        """
+
+
+        :return:
+        """
         return self.model.contributions[np.argmax(len(self.model.contributions[:, 0])), 0].keys()
 
     def get_achievements(self):
+        """
+
+
+        :return:
+        """
         if self.model.achievements is not None:
             return self.model.achievements.nonzero()[1]
         else:
             return None
 
     def get_fleet_average_pos(self, time):
+        """
+
+        :param time:
+        :return:
+        """
         return np.average(self.model.position_slice(time), axis=0)
 
     @check_model()
@@ -258,12 +315,18 @@ class EphyraController(object):
         })
 
     def get_heading_mag_max_min(self):
+        """
+
+
+        :return:
+        """
         mags = self.model.heading_mag_range()
         return max(mags), min(mags)
 
     def get_position_min_max(self, time):
         """
         Return a 3-tuple of (min,max),(min,max),(min,max) for x,y,z respectively for a given time
+        :param time:
         """
         pos = self.get_fleet_positions(time)
         mins = pos.min(axis=0)
@@ -271,11 +334,21 @@ class EphyraController(object):
         return tuple(zip(mins, maxes))
 
     def get_position_stddev_max_min(self):
+        """
+
+
+        :return:
+        """
         stddevs = self.model.distance_from_average_stddev_range()
         return max(stddevs), min(stddevs)
 
     @check_model()
     def get_waypoints(self):
+        """
+
+
+        :return:
+        """
         wp = getattr(self.model, 'waypoints', None)
         if isinstance(wp, np.ndarray) and wp.ndim == 0:
             return None
@@ -284,15 +357,33 @@ class EphyraController(object):
 
     @check_model()
     def drifting(self):
+        """
+
+
+        :return:
+        """
         return self.model.drifting
 
     @check_model()
     def ecea(self):
+        """
+
+
+        :return:
+        """
         return self.model.ecea
 
     @check_model()
     def get_3D_drift(self, source=None, node=None, time_start=None, length=None):
         """
+
+
+
+
+        :param source:
+        :param node:
+        :param time_start:
+        :param length:
         Return the [X:][Y:][Z:] trail for a given node's drift from time_start backwards to
         a given length
 

@@ -16,8 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-__author__ = 'andrewbolster'
-
 import os
 import logging
 import traceback
@@ -130,14 +128,14 @@ class MetricView(object):
 
         try:
             if self.ndim > 1:
-                slice = data[xmin:xmax][:]
+                value_range = data[xmin:xmax][:]
             else:
-                slice = data[xmin:xmax]
-            ymin = slice.min()
-            ymax = slice.max()
-            range = ymax - ymin
+                value_range = data[xmin:xmax]
+            ymin = value_range.min()
+            ymax = value_range.max()
+            y_range = ymax - ymin
             if margin is None:
-                margin = range * 0.3333
+                margin = y_range * 0.3333
 
             ymin -= margin
             ymax += margin
@@ -153,6 +151,10 @@ class Arrow3D(FancyArrowPatch):
         self._verts3d = xs, ys, zs
 
     def draw(self, renderer):
+        """
+
+        :param renderer:
+        """
         xs3d, ys3d, zs3d = self._verts3d
         xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, renderer.M)
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
@@ -160,6 +162,13 @@ class Arrow3D(FancyArrowPatch):
 
 
 class GenericFrame(wx.Frame):
+    """
+
+    :param controller:
+    :param args:
+    :param kw:
+    """
+
     def __init__(self, controller, *args, **kw):
         wx.Frame.__init__(
             self, None, title=EphyraNotebook.description, *args, **kw)
@@ -180,6 +189,13 @@ from ephyra.Views.Simulator import Simulator
 
 
 class EphyraNotebook(wx.Frame):
+    """
+
+    :param controller:
+    :param args:
+    :param kw:
+    """
+
     def __init__(self, controller, *args, **kw):
         wx.Frame.__init__(self, None, title="Ephyra")
         self.log = logging.getLogger(self.__module__)
@@ -222,13 +238,17 @@ class EphyraNotebook(wx.Frame):
         self.nb.SetSelection(0)
 
     def CreateMenuBar(self):
+        """
+
+
+        """
         menubar = wx.MenuBar()
         filem = wx.Menu()
         play = wx.Menu()
         view = wx.Menu()
         tools = wx.Menu()
         favorites = wx.Menu()
-        help = wx.Menu()
+        help_menu = wx.Menu()
 
         newm = filem.Append(
             wx.NewId(), '&New \t Ctrl+n', 'Generate a new Simulation')
@@ -247,7 +267,7 @@ class EphyraNotebook(wx.Frame):
 
         menubar.Append(favorites, 'F&avorites')
 
-        menubar.Append(help, '&Help')
+        menubar.Append(help_menu, '&Help')
 
         self.accel_tbl = wx.AcceleratorTable(
             [(wx.ACCEL_CTRL, ord('o'), openm.GetId())]
@@ -260,6 +280,10 @@ class EphyraNotebook(wx.Frame):
     # Window Events
     ####
     def on_close(self, event):
+        """
+
+        :param event:
+        """
         dlg = wx.MessageDialog(self,
                                "Do you really want to close this application?",
                                "Confirm Exit", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
@@ -269,11 +293,19 @@ class EphyraNotebook(wx.Frame):
             wx.CallAfter(self.exit)
 
     def exit(self):
+        """
+
+
+        """
         self.DestroyChildren()
         self.Destroy()
 
     def on_idle(self, event):
 
+        """
+
+        :param event:
+        """
         if self.args.autoexit:
             self.exit()
         else:
@@ -284,6 +316,11 @@ class EphyraNotebook(wx.Frame):
                 self.exit()
 
     def on_resize(self, event):
+        """
+
+        :param event:
+        :raise e:
+        """
         plot_size = self.GetClientSize()
         self.log.debug("plotsize:%s" % str(plot_size))
 
@@ -301,6 +338,10 @@ class EphyraNotebook(wx.Frame):
     # File Events
     ####
     def on_new(self, event):
+        """
+
+        :param event:
+        """
         dlg = wx.MessageDialog(self,
                                message="This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
                                style=wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
@@ -311,6 +352,10 @@ class EphyraNotebook(wx.Frame):
             self.ctl.new_simulation()
 
     def on_open(self, event):
+        """
+
+        :param event:
+        """
         dlg = wx.FileDialog(
             self, message="Select a DataPackage",
             defaultDir=os.getcwd(),
@@ -330,10 +375,19 @@ class EphyraNotebook(wx.Frame):
     # Status Management
     ###
     def update_status(self, msg):
+        """
+
+        :param msg:
+        """
         self.status_bar.SetStatusText(msg, number=0)
         if msg is not "Idle":
             self.log.info(msg)
 
     def update_timing(self, t, tmax):
+        """
+
+        :param t:
+        :param tmax:
+        """
         self.status_bar.SetStatusText(
             "%s:%d/%d" % ("SIM" if self.ctl.is_simulation() else "REC", t, tmax), number=2)

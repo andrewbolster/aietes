@@ -166,6 +166,11 @@ class Application(Sim.Process):
 
     def dump_stats(self):
 
+        """
+
+
+        :return: :raise RuntimeError:
+        """
         if self.HAS_LAYERCAKE:
             total_bits_in = total_bits_out = 0
             for pkt in self.received_log:
@@ -226,6 +231,10 @@ class Application(Sim.Process):
         """
         Packet Generator with periodicity
         Called from the lifecycle with defaults None,None
+        :param period:
+        :param destination:
+        :param args:
+        :param kwargs:
         """
         raise TypeError("Tried to instantiate the base Application class")
 
@@ -237,6 +246,11 @@ class AccessibilityTest(Application):
         """
         Copy of behaviour from AUVNetSim for default class,
         exhibiting poisson departure behaviour
+        :param period:
+        :param destination:
+        :param data:
+        :param args:
+        :param kwargs:
         """
         packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
         packet = {"ID": packet_ID, "dest": destination, "source": self.layercake.hostname, "route": [
@@ -245,6 +259,10 @@ class AccessibilityTest(Application):
         return packet, period
 
     def packetRecv(self, packet):
+        """
+
+        :param packet:
+        """
         delay = Sim.now() - packet["time_stamp"]
         hops = len(packet["route"])
 
@@ -253,6 +271,11 @@ class AccessibilityTest(Application):
 
 
 class RoutingTest(Application):
+    """
+
+    :param args:
+    :param kwargs:
+    """
     default_destination = None
     random_delay = 10
 
@@ -265,6 +288,11 @@ class RoutingTest(Application):
     def packetGen(self, period, destination=None, data=None, *args, **kwargs):
         """
         Lowest-count node gets a message
+        :param period:
+        :param destination:
+        :param data:
+        :param args:
+        :param kwargs:
         """
         if destination is not None:
             raise RuntimeWarning(
@@ -310,11 +338,19 @@ class RoutingTest(Application):
         return packet, period
 
     def packetRecv(self, packet):
+        """
+
+        :param packet:
+        """
         self.mergeCounters()
         self.received_counter[packet['source']] += 1
         del packet
 
     def mergeCounters(self):
+        """
+
+
+        """
         learned_nodes = self.sent_counter.keys() + self.received_counter.keys()
         learned_and_implied_nodes = set(
             self.total_counter.keys()) | set(learned_nodes)
@@ -336,6 +372,11 @@ class RoutingTest(Application):
                 not_in_rx, not_in_tx, not_in_tot))
 
     def dump_stats(self):
+        """
+
+
+        :return:
+        """
         initial = Application.dump_stats(self)
         initial.update({
             'sent_counts': frozenset(self.sent_counter.items()),
@@ -359,6 +400,10 @@ class CommsTrust(RoutingTest):
 
     def activate(self):
 
+        """
+
+
+        """
         self.current_target = None
         self.last_trust_assessment = None
         self.last_accessed_rx_packet = None
@@ -422,6 +467,10 @@ class CommsTrust(RoutingTest):
             return []
 
     def tick(self):
+        """
+
+
+        """
         if not Sim.now() % self.trust_assessment_period:
 
             # Set up the data structures
@@ -480,6 +529,11 @@ class CommsTrust(RoutingTest):
         is addressed to it with a particular stream length.
         The counter counts the 'actual' number of packets while the packet.data
         carries the zero-indexed 'packet id'
+        :param period:
+        :param destination:
+        :param data:
+        :param args:
+        :param kwargs:
         """
         if destination is not None:
             raise RuntimeWarning(
@@ -533,6 +587,10 @@ class CommsTrust(RoutingTest):
         return packet, period
 
     def packetRecv(self, packet):
+        """
+
+        :param packet:
+        """
         self.mergeCounters()
         self.received_counter[packet['source']] += 1
         self.result_packet_dl[packet['source']].append(packet['data'])
@@ -547,6 +605,11 @@ class CommsTrust(RoutingTest):
         del packet
 
     def dump_logs(self):
+        """
+
+
+        :return:
+        """
         initial = super(CommsTrust, self).dump_logs()
         initial.update({
             'trust': self.trust_assessments,
@@ -566,9 +629,18 @@ class Null(Application):
     def packetGen(self, period, destination, data=None, *args, **kwargs):
         """
         Does Nothing, says nothing
+        :param period:
+        :param destination:
+        :param data:
+        :param args:
+        :param kwargs:
         """
         return None, 1
 
     @staticmethod
     def packetRecv(packet):
+        """
+
+        :param packet:
+        """
         del packet

@@ -7,19 +7,19 @@ from polybos import ExperimentManager as EXP
 
 
 def set_exp():
-    exp = EXP(node_count=8,
-              title="Repulsion-Clumping Test")
-    exp.addVariable2RangeScenarios({"repulsion": numpy.linspace(0.005, 0.3, 10),
-                                   "clumping": numpy.linspace(0.005, 0.3, 10)})
-    return exp
+    e = EXP(node_count=8,
+            title="Repulsion-Clumping Test")
+    e.addVariable2RangeScenarios({"repulsion": numpy.linspace(0.005, 0.3, 10),
+                                  "clumping": numpy.linspace(0.005, 0.3, 10)})
+    return e
 
 
-def run_exp(exp):
-    exp.run(title="8-repulsion-10_10-3",
-            runcount=3,
-            threaded=False)
+def run_exp(e):
+    e.run(title="8-repulsion-10_10-3",
+          runcount=3,
+          threaded=False)
 
-    return exp
+    return e
 
 
 if __name__ == "__main__":

@@ -23,11 +23,12 @@ from bounos import DataPackage, Analyses
 from aietes.Tools import mkpickle
 
 
-def Find_Convergence(data, *args, **kwargs):
+def find_convergence(data, *args, **kwargs):
     """
     Return the Time of estimated convergence of the fleet along with some certainty value
     using the Average of Inter Node Distances metric
     i.e. the stability of convergence
+    :param data:
     Args:
         data(DataPackage)
     Raises:
@@ -44,7 +45,7 @@ def Find_Convergence(data, *args, **kwargs):
     return detection_points, metrics
 
 
-def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
+def detect_misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
                         stddev_frac=1, *args, **kwargs):
     """
     Detect and identify if a node / multiple nodes are misbehaving.
@@ -173,6 +174,15 @@ def Deviation(data, *args, **kwargs):
 def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs):
     # Combine multiple metrics detections into a general trust rating per node
     # over time.
+    """
+
+    :param data:
+    :param metrics:
+    :param suspects_only:
+    :param args:
+    :param kwargs:
+    :return: :raise ValueError:
+    """
     if not isinstance(metrics, list):
         raise ValueError("Should be passed a list of analyses")
     tmax = kwargs.get("tmax", data.tmax)
@@ -192,7 +202,7 @@ def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs)
             misbehavors = {suspect: range(data.tmax)
                            for suspect in range(data.n)}
         else:
-            results = Detect_Misbehaviour(data, metric=metric)
+            results = detect_misbehaviour(data, metric=metric)
             misbehavors = results['suspicions']
 
         stddev, deviance = results['detection_envelope'], results['deviance']
@@ -232,6 +242,11 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
     #TODO THIS DOES NOT IDENTIFY BEHAVIOUR
     Attempts to detect and guess malicious/'broken' node
     Deviance is unitless, in a shape [metrics,t,nodes]
+    :param deviance:
+    :param trust:
+    :param metrics:
+    :param names:
+    :param verbose:
     """
     detection_sums = np.sum(
         deviance, axis=1) - deviance.shape[1]  # Removes the 1.0 initial bias

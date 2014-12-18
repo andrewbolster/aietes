@@ -3,30 +3,33 @@
 __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 
+
 def set_exp():
-    exp = EXP(node_count=4,
-              title="FleetLawnmowerFilterIterVar-1-4",
-              parallel=True, future=True,
-              retain_data='files')
-    exp.updateDefaultNode({
-        'behaviour':'FleetLawnmower',
-        'waypoint_style':'lawnmower',
-        'positioning':'surface',
-        'drifting':'DriftFactorPy',
+    e = EXP(node_count=4,
+            title="FleetLawnmowerFilterIterVar-1-4",
+            parallel=True, future=True,
+            retain_data='files')
+    e.updateDefaultNode({
+        'behaviour': 'FleetLawnmower',
+        'waypoint_style': 'lawnmower',
+        'positioning': 'surface',
+        'drifting': 'DriftFactorPy',
     })
-    exp.addVariableRangeScenario('ecea',["Simple{}".format(n) for n in range(1,4)])
-    exp.updateDuration(21600)
-    return exp
+    e.addVariableRangeScenario('ecea', ["Simple{}".format(n) for n in range(1, 4)])
+    e.updateDuration(21600)
+    return e
 
-def run_exp(exp):
-    exp.run(title="ECEA_Iteration_Test",
-            runcount=32)
 
-    return exp
+def run_exp(e):
+    e.run(title="ECEA_Iteration_Test",
+          runcount=32)
+
+    return e
 
 
 if __name__ == "__main__":
     from aietes.Tools import memory
+
     exp = set_exp()
     exp = run_exp(exp)
     print exp.dump_dataruns()

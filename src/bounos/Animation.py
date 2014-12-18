@@ -19,15 +19,22 @@ __email__ = "me@andrewbolster.info"
 
 import logging
 
-from matplotlib import animation as MPLanimation
+from matplotlib import animation as mplanimation
 
 
-class AIETESAnimation(MPLanimation.FuncAnimation):
+class AIETESAnimation(mplanimation.FuncAnimation):
     def save(self, filename, fps=5, codec='libx264', clear_temp=True,
              frame_prefix='_tmp', blit=False, *args, **kwargs):
         """
         Saves a movie file by drawing every frame.
 
+
+        :param blit:
+        :param frame_prefix:
+        :param clear_temp:
+        :param codec:
+        :param fps:
+        :param filename:
         *filename* is the output filename, eg :file:`mymovie.mp4`
 
         *fps* is the frames per second in the movie

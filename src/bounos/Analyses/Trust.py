@@ -43,7 +43,7 @@ def _gray_class(x):
         return np.nan
 
 
-def T_kt(interval):
+def t_kt(interval):
     """
     Generate a single trust value from a GRG
     1/ (1+ sigma^2/theta^2)
@@ -96,7 +96,7 @@ def generate_single_run_trust_perspective(gf, metric_weights=None, flip_metrics=
         trusts.append(
             pd.Series(
                 interval.apply(
-                    T_kt,
+                    t_kt,
                     axis=1),
                 name='trust'
             )
@@ -178,6 +178,12 @@ def invert_node_trust_perspective(node_trust_perspective):
 
 
 def generate_global_trust_values(trust_logs, metric_weights=None):
+    """
+
+    :param trust_logs:
+    :param metric_weights:
+    :return:
+    """
     trust_perspectives = {
         node: generate_node_trust_perspective(node_observations, metric_weights=metric_weights)
         for node, node_observations in trust_logs.iteritems()
@@ -196,6 +202,7 @@ def generate_trust_logs_from_comms_logs(comms_logs):
     i.e. trust is internally recorded by each node wrt each node [node][t]
     for god processing it's easier to deal with [t][node]
 
+    :param comms_logs:
     :return: trust observations[observer][t][target]
     """
     obs = {}
@@ -217,6 +224,7 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     This method presents an exploded view of the trust log where the individual metrics are column-wise with the
     per-node indexes shifted from the col space to the row-multiindex space
 
+    :param metrics_string:
     tldr: turns the list-oriented value space in trust logs into a columular format.
     :param df:
     :return tf:
@@ -255,10 +263,10 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
 
     t_whitenized = lambda x: max(_gray_whitenized(x)) * x  # Maps to max_s{f_s(T_{Bi})})T_{Bi}
     t_direct = lambda x: 0.5 * t_whitenized(x)
-    t_recommend = lambda x: 0.5 * ( \
+    t_recommend = lambda x: 0.5 * (
         2 * len(recommendation_nodes)
         / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
-    t_indirect = lambda x: 0.5 * ( \
+    t_indirect = lambda x: 0.5 * (
         len(indirect_nodes)
         / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
 

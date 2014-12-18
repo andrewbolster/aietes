@@ -1,10 +1,6 @@
 #! /usr/bin/env python
 # coding=utf-8
 
-# paths = ["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-12-50-42"]
-paths = ["/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-11-17-14-31",
-         "/home/bolster/src/aietes/results/ThroughputTestingScenario-2014-11-12-17-50-11"]
-
 import os
 import logging
 import argparse

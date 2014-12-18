@@ -17,8 +17,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-__author__ = 'andrewbolster'
-
 WIDTH, HEIGHT = 16, 9
 SIDEBAR_WIDTH = 8
 
@@ -185,6 +183,10 @@ class VisualNavigator(wx.Panel):
     # 3D Plot Handling Functions
     ####
     def initialise_3d_plot(self):
+        """
+
+
+        """
         self._plot_initialised = True
         self.log.info("Plot Initialised")
         # Start off with all nodes displayed
@@ -266,6 +268,11 @@ class VisualNavigator(wx.Panel):
         self.d_t = int((self.tmax + 1) / 100)
 
     def redraw_page(self, t=None):
+        """
+
+        :param t:
+        :return: :raise:
+        """
         if not self._plot_initialised:
             self.log.warn("Plot isn't ready yet!")
             return
@@ -348,6 +355,7 @@ class VisualNavigator(wx.Panel):
     def move_T(self, delta_t=None):
         """ Seek the visual plot by delta_t while doing bounds checking and redraw
 
+        :param delta_t:
         : param delta_t: Positive or negative time shift from current t. If None use t_d
         : type delta_t: int
 
@@ -386,6 +394,10 @@ class VisualNavigator(wx.Panel):
     def sphere(x, y, z, r=1.0):
         """
         Returns a sphere definition tuple (xs,ys,zs) for use with plot_wireframe
+        :param x:
+        :param y:
+        :param z:
+        :param r:
         """
         u, v = np.mgrid[0:2 * np.pi:10j, 0:np.pi:10j]
         xs = (r * np.cos(u) * np.sin(v)) + x
@@ -395,6 +407,10 @@ class VisualNavigator(wx.Panel):
         return xs, ys, zs
 
     def redraw_fleet_sphere(self):
+        """
+
+
+        """
         fleet = self.ctl.get_fleet_configuration(self.t)
         (x, y, z) = fleet['positions']['avg']
         (r, s) = (max(fleet['positions']['delta_avg']),
@@ -416,6 +432,10 @@ class VisualNavigator(wx.Panel):
         )
 
     def redraw_fleet_heading_vectors(self):
+        """
+
+
+        """
         self._remove_vectors(self.node_vector_collections)
         positions = self.ctl.get_fleet_positions(self.t)
         headings = self.ctl.get_fleet_headings(self.t)
@@ -440,6 +460,10 @@ class VisualNavigator(wx.Panel):
             )
 
     def redraw_fleet_heading_contribs(self):
+        """
+
+
+        """
         self._remove_vectors(self.node_contrib_collections)
         positions = self.ctl.get_fleet_positions(self.t)
         self._contrib_labels = []
@@ -477,6 +501,11 @@ class VisualNavigator(wx.Panel):
         self.plot_axes.autoscale()
 
     def get_contrib_colour(self, contrib_key):
+        """
+
+        :param contrib_key:
+        :return: :raise ke:
+        """
         try:
             return self._contrib_colour_dict[contrib_key]
         except (AttributeError, KeyError):
@@ -515,6 +544,10 @@ class VisualNavigator(wx.Panel):
 
     def update_metric_charts(self):
         # Cleanup Metrics
+        """
+
+
+        """
         while None in self.metric_views:
             ind = self.metric_views.index(None)
             del self.metric_axes[ind]
@@ -546,22 +579,42 @@ class VisualNavigator(wx.Panel):
     # Button Event Handlers
     ####
     def on_pause_btn(self, event):
+        """
+
+        :param event:
+        """
         self.paused = not self.paused
         self.pause_btn.SetLabel("Resume" if self.paused else "Pause")
 
     def on_play_btn(self, event):
+        """
+
+        :param event:
+        """
         self.paused = False
         wx.CallAfter(self.redraw_page, t=0)
 
     def on_faster_btn(self, event):
+        """
+
+        :param event:
+        """
         self.d_t = int(min(max(2, self.d_t * 1.1), self.tmax / 20))
         self.log.debug("Setting time step to: %s" % self.d_t)
 
     def on_slower_btn(self, event):
+        """
+
+        :param event:
+        """
         self.d_t = int(min(max(2, self.d_t * 0.9), self.tmax / 20))
         self.log.debug("Setting time step to: %s" % self.d_t)
 
     def on_time_slider(self, event):
+        """
+
+        :param event:
+        """
         t = self.time_slider.GetValue()
         self.log.debug("Slider: Setting time to %d" % t)
         wx.CallAfter(self.redraw_page, t=t)
@@ -570,6 +623,10 @@ class VisualNavigator(wx.Panel):
     # Display Selection Tools
     ###
     def on_sphere_chk(self, event):
+        """
+
+        :param event:
+        """
         if not self.sphere_chk.IsChecked():
             self._remove_sphere()
             self.log.debug("Sphere Overlay Disabled")
@@ -580,6 +637,10 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page)
 
     def on_vector_chk(self, event):
+        """
+
+        :param event:
+        """
         if not self.vector_chk.IsChecked():
             self._remove_vectors(self.node_vector_collections)
             self.log.info("Vector Overlay Disabled")
@@ -593,6 +654,10 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page)
 
     def on_contrib_chk(self, event):
+        """
+
+        :param event:
+        """
         if not self.contrib_chk.IsChecked():
             self._remove_vectors(self.node_contrib_collections)
             self.log.info("Contrib Overlay Disabled")
@@ -606,6 +671,10 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page)
 
     def on_trail_slider(self, event):
+        """
+
+        :param event:
+        """
         event.Skip()
         norm_trail = self.trail_slider.GetValue()
         self.trail_length = int(
@@ -614,6 +683,10 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page)
 
     def on_metric_zoom_chk(self, event):
+        """
+
+        :param event:
+        """
         if self.metric_zoom_chk.IsChecked():
             for axes in self.metric_axes:
                 axes.autoscale_view(scalex=False, scaley=False, tight=True)
@@ -629,6 +702,10 @@ class VisualNavigator(wx.Panel):
 
     def on_zoom_fleet_chk(self, event):
         # When unchecking, return to default viewpoint
+        """
+
+        :param event:
+        """
         if not self.zoom_fleet_chk.IsChecked() and self._fleet_zoom:
             self.plot_axes.autoscale_view(
                 scalex=True, scaley=True, scalez=True, tight=False)
@@ -647,6 +724,7 @@ class VisualNavigator(wx.Panel):
         Based on the wxPython demo - opens the MultiChoiceDialog
         and sets that selection as the node entries to be
         displayed
+        :param event:
         """
         lst = list(self.ctl.get_vector_names())
         dlg = wx.MultiChoiceDialog(self,
@@ -671,6 +749,10 @@ class VisualNavigator(wx.Panel):
         wx.CallAfter(self.redraw_page)
 
     def on_idle(self, event):
+        """
+
+        :param event:
+        """
         if not self.paused:
             if self._plot_initialised:
                 self.move_T()
@@ -682,6 +764,7 @@ class VisualNavigator(wx.Panel):
     def on_resize(self, event):
         """
         Retrieve the Panel-size in pixels and update the plot panel, plot canvas, and figure.
+        :param event:
         """
         plot_size = self.panel_sizer.GetChildren()[0].GetSize()
         self.log.info("plotsize:%s" % str(plot_size))
@@ -697,6 +780,10 @@ class VisualNavigator(wx.Panel):
 
 class DriftingNavigator(VisualNavigator):
     def initialise_3d_plot(self):
+        """
+
+
+        """
         VisualNavigator.initialise_3d_plot(self)
         # Get Drift Plot info
         (xs, ys, zs) = self.ctl.get_3D_drift()
@@ -706,6 +793,11 @@ class DriftingNavigator(VisualNavigator):
         ]
 
     def redraw_page(self, t=None):
+        """
+
+        :param t:
+        :raise:
+        """
         VisualNavigator.redraw_page(self, t=t)
         for n, (line, label) in enumerate(zip(self.drift_lines, self.labels)):
             (xs, ys, zs) = self.ctl.get_3D_drift(
@@ -729,6 +821,10 @@ class ECEANavigator(DriftingNavigator):
     source = "intent"
 
     def initialise_3d_plot(self):
+        """
+
+
+        """
         DriftingNavigator.initialise_3d_plot(self)
         # Get Drift Plot info
         (xs, ys, zs) = self.ctl.get_3D_drift(source=self.source)
@@ -738,6 +834,11 @@ class ECEANavigator(DriftingNavigator):
         ]
 
     def redraw_page(self, t=None):
+        """
+
+        :param t:
+        :raise:
+        """
         DriftingNavigator.redraw_page(self, t=t)
         for n, (line, label) in enumerate(zip(self.intent_lines, self.labels)):
             (xs, ys, zs) = self.ctl.get_3D_drift(

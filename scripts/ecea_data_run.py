@@ -1,12 +1,16 @@
 # coding=utf-8
 __author__ = 'bolster'
 
-import ecea_basic_run, ecea_deltarange_run, ecea_nodecount_run, ecea_dvlrange_run
 from datetime import datetime
 import os
 
+import ecea_deltarange_run
+import ecea_nodecount_run
+import ecea_dvlrange_run
+
+
 test_cases = [ecea_nodecount_run, ecea_deltarange_run, ecea_dvlrange_run]
-#test_cases = [ecea_nodecount_run]
+# test_cases = [ecea_nodecount_run]
 
 date = datetime.now().strftime('%Y%m%d-%H-%M')
 for test in test_cases:
@@ -18,10 +22,11 @@ for test in test_cases:
         exp.dump_dataruns()
     except RuntimeError as err:
         import traceback
+
         print("Experiment {} went horribly wrong, carrying on regardless and leaving a note: {}".format(test.__name__,
                                                                                                         err))
         traceback.print_exc(file=open(
-            os.path.join(os.path.abspath(exp.exp_path),"FAILED.{}.log".format(test.__name__)),
+            os.path.join(os.path.abspath(exp.exp_path), "FAILED.{}.log".format(test.__name__)),
             'w+'
-            )
+        )
         )

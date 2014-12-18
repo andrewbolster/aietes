@@ -24,13 +24,13 @@ from operator import attrgetter
 import numpy as np
 from scipy.spatial.distance import squareform, pdist
 
-from aietes.Tools import Sim, distance, mag, secondsToStr
+from aietes.Tools import Sim, distance, mag, seconds_to_str
 from aietes.Tools.ProgressBar import ProgressBar
 from aietes.Environment import Environment
 
 
 try:
-    from contrib.Ghia.uuv_time_delay_model import timeOfFlightMatrix_Complex
+    from contrib.Ghia.uuv_time_delay_model import time_of_flight_matrix_complex
 
     ghia = True
 except ImportError:
@@ -62,7 +62,7 @@ class Fleet(Sim.Process):
 
     def activate(self):
         for node in self.nodes:
-            node.assignFleet(self)
+            node.assign_fleet(self)
         for node in self.nodes:
             node.activate()
         Sim.activate(self, self.lifecycle())
@@ -112,7 +112,7 @@ class Fleet(Sim.Process):
             if self.isMissionComplete():
                 if USS_Abraham_Lincoln:
                     self.logger.critical(
-                        "Mission accomplished at {}".format(secondsToStr(Sim.now())))
+                        "Mission accomplished at {}".format(seconds_to_str(Sim.now())))
                     USS_Abraham_Lincoln = False
                     Sim.stopSimulation()
 
@@ -145,11 +145,11 @@ class Fleet(Sim.Process):
         """
         return node in self.nodes and self.nodes.index(node)
 
-    def nodenum_from_id(self, id):
+    def nodenum_from_id(self, node_id):
         """
-        Return the index of the requested node id
+        Return the index of the requested node node_id
         """
-        return map(attrgetter('id'), self.nodes).index(id)
+        return map(attrgetter('id'), self.nodes).index(node_id)
 
     def nodeCount(self):
         """
@@ -167,6 +167,7 @@ class Fleet(Sim.Process):
     def nodePositions(self, shared=True):
         """
         Return the fleet-list array of latest reported positions
+        :param shared:
         (If shared: Use the 'drifted' reported positions)
         """
         if shared:
@@ -193,6 +194,8 @@ class Fleet(Sim.Process):
     def nodePositionsAt(self, t, shared=True):
         """
         Return the fleet-list array of reported positions at a given time
+        :param t:
+        :param shared:
         """
         if shared:
             kb = self.shared_map.logs_at_time(t)
@@ -206,6 +209,7 @@ class Fleet(Sim.Process):
     def nodePosLogs(self, shared=True):
         """
         Return the fleet-list array of reported position logs
+        :param shared:
         """
         if shared:
             kb = self.shared_map
@@ -220,29 +224,32 @@ class Fleet(Sim.Process):
         """
         I hate this so much
         """
-        return np.asarray([node.getPos() for node in self.nodes])
+        return np.asarray([node.get_pos() for node in self.nodes])
 
     def nodeCheatPositions(self):
         """
         I Hate this so much
         """
-        return np.asarray([node.getPos(true=True) for node in self.nodes])
+        return np.asarray([node.get_pos(true=True) for node in self.nodes])
 
     def nodeCheatLastECEAEstimates(self, update_index):
         """
         I Hate this so much
+        :param update_index:
         """
         return np.asarray([node.ecea.pos_log[:, update_index] for node in self.nodes])
 
     def nodeCheatDriftPositionsAt(self, t):
         """
         I hate this so much
+        :param t:
         """
         return np.asarray([node.pos_log[:, t] for node in self.nodes])
 
     def nodeCheatPositionsAt(self, t):
         """
         I Hate this so much
+        :param t:
         """
         return np.asarray([node.drift.pos_log[:, t] for node in self.nodes])
 
@@ -252,6 +259,8 @@ class Fleet(Sim.Process):
         Fleet order Node position errors based on generic accuracy from origin of each node.
 
         THIS IS PERFECT IN THE Z-AXIS, DON'T USE FOR ANYTHING IMPORTANT
+        :param shared:
+        :param error:
         """
         original_positions = self.nodePositionsAt(0, shared=False)
         t = Sim.now()
@@ -270,12 +279,15 @@ class Fleet(Sim.Process):
         Fleet order time of flight matrix
         There are very few reasons why this would ever need to be from the shared database....
         (0-n,0-n)
+        :param shared:
+        :param speed_of_sound:
+        :param guess_index:
         """
         latest_positions = self.nodeCheatPositions()
         if guess_index > 0:
             if not ghia:
                 raise NotImplementedError("This functionality requires the Ghia module")
-            tof = timeOfFlightMatrix_Complex(
+            tof = time_of_flight_matrix_complex(
                 latest_positions, self.environment.shape[2], guess_index)
         else:
             tof = squareform(pdist(latest_positions))

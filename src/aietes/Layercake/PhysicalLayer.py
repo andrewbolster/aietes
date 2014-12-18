@@ -146,9 +146,9 @@ class PhysicalLayer(object):
         self.collision = False
 
         if self.variable_power:
-            distance = self.level2distance[str(packet["level"])]
+            tx_range = self.level2distance[str(packet["level"])]
             power = distance2Intensity(
-                self.bandwidth, self.freq, distance, self.SNR_threshold)
+                self.bandwidth, self.freq, tx_range, self.SNR_threshold)
         else:
             power = self.transmit_power
 
@@ -164,13 +164,27 @@ class PhysicalLayer(object):
 
     # Checks if there has been a collision
     def CollisionDetected(self):
+        """
+
+
+        :return:
+        """
         return self.collision
 
     # When a packet has been received, we should pass it to the MAC layer
     def OnSuccessfulReceipt(self, packet):
+        """
+
+        :param packet:
+        """
         self.layercake.mac.OnNewPacket(packet)
 
     def level2delay(self, level):
+        """
+
+        :param level:
+        :return:
+        """
         try:
             distance = self.level2distance[str(level)]
         except AttributeError:
@@ -294,11 +308,19 @@ class Transducer(Sim.Resource):
             )
 
     def OnTransmitBegin(self):
+        """
+
+
+        """
         self.transmitting = True
         # Doom all currently incoming packets to failure.
         [i.Doom() for i in self.activeQ]
 
     def OnTransmitComplete(self):
+        """
+
+
+        """
         self.transmitting = False
 
 
@@ -328,10 +350,19 @@ class IncomingPacket(Sim.Process):
             )
 
     def UpdateInterference(self, interference, packet):
+        """
+
+        :param interference:
+        :param packet:
+        """
         if interference > self.MaxInterference:
             self.MaxInterference = interference
 
     def Receive(self, duration):
+        """
+
+        :param duration:
+        """
         if self.power >= self.physical_layer.listening_threshold:
             # Otherwise I will not even notice that there are packets in the
             # network
@@ -344,9 +375,18 @@ class IncomingPacket(Sim.Process):
                 self.physical_layer.receive_power) * duration
 
     def GetMinSIR(self):
+        """
+
+
+        :return:
+        """
         return self.power / (self.MaxInterference - self.power + 1)
 
     def Doom(self):
+        """
+
+
+        """
         self.doomed = True
 
 
@@ -365,6 +405,11 @@ class OutgoingPacket(Sim.Process):
             "{}".format(self.__class__.__name__))
 
     def transmit(self, packet, power):
+        """
+
+        :param packet:
+        :param power:
+        """
         yield Sim.request, self, self.physical_layer.modem
 
         # Create the acoustic event
@@ -421,6 +466,11 @@ class AcousticEventListener(Sim.Process):
         self.transducer = transducer
 
     def listen(self, channel_event, position_query):
+        """
+
+        :param channel_event:
+        :param position_query:
+        """
         while True:
             yield Sim.waitevent, self, channel_event
             params = channel_event.signalparam
@@ -438,6 +488,12 @@ class ArrivalScheduler(Sim.Process):
     """
 
     def schedule_arrival(self, transducer, params, pos):
+        """
+
+        :param transducer:
+        :param params:
+        :param pos:
+        """
         distance_to = distance(pos, params["pos"]())
 
         if distance_to > 0.01:  # I should not receive my own transmissions
@@ -472,6 +528,8 @@ def Attenuation(f, d):
 
     f - Frequency in kHz
     d - Distance in m
+    :param f:
+    :param d:
     """
 
     f2 = f ** 2
@@ -495,6 +553,7 @@ def Noise(f):
     Calculates the ambient noise at current frequency
 
     f - Frequency in kHz
+    :param f:
     """
 
     # Noise approximation valid from a few kHz
@@ -511,6 +570,10 @@ def distance2Bandwidth(I0, f, d, SNR):
     f - Frequency in kHz
     d - Distance to travel in m
     SNR - Signal to noise ratio in dB
+    :param I0:
+    :param f:
+    :param d:
+    :param SNR:
     """
 
     A = Attenuation(f, d)
@@ -529,6 +592,10 @@ def distance2Intensity(B, f, d, SNR):
     f - Frequency in kHz
     d - Distance to travel in m
     SNR - Signal to noise ratio in dB
+    :param B:
+    :param f:
+    :param d:
+    :param SNR:
     """
 
     A = Attenuation(f, d)
@@ -545,6 +612,7 @@ def AcousticPower(I):
 
     I - Created acoustic pressure
     dist - Distance in m
+    :param I:
     """
     # 170dB re uPa is the sound intensity created over a sphere of 1m by a
     # radiated acoustic power of 1 Watt with the source in the center
@@ -560,6 +628,9 @@ def ListeningThreshold(f, B, minSNR):
     B - Bandwidth in kHz
     f - Frequency in kHz
     minSNR - Signal to noise ratio in dB
+    :param f:
+    :param B:
+    :param minSNR:
     """
 
     N = Noise(f)
@@ -576,6 +647,9 @@ def ReceivingThreshold(f, B, SNR):
     B - Bandwidth in kHz
     f - Frequency in kHz
     SNR - Signal to noise ratio in dB
+    :param f:
+    :param B:
+    :param SNR:
     """
 
     N = Noise(f)
@@ -585,8 +659,18 @@ def ReceivingThreshold(f, B, SNR):
 
 
 def DB2Linear(dB):
+    """
+
+    :param dB:
+    :return:
+    """
     return 10.0 ** (dB / 10.0)
 
 
 def Linear2DB(Linear):
+    """
+
+    :param Linear:
+    :return:
+    """
     return 10.0 * math.log10(Linear + 0.0)

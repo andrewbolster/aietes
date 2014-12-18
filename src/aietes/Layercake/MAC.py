@@ -38,7 +38,7 @@ DEBUG = False
 DEFAULT_PROTO = "ALOHA"
 
 
-def SetupMAC(node, config):
+def setup_mac(node, config):
     if config["protocol"] == "DACAP":
         return DACAP(node, config)
     elif config["protocol"] == "DACAP4FBR":
@@ -163,6 +163,11 @@ class ALOHA(object):
             self.OverHearing()
 
     def IsForMe(self):
+        """
+
+
+        :return:
+        """
         if self.layercake.hostname == self.incoming_packet["through"]:
             return True
         else:
@@ -194,6 +199,10 @@ class ALOHA(object):
         self.layercake.net.OnPacketReception(self.incoming_packet)
 
     def SendAck(self, packet_origin):
+        """
+
+        :param packet_origin:
+        """
         if DEBUG:
             self.logger.debug("ACK to " + packet_origin)
         AckPacket = {"type": "ACK",
@@ -247,6 +256,10 @@ class ALOHA(object):
             self.TimerRequest.signal((random_delay, "send_DATA"))
 
     def OnTimeout(self):
+        """
+
+
+        """
         self.transmission_attempts += 1
         if DEBUG:
             self.logger.debug("Timed Out, No Ack Received")
@@ -284,9 +297,17 @@ class ALOHA(object):
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
 
     def QueueData(self):
+        """
+
+
+        """
         self.logger.debug("Queuing Data")
 
     def PrintMessage(self, msg):
+        """
+
+        :param msg:
+        """
         pass
         # print "ALOHA (%s): %s at t=" % (self.layercake.hostname, msg),
         # Sim.now(), self.fsm.input_symbol, self.fsm.current_state
@@ -378,16 +399,28 @@ class ALOHA4FBR(ALOHA):
             "got_ACK", "WAIT_2_RESEND", self.OnTransmitSuccess, "WAIT_2_RESEND")
 
     def IgnoreRTS(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring RTS received from " + self.incoming_packet["source"])
         self.incoming_packet = None
 
     def IgnoreCTS(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring CTS coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
 
     def IgnoreACK(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring ACK coming from " + self.incoming_packet["through"])
         print self.layercake.hostname, "Have we had a collision?"
@@ -453,6 +486,10 @@ class ALOHA4FBR(ALOHA):
                 self.fsm.process("ignore_RTS")
 
     def RouteCheck(self):
+        """
+
+
+        """
         if self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
             self.fsm.process("send_RTS")
         else:
@@ -544,6 +581,7 @@ class ALOHA4FBR(ALOHA):
 
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
+        :param packet:
         """
         # Is this a packet already "directed" to me? I'm not checking if only
         # dest its me to avoid current protocol errors. Should be revised.
@@ -566,6 +604,7 @@ class ALOHA4FBR(ALOHA):
 
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
+        :param IncomingPacket:
         """
         self.incoming_packet = IncomingPacket
 
@@ -579,6 +618,10 @@ class ALOHA4FBR(ALOHA):
             ALOHA.OverHearing(self)
 
     def PrintMessage(self, msg):
+        """
+
+        :param msg:
+        """
         pass
         # print "ALOHA4FBR (%s): %s at t=" % (self.layercake.hostname, msg),
         # Sim.now(), self.fsm.input_symbol, self.fsm.current_state
@@ -629,9 +672,18 @@ class DACAP(object):
         self.deltaD = config["deltadt"]
 
     def activate(self):
+        """
+
+
+        """
         Sim.activate(self.timer, self.timer.Lifecycle(self.TimerRequest))
 
     class InternalTimer(Sim.Process):
+
+        """
+
+        :param fsm:
+        """
 
         def __init__(self, fsm):
             Sim.Process.__init__(self, name="MAC_Timer")
@@ -639,6 +691,10 @@ class DACAP(object):
             self.fsm = fsm
 
         def Lifecycle(self, Request):
+            """
+
+            :param Request:
+            """
             while True:
                 yield Sim.waitevent, self, Request
                 yield Sim.hold, self, Request.signalparam[0]
@@ -870,26 +926,46 @@ class DACAP(object):
         self.incoming_packet = None
 
     def IgnoreRTS(self):
+        """
+
+
+        """
         self.logger.debug(
             "I can't attend the RTS received from " + self.incoming_packet["source"])
         self.incoming_packet = None
 
     def IgnoreCTS(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring CTS coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
 
     def IgnoreACK(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring ACK coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
 
     def IgnoreWAR(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring WAR coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
 
     def CheckPendingData(self):
+        """
+
+
+        """
         if self.pending_packet_ID is not None:
             if self.incoming_packet["ID"] == self.pending_packet_ID:
                 self.logger.warn(
@@ -899,6 +975,10 @@ class DACAP(object):
             self.OnError()
 
     def CheckPendingACK(self):
+        """
+
+
+        """
         if self.pending_packet_ID is not None:
             if self.incoming_packet["ID"] == self.pending_packet_ID:
                 self.logger.warn(
@@ -965,6 +1045,8 @@ class DACAP(object):
 
     def TimeWait(self, T, U):
         """ Returns the time to wait before transmitting
+        :param T:
+        :param U:
         """
         t1 = (self.t_min * T -
               min(self.deltaD * T, self.t_data, 2 * T - self.t_min * T)) / 2.0
@@ -993,6 +1075,8 @@ class DACAP(object):
 
     def BackOff(self, packet_type, T):
         """ Returns the backoff for a specific state.
+        :param packet_type:
+        :param T:
         """
         if packet_type == "RTS" or packet_type == "WAR":
             backoff = 2 * T + 2 * T - self.Tw_min * T
@@ -1011,6 +1095,8 @@ class DACAP(object):
 
     def TimeOut(self, packet_type, T):
         """ Returns the timeout for a specific state.
+        :param packet_type:
+        :param T:
         """
         if packet_type == "CTS":
             return 2 * T + 2 * self.t_control
@@ -1114,6 +1200,7 @@ class DACAP(object):
 
     def SendACK(self, packet_origin):
         """ Sometimes we can not use implicit ACKs.
+        :param packet_origin:
         """
         if DEBUG:
             self.logger.debug("ACK to {}".format(packet_origin[0]))
@@ -1129,12 +1216,14 @@ class DACAP(object):
 
     def InitiateTransmission(self, OutgoingPacket):
         """ Function called from the upper layers to transmit a packet.
+        :param OutgoingPacket:
         """
         self.outgoing_packet_queue.append(OutgoingPacket)
         self.fsm.process("send_DATA")
 
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
+        :param IncomingPacket:
         """
         self.incoming_packet = IncomingPacket
         if self.CanIHelp(IncomingPacket):
@@ -1144,6 +1233,7 @@ class DACAP(object):
 
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
+        :param packet:
         """
         # Is this a packet already "directed" to me? I'm not checking if only
         # dest its me to avoid current protocol errors. Should be revised.
@@ -1250,6 +1340,10 @@ class DACAP(object):
             self.transmission_attempts = 0
 
     def OnCTSTimeout(self):
+        """
+
+
+        """
         self.transmission_attempts += 1
         self.logger.debug("Timed Out, No CTS Received")
         if self.layercake.phy.CollisionDetected():
@@ -1262,6 +1356,10 @@ class DACAP(object):
             self.TimerRequest.signal((random_delay, "send_DATA"))
 
     def OnTimeout(self):
+        """
+
+
+        """
         self.logger.debug("Exiting from back off")
 
         if len(self.outgoing_packet_queue) > 0:
@@ -1270,6 +1368,10 @@ class DACAP(object):
             self.transmission_attempts = 0
 
     def Transmit(self):
+        """
+
+
+        """
         self.logger.debug("Transmit to " + self.outgoing_packet_queue[0][
             "dest"] + " through " + self.outgoing_packet_queue[0]["through"])
         self.layercake.phy.TransmitPacket(self.outgoing_packet_queue[0])
@@ -1278,6 +1380,10 @@ class DACAP(object):
         self.TimerRequest.signal((timeout, "timeout"))
 
     def QueueData(self):
+        """
+
+
+        """
         self.logger.debug("Queuing Data")
 
 
@@ -1379,6 +1485,10 @@ class DACAP4FBR(DACAP):
             "got_MC_RTS", "WAIT_ACK", self.ProcessMCRTS, "WAIT_ACK")
 
     def IgnoreSIL(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring SIL coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
@@ -1536,6 +1646,7 @@ class DACAP4FBR(DACAP):
 
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
+        :param packet:
         """
         # Is this a packet already "directed" to me? I'm not checking if only
         # dest its me to avoid current protocol errors. Should be revised.
@@ -1563,6 +1674,7 @@ class DACAP4FBR(DACAP):
 
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
+        :param IncomingPacket:
         """
         self.incoming_packet = IncomingPacket
 
@@ -1655,9 +1767,18 @@ class CSMA(object):
                          (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
     def activate(self):
+        """
+
+
+        """
         Sim.activate(self.timer, self.timer.Lifecycle(self.TimerRequest))
 
     class InternalTimer(Sim.Process):
+
+        """
+
+        :param fsm:
+        """
 
         def __init__(self, fsm):
             Sim.Process.__init__(self, name="MAC_Timer")
@@ -1665,6 +1786,10 @@ class CSMA(object):
             self.fsm = fsm
 
         def Lifecycle(self, Request):
+            """
+
+            :param Request:
+            """
             while True:
                 yield Sim.waitevent, self, Request
                 yield Sim.hold, self, Request.signalparam[0]
@@ -1829,22 +1954,38 @@ class CSMA(object):
         self.incoming_packet = None
 
     def IgnoreRTS(self):
+        """
+
+
+        """
         self.logger.debug("Ignoring RTS received from {src} as I'm currently in {state}".format(
             src=self.incoming_packet["source"],
             state=self.fsm.current_state))
         self.incoming_packet = None
 
     def IgnoreCTS(self):
+        """
+
+
+        """
         self.logger.debug("Ignoring CTS received from {src} as I'm waiting on an ACK".format(
             src=self.incoming_packet["source"]))
         self.incoming_packet = None
 
     def IgnoreACK(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring ACK coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
 
     def CheckPendingData(self):
+        """
+
+
+        """
         if self.pending_data_packet_from is not None:
             if self.incoming_packet["route"][-1][0] == self.pending_data_packet_from:
                 self.logger.debug(
@@ -1860,6 +2001,10 @@ class CSMA(object):
             self.OnError()
 
     def CheckPendingACK(self):
+        """
+
+
+        """
         if self.pending_ack_packet_from is not None:
             if self.incoming_packet["source"] == self.pending_ack_packet_from or self.pending_ack_packet_from[0:3] == "ANY":
                 self.logger.info(
@@ -1950,6 +2095,8 @@ class CSMA(object):
 
     def BackOff(self, packet_type, T):
         """ Returns the backoff for a specific state.
+        :param packet_type:
+        :param T:
         """
         if packet_type == "RTS":
             backoff = 4 * T
@@ -1969,6 +2116,8 @@ class CSMA(object):
 
     def TimeOut(self, packet_type, T):
         """ Returns the timeout for a specific state.
+        :param packet_type:
+        :param T:
         """
 
         if packet_type == "CTS":
@@ -2049,6 +2198,7 @@ class CSMA(object):
 
     def SendACK(self, packet_origin):
         """ Sometimes we can not use implicit ACKs.
+        :param packet_origin:
         """
         if DEBUG:
             self.logger.debug("ACK to " + packet_origin)
@@ -2070,6 +2220,7 @@ class CSMA(object):
 
     def InitiateTransmission(self, OutgoingPacket):
         """ Function called from the upper layers to transmit a packet.
+        :param OutgoingPacket:
         """
         if DEBUG:
             self.logger.debug("Prepping {id} for launch to {dest}".format(
@@ -2082,6 +2233,7 @@ class CSMA(object):
 
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
+        :param IncomingPacket:
         """
         self.incoming_packet = IncomingPacket
         if self.CanIHelp(IncomingPacket):
@@ -2091,6 +2243,7 @@ class CSMA(object):
 
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
+        :param packet:
         """
         # Is this a packet already "directed" to me?
         if packet["through"] == self.layercake.hostname and packet["dest"] == self.layercake.hostname:
@@ -2230,6 +2383,10 @@ class CSMA(object):
             self.transmission_attempts = 0
 
     def OnCTSTimeout(self):
+        """
+
+
+        """
         self.transmission_attempts += 1
         self.logger.debug("CTS timeout waiting on {}: Attempt {}".format(
             self.outgoing_packet_queue[0]['ID'],
@@ -2249,18 +2406,30 @@ class CSMA(object):
 
     def OnTimeout(self):
 
+        """
+
+
+        """
         if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
 
     def Transmit(self):
+        """
+
+
+        """
         p = Sim.Process()
         p.interrupt(self.timer)
 
         self.TransmitNoTimer()
 
     def TransmitNoTimer(self):
+        """
+
+
+        """
         self.layercake.phy.TransmitPacket(self.outgoing_packet_queue[0])
         self.last_data_to = self.outgoing_packet_queue[0]["through"]
         self.last_data_id = self.outgoing_packet_queue[0]["ID"]
@@ -2268,6 +2437,10 @@ class CSMA(object):
         self.TimerRequest.signal((timeout, "timeout"))
 
     def QueueData(self):
+        """
+
+
+        """
         if DEBUG:
             self.logger.debug("Queuing Data to {}:{} as we are currently {}".format(
                 self.outgoing_packet_queue[0]['dest'],
@@ -2286,6 +2459,8 @@ class FAMA(CSMA):
 
     def BackOff(self, packet_type, T):
         """ Returns the backoff for a specific state.
+        :param packet_type:
+        :param T:
         T : Maximum Propogation Delay
         """
         if packet_type == "RTS":
@@ -2306,6 +2481,8 @@ class FAMA(CSMA):
 
     def TimeOut(self, packet_type, T):
         """ Returns the timeout for a specific state.
+        :param packet_type:
+        :param T:
         T : Maximum Propogation Delay
         """
 
@@ -2373,6 +2550,10 @@ class CSMA4FBR(CSMA):
         self.fsm.add_transition("got_MC_RTS", "WAIT_ACK", self.ProcessMCRTS, "WAIT_ACK")
 
     def IgnoreSIL(self):
+        """
+
+
+        """
         self.logger.debug(
             "Ignoring SIL coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
@@ -2530,6 +2711,8 @@ class CSMA4FBR(CSMA):
 
     def TimeOut(self, packet_type, T):
         """ Returns the timeout for a specific state.
+        :param packet_type:
+        :param T:
         """
 
         if packet_type == "CTS":
@@ -2570,6 +2753,7 @@ class CSMA4FBR(CSMA):
 
     def CanIHelp(self, packet):
         """ A node may be able to help within a transmission if the packet is addressed to it or it is a multicast packet.
+        :param packet:
         """
         # Is this a packet already "directed" to me? I'm not checking if only
         # dest its me to avoid current protocol errors. Should be revised.
@@ -2595,6 +2779,7 @@ class CSMA4FBR(CSMA):
 
     def OnNewPacket(self, IncomingPacket):
         """ Function called from the lower layers when a packet is received.
+        :param IncomingPacket:
         """
         self.incoming_packet = IncomingPacket
 

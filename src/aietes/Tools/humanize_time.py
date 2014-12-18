@@ -31,13 +31,15 @@ def humanize_time(amount, units=None):
        [(5.5, 'seconds')]
        >>> humanize_time(5.0, "seconds")
        [(5.0, 'seconds')]
+    :param units:
+    :param amount:
     """
     result = []
 
     if units is None:
         units = 'seconds'
 
-    unit = map(lambda a: a[1], NAMES).index(units)
+    unit = map(lambda l: l[1], NAMES).index(units)
     # Convert to seconds
     amount *= INTERVALS[unit]
 
@@ -53,7 +55,7 @@ def humanize_time(amount, units=None):
     return result
 
 
-def secondsToStr(s):
+def seconds_to_str(s):
     humanified = humanize_time(s, "seconds")
     return ' '.join(["{} {}".format(tup[0], tup[1]) for tup in humanified])
 

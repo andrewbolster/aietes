@@ -7,18 +7,18 @@ from polybos import ExperimentManager as EXP
 
 
 def set_exp():
-    exp = EXP(node_count=8,
-              title="Clumping Test", parallel=True)
-    exp.addVariableRangeScenario("clumping", numpy.linspace(0.0, 1.0, 20))
-    return exp
+    e = EXP(node_count=8,
+            title="Clumping Test", parallel=True)
+    e.addVariableRangeScenario("clumping", numpy.linspace(0.0, 1.0, 20))
+    return e
 
 
-def run_exp(exp):
-    exp.run(title="8-clumping-20",
-            runcount=3,
-            threaded=True)
+def run_exp(e):
+    e.run(title="8-clumping-20",
+          runcount=3,
+          threaded=True)
 
-    return exp
+    return e
 
 
 if __name__ == "__main__":

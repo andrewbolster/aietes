@@ -3,18 +3,19 @@
 __author__ = 'andrewbolster'
 from polybos import ExperimentManager as EXP
 
+
 def set_exp():
-    exp = EXP(node_count=4,
-              title="FleetLawnmowerDriftNoiseVar",
-              parallel=True, future=True,
-              retain_data='files')
-    exp.updateDefaultNode({
-        'behaviour':'FleetLawnmower',
-        'waypoint_style':'lawnmower',
-        'positioning':'surface',
-        'drifting':'DriftFactor',
-        'ecea':'Simple2',
-        'beacon_rate':15
+    e = EXP(node_count=4,
+            title="FleetLawnmowerDriftNoiseVar",
+            parallel=True, future=True,
+            retain_data='files')
+    e.updateDefaultNode({
+        'behaviour': 'FleetLawnmower',
+        'waypoint_style': 'lawnmower',
+        'positioning': 'surface',
+        'drifting': 'DriftFactor',
+        'ecea': 'Simple2',
+        'beacon_rate': 15
     })
 
     default_noises = {
@@ -41,23 +42,24 @@ def set_exp():
         'dvl_across': 0.0,
     }
 
-    exp.addVariableRangeScenario('drift_noises',
-                                 [zeroed_noises,no_dvl, no_gyro, default_noises],
-                                 ["No Noise", "No DVL Noise", "No Gyro Noise", "Standard Noises"]
+    e.addVariableRangeScenario('drift_noises',
+                               [zeroed_noises, no_dvl, no_gyro, default_noises],
+                               ["No Noise", "No DVL Noise", "No Gyro Noise", "Standard Noises"]
     )
-    exp.updateDuration(21600) #6hrs
-    return exp
+    e.updateDuration(21600)  # 6hrs
+    return e
 
 
-def run_exp(exp):
-    exp.run(title="ECEA_DriftNoise",
-            runcount=32,
-            )
-    return exp
+def run_exp(e):
+    e.run(title="ECEA_DriftNoise",
+          runcount=32,
+    )
+    return e
 
 
 if __name__ == "__main__":
     from aietes.Tools import memory
+
     exp = set_exp()
     exp = run_exp(exp)
     print exp.dump_dataruns()

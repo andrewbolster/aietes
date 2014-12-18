@@ -181,6 +181,9 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
     """
     Generates a plot showing the distribution of the number of in-the-air packets at each time step
 
+    :param rx:
+    :param title:
+    :param figsize:
     http://stackoverflow.com/questions/26760962/python-pandas-count-of-records-between-values-at-a-given-time-packets-in-fli
 
     This *should* be run per-dataset or per-run but in the RX case is happy enough to take a var/run/node/n multiindex,
@@ -230,6 +233,17 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
 
 
 def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, target=None, title=None, sampleperiod=None, metric_weights=None):
+    """
+
+    :param dp:
+    :param trust_log:
+    :param pos_log:
+    :param target:
+    :param title:
+    :param sampleperiod:
+    :param metric_weights:
+    :return: :raise ValueError:
+    """
     from bounos.Analyses import Trust
 
     # TODO THIS HAS NOT BEEN FIXED FOR DATAFRAME MGMT
@@ -296,6 +310,14 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
 
 
 def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=(16, 13)):
+    """
+
+    :param stats:
+    :param title:
+    :param var:
+    :param figsize:
+    :return:
+    """
     f, ax = plt.subplots(1, 1, figsize=figsize)
     grp = stats.groupby(level='var')[['collisions', 'tx_counts', 'rx_counts', 'enqueued']].mean()
     grp.index = grp.index.astype(np.float64)
@@ -317,6 +339,14 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=(
 
 
 def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize=(16, 13)):
+    """
+
+    :param stats:
+    :param title:
+    :param var:
+    :param figsize:
+    :return:
+    """
     f, ax = plt.subplots(1, 1, figsize=figsize)
     packet_error_rates = (stats.rx_counts / stats.tx_counts).groupby(level='var').mean()
     ax.scatter(list(packet_error_rates.index), packet_error_rates.values)
@@ -336,6 +366,7 @@ def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
     Can be applied either per var, run, or dataset.
     If Delivered is Nan, the packet is stuck in a tx_queue and they can look after that
     This is concerned with routing level losses
+    :param figsize:
     :param tx:
     :return:
     """
@@ -372,6 +403,10 @@ def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
 
     def autolabel(rects):
         # attach some text labels
+        """
+
+        :param rects:
+        """
         for rect in rects:
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width() / 2., 1.05 * height, '%d' % int(height),
@@ -386,6 +421,8 @@ def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
 def trust_perspectives_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
+    :param title:
+    :param figsize:
     :param trust_frame:
     :return:
     """
@@ -434,6 +471,13 @@ def trust_perspectives_wrt_targets(trust_frame):
 
 
 def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
+    """
+
+    :param df:
+    :param title:
+    :param figsize:
+    :return:
+    """
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
     f.suptitle("Node Layout and mobility {}".format("for " + title if title is not None else ""))
     for n, (name, node_p) in enumerate(df.groupby('source')):
@@ -473,6 +517,13 @@ def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
 
 
 def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
+    """
+
+    :param df:
+    :param title:
+    :param figsize:
+    :return:
+    """
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
     f.suptitle("Node Layout and mobility {}".format("for " + title if title is not None else ""))
     for n, (name, node_p) in enumerate(df.groupby(level='node')):
@@ -567,6 +618,11 @@ def plot_positions(d, bounds=None):
 
 
 def area_of_centroid(d):
+    """
+
+    :param d:
+    :return:
+    """
     df = pd.DataFrame.from_dict({k: v for k, v in d.items()}, orient='index')
     extent = abs(df.min() - df.max())
     if extent[0] < 0:
@@ -576,4 +632,9 @@ def area_of_centroid(d):
 
 
 def avg_range(d):
+    """
+
+    :param d:
+    :return:
+    """
     return np.average(squareform(pdist(np.asarray(d.values()))))

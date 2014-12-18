@@ -40,7 +40,7 @@ import numpy as np
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded
-from aietes.Tools import _results_dir, nameGeneration, updateDict, kwarger, getConfig, ConfigError, try_x_times, secondsToStr, dotdict, notify_desktop, AutoSyncShelf
+from aietes.Tools import _results_dir, nameGeneration, updateDict, kwarger, getConfig, ConfigError, try_x_times, seconds_to_str, dotdict, notify_desktop, AutoSyncShelf
 from bounos import DataPackage, printAnalysis, load_sources, npz_in_dir
 
 try:
@@ -163,10 +163,11 @@ class Scenario(object):
     def run(self, runcount=None, runtime=None, *args, **kwargs):
         """
         Offload this to AIETES
+        :param runcount:
+        :param runtime:
+        :param args:
+        :param kwargs:
         Args:
-            :param runcount(int): Number of repeated executions of this scenario; this value overrides the
-                value set on init
-            :param runtime(int): Override simulation duration (normally inherited from config)
         """
         if runcount is None:
             runcount = self._default_run_count
@@ -220,6 +221,8 @@ class Scenario(object):
         """
         Offload this to AIETES multiprocessing queue
 
+        :param runtime:
+        :param kwargs:
         :param runcount:
         Args:
             runcount(int): Number of repeated executions of this scenario; this value overrides the
@@ -274,6 +277,7 @@ class Scenario(object):
         """
         Recieving a bounos.datapackage, generate relevant stats
         This is nasty and I can't remember why I did it this way
+        :param sim_run_dataset:
         Returns:
             A list of dict's given from DataPackage.package_statistics()
         """
@@ -385,6 +389,7 @@ class Scenario(object):
         """
         Set the scenario node count, but does not update the configuration (this is satisfied in
             the commit method)
+        :param count:
         Args:
             count(int): New Node count
         """
@@ -399,6 +404,7 @@ class Scenario(object):
     def setDuration(self, tmax):
         """
         Set the scenario simulation duration,
+        :param tmax:
         Args:
             tmax(int): New simulation time
         """
@@ -413,6 +419,7 @@ class Scenario(object):
     def setEnvironment(self, environment):
         """
         Set the scenario simulation environment extent,
+        :param environment:
         Args:
             environment([int,int,int]): New simulation environment extent
         """
@@ -426,6 +433,9 @@ class Scenario(object):
         """
         Used to update selected field mappings between scenario definition and
             the scenario configspec, as defined in mutable_node_configs
+        :param node_conf:
+        :param mutable:
+        :param value:
         Args:
             node_conf(dict): current node configuration to be updated
             mutable(str): a string describing the aspect to be changed, present in the mutable map
@@ -444,6 +454,8 @@ class Scenario(object):
     def addCustomNode(self, variable_map, count=1):
         """
         Adds a node to the scenario based on a dict of mutable key,values
+        :param variable_map:
+        :param count:
         Args:
             variable_map(dict): variables and values to be modified from the default
             count(int): if set, creates count instances of the custom node
@@ -457,6 +469,7 @@ class Scenario(object):
     def addDefaultNode(self, count=1):
         """
         Adds a default node
+        :param count:
         Args:
             count(int): if set, creates count instances of the default node
         """
@@ -466,6 +479,9 @@ class Scenario(object):
     def addNode(self, node_conf, names=None, count=1):
         """
         Adds a node to the scenario based on a (hopefully valid) node configuration
+        :param node_conf:
+        :param names:
+        :param count:
         Args:
             node_conf(dict): Fully defined node config dict
             names(list(str)): List of names for new nodes
@@ -490,6 +506,8 @@ class Scenario(object):
     def updateDefaultNode(self, variable, value):
         """
         Update the default node for the scenario.
+        :param variable:
+        :param value:
         Args:
             variable(str):The Variable to be modified (should me in the mutable map)
             value: the value to set that variable to
@@ -503,6 +521,17 @@ class Scenario(object):
 
 
 class ExperimentManager(object):
+    """
+
+    :param node_count:
+    :param title:
+    :param parallel:
+    :param base_config_file:
+    :param base_exp_path:
+    :param args:
+    :param kwargs:
+    """
+
     def __init__(self,
                  node_count=None,
                  title=None, parallel=False,
@@ -556,6 +585,7 @@ class ExperimentManager(object):
     def updateDefaultNode(self, config_dict):
         """
         Applys a behaviour (given as a string) to the experimental default for node generation
+        :param config_dict:
         Args:
             behaviour(str): new default behaviour
         """
@@ -565,6 +595,7 @@ class ExperimentManager(object):
     def updateDefaultBehaviour(self, behaviour):
         """
         Applys a behaviour (given as a string) to the experimental default for node generation
+        :param behaviour:
         Args:
             behaviour(str): new default behaviour
         """
@@ -573,6 +604,10 @@ class ExperimentManager(object):
     def run(self, runtime=None, runcount=None, retain_data=True, **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
+        :param runtime:
+        :param runcount:
+        :param retain_data:
+        :param kwargs:
         Args:
             runtime(int): Override simulation duration (normally inherited from config)
             runcount(int): Number of repeated executions of this scenario; this value overrides the
@@ -615,7 +650,7 @@ class ExperimentManager(object):
 
             print("Experimental results stored in %s" % self.exp_path)
         self.runtime = time.time() - start
-        msg = "Runtime:{}".format(secondsToStr(self.runtime))
+        msg = "Runtime:{}".format(seconds_to_str(self.runtime))
         notify_desktop(msg)
         print(msg)
 
@@ -630,6 +665,7 @@ class ExperimentManager(object):
         """
         Updates the node-count across all scenarios
 
+        :param new_count:
         Args:
             new_count(int):new value to be used across scenarios
         """
@@ -639,6 +675,7 @@ class ExperimentManager(object):
     def updateDuration(self, tmax):
         """
         Update the simulation time of currently configured scenarios
+        :param tmax:
         Args:
             tmax(int): update experiment simulation duration for all scenarios
         """
@@ -648,6 +685,7 @@ class ExperimentManager(object):
     def updateEnvironment(self, environment):
         """
         Update the environment extent of currently configured scenarios
+        :param environment:
         Args:
             environment([int,int,int]): update experiment simulation environment for all scenarios
         """
@@ -662,6 +700,9 @@ class ExperimentManager(object):
         """
         Add a scenario with a range of configuration values to the experimental run
 
+        :param variable:
+        :param value_range:
+        :param title_range:
         Args:
             variable(str): mutable value description
             value_range(range or generator): values to be tested against.
@@ -681,6 +722,9 @@ class ExperimentManager(object):
 
         This *UPDATES* the default nodes rather than adding custom ones
 
+        :param variable:
+        :param value_range:
+        :param title_range:
         Args:
             variable(str): mutable value description
             value_range(range or generator): values to be tested against.
@@ -698,6 +742,7 @@ class ExperimentManager(object):
         """
         Add a scenario with a range of configuration values to the experimental run
 
+        :param node_range:
         Args:
             variable(str): mutable value description
             value_range(range or generator): values to be tested against.
@@ -712,6 +757,9 @@ class ExperimentManager(object):
         """
         Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
 
+        :param behaviour_list:
+        :param n_minority:
+        :param title:
         Args:
             behaviour_list(list): minority behaviours
             n_minority(int): number of minority attackers in each scenario (optional)
@@ -728,6 +776,7 @@ class ExperimentManager(object):
         Add a 2dim range of scenarios based on a dictionary of value ranges.
         This generates a meshgrid and samples scenarios across the 2dim space
 
+        :param v_dict:
         Args:
             v_dict(dict):{'variable':'value_range', 'variable':'value_range'}
         """
@@ -755,6 +804,8 @@ class ExperimentManager(object):
 
         If goodbehaviour is not specified, then the default node configuration *should* be used
             for the remaining nodes
+        :param badbehaviour:
+        :param goodbehaviour:
         Args:
             badbehaviour(str):Aietes behaviour definition string (i.e. modulename)
             goodbehaviour(str):Aietes behaviour definition string (i.e. modulename) (optional)
@@ -777,6 +828,8 @@ class ExperimentManager(object):
     def addDefaultScenario(self, runcount=1, title=None):
         """
         Stick to the defaults
+        :param runcount:
+        :param title:
         """
         for i in range(runcount):
             s = Scenario(default_config=self._default_scenario.generateConfigObj(),
@@ -789,7 +842,8 @@ class ExperimentManager(object):
         manually set (i.e. operates only on the 'initial_position' value
 
         ONLY DEALS IN 2D AND ASSUMES ALL Z-VALUES ARE THE SAME
-        :param range:
+        :param scale_range:
+        :param basis_node_name:
         :param title:
         :return:
         """
@@ -826,6 +880,8 @@ class ExperimentManager(object):
             Stdev(INDD) (Proxy for fleet positional efficiency)
             Max Achievement Count,
             Percentage completion rate (how much of the fleet got the top count)
+        :param experiment:
+        :param verbose:
         """
 
         if isinstance(experiment, ExperimentManager):
@@ -852,20 +908,22 @@ class ExperimentManager(object):
             """
             Find the average of a key value across a list of dicts
 
+            :param dict_list:
+            :param keys:
             Args:
                 dict_list(list of dict):list of value maps to be sampled
                 keys(list of str): key-path of value in dict
             Returns:
                 average value (float)
             """
-            sum = 0
+            val_sum = 0
             count = 0
             for d in dict_list:
                 count += 1
                 for key in keys[:-1]:
                     d = d.get(key)
-                sum += d[keys[-1]]
-            return float(sum) / count
+                val_sum += d[keys[-1]]
+            return float(val_sum) / count
 
         correctness_stats = {}
         print(
@@ -1031,6 +1089,11 @@ class RecoveredExperiment(ExperimentManager):
 
     @classmethod
     def walk_dir(cls, path):
+        """
+
+        :param path:
+        :return:
+        """
         subdirs = filter(os.path.isdir,
                          map(lambda p: os.path.join(path, p),
                              os.listdir(path)

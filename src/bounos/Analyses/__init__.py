@@ -22,7 +22,7 @@ import os
 
 import pandas as pd
 
-import bounos.ChartBuilders as CB
+import bounos.ChartBuilders as ChartBuilders
 
 
 FORMAT = "%(asctime)-10s %(message)s"
@@ -135,7 +135,7 @@ def process_stats_logstore_graphics(logstore, title, directory=None):
     """
     keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
 
-    CB.performance_summary_for_variable_packet_rates(df)
+    ChartBuilders.performance_summary_for_variable_packet_rates(df)
 
 
 def process_rx_logstore_graphics(logstore, title, directory=None):
@@ -162,7 +162,7 @@ def process_tx_logstore_graphics(logstore, title, directory=None):
     :return:
     """
     keystring, df, path = hdf_process_kickstart(logstore, directory, 'stats')
-    CB.lost_packets_by_sender_reciever(df)
+    ChartBuilders.lost_packets_by_sender_reciever(df)
 
 
 def process_tx_queue_logstore_graphics(logstore, title, directory=None):

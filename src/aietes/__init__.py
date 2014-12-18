@@ -32,7 +32,7 @@ from Node import Node
 import Behaviour
 from bounos.DataPackage import DataPackage
 from Tools import *
-from Tools.humanize_time import secondsToStr
+from Tools.humanize_time import seconds_to_str
 
 
 np.set_printoptions(precision=3)
@@ -110,7 +110,7 @@ class Simulation(object):
                 self.config = self.populateConfig(self.config)
             else:
                 raise ConfigError(
-                    "Cannot open given config file:%s" % self.config_file)
+                    "Cannot open given config file:%s", self.config_file)
         if "__default__" in self.config['Node']['Nodes'].keys():
             raise RuntimeError("Dun fucked up: __default__ node detected")
 
@@ -164,7 +164,7 @@ class Simulation(object):
             fleet = self.config['Fleets']['fleet']
             fleet_class = getattr(Fleet, str(fleet))
         except AttributeError:
-            raise ConfigError("Can't find Fleet: %s" % fleet)
+            raise ConfigError("Can't find Fleet: %s", fleet)
         self.fleets.append(fleet_class(self.nodes, self))
 
         # Set up 'join-like' operation for nodes
@@ -175,6 +175,7 @@ class Simulation(object):
     def simulate(self, callback=None):
         """
         Initiate the processed Simulation
+        :param callback:
         Args:
             callback(func): Callback function to be called at each execution step
         Returns:
@@ -192,7 +193,7 @@ class Simulation(object):
         try:
             Sim.simulate(until=self.duration_intervals, callback=callback)
             self.logger.info("Finished Simulation at %s(%s) after %s" % (
-                Sim.now(), secondsToStr(Sim.now()), secondsToStr(time() - starttime)))
+                Sim.now(), seconds_to_str(Sim.now()), seconds_to_str(time() - starttime)))
         except RuntimeError as err:
             self.logger.critical(
                 "Expected Exception, Quitting gracefully: {}".format(err))
@@ -223,6 +224,7 @@ class Simulation(object):
 
     def reverse_node_lookup(self, uuid):
         """Return Node Given UUID
+        :param uuid:
         """
         for n in self.nodes:
             if n.id == uuid:
@@ -231,9 +233,19 @@ class Simulation(object):
 
     @staticmethod
     def now():
+        """
+
+
+        :return:
+        """
         return Sim.now()
 
     def currentState(self):
+        """
+
+
+        :return:
+        """
         positions = []
         vectors = []
 
@@ -328,7 +340,20 @@ class Simulation(object):
 
     @classmethod
     def populateConfig(cls, config, retain_default=False):
+        """
+
+        :param config:
+        :param retain_default:
+        :return: :raise ConfigError:
+        """
+
         def update(d, u):
+            """
+
+            :param d:
+            :param u:
+            :return:
+            """
             for k, v in u.iteritems():
                 if isinstance(v, collections.Mapping):
                     r = update(d.get(k, {}), v)
@@ -351,7 +376,7 @@ class Simulation(object):
         except KeyError:
             raise ConfigError("Config has no __default__ node, the may be due to a doubly-configured file. Aborting")
         # node_default_config_dict.update(
-        # # TODO import PHY,Behaviour, etc into the node config?
+        # # TODO import Phy,Behaviour, etc into the node config?
         # )
 
         #
@@ -444,7 +469,7 @@ class Simulation(object):
 
         # Fix MAC Duplication
         # Cross-check Default Mismatches (i.e. app undefined but Application.Protocol defined)
-        # phy/PHY is unnecessary (almost completly actually... #TODO)
+        # Phy/Phy is unnecessary (almost completly actually... #TODO)
         # mac /MAC.protocol
         try:
             macp = node_default_config_dict['MAC']['protocol']
@@ -504,6 +529,7 @@ class Simulation(object):
         """
         Configure the physical environment within which the simulation executed
         Assumes empty unless told otherwise
+        :param env_config:
         """
         return Environment(
             self,
@@ -540,6 +566,8 @@ class Simulation(object):
         """
         If a node is named in the configuration file, use the defined initial vector
         otherwise, use configured behaviour to assign an initial vector
+        :param node_name:
+        :param node_config:
         """
         try:  # If there is an entry, use it
             vector = node_config['initial_position']
@@ -574,6 +602,8 @@ class Simulation(object):
     def generateDataPackage(self, *args, **kwargs):
         """
         Creates a bounos.DataPackage object from the current sim
+        :param args:
+        :param kwargs:
         """
         from bounos.DataPackage import DataPackage
 
@@ -584,6 +614,19 @@ class Simulation(object):
                     inputFile=None, plot=False, xRes=1024, yRes=768, fps=24, extent=True):
         """
         Performs output and positions generation for a given simulation
+        :param log:
+        :param outputFile:
+        :param outputPath:
+        :param displayFrames:
+        :param dataFile:
+        :param movieFile:
+        :param gif:
+        :param inputFile:
+        :param plot:
+        :param xRes:
+        :param yRes:
+        :param fps:
+        :param extent:
         """
 
         dp = DataPackage(**(self.currentState()))
@@ -610,6 +653,8 @@ class Simulation(object):
     def deltaT(self, now, then):
         """
         Time in seconds between two simulation times
+        :param now:
+        :param then:
         """
         return (now - then) * self.config.Simulation.sim_interval
 
@@ -625,6 +670,12 @@ class Simulation(object):
 
 
 def go(options, args=None):
+    """
+
+    :param options:
+    :param args:
+    :return:
+    """
     if options.quiet:
         logtoconsole = logging.ERROR
     elif options.verbose:
@@ -661,6 +712,11 @@ def go(options, args=None):
 
 
 def option_parser():
+    """
+
+
+    :return:
+    """
     parser = optparse.OptionParser(
         formatter=optparse.TitledHelpFormatter(),
         usage=globals()['__doc__'],

@@ -181,6 +181,7 @@ class FSM(object):
         only the current state is changed.
         This method processes one input symbol. You can process a list of
         symbols (or a string) by calling process_list().
+        :param input_symbol:
         """
         self.input_symbol = input_symbol
         (action, next_state) = self.get_transition(
@@ -195,6 +196,7 @@ class FSM(object):
     def process_list(self, s):
         """This takes a list and sends each element to process().
         The list may be a string.
+        :param s:
         """
         for c in s:
             self.process(c)

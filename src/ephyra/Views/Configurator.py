@@ -180,14 +180,25 @@ class Configurator(wx.Panel):
             raise RuntimeError, "Child is probably bad: %s:%s" % (node, child)
 
     def on_resize(self, event):
+        """
+
+        :param event:
+        """
         self.Layout()
 
     def on_idle(self, event):
+        """
+
+        :param event:
+        """
         pass
 
     def add_fleet(self, index, *args, **kw):
         """
         Add a fleet to the simulation
+        :param index:
+        :param args:
+        :param kw:
         """
 
         fleetid = self.fleets.append(ListNode("%s" % kw.get("name", "Fleet %d" % index), [
@@ -200,6 +211,12 @@ class Configurator(wx.Panel):
             self.add_node(fleetid)
 
     def add_node(self, fleetid, *args, **kw):
+        """
+
+        :param fleetid:
+        :param args:
+        :param kw:
+        """
         node_names = [n.GetLabel() for n in self.fleets[fleetid][0]]
         myname = kw.get(
             "name", str(nameGeneration(1, existing_names=node_names)[0]))
@@ -210,6 +227,7 @@ class Configurator(wx.Panel):
     def set_config_panel(self, item):
         """
         Create and layout the widgets in the dialog
+        :param item:
         """
         logging.info("Setting config for :%s" % item)
         data = None
@@ -257,26 +275,26 @@ class Configurator(wx.Panel):
                 if isinstance(value, list):
                     default = value[0]
                     choices = value[1:]
-                    input = wx.ComboBox(self.config_panel, value=default,
+                    input_choice = wx.ComboBox(self.config_panel, value=default,
                                         choices=choices,
                                         style=wx.CB_READONLY,
                                         name=key)
                 # STRING VALUES
                 elif isinstance(value, (basestring, unicode)):
-                    input = wx.TextCtrl(
+                    input_choice = wx.TextCtrl(
                         self.config_panel, value=value, name=key)
                 # INTEGER VALUES
                 elif isinstance(value, int):
-                    input = IntCtrl(self.config_panel, value=value, name=key)
+                    input_choice = IntCtrl(self.config_panel, value=value, name=key)
                 # FLOAT VALUES
                 elif isinstance(value, float):
-                    input = FloatSpin(
+                    input_choice = FloatSpin(
                         self.config_panel, increment=0.01, value=value, name=key)
-                    input.SetFormat("%f")
-                    input.SetDigits(2)
+                    input_choice.SetFormat("%f")
+                    input_choice.SetDigits(2)
                 # DICT VALUES - Assume position or vector
                 elif isinstance(value, dict):
-                    input = wx.FlexGridSizer(rows=len(value), cols=2)
+                    input_choice = wx.FlexGridSizer(rows=len(value), cols=2)
                     for k, v in sorted(value.iteritems()):
                         i_lbl = wx.StaticText(self.config_panel, label=k)
                         i_lbl.SetFont(font)
@@ -285,7 +303,7 @@ class Configurator(wx.Panel):
                             self.config_panel, increment=0.01, value=v, name=k)
                         widget.SetFormat("%f")
                         widget.SetDigits(2)
-                        input.AddMany(
+                        input_choice.AddMany(
                             [(thing, 0, wx.ALL | wx.EXPAND | wx.ALIGN_RIGHT, 5) for thing in (i_lbl, widget)])
                 else:
                     raise NotImplementedError, "Value (%s, %s) has not been coped with by set_config_panel" % (
@@ -293,7 +311,7 @@ class Configurator(wx.Panel):
                         type(value)
                     )
                 gridSizer.AddMany(
-                    [(thing, 0, wx.ALL | wx.ALIGN_RIGHT, 5) for thing in (lbl, input)])
+                    [(thing, 0, wx.ALL | wx.ALIGN_RIGHT, 5) for thing in (lbl, input_choice)])
 
             colSizer.Add(gridSizer, 1, wx.EXPAND)
 
@@ -320,11 +338,16 @@ class Configurator(wx.Panel):
 
     @staticmethod
     def on_save(evt):
+        """
+
+        :param evt:
+        """
         print(evt)
 
     def on_update(self, evt):
         """
         Save the current values for each object
+        :param evt:
         """
         print(evt)
         for name in self.widgetNames:
@@ -352,6 +375,14 @@ class Configurator(wx.Panel):
 
 
 class ListNode(object):
+    """
+
+    :param title:
+    :param children:
+    :param data:
+    :raise RuntimeError:
+    """
+
     def __init__(self, title, children=None, data=None):
         self._nl = []
         if children is not None:
@@ -374,15 +405,35 @@ class ListNode(object):
         self._nl[key] = value
 
     def append(self, item):
+        """
+
+        :param item:
+        :return:
+        """
         print item.GetLabel()
         self._nl.append(item)
         return len(self) - 1
 
     def GetLabel(self):
+        """
+
+
+        :return:
+        """
         return self._tt
 
     def GetData(self):
+        """
+
+
+        :return:
+        """
         return self._data
 
     def IsLeaf(self):
+        """
+
+
+        :return:
+        """
         return len(self) == 0

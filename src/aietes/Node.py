@@ -201,9 +201,10 @@ class Node(Sim.Process):
                 "Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
 
-    def assignFleet(self, fleet):
+    def assign_fleet(self, fleet):
         """
         Assign or Re-assign a node to a given Fleet object
+        :param fleet:
         """
         self.fleet = fleet
         self.nodenum = self.fleet.nodenum(self)
@@ -213,6 +214,7 @@ class Node(Sim.Process):
     def activate(self, launch_args=None):
         """
         Fired on Sim Start
+        :param launch_args:
         """
         Sim.activate(self, self.lifecycle())
         if launch_args is None:
@@ -227,25 +229,34 @@ class Node(Sim.Process):
 
         self.update_environment()
 
-    def missionAccomplished(self):
+    def mission_accomplished(self):
         """
         GWB
         """
         self.on_mission = False
 
-    def wallCheck(self):
+    def wall_check(self):
         """
         Are we still in the bloody box?
         True if within bounds of the environment while we're doing wall checking (as defined by the behaviour)
         """
         return self.wallCheckDisabled or all(self.position < np.asarray(self.simulation.environment.shape)) and all(np.zeros(3) < self.position)
 
-    def distanceTo(self, otherNode):
-        assert hasattr(otherNode, "position"), "Other object has no position"
-        assert len(otherNode.position) == 3
-        return distance(self.position, otherNode.position)
+    def distance_to(self, their_position):
+        """
+
+        :param their_position:
+        :return:
+        """
+        d = distance(self.get_pos(), their_position)
+        return d
 
     def push(self, forceVector, contributions=None):
+        """
+
+        :param forceVector:
+        :param contributions:
+        """
         if Sim.now() < self.settling_time:
             forceVector = np.zeros(shape=forceVector.shape)
             contributions = {}
@@ -254,9 +265,11 @@ class Node(Sim.Process):
         self.acceleration_force = forceVector
         self.contributions_log.append(contributions)
 
-    def cruiseControl(self, velocity, prev_velocity):
+    def cruise_control(self, velocity, prev_velocity):
         """
         Attempt to maintain cruising velocity
+        :param velocity:
+        :param prev_velocity:
             The resultant velocity should:
                 y<x for cruise < x < max
                 y<=max for x>max
@@ -287,8 +300,8 @@ class Node(Sim.Process):
         #
         # Positional information
         #
-        old_pos = self.getPos()
-        old_vec = self.getVec()
+        old_pos = self.get_pos()
+        old_vec = self.get_vec()
         dT = self.simulation.deltaT(Sim.now(), self._lastupdate)
         # Since you're an idiot and keep forgetting if this is right or not; it is;
         # src (http://physics.stackexchange.com/questions/17049/how-does-force-relate-to-velocity)
@@ -305,7 +318,7 @@ class Node(Sim.Process):
             new_velocity = self.velocity + \
                            ((self.acceleration_force * dT) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
-            self.velocity = self.cruiseControl(new_velocity, self.velocity)
+            self.velocity = self.cruise_control(new_velocity, self.velocity)
             if DEBUG:
                 self.logger.debug(
                     "Normalized Velocity: %s, clipped: %s" % (new_velocity, self.velocity))
@@ -341,7 +354,7 @@ class Node(Sim.Process):
         if DEBUG:
             self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
-        if not self.wallCheck():
+        if not self.wall_check():
             self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
             raise RuntimeError(
@@ -353,24 +366,32 @@ class Node(Sim.Process):
             self.highest_attained_speed, mag(self.velocity))
 
     def update_environment(self):
+        """
+
+
+        """
         self.simulation.environment.update(self.id,
-                                           self.getPos(true=True),
-                                           self.getVec(true=True))
+                                           self.get_pos(true=True),
+                                           self.get_vec(true=True))
         pass
 
     def update_fleet(self):
+        """
+
+
+        """
         if self.ecea:
             # if using ECEA, need to update the fleet with the *corrected* positions
             # These corrected positions are currently only used by ECEA itself, not for
             # behaviour decisions #TODO
 
             self.fleet.shared_map.update(self.id,
-                                         self.ecea.getPos(),
-                                         self.ecea.getVec())
+                                         self.ecea.get_pos(),
+                                         self.ecea.get_vec())
         else:
             self.fleet.shared_map.update(self.id,
-                                         self.getPos(),
-                                         self.getVec())
+                                         self.get_pos(),
+                                         self.get_vec())
 
     def fleet_preprocesses(self):
         """
@@ -440,52 +461,57 @@ class Node(Sim.Process):
                 pass
             pass
 
-    def setPos(self, placeVector):
-        assert isinstance(placeVector, np.array)
-        assert len(placeVector) == 3
+    def set_pos(self, place_vector):
+        """
+
+        :param place_vector:
+        """
+        assert isinstance(place_vector, np.array)
+        assert len(place_vector) == 3
         self.logger.info("Vector focibly moved")
-        self.position = placeVector
+        self.position = place_vector
 
     # noinspection PyNoneFunctionAssignment
-    def getPos(self, true=False):
+    def get_pos(self, true=False):
         """
         Returns the current position of the node ACCORDING TO THE NODE
 
         If the node is drifting, the nodes position is incorrect, and
             it's 'true' position is requested using the keyword arg
+        :param true:
         """
         if self.drifting and true:
-            position = self.drift.getPos()
+            position = self.drift.get_pos()
         else:
             position = self.position.copy()
         return position
 
-    def getVec(self, true=False):
+    def get_vec(self, true=False):
         """
         Returns the current velocity of the node ACCORDING TO THE NODE
 
         If the node is drifting, the nodes velocity is incorrect, and
             it's 'true' velocity is requested using the keyword arg
+        :param true:
         """
         if self.drifting and true:
-            velocity = self.drift.getVec()
+            velocity = self.drift.get_vec()
             # FIXME For the time being assume that the control output is a fixed track and don't use the KF for  updated info
             # elif self.drifting and self.ecea:
             # If using the kalman filter, get the corrected position
-        # velocity = self.ecea.getVec()
+        # velocity = self.ecea.get_vec()
         else:
             velocity = self.velocity.copy()
         return velocity
 
-    def distance_to(self, their_position):
-        d = distance(self.getPos(), their_position)
-        return d
 
-    def grantAchievement(self, achievement):
+
+    def grant_achievement(self, achievement):
         """
         Record an achievement for statistics
             Achievements are indexed by time and can contain any object, in a list,
             although it is assumed to be a three-vector position and distance
+        :param achievement:
         """
         if isinstance(achievement, tuple):
             self.achievements_log[self._lastupdate].append(achievement)
@@ -493,13 +519,23 @@ class Node(Sim.Process):
             raise RuntimeError(
                 "Non standard Achievement passed:%s" % achievement)
 
-    def timeSinceLastAchievement(self):
+    def time_since_last_achievement(self):
+        """
+
+
+        :return:
+        """
         try:
             return [i for i, l in enumerate(self.achievements_log) if len(l[i])][-1]
         except IndexError:
             return self._lastupdate
 
-    def meanAchievementTime(self):
+    def mean_achievement_time(self):
+        """
+
+
+        :return:
+        """
         try:
             wins = [
                 i for i, l in enumerate(self.achievements_log) if len(l[0])]

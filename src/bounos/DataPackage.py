@@ -171,6 +171,8 @@ class DataPackage(object):
         Does NOT modify `self.tmax`
 
         NOT TESTED
+        :param tmax:
+        :param val:
         """
         if tmax > self.tmax:
             for datum in ['p', 'v', 'drift_positions']:
@@ -188,6 +190,15 @@ class DataPackage(object):
             pass
 
     def update(self, p=None, v=None, names=None, environment=None, **kwargs):
+        """
+
+        :param p:
+        :param v:
+        :param names:
+        :param environment:
+        :param kwargs:
+        :raise ValueError:
+        """
         logging.debug("Updating from tmax %d" % self.tmax)
 
         if all(x is not None for x in [p, v, names, environment]):
@@ -201,6 +212,13 @@ class DataPackage(object):
         self.n = len(self.p)
 
     def write(self, filename=None, results_dir=None, track_mat=False):
+        """
+
+        :param filename:
+        :param results_dir:
+        :param track_mat:
+        :return:
+        """
         logging.info(
             "Writing datafile to {}.npz".format(results_file(filename, results_dir=results_dir)))
 
@@ -222,6 +240,11 @@ class DataPackage(object):
     # [n][x,y,z][t]
 
     def getBehaviourDict(self):
+        """
+
+
+        :return: :raise:
+        """
         behaviour_set = set()
         config_dict = self.config
         try:
@@ -331,30 +354,37 @@ class DataPackage(object):
     def position_of(self, node, time):
         """
         Query the data set for the x,y,z position of a node at a given time
+        :param node:
+        :param time:
         """
         return self.p[node, :, time]
 
     def heading_of(self, node, time):
         """
         Query the data set for the x,y,z vector of a node at a given time
+        :param node:
+        :param time:
         """
         return self.v[node, :, time]
 
     def position_slice(self, time):
         """
         Query the dataset for the [n][x,y,z] position list of all nodes at a given time
+        :param time:
         """
         return self.p[:, :, time]
 
     def heading_slice(self, time):
         """
         Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
+        :param time:
         """
         return self.v[:, :, time]
 
     def position_slice_of(self, node):
         """
         Query the dataset for the [n][x,y,z] position list of all nodes at a given time
+        :param node:
         """
         try:
             return self.p[node, :, :]
@@ -366,6 +396,7 @@ class DataPackage(object):
     def heading_slice_of(self, node):
         """
         Query the dataset for the [n][x,y,z] heading list of all nodes at a given time
+        :param node:
         """
         try:
             return self.v[node, :, :]
@@ -490,6 +521,7 @@ class DataPackage(object):
         """
         Return a one dimensional list of the linear distances from
         each node to the current fleet average point
+        :param time:
         """
         return self.distances_from_at(self.average_position(time), time)
 
@@ -502,6 +534,7 @@ class DataPackage(object):
     def position_matrix(self, time):
         """
         Returns a positional matrix of the distances between all the nodes at a given time.
+        :param time:
         """
         return squareform(
             pdist(
@@ -512,6 +545,8 @@ class DataPackage(object):
     def contribution_slice(self, node, time):
         """
         Query the dataset for the [n][b][x,y,z] contribution list of all nodes at a given time
+        :param node:
+        :param time:
         """
         try:
             return self.contributions[node, time]
@@ -527,6 +562,7 @@ class DataPackage(object):
     def inter_distance_average(self, time):
         """
         Returns the average distance between nodes
+        :param time:
         """
         return np.average(self.position_matrix(time))
 
@@ -534,6 +570,7 @@ class DataPackage(object):
         """
         Returns the drift errors for each node
         in real meters
+        :param source:
         """
         if self.drifting:
             if source == "drift":
@@ -548,12 +585,14 @@ class DataPackage(object):
     def drift_RMS(self, source="drift"):
         """
         Returns the RMS of drift across all nodes over time
+        :param source:
         """
         return np.sqrt(np.sum(self.drift_error(source), axis=0) / self.n)
 
     def ecea_error(self, periodic=True):
         """
         Nasty hacky dirty stuff to get the RMS statistics out of the 'additional' section across executions
+        :param periodic:
         :return:
         """
         period = np.asarray(
@@ -579,6 +618,7 @@ class DataPackage(object):
     def export_track_mat(self, filename=None):
         """
         Export the True, Drift and ECEA (if available) for each node into a <title>.tracks.mat file,
+        :param filename:
         {   true_positions:
             drift_positions:
             ecea_positions
@@ -603,6 +643,8 @@ class DataPackage(object):
     def generate_animation(self, filename=None, fps=24, gif=False, movieFile=True, xRes=1024, yRes=768, extent=True, displayFrames=None):
         """
 
+
+        :param displayFrames:
         :param filename: Defaults to Title if not given; appended with mp4 / gif
         :param fps:
         :param gif: Bool to build gif
@@ -624,6 +666,10 @@ class DataPackage(object):
             Update the currently displayed line positions
             positions contains [x,y,z],[t] positions for each vector
             displayFrames configures the display cache size
+            :param i:
+            :param positions:
+            :param lines:
+            :param displayFrames:
             """
             if isinstance(displayFrames, int):
                 j = max(i - displayFrames, 0)
@@ -742,8 +788,8 @@ class DataPackage(object):
         Returns the global packet log, defaults to recieved packets
 
         Can select to be sorted by time_stamp.
+        :param sort:
         :param pkt_type: string (rx/tx)
-        :param sorted: None, or Bool
         :return DataFrame:
         """
         valid_types = ['rx', 'tx']

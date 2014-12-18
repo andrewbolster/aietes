@@ -21,8 +21,6 @@ import time
 
 from ephyra import wx
 
-
-__author__ = 'andrewbolster'
 from threading import *
 # Thread class that executes processing
 

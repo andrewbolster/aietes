@@ -184,6 +184,7 @@ class Environment(object):
     def node_pos_log(self, uid):
         """
         Returns the poslog (3,t) for a node of a given uuid
+        :param uid:
         """
         pos_get = attrgetter('position')
         node_get = lambda l: l.object_id == uid
@@ -193,6 +194,7 @@ class Environment(object):
     def logs_at_time(self, t):
         """
         Return the object logs for the fleet at a given time
+        :param t:
         """
         return {l.object_id: l for l in filter(lambda l: l.time == t, self.pos_log)}
 
@@ -200,7 +202,7 @@ class Environment(object):
         """
         Returns the latest positions (n,3) for the nodes in the fleet
         """
-        last_log = {id: None for id in self.object_ids()}
+        last_log = {oid: None for oid in self.object_ids()}
         for log in reversed(self.pos_log):
             if last_log[log.object_id] is None:
                 last_log[log.object_id] = log
@@ -221,6 +223,7 @@ class Environment(object):
     def pointPlane(self, index=-1):
         """
         Calculate the current best fit plane between all nodes
+        :param index:
         """
         pos_get = attrgetter('position')
         positions = map(pos_get, self.map.values())
@@ -233,6 +236,12 @@ class Environment(object):
 
     @staticmethod
     def normalPlane(point, normal):  # plot final plane
+        """
+
+        :param point:
+        :param normal:
+        :return:
+        """
         d = np.dot(-point, normal)
         [xx, yy] = np.meshgrid(np.arange(point[0] - 10, point[0] + 10),
                                np.arange(point[1] - 10, point[1] + 10))
@@ -240,12 +249,18 @@ class Environment(object):
         return xx, yy, zz
 
     def eigenPlot(self, index=-1):
+        """
+
+        :param index:
+        :return:
+        """
         average, normal = self.pointPlane(index)
         return self.normalPlane(average, normal)
 
     def export(self, filename=None):
         """
         Export the current environment to a csv
+        :param filename:
         """
         assert filename is not None
         np.savez(filename, self.pos_log)

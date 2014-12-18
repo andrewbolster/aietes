@@ -21,13 +21,14 @@ def lru_cache(maxsize=100):
     Arguments to the cached function must be hashable.
     Cache performance statistics stored in f.hits and f.misses.
     Clear the cache with f.clear().
+    :param maxsize:
     http://en.wikipedia.org/wiki/Cache_algorithms#Least_Recently_Used
 
     """
     maxqueue = maxsize * 10
 
     def decorating_function(user_function,
-                            len=len, iter=iter, tuple=tuple, sorted=sorted, KeyError=KeyError):
+                            length=length, iterable=iterable, tup=tup, sorted_val=sorted_val, keyerror=keyerror):
         cache = {}  # mapping of args to results
         queue = collections.deque()  # order that keys have been used
         refcount = Counter()  # times each key is in the queue
@@ -43,7 +44,7 @@ def lru_cache(maxsize=100):
             # cache key records both positional and keyword args
             key = args
             if kwds:
-                key += (kwd_mark,) + tuple(sorted(kwds.items()))
+                key += (kwd_mark,) + tup(sorted_val(kwds.items()))
 
             # record recent use of this key
             queue_append(key)
@@ -53,13 +54,13 @@ def lru_cache(maxsize=100):
             try:
                 result = cache[key]
                 wrapper.hits += 1
-            except KeyError:
+            except keyerror:
                 result = user_function(*args, **kwds)
                 cache[key] = result
                 wrapper.misses += 1
 
                 # purge least recently used cache entry
-                if len(cache) > maxsize:
+                if length(cache) > maxsize:
                     key = queue_popleft()
                     refcount[key] -= 1
                     while refcount[key]:
@@ -69,11 +70,11 @@ def lru_cache(maxsize=100):
 
             # periodically compact the queue by eliminating duplicate keys
             # while preserving order of most recent access
-            if len(queue) > maxqueue:
+            if length(queue) > maxqueue:
                 refcount.clear()
                 queue_appendleft(sentinel)
                 for key in ifilterfalse(refcount.__contains__,
-                                        iter(queue_pop, sentinel)):
+                                        iterable(queue_pop, sentinel)):
                     queue_appendleft(key)
                     refcount[key] = 1
 
@@ -159,6 +160,12 @@ if __name__ == '__main__':
 
     @lfu_cache(maxsize=20)
     def f(x, y):
+        """
+
+        :param x:
+        :param y:
+        :return:
+        """
         return 3 * x + y
 
     domain = range(5)
