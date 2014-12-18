@@ -36,7 +36,7 @@ import pandas as pd
 np.set_printoptions(precision=3)
 
 
-class Simulation():
+class Simulation(object):
     """
     Defines a single simulation
     Keyword Arguments:
@@ -227,7 +227,8 @@ class Simulation():
                 return n
         raise KeyError("Given UUID does not exist in Nodes list")
 
-    def now(self):
+    @staticmethod
+    def now():
         return Sim.now()
 
     def currentState(self):
@@ -366,7 +367,7 @@ class Simulation():
         #
         # Check and generate application distribution
         # i.e. app = ["App A","App B"]
-        #        dist = [ 4, 5 ]
+        # dist = [ 4, 5 ]
         try:
             appp = node_default_config_dict['Application']['protocol']
             app = node_default_config_dict['app']
@@ -640,7 +641,7 @@ def go(options, args=None):
         sim.prepare(sim_time=options.sim_time)
         if not options.noexecution:
             try:
-                sim.simulate()
+                ran_time = sim.simulate()
             except RuntimeError as exp:
                 print(exp)
                 print("Will try to postprocess anyway")
@@ -653,6 +654,8 @@ def go(options, args=None):
     if options.plot:
         sim.postProcess(
             inputFile=options.input, displayFrames=720, plot=True, fps=options.fps)
+
+    return ran_time
 
 
 def option_parser():

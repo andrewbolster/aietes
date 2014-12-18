@@ -115,7 +115,7 @@ class Scenario(object):
             logging.info("User provided a (hopefully complete) dotdict")
             self._default_config = deepcopy(ConfigObj(default_config))
         elif default_config_file is not None:
-            logging.info("User provided a config file that we have to interpolate " \
+            logging.info("User provided a config file that we have to interpolate "
                          "against the defaults to generate a full config")
             intermediate_config = getConfig(default_config_file)
             self._default_config = Simulation.populateConfig(
@@ -217,10 +217,11 @@ class Scenario(object):
                 raise
         log.info("done %d runs for %d each" % (runcount, sim_time))
 
-    def run_parallel(self, runcount=None, runtime=None, *args, **kwargs):
+    def run_parallel(self, runcount=None, runtime=None, **kwargs):
         """
         Offload this to AIETES multiprocessing queue
 
+        :param runcount:
         Args:
             runcount(int): Number of repeated executions of this scenario; this value overrides the
                 value set on init
@@ -268,7 +269,7 @@ class Scenario(object):
             r is not None for r in self.datarun), "All dataruns should be completed by now"
         log.info("Got responses")
 
-        print("done %d runs in parallel" % (runcount))
+        print("done %d runs in parallel" % runcount)
 
     def generateRunStats(self, sim_run_dataset=None):
         """
@@ -323,11 +324,12 @@ class Scenario(object):
         Returns:
             DataPackage compatible dict
         """
-        config = {}
-        config['Simulation'] = self.simulation
-        config['Environment'] = self.environment
-        config['Node'] = {'Nodes': self.nodes,
-                          'count': len([name for name in self.nodes.keys() if name != "__default__"])}
+        config = {'Simulation': self.simulation,
+                  'Environment': self.environment,
+                  'Node': {'Nodes': self.nodes,
+                           'count': len([name for name in self.nodes.keys() if name != "__default__"])
+                  }
+        }
         return config
 
     def generateConfigObj(self):
@@ -356,8 +358,7 @@ class Scenario(object):
         else:
             behaviour_set = set()
             behaviour_set.add(default_bev)
-        behaviours = {}
-        behaviours[default_bev] = ['__default__', ]
+        behaviours = {default_bev: ['__default__', ]}
 
         if self._default_node_config['bev'] != 'Null':
             raise NotImplementedError(
@@ -1007,18 +1008,6 @@ class ExperimentManager(object):
 
             pickle.dump(stats, open(s_path, "wb"))
             print("Done in %f seconds" % (time.clock() - start))
-
-    @classmethod
-    def write_analysis(exp):
-        """
-        big lazy multi-run write up that I'll change whenever I like
-
-        CURRENTLY DOES
-            Write intermediate fusion graphs for each scenario
-            Best (Worst if Waypoint behaviour) case fusion presentation across N scenarios
-        :param experiment:
-        :return:
-        """
 
 
 class RecoveredExperiment(ExperimentManager):

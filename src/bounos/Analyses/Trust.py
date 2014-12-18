@@ -76,11 +76,11 @@ def generate_single_run_trust_perspective(gf, metric_weights=None, flip_metrics=
         width = gmx - gmn
         with np.errstate(invalid='ignore'):
             good = gi.apply(
-                lambda o: (0.75 * np.divide((width), (np.abs(o - gmn)) + rho * (width)) - 0.5).fillna(1),
+                lambda o: (0.75 * np.divide(width, (np.abs(o - gmn)) + rho * width) - 0.5).fillna(1),
                 axis=1
             )
             bad = gi.apply(
-                lambda o: (0.75 * np.divide((width), (np.abs(o - gmx)) + rho * (width)) - 0.5).fillna(1),
+                lambda o: (0.75 * np.divide(width, (np.abs(o - gmx)) + rho * width) - 0.5).fillna(1),
                 axis=1
             )
 
@@ -204,7 +204,7 @@ def generate_trust_logs_from_comms_logs(comms_logs):
             obs[i_node] = []
         for j_node, j_t in i_t.items():
             for o, observation in enumerate(j_t):
-                while len(obs[i_node]) <= (o):
+                while len(obs[i_node]) <= o:
                     obs[i_node].append({})
                 obs[i_node][o][j_node] = observation
     return obs
@@ -235,7 +235,7 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     return tf
 
 
-def network_trust_dict(trust_run, observer='n0', recommendation_nodes=['n2', 'n3'], target='n1', indirect_nodes=['n4', 'n5']):
+def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, target='n1', indirect_nodes=None):
     """
     Take an individual simulation run and get a dict of the standard network perspectives across given recommenders and indirect nodes
     (you could probably cludge together a few runs and the data format would still be ok, but I wouldn't try plotting it directly)
@@ -246,13 +246,18 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=['n2', 'n3
     :param indirect_nodes:
     :return:
     """
+    if not recommendation_nodes:
+        recommendation_nodes = ['n2', 'n3']
+    if not indirect_nodes:
+        indirect_nodes = ['n4', 'n5']
+
     t_whitenized = lambda x: max(_gray_whitenized(x)) * x  # Maps to max_s{f_s(T_{Bi})})T_{Bi}
     t_direct = lambda x: 0.5 * t_whitenized(x)
     t_recommend = lambda x: 0.5 * ( \
-        2 * len(recommendation_nodes) \
+        2 * len(recommendation_nodes)
         / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
     t_indirect = lambda x: 0.5 * ( \
-        len(indirect_nodes) \
+        len(indirect_nodes)
         / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
 
     network_list = [observer] + recommendation_nodes + indirect_nodes

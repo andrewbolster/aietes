@@ -16,8 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-__author__ = 'andrewbolster'
-
 import numpy as np
 
 from aietes.Tools import mag

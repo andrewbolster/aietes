@@ -16,7 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-__author__ = 'bolster'
 import sys
 import traceback
 import logging
@@ -34,6 +33,7 @@ import Analyses.Trust
 from configobj import ConfigObj
 
 
+# noinspection PyCallByClass
 class DataPackage(object):
     """
     Data Store for simulation results
@@ -207,14 +207,14 @@ class DataPackage(object):
         data['filename'] = "{}.npz".format(filename)
 
         np.savez(filename,
-                 **(data)
+                 **data
         )
         co = ConfigObj(self.config, list_values=False)
         co.filename = "%s.conf" % filename
         co.write()
         if track_mat:
             self.export_track_mat(filename)
-        return ("%s.npz" % filename, co.filename)
+        return "%s.npz" % filename, co.filename
 
     # Data has the format:
     # [n][x,y,z][t]
@@ -312,13 +312,10 @@ class DataPackage(object):
         # TODO The maths for this is insane....
 
         """Motion Statistics"""
-        mot_stat = {}
         # Standard Variation of the Internode Distance Average would represent
         # the variability of the fleet
-        mot_stat["std_of_INDA"] = np.std(
-            [self.inter_distance_average(t) for t in xrange(self.tmax)])
-        mot_stat["std_of_INDD"] = np.std(
-            [self.position_matrix(t) / self.inter_distance_average(t) for t in xrange(self.tmax)])
+        mot_stat = {"std_of_INDA": np.std([self.inter_distance_average(t) for t in xrange(self.tmax)]),
+                    "std_of_INDD": np.std([self.position_matrix(t) / self.inter_distance_average(t) for t in xrange(self.tmax)])}
         # Fleet speed (i.e. total distance covered) would represent comparative
         # efficiency
         mot_f_distance = np.sum(map(mag, self.v))
@@ -575,7 +572,7 @@ class DataPackage(object):
         drift_err = np.linalg.norm(drift - truth, axis=1)
         estimate_err = np.linalg.norm(estimate - truth, axis=1)
 
-        return (drift_err, estimate_err, self.n, period)
+        return drift_err, estimate_err, self.n, period
 
     def export_track_mat(self, filename=None):
         """
@@ -706,9 +703,9 @@ class DataPackage(object):
         for n, node_p in enumerate(self.p):
             x, y, z = node_p[:, 0]
 
-            ax1.annotate(self.names[n], xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom', \
-                         bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3), \
-                         arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
+            ax1.annotate(self.names[n], xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom',
+                         bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
+                         arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                          color='red')
             )
             ax1.scatter(x, y)

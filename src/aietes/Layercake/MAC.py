@@ -99,7 +99,7 @@ class ALOHA(object):
             while True:
                 yield Sim.waitevent, self, Request
                 yield Sim.hold, self, Request.signalparam[0]
-                if (self.interrupted()):
+                if self.interrupted():
                     self.interruptReset()
                 else:
                     self.fsm.process(Request.signalparam[1])
@@ -239,7 +239,7 @@ class ALOHA(object):
         """
         self.outgoing_packet_queue.pop(0)
         self.transmission_attempts = 0
-        if (len(self.outgoing_packet_queue) > 0):
+        if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
 
@@ -265,7 +265,7 @@ class ALOHA(object):
 
         # Before transmitting, we check if the channel is idle
         if self.layercake.phy.IsIdle():
-            self.transmission_attempts = self.transmission_attempts + 1
+            self.transmission_attempts += 1
             self.channel_access_retries = 0
             if DEBUG:
                 self.logger.debug(
@@ -276,7 +276,7 @@ class ALOHA(object):
             if DEBUG:
                 self.logger.debug("The timeout is " + str(self.timeout))
         else:
-            self.channel_access_retries = self.channel_access_retries + 1
+            self.channel_access_retries += 1
             timeout = random.random() * (2 * self.T)
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
 
@@ -399,7 +399,7 @@ class ALOHA4FBR(ALOHA):
         self.T = self.layercake.phy.level2delay(self.level)
 
         if self.layercake.phy.IsIdle():
-            self.transmission_attempts = self.transmission_attempts + 1
+            self.transmission_attempts += 1
             self.channel_access_retries = 0
 
             if self.outgoing_packet_queue[0]["through"][0:3] == "ANY":
@@ -429,7 +429,7 @@ class ALOHA4FBR(ALOHA):
         # I'm currently not limiting the number of channel access retries
         else:
             self.logger.debug("The channel was not idle.")
-            self.channel_access_retries = self.channel_access_retries + 1
+            self.channel_access_retries += 1
             timeout = random.random() * (2 * self.T + self.t_data)
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
 
@@ -491,7 +491,7 @@ class ALOHA4FBR(ALOHA):
 
         self.incoming_packet = None
 
-        if self.multicast == False:
+        if not self.multicast:
             # Update the timer: 1.-Stop, 2.-Restart
             p = Sim.Process()
             p.interrupt(self.timer)
@@ -581,7 +581,7 @@ class ALOHA4FBR(ALOHA):
         # Sim.now(), self.fsm.input_symbol, self.fsm.current_state
 
 
-class DACAP:
+class DACAP(object):
     """DACAP : Distance Aware Collision Avoidance Protocol coupled with power control
     """
 
@@ -639,7 +639,7 @@ class DACAP:
             while True:
                 yield Sim.waitevent, self, Request
                 yield Sim.hold, self, Request.signalparam[0]
-                if (self.interrupted()):
+                if self.interrupted():
                     self.interruptReset()
                 else:
                     if not Request.occurred:
@@ -887,7 +887,7 @@ class DACAP:
         self.incoming_packet = None
 
     def CheckPendingData(self):
-        if self.pending_packet_ID != None:
+        if self.pending_packet_ID is not None:
             if self.incoming_packet["ID"] == self.pending_packet_ID:
                 self.logger.warn(
                     "Despite everything, I properly received the DATA packet from: " + self.incoming_packet["source"])
@@ -896,7 +896,7 @@ class DACAP:
             self.OnError()
 
     def CheckPendingACK(self):
-        if self.pending_packet_ID != None:
+        if self.pending_packet_ID is not None:
             if self.incoming_packet["ID"] == self.pending_packet_ID:
                 self.logger.warn(
                     "Despite everything, I we properly transmitted to: " + self.incoming_packet["source"])
@@ -911,7 +911,7 @@ class DACAP:
         self.T = self.layercake.phy.level2delay(self.level)
 
         if self.layercake.phy.IsIdle():
-            self.transmission_attempts = self.transmission_attempts + 1
+            self.transmission_attempts += 1
             self.channel_access_retries = 0
 
             if self.outgoing_packet_queue[0]["through"].startswith("ANY"):
@@ -940,7 +940,7 @@ class DACAP:
             self.pending_packet_ID = self.outgoing_packet_queue[0]["ID"]
             self.fsm.current_state = "WAIT_CTS"
         else:
-            self.channel_access_retries = self.channel_access_retries + 1
+            self.channel_access_retries += 1
             timeout = random.random() * (2 * self.T + self.t_data)
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
 
@@ -968,7 +968,7 @@ class DACAP:
         t2 = (self.t_min * T - self.deltaTData) / 2.0
         t3 = (self.t_min * T + self.Tw_min * T - 2 * self.deltaD * T) / 4.0
 
-        if U >= t1 and U <= t2:
+        if t1 <= U <= t2:
             timewait = 2 * (U + self.deltaD * T) - self.t_min * T
             self.logger.debug(
                 "First case, U=" + str(U) + ", I'll wait for " + str(timewait))
@@ -1221,7 +1221,7 @@ class DACAP:
         self.transmission_attempts = 0
 
         # Is there anything else to do?
-        if (len(self.outgoing_packet_queue) > 0):
+        if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
@@ -1241,7 +1241,7 @@ class DACAP:
         """
         self.logger.debug("Timed Out!, No Data Received")
 
-        if (len(self.outgoing_packet_queue) > 0):
+        if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
@@ -1261,7 +1261,7 @@ class DACAP:
     def OnTimeout(self):
         self.logger.debug("Exiting from back off")
 
-        if (len(self.outgoing_packet_queue) > 0):
+        if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
@@ -1443,7 +1443,7 @@ class DACAP4FBR(DACAP):
 
         self.incoming_packet = None
 
-        if self.multicast == False:
+        if not self.multicast:
             # Update the timer: 1.-Stop, 2.-Restart
             p = Sim.Process()
             p.interrupt(self.timer)
@@ -1608,7 +1608,7 @@ class DACAP4FBR(DACAP):
         DACAP.SendRTS(self)
 
 
-class CSMA:
+class CSMA(object):
     """CSMA: Carrier Sensing Multiple Access - Something between ALOHA and DACAP
 
     This implementation is extremely close to MACA (Karn 1990)
@@ -1665,7 +1665,7 @@ class CSMA:
             while True:
                 yield Sim.waitevent, self, Request
                 yield Sim.hold, self, Request.signalparam[0]
-                if (self.interrupted()):
+                if self.interrupted():
                     self.interruptReset()
                 else:
                     if not Request.occurred:
@@ -1842,7 +1842,7 @@ class CSMA:
         self.incoming_packet = None
 
     def CheckPendingData(self):
-        if self.pending_data_packet_from != None:
+        if self.pending_data_packet_from is not None:
             if self.incoming_packet["route"][-1][0] == self.pending_data_packet_from:
                 self.logger.debug(
                     "Despite everything, I properly received the DATA packet from: " + self.incoming_packet["source"])
@@ -1885,7 +1885,7 @@ class CSMA:
             raise
 
         if self.layercake.phy.IsIdle():
-            self.transmission_attempts = self.transmission_attempts + 1
+            self.transmission_attempts += 1
             self.channel_access_retries = 0
 
             if self.outgoing_packet_queue[0]["through"].startswith("ANY"):
@@ -1919,7 +1919,7 @@ class CSMA:
 
         # I'm currently not limiting the number of channel access retries
         else:
-            self.channel_access_retries = self.channel_access_retries + 1
+            self.channel_access_retries += 1
             timeout = random.random() * (2 * self.T + self.t_data)
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
 
@@ -2197,7 +2197,7 @@ class CSMA:
         self.transmission_attempts = 0
 
         # Is there anything else to do?
-        if (len(self.outgoing_packet_queue) > 0):
+        if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
@@ -2221,7 +2221,7 @@ class CSMA:
         self.logger.debug(
             "Timed Out!, No Data Received for {}".format(self.last_cts_to))
 
-        if (len(self.outgoing_packet_queue) > 0):
+        if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
@@ -2246,7 +2246,7 @@ class CSMA:
 
     def OnTimeout(self):
 
-        if (len(self.outgoing_packet_queue) > 0):
+        if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
@@ -2440,7 +2440,7 @@ class CSMA4FBR(CSMA):
 
         self.incoming_packet = None
 
-        if self.multicast == False:
+        if not self.multicast:
             # Update the timer: 1.-Stop, 2.-Restart
             p = Sim.Process()
             p.interrupt(self.timer)

@@ -40,7 +40,7 @@ from pprint import pformat
 import collections
 import weakref
 
-from humanize_time import secondsToStr
+from aietes.Tools.humanize_time import secondsToStr
 
 from joblib import Memory
 from tempfile import mkdtemp
@@ -92,6 +92,11 @@ log_hdl.addFilter(SimTimeFilter())
 
 
 def notify_desktop(message):
+    """
+    Thin Shim to notify when the simulations are complete, and not cry under no xsession
+    :param message:
+    :return:
+    """
     try:
         if not Notify.is_initted():
             Notify.init("AIETES Simulation")
@@ -106,9 +111,12 @@ class ConfigError(Exception):
     Contains a 'status' with the boolean dict representation of the error
     """
 
-    def __init__(self, value):
-        logging.critical("Invalid Config; Dying: %s" % value)
-        self.status = value
+    def __init__(self, message, errors):
+        super(ConfigError, self).__init__(message)
+
+        logging.critical("Invalid Config; Dying: %s" % message)
+        self.status = message
+        self.errors = errors
 
     def __str__(self):
         return repr(self.status)
@@ -163,7 +171,7 @@ def angle_between(v1, v2):
         try:
             angle = np.arccos(np.dot(v1_u, v2_u))
         except FloatingPointError:
-            logging.critical("FPE: 1:{},2:{}".format(v1_u, v2_u))
+            logging.critical("FPE: 1:%f,2:%f", v1_u, v2_u)
             raise
     if np.isnan(angle):
         return np.pi
@@ -186,8 +194,8 @@ def distance(pos_a, pos_b, scale=1):
     try:
         return mag(pos_a - pos_b) * scale
     except (TypeError, FloatingPointError) as Err:
-        logging.error("Type/FP Error on Distances (%s,%s): %s" %
-                      (pos_a, pos_b, Err))
+        logging.error("Type/FP Error on Distances (%s,%s): %s",
+                      pos_a, pos_b, Err)
         raise
 
 
@@ -249,7 +257,7 @@ def random_three_vector():
     x = np.sin(theta) * np.cos(phi)
     y = np.sin(theta) * np.sin(phi)
     z = np.cos(theta)
-    return (x, y, z)
+    return x, y, z
 
 
 def random_xy_vector():
@@ -258,7 +266,7 @@ def random_xy_vector():
     this is a horrible cheat but it works.
     :return:
     """
-    return (random_three_vector()[0:2] + (0,))
+    return random_three_vector()[0:2] + (0,)
 
 
 def sixvec(xyz):
@@ -391,7 +399,8 @@ class dotdictify(dict):
         newone.__dict__.update(dict(self.__dict__))
         return newone
 
-    def __deepcopy__(self):
+    @staticmethod
+    def __deepcopy__():
         raise (
             NotImplementedError, "Don't deep copy! This already deepcopy's on assignment")
 
@@ -443,7 +452,7 @@ class dotdict(dict):
         return self.keys(), dir(dict(self))
 
 
-class memory_entry():
+class memory_entry(object):
     def __init__(self, object_id, position, velocity, distance=None, name=None):
         self.object_id = object_id
         self.name = name
@@ -455,7 +464,7 @@ class memory_entry():
         return "%s:%s:%s" % (self.name, self.position, self.distance)
 
 
-class map_entry():
+class map_entry(object):
     def __init__(self, object_id, position, velocity, name=None, distance=None):
         self.object_id = object_id
         self.position = position
@@ -615,8 +624,8 @@ def itersubclasses(cls, _seen=None):
         if sub not in _seen:
             _seen.add(sub)
             yield sub
-            for sub in itersubclasses(sub, _seen):
-                yield sub
+            for ssub in itersubclasses(sub, _seen):
+                yield ssub
 
 
 class KeepRefs(object):
@@ -847,8 +856,8 @@ _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
 
 
 def _VmB(VmKey):
-    '''Private.
-    '''
+    """Private.
+    """
     global _proc_status, _scale
     # get pseudo file  /proc/<pid>/status
     try:
@@ -867,26 +876,26 @@ def _VmB(VmKey):
 
 
 def memory(since=0.0):
-    '''Return memory usage in Megabytes.
-    '''
+    """Return memory usage in Megabytes.
+    """
     return _VmB('VmSize:') - since
 
 
 def swapsize(since=0.0):
-    '''Return memory usage in Megabytes.
-    '''
+    """Return memory usage in Megabytes.
+    """
     return _VmB('VmSwap:') - since
 
 
 def resident(since=0.0):
-    '''Return resident memory usage in Megabytes.
-    '''
+    """Return resident memory usage in Megabytes.
+    """
     return _VmB('VmRSS:') - since
 
 
 def stacksize(since=0.0):
-    '''Return stack size in Megabytes.
-    '''
+    """Return stack size in Megabytes.
+    """
     return _VmB('VmStk:') - since
 
 

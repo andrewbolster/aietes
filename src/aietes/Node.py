@@ -446,6 +446,7 @@ class Node(Sim.Process):
         self.logger.info("Vector focibly moved")
         self.position = placeVector
 
+    # noinspection PyNoneFunctionAssignment
     def getPos(self, true=False):
         """
         Returns the current position of the node ACCORDING TO THE NODE

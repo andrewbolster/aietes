@@ -380,7 +380,8 @@ class VisualNavigator(wx.Panel):
         if self.ctl.model_is_ready():
             self.redraw_page(t=t)
 
-    def sphere(self, x, y, z, r=1.0):
+    @staticmethod
+    def sphere(x, y, z, r=1.0):
         """
         Returns a sphere definition tuple (xs,ys,zs) for use with plot_wireframe
         """
@@ -494,7 +495,8 @@ class VisualNavigator(wx.Panel):
                 and self.sphere_line_collection in self.plot_axes.collections:
             self.plot_axes.collections.remove(self.sphere_line_collection)
 
-    def _remove_vectors(self, collection):
+    @staticmethod
+    def _remove_vectors(collection):
         try:
             length = len(collection)
         except TypeError:

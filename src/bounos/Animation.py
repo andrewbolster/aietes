@@ -78,7 +78,8 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
             self._first_draw_id = self._fig.canvas.mpl_connect('draw_event',
                                                                self._start)
 
-    def ffmpeg_cmd(self, fname, fps, codec, frame_prefix):
+    @staticmethod
+    def ffmpeg_cmd(fname, fps, codec, frame_prefix):
         # Returns the command line parameters for subprocess to use
         # ffmpeg to create a movie
         return ['ffmpeg', '-y', '-r', str(fps),
@@ -86,7 +87,8 @@ class AIETESAnimation(MPLanimation.FuncAnimation):
                 '-vcodec', codec, '-vpre', 'slow', '-vpre', 'baseline',
                 "%s.mp4" % fname]
 
-    def mencoder_cmd(self, fname, fps, codec, frame_prefix):
+    @staticmethod
+    def mencoder_cmd(fname, fps, codec, frame_prefix):
         # Returns the command line parameters for subprocess to use
         # mencoder to create a movie
         return ['mencoder',

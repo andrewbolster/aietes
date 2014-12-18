@@ -33,7 +33,7 @@ DEBUG = True
 DEBUG = False
 
 
-class PhysicalLayer():
+class PhysicalLayer(object):
     # Initialization of the layer
 
     def __init__(self, layercake, config, channel_event):
@@ -135,7 +135,7 @@ class PhysicalLayer():
     # packet
     def TransmitPacket(self, packet):
 
-        if self.IsIdle() == False:
+        if not self.IsIdle():
             # The MAC protocol is the one that should check this before
             # transmitting
             self.logger.warn(
@@ -326,7 +326,7 @@ class IncomingPacket(Sim.Process):
             )
 
     def UpdateInterference(self, interference, packet):
-        if (interference > self.MaxInterference):
+        if interference > self.MaxInterference:
             self.MaxInterference = interference
 
     def Receive(self, duration):
@@ -385,7 +385,7 @@ class OutgoingPacket(Sim.Process):
             ))
 
         # Need to add this info in for higher layers
-        packet['tx_pwr_db'] = (power)
+        packet['tx_pwr_db'] = power
 
         self.physical_layer.transducer.channel_event.signal({"pos": self.physical_layer.layercake.get_real_current_position,
                                                              "power": power, "duration": duration, "frequency": self.physical_layer.freq,
@@ -419,7 +419,7 @@ class AcousticEventListener(Sim.Process):
         self.transducer = transducer
 
     def listen(self, channel_event, position_query):
-        while (True):
+        while True:
             yield Sim.waitevent, self, channel_event
             params = channel_event.signalparam
             sched = ArrivalScheduler(name="ArrivalScheduler" + self.name[-1])

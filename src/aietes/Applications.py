@@ -366,9 +366,10 @@ class CommsTrust(RoutingTest):
         self.last_accessed_tx_packet = None
 
         self.trust_assessments = {}  # My generated trust metrics, [node][t][n_observation_arrays]
-        self.trust_accessories = {}  # Extra information that might be interesting in the longer term.
-        self.trust_accessories['queue_length'] = []
-        self.trust_accessories['collisions'] = []
+        # Extra information that might be interesting in the longer term.
+        self.trust_accessories = {'queue_length': [],
+                                  'collisions': []
+        }
 
         self.forced_nodes = self.layercake.host.fleet.nodeNames()
         if self.forced_nodes:
@@ -569,5 +570,6 @@ class Null(Application):
         """
         return None, 1
 
-    def packetRecv(self, packet):
+    @staticmethod
+    def packetRecv(packet):
         del packet

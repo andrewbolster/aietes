@@ -12,7 +12,7 @@ NAMES = [('second', 'seconds'),
 
 
 def humanize_time(amount, units=None):
-    '''
+    """
        Divide `amount` in time periods.
        Useful for making time intervals more human readable.
 
@@ -30,7 +30,7 @@ def humanize_time(amount, units=None):
        [(5.5, 'seconds')]
        >>> humanize_time(5.0, "seconds")
        [(5.0, 'seconds')]
-    '''
+    """
     result = []
 
     if units is None:
@@ -38,7 +38,7 @@ def humanize_time(amount, units=None):
 
     unit = map(lambda a: a[1], NAMES).index(units)
     # Convert to seconds
-    amount = amount * INTERVALS[unit]
+    amount *= INTERVALS[unit]
 
     for i in range(len(NAMES) - 1, -1, -1):
         a = amount // INTERVALS[i]
@@ -47,7 +47,7 @@ def humanize_time(amount, units=None):
                 result.append((amount, NAMES[i][1]))
             else:
                 result.append((int(a), NAMES[i][1 % int(a)]))
-            amount -= (a) * INTERVALS[i]
+            amount -= a * INTERVALS[i]
 
     return result
 

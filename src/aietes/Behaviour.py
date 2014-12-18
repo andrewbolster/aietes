@@ -81,7 +81,8 @@ class Behaviour(object):
 
         self.logger.debug("Launched Behaviour")
 
-    def normalize_behaviour(self, forceVector):
+    @staticmethod
+    def normalize_behaviour(forceVector):
         return forceVector
 
     def neighbour_map(self):
@@ -417,7 +418,7 @@ class Flock(Behaviour):
         return (node_history[-1].position - node_history[-2].position) / (node_history[-1].time - node_history[-2].time)
 
 
-class AlternativeFlockMixin():
+class AlternativeFlockMixin(object):
     def __init__(self, *args, **kwargs):
         self.behaviours.remove(self.clumpingVector)
         self.behaviours.remove(self.repulsiveVector)
@@ -449,7 +450,7 @@ class AlternativeFlock(Flock, AlternativeFlockMixin):
         AlternativeFlockMixin.__init__(self, *args, **kwargs)
 
 
-class WaypointMixin():
+class WaypointMixin(object):
     """
     Waypoint MixIn Class defines the general waypoint behaviour and includes the inner 'waypoint' object class.
     """
@@ -631,7 +632,8 @@ class FleetLawnmower(Flock, WaypointMixin):
             self.logger.debug("Repulse:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.repulsive_factor
 
-    def per_node_lawnmower(self, environment, swath, base_axis=0, altitude=None):
+    @staticmethod
+    def per_node_lawnmower(environment, swath, base_axis=0, altitude=None):
         """
         Generates a flat segmented lawnmower waypoint loop
         """
@@ -808,7 +810,7 @@ class SlowCoach(Flock):
 
     def slowcoachVector(self, position, velocity):
         forceVector = np.array([0, 0, 0], dtype=np.float)
-        forceVector = -(velocity)
+        forceVector = -velocity
         if self.debug:
             self.logger.debug("SlowCoach:%s" % forceVector)
         return self.normalize_behaviour(forceVector) * self.clumping_factor

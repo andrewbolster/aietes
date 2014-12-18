@@ -28,7 +28,7 @@ from aietes.Tools import map_entry, distance, DEBUG, ConfigError
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
 
 
-class Environment():
+class Environment(object):
     """
     Environment Class representing the physical environment inc any objects
     / activities within that environment that are not controlled by the
@@ -230,7 +230,8 @@ class Environment():
         sorted_evecs = evecs[evals.argsort()]
         return average, sorted_evecs[index]
 
-    def normalPlane(self, point, normal):  # plot final plane
+    @staticmethod
+    def normalPlane(point, normal):  # plot final plane
         d = np.dot(-point, normal)
         [xx, yy] = np.meshgrid(np.arange(point[0] - 10, point[0] + 10),
                                np.arange(point[1] - 10, point[1] + 10))

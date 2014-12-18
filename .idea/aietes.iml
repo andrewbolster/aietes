@@ -6,14 +6,17 @@
     </content>
     <orderEntry type="jdk" jdkName="Python 2.7.5+ (/usr/bin/python)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="auvnetsim-code" />
+    <orderEntry type="library" name="Puppet modules" level="application" />
   </component>
   <component name="PackageRequirementsSettings">
     <option name="requirementsPath" value="$MODULE_DIR$/requirements" />
+  </component>
+  <component name="PuppetModuleSettings">
+    <option name="confdir" value="/etc/puppet" />
+    <option name="modulePath" value="/etc/puppet/modules:/usr/share/puppet/modules:/opt/puppet/share/puppet/modules" />
   </component>
   <component name="TestRunnerService">
     <option name="projectConfiguration" value="Nosetests" />
     <option name="PROJECT_TEST_RUNNER" value="Nosetests" />
   </component>
 </module>
-

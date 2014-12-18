@@ -16,15 +16,12 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-import logging
-
-from aietes.Tools import ConfigError
 import PhysicalLayer as PHY
 import MAC
 import RoutingLayer as Net
 
 
-class Layercake():
+class Layercake(object):
     """
     Defines the Four relevant network layers for a given node
     PHY,MAC,Network,Application
@@ -123,7 +120,6 @@ class Layercake():
     def get_current_position(self):
         """
         Host position as far as it's concerned (unless overridden with 'true' which will return the real physical location
-        :param true:
         :return:
         """
         return self.host.getPos()
@@ -131,7 +127,6 @@ class Layercake():
     def get_real_current_position(self):
         """
         Host position as far as it's concerned (unless overridden with 'true' which will return the real physical location
-        :param true:
         :return:
         """
         return self.host.getPos(True)

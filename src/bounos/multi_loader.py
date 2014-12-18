@@ -140,7 +140,7 @@ def generate_dataframes_from_inverted_log(tup):
     except:
         log.exception("{k} didn't work".format(k=k))
 
-    return (k, df)
+    return k, df
 
 
 def dump_trust_logs_and_stats_from_exp_paths(paths, title=None):

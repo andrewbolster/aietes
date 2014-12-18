@@ -213,11 +213,11 @@ class DSDV(SimpleRoutingTable):
 
 
 class Static(SimpleRoutingTable):
-    ''' Note that it has not sense to use static routes when the network has mobile nodes. For MAC, CS-ALOHA or DACAP should be used.
+    """ Note that it has not sense to use static routes when the network has mobile nodes. For MAC, CS-ALOHA or DACAP should be used.
         Variation 0: approximation to the transmission cone
         Variation 1: approximation to the receiver cone
         Variation 2: Dijkstras' algorithm for minimum power routes
-    '''
+    """
 
     def __init__(self, layercake, config):
         SimpleRoutingTable.__init__(self, layercake, config)
@@ -328,8 +328,8 @@ class Static(SimpleRoutingTable):
         pass
 
     def BuildRoutingTable0(self):
-        ''' Transmission Cone approach.
-        '''
+        """ Transmission Cone approach.
+        """
         self.logger.debug(
             "Building routing table for node " + self.layercake.hostname)
         self.nodes_rel_pos = {}
@@ -445,8 +445,8 @@ class Static(SimpleRoutingTable):
                     if DEBUG:
                         print 'Trying a path through', i, 'with angle', j[1], 'and distance', j[0]
 
-                    if j[1] < ((rel_pos_item[1] + 90.0)):
-                        if j[1] > ((rel_pos_item[1] - 90.0)):
+                    if j[1] < (rel_pos_item[1] + 90.0):
+                        if j[1] > (rel_pos_item[1] - 90.0):
                             # This means that the node is going forward to the
                             # destination
                             if name_item == i:
@@ -455,8 +455,8 @@ class Static(SimpleRoutingTable):
                                 recep_angle = nodes_geo[
                                     name_item].anglewith(nodes_geo[i])
 
-                            if recep_angle < ((rel_pos_item[2] + self.cone_angle / 2.0)):
-                                if recep_angle > ((rel_pos_item[2] - self.cone_angle / 2.0)):
+                            if recep_angle < (rel_pos_item[2] + self.cone_angle / 2.0):
+                                if recep_angle > (rel_pos_item[2] - self.cone_angle / 2.0):
                                     if inside:
                                         if j[0] > self.cone_radius:
                                             if DEBUG:
@@ -507,7 +507,7 @@ class Static(SimpleRoutingTable):
         # Check if the power level needed for each next hop allows us to
         # directly reaching destination, even being out of the cone
         for i in self:
-            if self.GetLevel(nodes_geo[i]) != None and self.GetLevel(nodes_geo[i]) <= self.GetLevel(nodes_geo[self[i]]):
+            if self.GetLevel(nodes_geo[i]) is not None and self.GetLevel(nodes_geo[i]) <= self.GetLevel(nodes_geo[self[i]]):
                 self[i] = i
 
         if DEBUG:
@@ -545,7 +545,7 @@ class Static(SimpleRoutingTable):
                 if fname == tname:
                     continue
                 d = distance(fpos, tpos)
-                if self.GetLevelFT(d) != None:
+                if self.GetLevelFT(d) is not None:
                     # We can reach it using some power level
                     graph[fname][tname] = self.layercake.phy.distance2power[
                         self.GetLevelFT(d)]
@@ -558,7 +558,8 @@ class Static(SimpleRoutingTable):
             if d <= distance:
                 return level
 
-    def Dijkstra(self, G, start, end=None):
+    @staticmethod
+    def Dijkstra(G, start, end=None):
         """
         Find shortest paths from the start vertex to all
         vertices nearer than or equal to the end.
@@ -619,7 +620,7 @@ class Static(SimpleRoutingTable):
                 elif w not in Q or vwLength < Q[w]:
                     Q[w] = vwLength
                     P[w] = v
-        return (D, P)
+        return D, P
 
     def shortestPath(self, start, end):
         """
@@ -646,10 +647,10 @@ class Static(SimpleRoutingTable):
 
 
 class FBR(SimpleRoutingTable):
-    ''' In this case, DACAP4FBR should be selected as MAC protocol.
+    """ In this case, DACAP4FBR should be selected as MAC protocol.
         Variation 0: Transmission cone
         Variation 1: Reception cone (transmission cone with big apperture)
-    '''
+    """
 
     def __init__(self, layercake, config):
         SimpleRoutingTable.__init__(self, layercake, config)
@@ -726,7 +727,7 @@ class FBR(SimpleRoutingTable):
         self.layercake.mac.InitiateTransmission(self.incoming_packet)
 
     def IsReachable(self, current_level, dest_pos):
-        if self.GetLevel(dest_pos) == None:
+        if self.GetLevel(dest_pos) is None:
             return False
         else:
             return self.GetLevel(dest_pos) <= current_level

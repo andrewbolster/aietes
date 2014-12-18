@@ -16,8 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-__author__ = 'andrewbolster'
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
@@ -440,9 +438,9 @@ def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
         node_p = pd.DataFrame.from_records(node_p.source_position.values)
         x, y, z = initial = node_p.iloc[0]
 
-        ax1.annotate(name, xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom', \
-                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3), \
-                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
+        ax1.annotate(name, xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom',
+                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
+                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                      color='red')
         )
         ax1.scatter(x, y)
@@ -478,9 +476,9 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
     for n, (name, node_p) in enumerate(df.groupby(level='node')):
         x, y, z = initial = node_p.iloc[0]
 
-        ax1.annotate(name, xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom', \
-                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3), \
-                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5', \
+        ax1.annotate(name, xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom',
+                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
+                     arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                      color='red')
         )
         ax1.scatter(x, y)
@@ -523,9 +521,9 @@ def plot_positions(d, bounds=None):
     for name, pos in d.items():
         x, y, z = initial = pos
 
-        ax1.annotate(name, xy=(x, y), xytext=(-10, 5), textcoords='offset points', ha='center', va='bottom', \
-                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3), \
-                     arrowprops=dict(arrowstyle='->', \
+        ax1.annotate(name, xy=(x, y), xytext=(-10, 5), textcoords='offset points', ha='center', va='bottom',
+                     bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
+                     arrowprops=dict(arrowstyle='->',
                                      color='red')
         )
         ax1.scatter(x, y)

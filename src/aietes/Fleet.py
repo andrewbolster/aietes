@@ -248,6 +248,7 @@ class Fleet(Sim.Process):
         """
         return np.asarray([node.drift.pos_log[:, t] for node in self.nodes])
 
+    # noinspection PyNoneFunctionAssignment
     def nodePositionErrors(self, shared=True, error=0.001):
         """
         Fleet order Node position errors based on generic accuracy from origin of each node.

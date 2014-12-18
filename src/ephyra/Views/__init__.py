@@ -61,16 +61,17 @@ def callsuper(method):
                         hasattr(getattr(base, name), '__call__')):
                     supermethod = callsuper(getattr(base, name))
                     break
-            if not supermethod:
+            if not supermethod and callable(supermethod):
                 raise
-            return supermethod(self, *exc.args, **exc.kwargs)
+            else:
+                return supermethod(self, *exc.args, **exc.kwargs)
 
     callsuper_wrapper.__name__ = method.__name__
     callsuper_wrapper.__doc__ = method.__doc__
     return callsuper_wrapper
 
 
-class MetricView():
+class MetricView(object):
     """
     This Class is a plotable view of the Metric class availiable from Bounos.
     It is instantiated with the representative Bounos.Metric base metric

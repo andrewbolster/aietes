@@ -16,7 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-__author__ = 'andrewbolster'
 import logging
 from wx.lib.agw.customtreectrl import CustomTreeCtrl
 from wx.lib.intctrl import IntCtrl
@@ -318,7 +317,8 @@ class Configurator(wx.Panel):
 
         self.Layout()
 
-    def on_save(self, evt):
+    @staticmethod
+    def on_save(evt):
         print(evt)
 
     def on_update(self, evt):
@@ -350,21 +350,7 @@ class Configurator(wx.Panel):
 ##########################
 
 
-class TreeNode:
-    def __len__(self):
-        return 0
-
-    def __getitem__(self, item):
-        raise IndexError
-
-    def GetLabel(self):
-        raise NotImplementedError
-
-    def __setitem__(self, item):
-        raise IndexError
-
-
-class ListNode:
+class ListNode(object):
     def __init__(self, title, children=None, data=None):
         self._nl = []
         if children is not None:

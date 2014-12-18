@@ -65,6 +65,7 @@ class BounosModel(DataPackage):
     """
 
     def __init__(self, *args, **kwargs):
+        super(BounosModel, self).__init__(*args, **kwargs)
         self.metrics = []
         self.is_ready = False
         self.is_simulating = None
@@ -516,11 +517,11 @@ def run_detection_fusion(data, args=None):
                     # Per Run Legend
                     n_leg = len(data)
                     leg_w = 1.0 / n_leg
-                    leg_x = 0 + (leg_w * (i))
+                    leg_x = 0 + (leg_w * i)
 
                     ax.legend(sorted(d.names), "lower center", bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
-                              ncol=int(ceil(float(len(d.names) + 1) / (n_leg))))
+                              ncol=int(ceil(float(len(d.names) + 1) / n_leg)))
                 # First Legend
                 elif i == 0:
                     ax.legend(sorted(d.names), "lower center",
@@ -674,12 +675,12 @@ def run_metric_comparison(data, args=None):
                     # Per Run Legend
                     n_leg = len(data)
                     leg_w = 1.0 / n_leg
-                    leg_x = 0 + (leg_w * (i))
+                    leg_x = 0 + (leg_w * i)
 
                     ax.legend(d.names, "lower center",
                               bbox_to_anchor=(leg_x, 0, leg_w, 1),
                               bbox_transform=fig.transFigure,
-                              ncol=int(ceil(float(len(d.names) + 1) / (n_leg))))
+                              ncol=int(ceil(float(len(d.names) + 1) / n_leg)))
                 # First Legend
                 elif i == 0:
                     ax.legend(d.names, "lower center",

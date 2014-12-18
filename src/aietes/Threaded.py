@@ -16,8 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-__author__ = 'andrewbolster'
-
 from multiprocessing.process import current_process
 from joblib import Parallel, delayed
 import struct

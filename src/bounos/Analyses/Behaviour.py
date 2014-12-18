@@ -16,7 +16,6 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-__author__ = 'andrewbolster'
 
 import numpy as np
 from pandas.stats.moments import ewma
@@ -80,7 +79,7 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
     # IND has the highlight data to be the average of internode distances
     # TODO implement scrolling stddev calc to adjust smearing value (5)
     potential_misbehavers = {}
-    detection_envelope = np.zeros((data.tmax), dtype=np.float64)
+    detection_envelope = np.zeros(data.tmax, dtype=np.float64)
     deviance = np.zeros((data.tmax, data.n), dtype=np.float64)
 
     rolling_detections = [[]] * data.tmax
@@ -157,7 +156,7 @@ def Deviation(data, *args, **kwargs):
     metric.update(data)
     # IND has the highlight data to be the average of internode distances
     # TODO implement scrolling stddev calc to adjust smearing value (5)
-    stddev = np.zeros((data.tmax), dtype=np.float64)
+    stddev = np.zeros(data.tmax, dtype=np.float64)
     deviance = np.zeros((data.tmax, data.n), dtype=np.float64)
 
     for t in range(data.tmax):
