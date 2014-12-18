@@ -21,7 +21,7 @@ __author__ = 'andrewbolster'
 import numpy as np
 from pandas.stats.moments import ewma
 
-from bounos import DataPackage
+from bounos import DataPackage, Analyses
 from aietes.Tools import mkpickle
 
 
@@ -44,35 +44,6 @@ def Find_Convergence(data, *args, **kwargs):
     detection_points = data
     metrics = data
     return detection_points, metrics
-
-
-def get_valid_metric(metric):
-    """
-    Returns an instantiated, valid, metric if possible.
-
-    Inspects the TOP of the MRO of an attempted class to check if it matches the class name (i.e. not the id)
-
-    issubclass doesn't work across execution instances  (i.e. saved data files / parralel execution)
-
-    Class structure of metric is expected to be [ something -> bounos.Metrics.Metric -> object ]
-    :param metric:
-    :return:
-    """
-    import bounos.Metrics as Metrics
-
-    metric_arg = metric
-    if isinstance(metric_arg, type) and hasattr(metric_arg, 'mro') and metric_arg.mro()[-2].__name__ == 'Metric':
-        metric_class = metric_arg
-    elif isinstance(metric_arg, str):
-        metric_class = getattr(Metrics, metric_arg)
-    else:
-        raise ValueError("Invalid object give for metric, should be either subclass of bounos.Metrics.Metric or string: got type {} containing {}:{}".format(
-            type(metric_arg), metric_arg, metric_arg.__bases__
-        ))
-    metric = metric_class()
-    if metric is None:
-        raise ValueError("No Metric! Cannot Contine")
-    return metric
 
 
 def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
@@ -103,7 +74,7 @@ def Detect_Misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
             'metrics': as metric.data
                 Raw metric data
     """
-    metric = get_valid_metric(metric)
+    metric = Analyses.get_valid_metric(metric)
 
     metric.update(data)
     # IND has the highlight data to be the average of internode distances

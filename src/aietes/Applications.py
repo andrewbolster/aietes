@@ -23,10 +23,10 @@ import pandas as pd
 
 from collections import Counter, OrderedDict
 
-from aietes.Tools import Sim, debug, randomstr, broadcast_address, ConfigError
+from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
 
-debug = False
+DEBUG = False
 
 
 class Application(Sim.Process):
@@ -61,13 +61,13 @@ class Application(Sim.Process):
 
             if packet_rate > 0 and packet_count == 0:
                 self.packet_rate = packet_rate
-                if debug:
+                if DEBUG:
                     self.logger.debug(
                         "Taking Packet_Rate from config: %s" % self.packet_rate)
             elif packet_count > 0 and packet_rate == 0:
                 # If packet count defined, only send our N packets
                 self.packet_rate = packet_count / float(self.sim_duration)
-                if debug:
+                if DEBUG:
                     self.logger.debug(
                         "Taking Packet_Count from config: %s" % self.packet_rate)
             else:
@@ -120,7 +120,7 @@ class Application(Sim.Process):
                                               data=randomstr(24),
                                               destination=destination)
             if packet is not None:
-                if debug:
+                if DEBUG:
                     self.logger.debug(
                         "Generated Payload %s: Waiting %s" % (packet['data'], period))
                 self.layercake.send(packet)
@@ -132,7 +132,7 @@ class Application(Sim.Process):
         """
         Called by RoutingTable on packet reception
         """
-        if debug:
+        if DEBUG:
             self.logger.info("Got Packet {id} from {src}".format(
                 id=FromBelow['ID'],
                 src=FromBelow['source']
@@ -147,7 +147,7 @@ class Application(Sim.Process):
         """
         source = packet["route"][0][0]
 
-        if debug:
+        if DEBUG:
             self.logger.info("App Packet received from %s" % source)
         self.stats['packets_received'] += 1
 
@@ -523,7 +523,7 @@ class CommsTrust(RoutingTest):
         else:
             # Finished Stream
             period = poisson(float(self.period))
-            if debug:
+            if DEBUG:
                 self.logger.info("Finished Stream {} for {}, sleeping for {}".format(
                     self.test_packet_counter[destination] / self.test_stream_length,
                     destination,
@@ -538,7 +538,7 @@ class CommsTrust(RoutingTest):
         self.result_packet_dl[packet['source']].append(packet['data'])
 
         if not (packet['data'] + 1) % self.test_stream_length:
-            if debug:
+            if DEBUG:
                 self.logger.info("Got Stream {count} from {src} after {delay}".format(
                     count=(packet['data'] + 1) / self.test_stream_length,
                     src=packet['source'],

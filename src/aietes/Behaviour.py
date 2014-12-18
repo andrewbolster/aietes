@@ -23,9 +23,9 @@ from collections import namedtuple
 
 import numpy as np
 
-from aietes.Tools import map_entry, distance, fudge_normal, debug, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
+from aietes.Tools import map_entry, distance, fudge_normal, DEBUG, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
-debug = True
+DEBUG = True
 
 
 class _waypoint(object):
@@ -54,7 +54,7 @@ class Behaviour(object):
         self.node = kwargs.get('node')
         self.bev_config = kwargs.get('bev_config')
         self.map = kwargs.get('map', None)
-        self.debug = debug and self.node.debug
+        self.debug = DEBUG and self.node.debug
         self._start_log(self.node)
         if self.debug:
             self.logger.debug('from bev_config: %s' % self.bev_config)
@@ -167,11 +167,11 @@ class Behaviour(object):
                                                   value.position)
 
         ) for key, value in self.neighbours.items()]
-        # self.logger.debug("Got Distances: %s"%neighbours_with_distance)
+        # self.logger.DEBUG("Got Distances: %s"%neighbours_with_distance)
         nearest_neighbours = sorted(neighbours_with_distance, key=attrgetter('distance')
         )
         # Select N neighbours in order
-        # self.logger.debug("Nearest Neighbours:%s"%nearest_neighbours)
+        # self.logger.DEBUG("Nearest Neighbours:%s"%nearest_neighbours)
         if n_neighbours is not None:
             nearest_neighbours = nearest_neighbours[:n_neighbours]
         return nearest_neighbours

@@ -31,7 +31,7 @@ class Node(Sim.Process):
     """
 
     def __init__(self, name, simulation, node_config, vector=None, **kwargs):
-        self.debug = debug
+        self.debug = DEBUG
         self.on_mission = True
 
         self.id = uuid.uuid4()  # Hopefully unique id
@@ -60,7 +60,7 @@ class Node(Sim.Process):
         # things.
         self.vec_log = np.zeros(
             (3, self.simulation.config.Simulation.sim_duration))
-        # However, it does make it easier to debug the behave/move
+        # However, it does make it easier to DEBUG the behave/move
         # interplay....
         self.vec_log.fill(None)
 
@@ -275,7 +275,7 @@ class Node(Sim.Process):
         else:
             self.logger.error(
                 "shouldn't really be here: {},{}".format(velocity, mag(velocity)))
-        if debug:
+        if DEBUG:
             self.logger.error("Cruise: From %f against %f and vel of %f" % (
                 mag(velocity), cruisev, mag(new_V)))
         return new_V
@@ -306,11 +306,11 @@ class Node(Sim.Process):
                            ((self.acceleration_force * dT) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruiseControl(new_velocity, self.velocity)
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "Normalized Velocity: %s, clipped: %s" % (new_velocity, self.velocity))
         else:
-            if debug:
+            if DEBUG:
                 self.logger.debug("Velocity: %s" % new_velocity)
             self.velocity = new_velocity
 
@@ -338,7 +338,7 @@ class Node(Sim.Process):
         self.pos_log[:, self._lastupdate] = self.position.copy()
         self.vec_log[:, self._lastupdate] = self.velocity
 
-        if debug:
+        if DEBUG:
             self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
                 self.velocity, mag(self.velocity), dT, old_pos, self.position))
         if not self.wallCheck():
@@ -515,15 +515,12 @@ class Node(Sim.Process):
         # Nasty ECEA initialisation because it needs to be started AFTER the nodes
         # have exposed their positions to the fleet and BEFORE t>0
 
-        debug = False
         while Sim.now() < self.simulation.duration_intervals:
 
             yield Sim.passivate, self
             #
             # Update Node State
             #
-            if debug:
-                self.logger.info('updating behaviour')
             try:
                 self.behaviour.process()
                 self.app.tick()
@@ -536,9 +533,6 @@ class Node(Sim.Process):
             #
             # Move Fleet
             #
-            if debug:
-                self.logger.info(
-                    'updating position, then waiting %s' % self.behaviour.update_rate)
             try:
                 self.move()
             except Exception:
@@ -559,8 +553,6 @@ class Node(Sim.Process):
             # Initial environment is instantiated in activate; so if it's the first interval, skip this
             #
             if Sim.now() > 0:
-                if debug:
-                    self.logger.info('updating map at {}'.format(Sim.now()))
                 try:
                     self.update_environment()
                 except Exception:

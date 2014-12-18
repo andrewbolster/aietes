@@ -37,6 +37,7 @@ nosetests.xml
 
 # Virtualenv
 env/
+.pyenv/
 
 # distribute pkg
 distribute*.tar.gz

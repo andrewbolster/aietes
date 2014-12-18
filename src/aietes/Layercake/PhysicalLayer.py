@@ -27,10 +27,10 @@ import SimPy.Simulation as Sim
 import math
 
 from copy import deepcopy
-from aietes.Tools import distance, debug
+from aietes.Tools import distance, DEBUG
 
-debug = True
-debug = False
+DEBUG = True
+DEBUG = False
 
 
 class PhysicalLayer():
@@ -124,7 +124,7 @@ class PhysicalLayer():
     # Before transmissting, we should check if the system is idle or not
     def IsIdle(self):
         if len(self.transducer.activeQ) > 0:
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "The channel is not idle. Currently receiving: " + str(len(self.transducer.activeQ)) + " packet(s).")
             return False
@@ -272,12 +272,12 @@ class Transducer(Sim.Resource):
                 if self.physical_layer.layercake.hostname == new_packet["through"] or self.physical_layer.layercake.hostname == new_packet["dest"]:
                     self.collision = True
                     self.collisions.append(new_packet)
-                    if debug:
+                    if DEBUG:
                         self.logger.debug("A " + new_packet["type"] + " packet to " + new_packet["through"] + " from " + new_packet['source']
                                           + " was discarded due to interference.")
             else:
                 # Not enough power to be properly received: just heard.
-                if debug:
+                if DEBUG:
                     self.logger.info("Packet {id} from {src} to {dest} heard below reception threshold".format(
                         id=new_packet['ID'],
                         src=new_packet['source'],
@@ -318,7 +318,7 @@ class IncomingPacket(Sim.Process):
         # Need to add this info in for higher layers
         self.packet['rx_pwr_db'] = Linear2DB(self.power)
 
-        if debug:
+        if DEBUG:
             self.physical_layer.logger.debug("Packet {id} from {src} to {dest} recieved with power {pwr}".format(
                 id=packet['ID'], src=packet[
                     'source'], dest=packet['dest'], pwr=power
@@ -377,7 +377,7 @@ class OutgoingPacket(Sim.Process):
         bitrate = bandwidth * 1e3 * self.physical_layer.band2bit
         duration = packet["length"] / bitrate
 
-        if debug:
+        if DEBUG:
             self.logger.debug("Packet {id} to {dest} will take {s} to be transmitted".format(
                 id=packet['ID'],
                 s=duration,
@@ -445,7 +445,7 @@ class ArrivalScheduler(Sim.Process):
             travel_time = distance_to / transducer.physical_layer.medium_speed
 
             packet = params['packet']
-            if debug:
+            if DEBUG:
                 transducer.logger.debug("Packet from %s to %s will take %s to get to me %.2fm away" % (
                     packet['source'], packet['dest'], travel_time, distance_to)
                 )

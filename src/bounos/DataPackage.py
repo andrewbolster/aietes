@@ -523,7 +523,7 @@ class DataPackage(object):
                 raise e
             except AttributeError as e:
                 logging.error(
-                    "Ok, the debug message failed, this looks like a corrupted file so I'll just shut off the contrib ")
+                    "Ok, the DEBUG message failed, this looks like a corrupted file so I'll just shut off the contrib ")
 
     def inter_distance_average(self, time):
         """
@@ -686,7 +686,7 @@ class DataPackage(object):
             from matplotlib import animation as MPLanimation
             from matplotlib import verbose
 
-            verbose.level = "debug"
+            verbose.level = "DEBUG"
 
             return_dict['ani_file'] = "%s.gif" % filename
             MPLanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8",

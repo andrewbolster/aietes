@@ -1,4 +1,3 @@
-# -*- coding: cp1252 -*-
 ###########################################################################
 #
 # Copyright (C) 2007 by Justin Eskesen and Josep Miquel Jornet Montana
@@ -28,13 +27,12 @@ import SimPy.Simulation as Sim
 import random
 from aietes.Layercake import RoutingLayer
 
-from aietes.Tools import broadcast_address, np, debug, distance
+from aietes.Tools import broadcast_address, DEBUG, distance
 from aietes.Tools.FSM import FSM
 
-debug = True
-debug = False
+DEBUG = False
 
-default = "ALOHA"
+DEFAULT_PROTO = "ALOHA"
 
 
 def SetupMAC(node, config):
@@ -54,7 +52,7 @@ def SetupMAC(node, config):
         return ALOHA(node, config)
 
 
-class ALOHA:
+class ALOHA(object):
     """ALOHA:  A very simple MAC Algorithm
     """
 
@@ -151,12 +149,12 @@ class ALOHA:
         """
         self.incoming_packet = IncomingPacket
         if self.IsForMe():
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "received Packet from {src}".format(src=IncomingPacket['source']))
             self.fsm.process(self.packet_signal[IncomingPacket["type"]])
         else:
-            if debug:
+            if DEBUG:
                 self.logger.debug("Overheard Packet from {src} to {dest}".format(
                     src=IncomingPacket['source'], dest=IncomingPacket['dest']))
             self.OverHearing()
@@ -193,7 +191,7 @@ class ALOHA:
         self.layercake.net.OnPacketReception(self.incoming_packet)
 
     def SendAck(self, packet_origin):
-        if debug:
+        if DEBUG:
             self.logger.debug("ACK to " + packet_origin)
         AckPacket = {"type": "ACK",
                      "source": self.layercake.hostname,
@@ -217,7 +215,7 @@ class ALOHA:
     def OnTransmitSuccess(self):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
         """
-        if debug:
+        if DEBUG:
             self.logger.debug(
                 "Successfully Transmitted to " + self.incoming_packet["source"])
 
@@ -247,7 +245,7 @@ class ALOHA:
 
     def OnTimeout(self):
         self.transmission_attempts += 1
-        if debug:
+        if DEBUG:
             self.logger.debug("Timed Out, No Ack Received")
 
         if self.transmission_attempts > self.max_transmission_attempts:
@@ -269,13 +267,13 @@ class ALOHA:
         if self.layercake.phy.IsIdle():
             self.transmission_attempts = self.transmission_attempts + 1
             self.channel_access_retries = 0
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "Transmit to " + self.outgoing_packet_queue[0]["through"])
             self.layercake.phy.TransmitPacket(self.outgoing_packet_queue[0])
             self.fsm.current_state = "WAIT_ACK"
             self.TimerRequest.signal((self.timeout, "timeout"))
-            if debug:
+            if DEBUG:
                 self.logger.debug("The timeout is " + str(self.timeout))
         else:
             self.channel_access_retries = self.channel_access_retries + 1
@@ -415,7 +413,7 @@ class ALOHA4FBR(ALOHA):
                          "through": self.outgoing_packet_queue[0]["through"], "through_position": self.outgoing_packet_queue[0]["through_position"],
                          "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"], "time_stamp": Sim.now()}
 
-            if debug:
+            if DEBUG:
                 self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[
                     0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
 
@@ -473,7 +471,7 @@ class ALOHA4FBR(ALOHA):
                          "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
                          "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "Transmitting CTS to " + self.incoming_packet["source"])
             self.layercake.phy.TransmitPacket(CTSPacket)
@@ -856,7 +854,7 @@ class DACAP:
         p = Sim.Process()
         p.interrupt(self.timer)
 
-        if debug:
+        if DEBUG:
             self.logger.debug("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
                               + " coming from " +
                               self.incoming_packet["source"]
@@ -927,7 +925,7 @@ class DACAP:
                          "through": self.outgoing_packet_queue[0]["through"], "through_position": self.outgoing_packet_queue[0]["through_position"],
                          "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"], "time_stamp": Sim.now()}
 
-            if debug:
+            if DEBUG:
                 self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[
                     0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
 
@@ -1094,7 +1092,7 @@ class DACAP:
                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"],
                      "ID": self.incoming_packet["ID"]}
 
-        if debug:
+        if DEBUG:
             self.logger.debug(
                 "Transmitting CTS to " + self.incoming_packet["source"])
         self.pending_packet_ID = self.incoming_packet["ID"]
@@ -1114,7 +1112,7 @@ class DACAP:
     def SendACK(self, packet_origin):
         """ Sometimes we can not use implicit ACKs.
         """
-        if debug:
+        if DEBUG:
             self.logger.debug("ACK to {}".format(packet_origin[0]))
 
         AckPacket = {"type": "ACK",
@@ -1198,7 +1196,7 @@ class DACAP:
     def OnTransmitSuccess(self):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
         """
-        if debug:
+        if DEBUG:
             self.logger.debug(
                 "Successfully Transmitted to " + self.incoming_packet["source"])
         self.pending_packet_ID = None
@@ -1769,12 +1767,12 @@ class CSMA:
         If I'm in any state
         """
         if self.fsm.current_state == "READY_WAIT":
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "I'm in READY_WAIT and have received a " + self.incoming_packet["type"])
 
         elif self.fsm.current_state == "WAIT_CTS":
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
             self.pending_ack_packet_from = self.last_data_to
@@ -1782,7 +1780,7 @@ class CSMA:
             return False
 
         if self.fsm.current_state == "WAIT_DATA":
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
             self.pending_data_packet_from = self.last_cts_to
@@ -1790,7 +1788,7 @@ class CSMA:
             return False
 
         elif self.fsm.current_state == "WAIT_ACK":
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "I'm in " + self.fsm.current_state + " and have overheard " + self.incoming_packet["type"])
             self.pending_ack_packet_from = self.last_data_to
@@ -1815,7 +1813,7 @@ class CSMA:
             # I will wait for the longest time
             backoff = self.next_timeout - Sim.now()
 
-        if debug:
+        if DEBUG:
             self.logger.debug("Sleep for " + str(backoff) + " due to " + self.incoming_packet["type"]
                               + " coming from " +
                               self.incoming_packet["source"]
@@ -1959,7 +1957,7 @@ class CSMA:
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
 
-        if debug > 1:
+        if DEBUG > 1:
             self.logger.debug("Backoff: {t} based on {T} {pkt}".format(
                 t=backoff, T=T, pkt=packet_type
 
@@ -1977,7 +1975,7 @@ class CSMA:
         elif packet_type == "ACK":
             t = 2 * T + self.t_data + self.t_control
 
-        if debug > 1:
+        if DEBUG > 1:
             self.logger.debug("Timeout: {t} based on {T} {pkt}".format(
                 t=t, T=T, pkt=packet_type
             ))
@@ -2024,7 +2022,7 @@ class CSMA:
                      "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
-        if debug:
+        if DEBUG:
             self.logger.debug("Transmitting CTS to {src} in response to {id}".format(
                 src=self.incoming_packet["source"],
                 id=self.incoming_packet["ID"],
@@ -2049,7 +2047,7 @@ class CSMA:
     def SendACK(self, packet_origin):
         """ Sometimes we can not use implicit ACKs.
         """
-        if debug:
+        if DEBUG:
             self.logger.debug("ACK to " + packet_origin)
 
         # This may be incorrect
@@ -2070,7 +2068,7 @@ class CSMA:
     def InitiateTransmission(self, OutgoingPacket):
         """ Function called from the upper layers to transmit a packet.
         """
-        if debug:
+        if DEBUG:
             self.logger.debug("Prepping {id} for launch to {dest}".format(
                 id=OutgoingPacket["ID"],
                 dest=OutgoingPacket["dest"]
@@ -2148,7 +2146,7 @@ class CSMA:
         """ This function is called when the FSM has an unexpected input_symbol in a determined state.
         """
         try:
-            if debug:
+            if DEBUG:
                 self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {src} {thru} {dest} {id}".format(
                     sm=self.fsm,
                     src=self.incoming_packet['source'],
@@ -2167,7 +2165,7 @@ class CSMA:
     def OnTransmitSuccess(self):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
         """
-        if debug:
+        if DEBUG:
             self.logger.debug(
                 "Successfully Transmitted to " + self.incoming_packet["source"])
 
@@ -2267,7 +2265,7 @@ class CSMA:
         self.TimerRequest.signal((timeout, "timeout"))
 
     def QueueData(self):
-        if debug:
+        if DEBUG:
             self.logger.debug("Queuing Data to {}:{} as we are currently {}".format(
                 self.outgoing_packet_queue[0]['dest'],
                 self.outgoing_packet_queue[0]['ID'],
@@ -2296,7 +2294,7 @@ class FAMA(CSMA):
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
 
-        if debug:
+        if DEBUG:
             self.logger.debug("Backoff: {t} based on {T} {pkt}".format(
                 t=backoff, T=T, pkt=packet_type
 
@@ -2315,7 +2313,7 @@ class FAMA(CSMA):
         elif packet_type == "ACK":
             t = 2 * T + self.t_data + self.t_control
 
-        if debug:
+        if DEBUG:
             self.logger.debug("Timeout: {t} based on {T} {pkt}".format(
                 t=t, T=T, pkt=packet_type
             ))
@@ -2388,7 +2386,7 @@ class CSMA4FBR(CSMA):
                     self.multicast = True
                     self.fsm.process("send_CTS")
             else:
-                # self.logger.debug("I can't attend the MultiCast RTS received from " + self.incoming_packet["source"] + " but I will be silent.")
+                # self.logger.DEBUG("I can't attend the MultiCast RTS received from " + self.incoming_packet["source"] + " but I will be silent.")
                 self.fsm.process("ignore_RTS")
         elif self.fsm.current_state == "WAIT_DATA":
             if self.last_cts_to == self.incoming_packet["source"]:
@@ -2431,7 +2429,7 @@ class CSMA4FBR(CSMA):
         """
         self.valid_candidates[self.incoming_packet["through"]] = (
                                                                      Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
-        if debug > 1:
+        if DEBUG > 1:
             self.logger.debug("Appending CTS to {src} coming from {thru}@{pos}".format(
                 src=self.incoming_packet["source"],
                 thru=self.incoming_packet["through"],
@@ -2457,7 +2455,7 @@ class CSMA4FBR(CSMA):
 
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
             # We have consumed all the attemps
-            if debug:
+            if DEBUG:
                 self.logger.debug("Aborting {type}-{id} to {dest}".format(
                     type=self.outgoing_packet_queue[0]['type'],
                     id=self.outgoing_packet_queue[0]['ID'],
@@ -2469,7 +2467,7 @@ class CSMA4FBR(CSMA):
             # We should retransmit increasing the power
             self.outgoing_packet_queue[0]["level"] = int(
                 self.outgoing_packet_queue[0]["through"][3])
-            if debug:
+            if DEBUG:
                 self.logger.debug("Raising {type}-{id} to {dest} to tx level {level}".format(
                     type=self.outgoing_packet_queue[0]['type'],
                     id=self.outgoing_packet_queue[0]['ID'],
@@ -2481,7 +2479,7 @@ class CSMA4FBR(CSMA):
         elif self.outgoing_packet_queue[0]["through"] == "2CHANCE":
             # We should give a second chance to current node
             self.outgoing_packet_queue[0]["through"] = current_through
-            if debug:
+            if DEBUG:
                 self.logger.debug("Second Chance to {type}-{id} to {dest} via {through}".format(
                     type=self.outgoing_packet_queue[0]['type'],
                     id=self.outgoing_packet_queue[0]['ID'],
@@ -2498,7 +2496,7 @@ class CSMA4FBR(CSMA):
             self.outgoing_packet_queue[0][
                 "through_position"] = self.outgoing_packet_queue[0]["dest_position"]
 
-            if debug:
+            if DEBUG:
                 self.logger.debug("Destination of {type}-{id} to {dest} is neighbour {dist} away".format(
                     type=self.outgoing_packet_queue[0]['type'],
                     id=self.outgoing_packet_queue[0]['ID'],

@@ -22,7 +22,7 @@ from collections import namedtuple
 import numpy as np
 from SimPy import Simulation as Sim
 
-from aietes.Tools import map_entry, distance, debug, ConfigError
+from aietes.Tools import map_entry, distance, DEBUG, ConfigError
 
 
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
@@ -116,7 +116,7 @@ class Environment():
                 if on_a_plane:
                     candidate_pos[2] = position[2]
                 valid = self.is_safe(candidate_pos, 50)
-                if debug:
+                if DEBUG:
                     self.logger.debug(
                         "Candidate position: %s:%s" % (candidate_pos, valid))
         return tuple(candidate_pos)
@@ -150,14 +150,14 @@ class Environment():
                                                                                          pos=position)
             )
 
-        # debug=True
+        # DEBUG=True
         if t < self.simulation.duration_intervals:
             try:
                 assert self.map[
                            object_id].position is not position, "Attempted direct obj=obj comparison"
                 update_distance = distance(
                     self.map[object_id].position, position)
-                if debug:
+                if DEBUG:
                     self.logger.debug("Moving %s %f from %s to %s @ %d" % (object_name,
                                                                            update_distance,
                                                                            self.map[
@@ -166,7 +166,7 @@ class Environment():
                 self.map[object_id] = map_entry(
                     object_id, position, velocity, object_name)
             except KeyError:
-                if debug:
+                if DEBUG:
                     self.logger.debug(
                         "Creating map entry for %s at %s @ %d" % (object_name, position, Sim.now()))
                 self.map[object_id] = map_entry(
@@ -203,7 +203,7 @@ class Environment():
         for log in reversed(self.pos_log):
             if last_log[log.object_id] is None:
                 last_log[log.object_id] = log
-                if debug:
+                if DEBUG:
                     self.logger.debug(
                         "Object {} last seen at {} @ {}".format(log.name, log.position, log.time))
             if None not in last_log.values():

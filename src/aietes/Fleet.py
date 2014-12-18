@@ -40,7 +40,7 @@ except ImportError:
 
 
 # Local Debug
-debug = False
+DEBUG = False
 
 
 class Fleet(Sim.Process):
@@ -101,12 +101,12 @@ class Fleet(Sim.Process):
 
         while True:
             self.simulation.waiting = True
-            if debug:
+            if DEBUG:
                 self.logger.debug(
                     "Yield for allPassive: Environment Processing")
             yield Sim.waituntil, self, allPassive
 
-            if debug:
+            if DEBUG:
                 self.logger.debug("Yield for allPassive: Node Processing")
             yield Sim.waituntil, self, allPassive
 
@@ -122,22 +122,22 @@ class Fleet(Sim.Process):
             if self.simulation.progress_display:
                 percent_now = (
                     (100 * Sim.now()) / self.simulation.duration_intervals)
-                if debug and percent_now % 5 == 0:
+                if DEBUG and percent_now % 5 == 0:
                     self.logger.info("Fleet  %d%%: %s" %
                                      (percent_now, self.currentStats()))
-                if not debug and percent_now % 1 == 0 and progress_bar is not None:
+                if not DEBUG and percent_now % 1 == 0 and progress_bar is not None:
                     progress_bar.render(int(percent_now),
                                         'step %s Processing %s...' % (percent_now, self.simulation.title))
 
             # Yield for anything the simulation should wait on (i.e. GUI)
-            if debug:
+            if DEBUG:
                 self.logger.debug("Yield for not_waiting")
             yield Sim.waituntil, self, not_waiting
 
             # Perform any out of loop preprocessing required
             for node in self.nodes:
                 Sim.reactivate(node)
-            if debug:
+            if DEBUG:
                 self.logger.debug("Yield for allPassive: Fleet Updates")
             yield Sim.waituntil, self, allPassive
 
@@ -181,7 +181,7 @@ class Fleet(Sim.Process):
             index = self.nodenum_from_id(id)
             positions[index] = log.position
             times[index] = log.time
-            if debug:
+            if DEBUG:
                 self.logger.debug("Node last seen at {} at {} @ {}".format(
                     log.name, log.position, log.time
                 ))

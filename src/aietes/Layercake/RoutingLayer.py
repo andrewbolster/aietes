@@ -28,10 +28,10 @@ import collections
 import operator
 
 from aietes.Layercake.priodict import priorityDictionary
-from aietes.Tools import distance, broadcast_address, debug
+from aietes.Tools import distance, broadcast_address, DEBUG
 
 
-debug = False
+DEBUG = False
 
 
 def SetupRouting(node, config):
@@ -49,7 +49,7 @@ class SimpleRoutingTable(dict):
         self.layercake = layercake
         self.logger = layercake.logger.getChild(
             "{}".format(self.__class__.__name__))
-        # if not debug: self.logger.setLevel(logging.WARNING) # You always
+        # if not DEBUG: self.logger.setLevel(logging.WARNING) # You always
         # forget about this
         self.has_routing_table = False
         self.packets = set([])
@@ -83,7 +83,7 @@ class SimpleRoutingTable(dict):
         except KeyError:
             packet["dest_position"] = None
 
-        if debug:
+        if DEBUG:
             self.logger.info("NET initiating TX of {}".format(packet['ID']))
         self.layercake.mac.InitiateTransmission(packet)
 
@@ -350,27 +350,27 @@ class Static(SimpleRoutingTable):
             inside = False
 
             if rel_pos_item[0] < self.cone_radius:
-                if debug:
+                if DEBUG:
                     print 'Direct path is the best now'
                 next_hop_name = name_item
             else:
-                if debug:
+                if DEBUG:
                     print 'When trying to reach node', name_item
                 for i, j in self.nodes_rel_pos.iteritems():
-                    if debug:
+                    if DEBUG:
                         print 'Trying a path through', i, 'with angle', j[1], 'and distance', j[0]
                     if j[1] < (rel_pos_item[1] + self.cone_angle / 2.0):
                         if j[1] > (rel_pos_item[1] - self.cone_angle / 2.0):
                             if inside:
                                 if j[0] > self.cone_radius:
-                                    if debug:
+                                    if DEBUG:
                                         print 'case 1'
                                     continue
 
                                 if j[0] > next_hop_rel_pos[0]:
                                     next_hop_name = i
                                     next_hop_rel_pos = j
-                                    if debug:
+                                    if DEBUG:
                                         print 'case 2'
 
                             else:
@@ -378,12 +378,12 @@ class Static(SimpleRoutingTable):
                                     inside = True
                                     next_hop_name = i
                                     next_hop_rel_pos = j
-                                    if debug:
+                                    if DEBUG:
                                         print 'case 3'
                                 elif j[0] < next_hop_rel_pos[0]:
                                     next_hop_name = i
                                     next_hop_rel_pos = j
-                                    if debug:
+                                    if DEBUG:
                                         print 'case 4'
 
             self[name_item] = next_hop_name
@@ -392,7 +392,7 @@ class Static(SimpleRoutingTable):
         for i in self:
             while self[i] != self[self[i]]:
                 self[i] = self[self[i]]
-                if debug:
+                if DEBUG:
                     print i, self[i]
 
         # Check if the power level needed for each next hop allows us to
@@ -401,7 +401,7 @@ class Static(SimpleRoutingTable):
             if self.GetLevel(nodes_geo[i]) is not None and self.GetLevel(nodes_geo[i]) <= self.GetLevel(nodes_geo[self[i]]):
                 self[i] = i
 
-        if debug:
+        if DEBUG:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(), nodes_geo[self[i]])
 
     def BuildRoutingTable1(self):
@@ -435,14 +435,14 @@ class Static(SimpleRoutingTable):
             inside = False
 
             if rel_pos_item[0] < self.cone_radius:
-                if debug:
+                if DEBUG:
                     print 'Direct path is the best now'
                 next_hop_name = name_item
             else:
-                if debug:
+                if DEBUG:
                     print 'When trying to reach node', name_item, rel_pos_item
                 for i, j in self.nodes_rel_pos.iteritems():
-                    if debug:
+                    if DEBUG:
                         print 'Trying a path through', i, 'with angle', j[1], 'and distance', j[0]
 
                     if j[1] < ((rel_pos_item[1] + 90.0)):
@@ -459,7 +459,7 @@ class Static(SimpleRoutingTable):
                                 if recep_angle > ((rel_pos_item[2] - self.cone_angle / 2.0)):
                                     if inside:
                                         if j[0] > self.cone_radius:
-                                            if debug:
+                                            if DEBUG:
                                                 print 'case 1'
                                             continue
 
@@ -473,7 +473,7 @@ class Static(SimpleRoutingTable):
                                                 next_dist = dist(
                                                     nodes_geo[i], nodes_geo[next_hop_name])
                                                 next_angle = recep_angle
-                                                if debug:
+                                                if DEBUG:
                                                     print 'case 2'
 
                                     else:
@@ -484,7 +484,7 @@ class Static(SimpleRoutingTable):
                                             next_dist = dist(
                                                 nodes_geo[i], nodes_geo[next_hop_name])
                                             next_angle = recep_angle
-                                            if debug:
+                                            if DEBUG:
                                                 print 'case 3'
                                         elif j[0] < next_hop_rel_pos[0]:
                                             next_hop_name = i
@@ -492,7 +492,7 @@ class Static(SimpleRoutingTable):
                                             next_dist = dist(
                                                 nodes_geo[i], nodes_geo[next_hop_name])
                                             next_angle = recep_angle
-                                            if debug:
+                                            if DEBUG:
                                                 print 'case 4'
 
             self[name_item] = next_hop_name
@@ -501,7 +501,7 @@ class Static(SimpleRoutingTable):
         for i in self:
             while self[i] != self[self[i]]:
                 self[i] = self[self[i]]
-                if debug:
+                if DEBUG:
                     print i, self[i]
 
         # Check if the power level needed for each next hop allows us to
@@ -510,7 +510,7 @@ class Static(SimpleRoutingTable):
             if self.GetLevel(nodes_geo[i]) != None and self.GetLevel(nodes_geo[i]) <= self.GetLevel(nodes_geo[self[i]]):
                 self[i] = i
 
-        if debug:
+        if DEBUG:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(), nodes_geo[self[i]])
 
     def BuildRoutingTable2(self):
@@ -533,7 +533,7 @@ class Static(SimpleRoutingTable):
                 end = P[end]
             Path.reverse()
             self[i] = Path[1]
-            if debug:
+            if DEBUG:
                 print i, self[i]
 
     def BuildGraph(self):

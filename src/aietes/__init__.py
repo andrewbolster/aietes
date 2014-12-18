@@ -203,7 +203,7 @@ class Simulation():
         """
         joined = self.move_flag.n == 0 and self.process_flag.n == len(
             self.nodes)
-        if joined and debug:
+        if joined and DEBUG:
             self.logger.debug("Joined: %s,%s" %
                               (self.move_flag.n, self.process_flag.n))
         return joined
@@ -214,7 +214,7 @@ class Simulation():
         """
         joined = self.move_flag.n == len(
             self.nodes) and self.process_flag.n == 0
-        if joined and debug:
+        if joined and DEBUG:
             self.logger.debug("Joined: %s,%s" %
                               (self.move_flag.n, self.process_flag.n))
         return joined
@@ -448,7 +448,7 @@ class Simulation():
             mac = node_default_config_dict['mac']
 
             if mac != macp:
-                if mac == MAC.default:
+                if mac == MAC.DEFAULT_PROTO:
                     node_default_config_dict['mac'] = macp
                 else:
                     raise ConfigError("Conflicting mac and MAC.Protcols ({},{})".format(
