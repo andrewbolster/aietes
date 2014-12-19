@@ -63,6 +63,7 @@ def generate_inverted_logs_from_paths(paths):
     # Transpose per-var-per-run statistics into Per 'log' stats (i.e. rx, tx, trust, stats, etc)
     for var, runs in scenarios_comms(paths):
         for run, data in runs:
+
             nodes = dict(data['logs'].items() + [('stats', data['stats']), ('positions', data['positions'])])
             data = None
             run = run.split('-')[-1]

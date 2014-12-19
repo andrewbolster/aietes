@@ -17,10 +17,12 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-from collections import Counter
+from collections import Counter,namedtuple
 
-from numpy import *
+import numpy as np
 from numpy.random import poisson
+
+import pandas as pd
 
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
@@ -192,7 +194,7 @@ class Application(Sim.Process):
             except ZeroDivisionError:
                 if self.stats['packets_received'] == 0:
                     avg_length = 0
-                    average_rx_delay = inf
+                    average_rx_delay = np.inf
                 else:
                     raise RuntimeError("Got a zero in a weird place: {}/{}".format(
                         total_bits_in,
@@ -316,7 +318,7 @@ class RoutingTest(Application):
         if len(self.received_counter) > 1:
             most_common = self.received_counter.most_common()
             least_count = most_common[-1][1]
-            destination = random.choice(
+            destination = np.random.choice(
                 [n for n, c in most_common if c == least_count])
             self.sent_counter[destination] += 1
             self.logger.info("Sending to {} with count {}({})".format(
@@ -442,8 +444,13 @@ class CommsTrust(RoutingTest):
         :param packet:
         :return:
         """
-        pkt_indexes = ['tx_pwr_db', 'rx_pwr_db', 'delay', 'length']
-        return [packet[_] for _ in pkt_indexes]
+        pkt_indexes_map = {
+            'tx_pwr_db':"TXP",
+            'rx_pwr_db':"RXP",
+            'delay':"Delay",
+            'length':"Length"
+        }
+        return pd.Series({v:packet[k] for k,v in pkt_indexes_map.items()})
 
     def get_metrics_from_batch(self, batch):
         """
@@ -462,10 +469,12 @@ class CommsTrust(RoutingTest):
 
         if throughput:
             try:
-                return append(average(nodepktstats, axis=0), [throughput])
+                s = pd.concat(nodepktstats,axis=1).mean(axis=1)
+                s['RXThroughput']=throughput
+                return s
             except:
-                self.logger.error("PKTS:{},TP:{},NANMEAN:{}".format(
-                    nodepktstats, throughput, nanmean(nodepktstats, axis=0)
+                self.logger.exception("PKTS:{},TP:{},NANMEAN:{}".format(
+                    nodepktstats, throughput, np.nanmean(nodepktstats, axis=0)
                 ))
                 raise
         else:
@@ -494,34 +503,51 @@ class CommsTrust(RoutingTest):
                 rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
                 # avg(tx pwr, rx pwr, delay, length), rx throughput
 
-
             # TODO NamedTuples for safety
+            Pkt=namedtuple('Pkt',['n','dest','length','delivered'])
             relevant_packets = []
             last_relevant_time = Sim.now() - 2 * self.trust_assessment_period
             for i, p in enumerate(self.sent_log):
                 if p.has_key('delivered') and p['time_stamp'] > last_relevant_time:
-                    relevant_packets.append((i, p['dest'], p['length'], p['delivered']))
+                    relevant_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
 
             tx_stats = {}
             # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
             for node in self.trust_assessments.keys():
                 per = map(
-                    lambda p: float(not p[3]),
+                    lambda p: float(not p.delivered),
                     filter(
-                        lambda p: p[1] == node,
+                        lambda p: p.dest == node,
                         relevant_packets)
                 )
                 if per:
-                    per = nanmean(per)
+                    per = np.nanmean(per)
                 else:
-                    per = nan
-                tx_stats[node] = [per if not isnan(per) else 0.0]
+                    per = np.nan
+
+                tx_throughput = map(
+                    lambda p: float(p.length),
+                    filter(
+                        lambda p: p.dest == node,
+                        relevant_packets)
+                )
+                if tx_throughput:
+                    tx_throughput = np.sum(tx_throughput)
+                else:
+                    tx_throughput = np.nan
+
+                tx_stats[node] = pd.Series({
+                    'PLR':per if not np.isnan(per) else 0.0,
+                    'TXThroughput':tx_throughput
+                })
+
                 # Packet Error Rate (all time)
                 if len(rx_stats[node]):
-                    nodestat = append(rx_stats[node], tx_stats[node])
+                    nodestat = pd.concat([rx_stats[node], tx_stats[node]])
                     # avg(tx pwr, rx pwr, delay, length), rx throughput, PER
+
                 else:
-                    nodestat = []
+                    nodestat = pd.Series([])
                 self.trust_assessments[node].append(nodestat)
 
             self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))
@@ -557,7 +583,7 @@ class CommsTrust(RoutingTest):
 
         most_common = self.total_counter.most_common()
         if not self.current_target:
-            self.current_target = random.choice(
+            self.current_target = np.random.choice(
                 [n
                  for n, c in most_common
                  if c == most_common[-1][1]
