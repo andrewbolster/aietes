@@ -166,6 +166,7 @@ def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12, 4)
 
     return f
 
+
 def _channel_occupancy_calc(df):
     tx = pd.DataFrame(index=df.time_stamp)
     rx = pd.DataFrame(index=df.received)
@@ -174,8 +175,9 @@ def _channel_occupancy_calc(df):
 
     # create the time series here
     t = pd.concat([tx, rx])
-    t.index = pd.to_datetime(t.index, unit='s')  #to convert from nanoseconds to seconds
+    t.index = pd.to_datetime(t.index, unit='s')  # to convert from nanoseconds to seconds
     return t.resample('s', how='sum').cumsum().fillna(0)
+
 
 def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)):
     """

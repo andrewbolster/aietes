@@ -9,14 +9,14 @@ def set_exp():
             title="LawnmowerWithDriftOnly",
             parallel=True, future=True,
             retain_data='files')
-    e.updateDefaultNode({
+    e.update_default_node({
         'behaviour': 'FleetLawnmowerLoop',
         'waypoint_style': 'lawnmower',
         'positioning': 'surface',
         'drifting': 'DriftFactorPy',
     })
-    e.addDefaultScenario()
-    e.updateDuration(21600)
+    e.add_default_scenario()
+    e.update_duration(21600)
     return e
 
 

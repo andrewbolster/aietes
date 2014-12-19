@@ -10,7 +10,7 @@ def set_exp():
             title="FleetLawnmowerTOFVar-{}".format(variations),
             parallel=True, future=True,
             retain_data='files')
-    e.updateDefaultNode({
+    e.update_default_node({
         'behaviour': 'FleetLawnmower',
         'waypoint_style': 'lawnmower',
         'positioning': 'surface',
@@ -18,8 +18,8 @@ def set_exp():
         'ecea': 'Simple2',
         'beacon_rate': 15
     })
-    e.addVariableRangeScenario('tof_type', variations)
-    e.updateDuration(28800)
+    e.add_variable_range_scenario('tof_type', variations)
+    e.update_duration(28800)
     return e
 
 

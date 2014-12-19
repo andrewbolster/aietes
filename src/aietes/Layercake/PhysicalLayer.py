@@ -72,14 +72,14 @@ class PhysicalLayer(object):
         # Minimum signal to noise ratio to properly detect a packet
         self.LIS_threshold = self.config["threshold"]["LIS"]
 
-        self.receiving_threshold = DB2Linear(
-            ReceivingThreshold(self.freq, self.bandwidth, self.SNR_threshold))
-        self.listening_threshold = DB2Linear(
-            ListeningThreshold(self.freq, self.bandwidth, self.LIS_threshold))
+        self.receiving_threshold = db2linear(
+            receiving_threshold(self.freq, self.bandwidth, self.SNR_threshold))
+        self.listening_threshold = db2linear(
+            listening_threshold(self.freq, self.bandwidth, self.LIS_threshold))
 
         # Definition of system parameters
-        self.ambient_noise = DB2Linear(
-            Noise(self.freq) + 10 * math.log10(self.bandwidth * 1e3))  # In linear scale
+        self.ambient_noise = db2linear(
+            channel_noise(self.freq) + 10 * math.log10(self.bandwidth * 1e3))  # In linear scale
         # Initially, interference and noise are the same
         self.interference = self.ambient_noise
         self.collision = False  # Emulates collision detection
@@ -88,7 +88,7 @@ class PhysicalLayer(object):
         self.modem = Sim.Resource(name="a_modem")
 
         self.transducer = Transducer(self, self.ambient_noise, channel_event,
-                                     self.layercake.get_real_current_position, self.SIR_threshold, self.OnSuccessfulReceipt)
+                                     self.layercake.get_real_current_position, self.SIR_threshold, self.on_successful_receipt)
 
         self.messages = []
         self.event = Sim.SimEvent("TransducerEvent" + self.layercake.hostname)
@@ -99,8 +99,8 @@ class PhysicalLayer(object):
         # Levels defined in terms of power (dB re uPa)
         self.distance2power = {}
         for level, distance in self.level2distance.iteritems():
-            self.distance2power[level] = DB2Linear(
-                distance2Intensity(self.bandwidth, self.freq, distance, self.SNR_threshold))
+            self.distance2power[level] = db2linear(
+                distance2intensity(self.bandwidth, self.freq, distance, self.SNR_threshold))
 
         self.tx_energy = 0  # Energy consumed so far when tx (Joules)
         self.rx_energy = 0  # Energy consumed so far when rx (Joules)
@@ -124,7 +124,7 @@ class PhysicalLayer(object):
         return data
 
     # Before transmissting, we should check if the system is idle or not
-    def IsIdle(self):
+    def is_idle(self):
         if len(self.transducer.activeQ) > 0:
             if DEBUG:
                 self.logger.debug(
@@ -135,9 +135,9 @@ class PhysicalLayer(object):
 
     # Funtion called from the layers above. The MAC layer needs to transmit a
     # packet
-    def TransmitPacket(self, packet):
+    def transmit_packet(self, packet):
 
-        if not self.IsIdle():
+        if not self.is_idle():
             # The MAC protocol is the one that should check this before
             # transmitting
             self.logger.warn(
@@ -147,7 +147,7 @@ class PhysicalLayer(object):
 
         if self.variable_power:
             tx_range = self.level2distance[str(packet["level"])]
-            power = distance2Intensity(
+            power = distance2intensity(
                 self.bandwidth, self.freq, tx_range, self.SNR_threshold)
         else:
             power = self.transmit_power
@@ -163,7 +163,7 @@ class PhysicalLayer(object):
             new_transmission, new_transmission.transmit(packet, power))
 
     # Checks if there has been a collision
-    def CollisionDetected(self):
+    def collision_detected(self):
         """
 
 
@@ -172,12 +172,12 @@ class PhysicalLayer(object):
         return self.collision
 
     # When a packet has been received, we should pass it to the MAC layer
-    def OnSuccessfulReceipt(self, packet):
+    def on_successful_receipt(self, packet):
         """
 
         :param packet:
         """
-        self.layercake.mac.OnNewPacket(packet)
+        self.layercake.mac.on_new_packet_received(packet)
 
     def level2delay(self, level):
         """
@@ -205,7 +205,7 @@ class Transducer(Sim.Resource):
     any outgoing transmission is completed.
     """
 
-    def __init__(self, physical_layer, ambient_noise, channel_event, position_query, SIR_thresh, on_success, name="a_transducer"):
+    def __init__(self, physical_layer, ambient_noise, channel_event, position_query, sir_thresh, on_success, name="a_transducer"):
         # A resource with large capacity, because we don't want incoming messages to queue,
         # We want them to interfere.
 
@@ -228,7 +228,7 @@ class Transducer(Sim.Resource):
         self.on_success = on_success
 
         # SIR threshold
-        self.SIR_thresh = SIR_thresh
+        self.SIR_thresh = sir_thresh
 
         # Controls the half-duplex behavior
         self.transmitting = False
@@ -245,15 +245,15 @@ class Transducer(Sim.Resource):
         # "arg[1] is a reference to the IncomingPacket instance that has been just created
         new_packet = arg[1]
 
-        # Doom any newly incoming packets to failure if the transducer is
+        # doom any newly incoming packets to failure if the transducer is
         # transmitting
         if self.transmitting:
-            new_packet.Doom()
+            new_packet.doom()
 
         # Update all incoming packets' SIR
         self.interference += new_packet.power
 
-        [i.UpdateInterference(self.interference, new_packet.packet)
+        [i.update_interference(self.interference, new_packet.packet)
          for i in self.activeQ]
 
     # Override SimPy Resource's "_release" function to update SIR for all
@@ -261,7 +261,7 @@ class Transducer(Sim.Resource):
     def _release(self, arg):
         # "arg[1] is a reference to the IncomingPacket instance that just completed
         doomed = arg[1].doomed
-        minSIR = arg[1].GetMinSIR()
+        min_sir = arg[1].get_min_sir()
         new_packet = deepcopy(arg[1].packet)
 
         # Reduce the overall interference by this message's power
@@ -275,8 +275,8 @@ class Transducer(Sim.Resource):
         Sim.Resource._release(self, arg)
 
         # If it isn't doomed due to transmission & it is not interfered
-        if minSIR > 0:
-            if not doomed and Linear2DB(minSIR) >= self.SIR_thresh and arg[1].power >= self.physical_layer.receiving_threshold:
+        if min_sir > 0:
+            if not doomed and linear2db(min_sir) >= self.SIR_thresh and arg[1].power >= self.physical_layer.receiving_threshold:
                 # Properly received: enough power, not enough interference
                 self.collision = False
                 self.logger.debug("received packet {}".format(new_packet))
@@ -303,20 +303,20 @@ class Transducer(Sim.Resource):
         else:
             # This should never appear, and in fact, it doesn't, but just to
             # detect bugs (we cannot have a negative SIR in lineal scale).
-            raise RuntimeError("This really shouldn't happen: Negative minSIR from type {} from {} to {} through {} detected by {}".format(
+            raise RuntimeError("This really shouldn't happen: Negative min_sir from type {} from {} to {} through {} detected by {}".format(
                 new_packet["type"], new_packet["source"], new_packet["dest"], new_packet["through"], self.physical_layer.layercake.hostname)
             )
 
-    def OnTransmitBegin(self):
+    def on_transmit_begin(self):
         """
 
 
         """
         self.transmitting = True
-        # Doom all currently incoming packets to failure.
-        [i.Doom() for i in self.activeQ]
+        # doom all currently incoming packets to failure.
+        [i.doom() for i in self.activeQ]
 
-    def OnTransmitComplete(self):
+    def on_transmit_complete(self):
         """
 
 
@@ -340,7 +340,7 @@ class IncomingPacket(Sim.Process):
         self.MaxInterference = 1
 
         # Need to add this info in for higher layers
-        self.packet['rx_pwr_db'] = Linear2DB(self.power)
+        self.packet['rx_pwr_db'] = linear2db(self.power)
 
         if DEBUG:
             self.physical_layer.logger.debug("Packet {id} from {src} to {dest} recieved with power {pwr}".format(
@@ -349,7 +349,7 @@ class IncomingPacket(Sim.Process):
             )
             )
 
-    def UpdateInterference(self, interference, packet):
+    def update_interference(self, interference, packet):
         """
 
         :param interference:
@@ -358,7 +358,7 @@ class IncomingPacket(Sim.Process):
         if interference > self.MaxInterference:
             self.MaxInterference = interference
 
-    def Receive(self, duration):
+    def receive(self, duration):
         """
 
         :param duration:
@@ -371,10 +371,10 @@ class IncomingPacket(Sim.Process):
             yield Sim.release, self, self.physical_layer.transducer
 
             # Even if a packet is not received properly, we have consumed power
-            self.physical_layer.rx_energy += DB2Linear(
+            self.physical_layer.rx_energy += db2linear(
                 self.physical_layer.receive_power) * duration
 
-    def GetMinSIR(self):
+    def get_min_sir(self):
         """
 
 
@@ -382,7 +382,7 @@ class IncomingPacket(Sim.Process):
         """
         return self.power / (self.MaxInterference - self.power + 1)
 
-    def Doom(self):
+    def doom(self):
         """
 
 
@@ -415,7 +415,7 @@ class OutgoingPacket(Sim.Process):
         # Create the acoustic event
         if self.physical_layer.variable_bandwidth:
             distance = self.physical_layer.level2distance[packet["level"]]
-            bandwidth = distance2Bandwidth(
+            bandwidth = distance2bandwidth(
                 power, self.physical_layer.freq, distance, self.physical_layer.SNR_threshold)
         else:
             bandwidth = self.physical_layer.bandwidth
@@ -439,15 +439,15 @@ class OutgoingPacket(Sim.Process):
                                                              "packet": packet})
 
         # Hold onto the transducer for the duration of the transmission
-        self.physical_layer.transducer.OnTransmitBegin()
+        self.physical_layer.transducer.on_transmit_begin()
 
         yield Sim.hold, self, duration
-        self.physical_layer.transducer.OnTransmitComplete()
+        self.physical_layer.transducer.on_transmit_complete()
 
         # Release the modem when done
         yield Sim.release, self, self.physical_layer.modem
 
-        power_w = DB2Linear(AcousticPower(power))
+        power_w = db2linear(acoustic_power_db_per_upa(power))
         self.physical_layer.tx_energy += (power_w * duration)
 
 
@@ -498,7 +498,7 @@ class ArrivalScheduler(Sim.Process):
 
         if distance_to > 0.01:  # I should not receive my own transmissions
             receive_power = params["power"] - \
-                            Attenuation(params["frequency"], distance_to)
+                            attenuation(params["frequency"], distance_to)
             # Speed of sound in water = 1482.0 m/s
             travel_time = distance_to / transducer.physical_layer.medium_speed
 
@@ -511,17 +511,17 @@ class ArrivalScheduler(Sim.Process):
             yield Sim.hold, self, travel_time
 
             new_incoming_packet = IncomingPacket(
-                DB2Linear(receive_power), params["packet"], transducer.physical_layer)
+                db2linear(receive_power), params["packet"], transducer.physical_layer)
             Sim.activate(
-                new_incoming_packet, new_incoming_packet.Receive(params["duration"]))
+                new_incoming_packet, new_incoming_packet.receive(params["duration"]))
 
 
 #####################################################################
 # Propagation functions
 #####################################################################
 
-def Attenuation(f, d):
-    """Attenuation(P0,f,d)
+def attenuation(f, d):
+    """attenuation(P0,f,d)
 
     Calculates the acoustic signal path loss
     as a function of frequency & distance
@@ -534,7 +534,7 @@ def Attenuation(f, d):
 
     f2 = f ** 2
     k = 1.5
-    DistanceInKm = d / 1000
+    distanceinkm = d / 1000
 
     # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on
     # the frequency
@@ -544,10 +544,10 @@ def Attenuation(f, d):
     else:
         absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
 
-    return k * Linear2DB(d) + DistanceInKm * absorption_coeff
+    return k * linear2db(d) + distanceinkm * absorption_coeff
 
 
-def Noise(f):
+def channel_noise(f):
     """Noise(f)
 
     Calculates the ambient noise at current frequency
@@ -560,117 +560,117 @@ def Noise(f):
     return 50 - 18 * math.log10(f)
 
 
-def distance2Bandwidth(I0, f, d, SNR):
-    """distance2Bandwidth(P0, A, N, SNR)
+def distance2bandwidth(i0, f, d, snr):
+    """distance2bandwidth(P0, a, n, snr)
 
     Calculates the available bandwidth for the acoustic signal as
     a function of acoustic intensity, frequency and distance
 
-    I0 - Transmit power in dB
+    i0 - transmit power in dB
     f - Frequency in kHz
     d - Distance to travel in m
-    SNR - Signal to noise ratio in dB
-    :param I0:
+    snr - Signal to noise ratio in dB
+    :param i0:
     :param f:
     :param d:
-    :param SNR:
+    :param snr:
     """
 
-    A = Attenuation(f, d)
-    N = Noise(f)
+    a = attenuation(f, d)
+    n = channel_noise(f)
 
-    return DB2Linear(I0 - SNR - N - A - 30)  # In kHz
+    return db2linear(i0 - snr - n - a - 30)  # In kHz
 
 
-def distance2Intensity(B, f, d, SNR):
-    """distance2Power(B, A, N, SNR)
+def distance2intensity(b, f, d, snr):
+    """distance2Power(b, a, n, SNR)
 
     Calculates the acoustic intensity at the source as
     a function of bandwidth, frequency and distance
 
-    B - Bandwidth in kHz
+    b - Bandwidth in kHz
     f - Frequency in kHz
     d - Distance to travel in m
     SNR - Signal to noise ratio in dB
-    :param B:
+    :param b:
     :param f:
     :param d:
-    :param SNR:
+    :param snr:
     """
 
-    A = Attenuation(f, d)
-    N = Noise(f)
-    B = Linear2DB(B * 1.0e3)
+    a = attenuation(f, d)
+    n = channel_noise(f)
+    b = linear2db(b * 1.0e3)
 
-    return SNR + A + N + B
+    return snr + a + n + b
 
 
-def AcousticPower(I):
-    """AcousticPower(P, dist)
+def acoustic_power_db_per_upa(i):
+    """acoustic_power_db_per_upa(P, dist)
 
     Calculates the acoustic power needed to create an acoustic intensity at a distance dist
 
-    I - Created acoustic pressure
+    i - Created acoustic pressure
     dist - Distance in m
-    :param I:
+    :param i:
     """
     # 170dB re uPa is the sound intensity created over a sphere of 1m by a
     # radiated acoustic power of 1 Watt with the source in the center
-    I_ref = 172.0
-    return I - I_ref
+    i_ref = 172.0
+    return i - i_ref
 
 
-def ListeningThreshold(f, B, minSNR):
-    """ReceivingThreshold(f, B)
+def listening_threshold(f, b, min_snr):
+    """receiving_threshold(f, b)
 
     Calculates the minimum acoustic intensity that a node may be able to hear
 
-    B - Bandwidth in kHz
+    b - Bandwidth in kHz
     f - Frequency in kHz
-    minSNR - Signal to noise ratio in dB
+    min_snr - Signal to noise ratio in dB
     :param f:
-    :param B:
-    :param minSNR:
+    :param b:
+    :param min_snr:
     """
 
-    N = Noise(f)
-    B = Linear2DB(B * 1.0e3)
+    n = channel_noise(f)
+    b = linear2db(b * 1.0e3)
 
-    return minSNR + N + B
+    return min_snr + n + b
 
 
-def ReceivingThreshold(f, B, SNR):
-    """ReceivingThreshold(f, B)
+def receiving_threshold(f, b, snr):
+    """receiving_threshold(f, b)
 
     Calculates the minimum acoustic intensity that a packet should have to be properly received
 
-    B - Bandwidth in kHz
+    b - Bandwidth in kHz
     f - Frequency in kHz
-    SNR - Signal to noise ratio in dB
+    snr - Signal to noise ratio in dB
     :param f:
-    :param B:
-    :param SNR:
+    :param b:
+    :param snr:
     """
 
-    N = Noise(f)
-    B = Linear2DB(B * 1.0e3)
+    n = channel_noise(f)
+    b = linear2db(b * 1.0e3)
 
-    return SNR + N + B
+    return snr + n + b
 
 
-def DB2Linear(dB):
+def db2linear(db):
     """
 
-    :param dB:
+    :param db:
     :return:
     """
-    return 10.0 ** (dB / 10.0)
+    return 10.0 ** (db / 10.0)
 
 
-def Linear2DB(Linear):
+def linear2db(linear):
     """
 
-    :param Linear:
+    :param linear:
     :return:
     """
-    return 10.0 * math.log10(Linear + 0.0)
+    return 10.0 * math.log10(linear + 0.0)

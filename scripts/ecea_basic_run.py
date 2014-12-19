@@ -9,15 +9,15 @@ def set_exp():
             title="FleetLawnmowerBasicRun",
             parallel=True, future=True,
             retain_data='files')
-    e.updateDefaultNode({
+    e.update_default_node({
         'behaviour': 'FleetLawnmower',
         'waypoint_style': 'lawnmower',
         'positioning': 'surface',
         'drifting': 'DriftFactor',
         'ecea': 'Simple2'
     })
-    e.addDefaultScenario()
-    e.updateDuration(21600)
+    e.add_default_scenario()
+    e.update_duration(21600)
     return e
 
 

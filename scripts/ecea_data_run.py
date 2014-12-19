@@ -16,7 +16,7 @@ date = datetime.now().strftime('%Y%m%d-%H-%M')
 for test in test_cases:
     print test.__name__
     exp = test.set_exp()
-    exp.updateDuration(28800)
+    exp.update_duration(28800)
     try:
         exp.run(title="ECEA_Datarun_{}".format(date), no_time=True, runcount=32)
         exp.dump_dataruns()

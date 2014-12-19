@@ -31,10 +31,10 @@ class ExperimentGeneration(unittest.TestCase):
         count = 4
         behaviour = "Flock"
         e = polybos.ExperimentManager(node_count=count)
-        e.addRatioScenarios(behaviour)
+        e.add_ratio_scenarios(behaviour)
         self.assertEqual(len(e.scenarios), count + 1)
         v, s = e.scenarios.items()[count / 2]
-        self.assertEqual(len(s.getBehaviourDict()[behaviour]), int(count * float(re.split('\(|\)|\%', v)[1]) / 100.0))
+        self.assertEqual(len(s.get_behaviour_dict()[behaviour]), int(count * float(re.split('\(|\)|\%', v)[1]) / 100.0))
 
     def testRuntimeModification(self):
         """Ensure that polybos appropriatly propogates simulation time using the run method"""
@@ -43,7 +43,7 @@ class ExperimentGeneration(unittest.TestCase):
         runtime = 10
         behaviour = "Flock"
         e = polybos.ExperimentManager(node_count=count)
-        e.addRatioScenarios(behaviour)
+        e.add_ratio_scenarios(behaviour)
         e.run(runcount=runcount,
               runtime=runtime,
               retain_data=True)
@@ -59,7 +59,7 @@ class ExperimentGeneration(unittest.TestCase):
         runtime = 10
         behaviour = "Flock"
         e = polybos.ExperimentManager(node_count=count, parallel=True)
-        e.addRatioScenarios(behaviour)
+        e.add_ratio_scenarios(behaviour)
         e.run(runcount=runcount,
               runtime=runtime,
               retain_data=True)
@@ -76,10 +76,10 @@ class ExperimentGeneration(unittest.TestCase):
         runtime = 10
         behaviour = "Flock"
         e = polybos.ExperimentManager(node_count=count, parallel=True)
-        e.addRatioScenarios(behaviour)
+        e.add_ratio_scenarios(behaviour)
         e.run(runcount=runcount,
               runtime=runtime)
-        multistats = e.generateSimulationStats()
+        multistats = e.generate_simulation_stats()
         self.assertEqual(len(e.scenarios), count + 1,
                          "Scenarios count for behaviour ratio should be node_count ({}) + 1, is {}".format(
                              count, len(e.scenarios)))
@@ -95,16 +95,16 @@ class ExperimentGeneration(unittest.TestCase):
                                  runname, len(stats), runcount))
 
     def testSimulationStatsQuery(self):
-        """ Test that generateSimulationStats does single and multiple query responses based on data"""
+        """ Test that generate_simulation_stats does single and multiple query responses based on data"""
         count = 4
         runcount = 2
         runtime = 10
         behaviour = "Flock"
         e = polybos.ExperimentManager(node_count=count)
-        e.addRatioScenarios(behaviour)
+        e.add_ratio_scenarios(behaviour)
         e.run(runcount=runcount,
               runtime=runtime)
-        multistats = e.generateSimulationStats()
+        multistats = e.generate_simulation_stats()
         self.assertEqual(len(e.scenarios), count + 1)
         self.assertEqual(len(multistats), len(e.scenarios))
         for stats in multistats.items():

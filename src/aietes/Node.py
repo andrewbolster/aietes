@@ -25,6 +25,9 @@ import Applications
 from aietes.Tools import *
 
 
+FULL = 0
+SIMPLE = 1
+
 class Node(Sim.Process):
     """
     Generic Representation of a network node
@@ -251,18 +254,18 @@ class Node(Sim.Process):
         d = distance(self.get_pos(), their_position)
         return d
 
-    def push(self, forceVector, contributions=None):
+    def push(self, force_vector, contributions=None):
         """
 
-        :param forceVector:
+        :param force_vector:
         :param contributions:
         """
         if Sim.now() < self.settling_time:
-            forceVector = np.zeros(shape=forceVector.shape)
+            force_vector = np.zeros(shape=force_vector.shape)
             contributions = {}
-        assert len(forceVector) == 3 and not np.isnan(sum(forceVector)), "Out of spec vector: %s,%s" % (
-            forceVector, type(forceVector))
-        self.acceleration_force = forceVector
+        assert len(force_vector) == 3 and not np.isnan(sum(force_vector)), "Out of spec vector: %s,%s" % (
+            force_vector, type(force_vector))
+        self.acceleration_force = force_vector
         self.contributions_log.append(contributions)
 
     def cruise_control(self, velocity, prev_velocity):
@@ -282,16 +285,16 @@ class Node(Sim.Process):
         cruisev = max(self.cruising_speed)
         maxv = max(self.max_speed)
         if cruisev < mag(velocity) < maxv:
-            new_V = unit(velocity) * (cruisev + (mag(velocity) - cruisev) ** 2)
+            new_v = unit(velocity) * (cruisev + (mag(velocity) - cruisev) ** 2)
         elif maxv < mag(velocity):
-            new_V = unit(velocity) * max(self.max_speed)
+            new_v = unit(velocity) * max(self.max_speed)
         else:
             self.logger.error(
                 "shouldn't really be here: {},{}".format(velocity, mag(velocity)))
         if DEBUG:
             self.logger.error("Cruise: From %f against %f and vel of %f" % (
-                mag(velocity), cruisev, mag(new_V)))
-        return new_V
+                mag(velocity), cruisev, mag(new_v)))
+        return new_v
 
     def move(self):
         """
@@ -302,7 +305,7 @@ class Node(Sim.Process):
         #
         old_pos = self.get_pos()
         old_vec = self.get_vec()
-        dT = self.simulation.deltaT(Sim.now(), self._lastupdate)
+        dt = self.simulation.delta_t(Sim.now(), self._lastupdate)
         # Since you're an idiot and keep forgetting if this is right or not; it is;
         # src (http://physics.stackexchange.com/questions/17049/how-does-force-relate-to-velocity)
         # TL;DR
@@ -316,7 +319,7 @@ class Node(Sim.Process):
             new_velocity = np.zeros(3)
         else:
             new_velocity = self.velocity + \
-                           ((self.acceleration_force * dT) / self.mass)
+                           ((self.acceleration_force * dt) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruise_control(new_velocity, self.velocity)
             if DEBUG:
@@ -340,11 +343,11 @@ class Node(Sim.Process):
                                                                              self.velocity,
                                                                              old_vec,
                                                                              self._lastupdate,
-                                                                             dT)
+                                                                             dt)
             except FloatingPointError:
                 type, value, traceback = sys.exc_info()
                 raise ValueError, ("Dt,t:{},{}".format(
-                    dT, Sim.now()), type, value), traceback
+                    dt, Sim.now()), type, value), traceback
         else:
             self.position += self.velocity
 
@@ -353,10 +356,10 @@ class Node(Sim.Process):
 
         if DEBUG:
             self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
-                self.velocity, mag(self.velocity), dT, old_pos, self.position))
+                self.velocity, mag(self.velocity), dt, old_pos, self.position))
         if not self.wall_check():
             self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
-                self.velocity, mag(self.velocity), dT, old_pos, self.position))
+                self.velocity, mag(self.velocity), dt, old_pos, self.position))
             raise RuntimeError(
                 "{} Crashed out of the environment at {}".format(self.name, Sim.now()))
 
@@ -399,8 +402,6 @@ class Node(Sim.Process):
         EG Ecea
         :return:
         """
-        FULL = 0
-        SIMPLE = 1
         if self.ecea:
             if not self.ecea.activated:
                 self.ecea.activate()
@@ -408,8 +409,8 @@ class Node(Sim.Process):
                 # If in a delta period, update the kalman filter with the requires deltas
                 # need to collect:
                 if Sim.now() == 0:
-                    true_positions = self.fleet.nodeCheatPositions()
-                    drifted_positions = self.fleet.nodeCheatDriftPositions()
+                    true_positions = self.fleet.node_cheat_positions()
+                    drifted_positions = self.fleet.node_cheat_drift_positions()
                     drifted_deltas = np.zeros_like(true_positions)
                     est_positions = None
                     # Need to cycle the filter with the 0th update
@@ -417,21 +418,21 @@ class Node(Sim.Process):
                     # This must be the real environmental data to simulate TOF
                     # Drift is based on each nodes REPORTED position from the
                     # previous REPORTED position
-                    true_positions = self.fleet.nodeCheatPositions()
-                    drifted_positions = self.fleet.nodeCheatDriftPositions()
+                    true_positions = self.fleet.node_cheat_positions()
+                    drifted_positions = self.fleet.node_cheat_drift_positions()
                     last_index = max(0, Sim.now() - self.ecea.params.Delta)
                     # this_index = Sim.now()
-                    last_drifted_positions = self.fleet.nodeCheatDriftPositionsAt(
+                    last_drifted_positions = self.fleet.node_cheat_drift_positions_at(
                         last_index)  # INS Delta since last
                     drifted_deltas = drifted_positions - last_drifted_positions
-                    last_true_positions = self.fleet.nodeCheatPositionsAt(
+                    last_true_positions = self.fleet.node_cheat_positions_at(
                         last_index)  # True Delta since last
                     # true_deltas = true_positions-last_true_positions
 
                 if self.ecea.type == SIMPLE:
-                    error_estimates = self.fleet.nodePositionErrors(
+                    error_estimates = self.fleet.node_position_errors(
                     ) * self.ecea.params.Delta
-                    tof = self.fleet.timeOfFlightMatrix(
+                    tof = self.fleet.time_of_flight_matrix(
                         guess_index=self.tof_type)
                     # True positions only used for statistics
                     improved_positions = self.ecea.update(time_of_flight_matrix=tof,
@@ -503,7 +504,6 @@ class Node(Sim.Process):
         else:
             velocity = self.velocity.copy()
         return velocity
-
 
 
     def grant_achievement(self, achievement):

@@ -10,7 +10,7 @@ import pandas as pd
 
 from bounos import DataPackage, npz_in_dir, load_sources, generate_sources
 import bounos.Analyses.Trust as Trust
-from aietes.Tools import unCpickle
+from aietes.Tools import uncpickle
 
 
 def grab_comms(s):
@@ -48,7 +48,7 @@ def hdfstore(filename, obj):
         store.close()
 
 
-logs = unCpickle('trust_logs.pkl')
+logs = uncpickle('trust_logs.pkl')
 logs = OrderedDict(sorted(logs.iteritems(), key=lambda k: k))
 
 
@@ -76,16 +76,16 @@ def network_trust_dict(trust_inverted):
         return t_sum / float(len(who))
 
     def total_trust(t):
-        Td = t_direct(trust_inverted[observer][target][t])
-        Tr = np.average([t_recommend(trust_inverted[recommender][target][t]) for recommender in recommendation_nodes])
-        Ti = np.average([t_indirect(trust_inverted[indirecter][target][t]) for indirecter in indirect_nodes])
-        return sum((Td, Tr, Ti))
+        td = t_direct(trust_inverted[observer][target][t])
+        tr = np.average([t_recommend(trust_inverted[recommender][target][t]) for recommender in recommendation_nodes])
+        ti = np.average([t_indirect(trust_inverted[indirecter][target][t]) for indirecter in indirect_nodes])
+        return sum((td, tr, ti))
 
     tmax = len(trust_inverted[observer][target])
 
-    T_total = map(total_trust, range(1, tmax))
-    T_network = map(network_trust, range(1, tmax))
-    T_class = map(white_class, T_total)
+    t_total = map(total_trust, range(1, tmax))
+    t_network = map(network_trust, range(1, tmax))
+    t_class = map(white_class, t_total)
 
     _d = pd.DataFrame.from_dict(
         {"t10": pd.Series(trust_inverted[observer][target]),
@@ -93,8 +93,8 @@ def network_trust_dict(trust_inverted):
          "t13": pd.Series(trust_inverted['n3'][target]),
          "t14": pd.Series(trust_inverted['n4'][target]),
          "t15": pd.Series(trust_inverted['n5'][target]),
-         "t10-5": pd.Series(T_total),
-         "t10-net": pd.Series(T_network)}
+         "t10-5": pd.Series(t_total),
+         "t10-net": pd.Series(t_network)}
     )
     return _d
 

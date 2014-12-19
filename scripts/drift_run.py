@@ -9,14 +9,14 @@ def set_exp():
             title="Drift Analysis",
             parallel=True, future=True,
             retain_data=False)
-    e.updateDefaultNode({
+    e.update_default_node({
         'behaviour': 'FleetLawnmower',
         'waypoint_style': 'lawnmower',
         'positioning': 'surface',
         'drifting': 'DriftFactorPy'
     })
-    e.addDefaultScenario()
-    e.updateDuration(28800)
+    e.add_default_scenario()
+    e.update_duration(28800)
     return e
 
 

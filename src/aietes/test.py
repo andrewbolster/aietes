@@ -63,7 +63,7 @@ class DefaultBehaviour(unittest.TestCase):
 
     def testDataPackage(self):
         """Test generation of DataPackage and the availability of data members"""
-        datapackage = self.simulation.generateDataPackage()
+        datapackage = self.simulation.generate_datapackage()
         self.assertIsInstance(datapackage, bounos.DataPackage)
         for member in datapackage_per_node_members:
             m_val = getattr(datapackage, member)
@@ -73,9 +73,9 @@ class DefaultBehaviour(unittest.TestCase):
     def testDataPackageDestination(self):
         """Test generation of DataPackage files and ensure they go in the right place!"""
         empty_dir = tempfile.mkdtemp()
-        output_dict = self.simulation.postProcess(outputFile=self.__class__.__name__,
-                                                  outputPath=empty_dir,
-                                                  dataFile=True)
+        output_dict = self.simulation.postprocess(output_file=self.__class__.__name__,
+                                                  output_path=empty_dir,
+                                                  data_file=True)
         expected_filename = "{}.aietes".format(self.__class__.__name__)
         expected_path = os.path.join(empty_dir, expected_filename)
         self.assertEqual(output_dict['data_file'], expected_path + '.npz', "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
@@ -86,8 +86,8 @@ class DefaultBehaviour(unittest.TestCase):
 
     def testDefaultDataPackageDestination(self):
         """Test generation of DataPackage files and ensure they go in the right place!"""
-        output_dict = self.simulation.postProcess(outputFile=self.__class__.__name__,
-                                                  dataFile=True)
+        output_dict = self.simulation.postprocess(output_file=self.__class__.__name__,
+                                                  data_file=True)
         expected_filename = "{}.aietes".format(self.__class__.__name__)
         expected_path = os.path.join(aietes.Tools._results_dir, expected_filename)
         self.assertEqual(output_dict['data_file'], expected_path + '.npz', "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
@@ -111,8 +111,8 @@ class OutputBehaviour(unittest.TestCase):
     def testGifGeneration(self):
         """Ensure nothing goes too wrong with gif generation"""
         options = aietes.option_parser().defaults
-        options.update({'gif': True, 'quiet': False, 'sim_time': 100, 'outputPath': tempfile.mkdtemp()})
-        options = aietes.Tools.dotdictify(options)
+        options.update({'gif': True, 'quiet': False, 'sim_time': 100, 'output_path': tempfile.mkdtemp()})
+        options = aietes.Tools.Dotdictify(options)
         try:
             print(pformat(options))
             aietes.go(options)
@@ -122,33 +122,36 @@ class OutputBehaviour(unittest.TestCase):
     def testMovieGeneration(self):
         """Ensure nothing goes too wrong with movie generation"""
         options = aietes.option_parser().defaults
-        options.update({'movie': True, 'quiet': False, 'sim_time': 100, 'outputPath': tempfile.mkdtemp()})
-        options = aietes.Tools.dotdictify(options)
+        options.update({'movie': True, 'quiet': False, 'sim_time': 100, 'output_path': tempfile.mkdtemp()})
+        options = aietes.Tools.Dotdictify(options)
         print(pformat(options))
         aietes.go(options)
 
+
 class Tools(unittest.TestCase):
     """Slow grow of tool testing"""
+
     def testGetConfigFile_Empty(self):
-        self.assertRaises(TypeError, aietes.Tools.getConfigFile)
+        self.assertRaises(TypeError, aietes.Tools.get_config_file)
 
     def testGetConfigFile_NonExist(self):
-        self.assertRaises(OSError, aietes.Tools.getConfigFile, "NotThere.conf")
+        self.assertRaises(OSError, aietes.Tools.get_config_file, "NotThere.conf")
 
     def testGetConfigFile_Exists(self):
         config_tail = 'bella_static.conf'
-        config_path = aietes.Tools.getConfigFile(config_tail)
+        config_path = aietes.Tools.get_config_file(config_tail)
         config_list = map(os.path.abspath,
                           [os.path.join(aietes.Tools._config_dir, c)
                            for c in os.listdir(aietes.Tools._config_dir)
                           ]
         )
-        self.assertIn(config_path,config_list)
+        self.assertIn(config_path, config_list)
         self.assertTrue(config_path.endswith(config_tail))
 
     def testGetConfig_Default(self):
-        config = aietes.Tools.getConfig()
+        config = aietes.Tools.get_config()
         self.assertIsNotNone(config)
+
 
 if __name__ == "__main__":
     unittest.main()

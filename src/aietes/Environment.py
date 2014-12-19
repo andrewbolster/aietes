@@ -23,7 +23,7 @@ from collections import namedtuple
 import numpy as np
 from SimPy import Simulation as Sim
 
-from aietes.Tools import map_entry, distance, DEBUG, ConfigError
+from aietes.Tools import MapEntry, distance, DEBUG, ConfigError
 
 
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
@@ -164,13 +164,13 @@ class Environment(object):
                                                                            self.map[
                                                                                object_id].position,
                                                                            position, t))
-                self.map[object_id] = map_entry(
+                self.map[object_id] = MapEntry(
                     object_id, position, velocity, object_name)
             except KeyError:
                 if DEBUG:
                     self.logger.debug(
                         "Creating map entry for %s at %s @ %d" % (object_name, position, Sim.now()))
-                self.map[object_id] = map_entry(
+                self.map[object_id] = MapEntry(
                     object_id, position, velocity, object_name)
             self.pos_log.append(Log(name=object_name,
                                     position=position,
@@ -220,22 +220,22 @@ class Environment(object):
         """
         return set(map(attrgetter('object_id'), self.pos_log))
 
-    def pointPlane(self, index=-1):
+    def generate_point_plane(self, index=-1):
         """
         Calculate the current best fit plane between all nodes
         :param index:
         """
         pos_get = attrgetter('position')
         positions = map(pos_get, self.map.values())
-        N = len(positions)
-        average = sum(positions) / N
+        n = len(positions)
+        average = sum(positions) / n
         covariant = np.cov(np.asarray(positions - average), rowvar=0)
         evecs, evals = np.linalg.eig(covariant)
         sorted_evecs = evecs[evals.argsort()]
         return average, sorted_evecs[index]
 
     @staticmethod
-    def normalPlane(point, normal):  # plot final plane
+    def generate_normal_plane(point, normal):  # plot final plane
         """
 
         :param point:
@@ -248,14 +248,14 @@ class Environment(object):
         zz = (-normal[0] * xx - normal[1] * yy - d) / normal[2]
         return xx, yy, zz
 
-    def eigenPlot(self, index=-1):
+    def eigen_plot(self, index=-1):
         """
 
         :param index:
         :return:
         """
-        average, normal = self.pointPlane(index)
-        return self.normalPlane(average, normal)
+        average, normal = self.generate_point_plane(index)
+        return self.generate_normal_plane(average, normal)
 
     def export(self, filename=None):
         """

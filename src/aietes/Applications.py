@@ -45,6 +45,7 @@ class Application(Sim.Process):
                       'packets_dhops': 0,
         }
         self.received_log = []
+        self.last_accessed_rx_packet = None
         self.sent_log = []
         self.config = config
         self.layercake = layercake
@@ -115,7 +116,7 @@ class Application(Sim.Process):
             yield Sim.hold, self, poisson(self.random_delay)
 
         while True:
-            (packet, period) = self.packetGen(period=self.period,
+            (packet, period) = self.generate_next_packet(period=self.period,
                                               data=randomstr(24),
                                               destination=destination)
             if packet is not None:
@@ -127,20 +128,23 @@ class Application(Sim.Process):
                 self.sent_log.append(packet)
             yield Sim.hold, self, period
 
-    def recv(self, FromBelow):
+    def recv(self, from_below):
         """
         Called by RoutingTable on packet reception
         """
         if DEBUG:
             self.logger.info("Got Packet {id} from {src}".format(
-                id=FromBelow['ID'],
-                src=FromBelow['source']
+                id=from_below['ID'],
+                src=from_below['source']
             ))
-        FromBelow['received'] = Sim.now()
-        self.logPacket(FromBelow)
-        self.packetRecv(FromBelow)
+        from_below['received'] = Sim.now()
+        self.log_received_packet(from_below)
+        self.packet_recv(from_below)
 
-    def logPacket(self, packet):
+    def packet_recv(self, packet):
+        pass
+
+    def log_received_packet(self, packet):
         """
         Grab packet statistics
         """
@@ -214,6 +218,7 @@ class Application(Sim.Process):
             app_stats = {}
         return app_stats
 
+
     def dump_logs(self):
         """
         Return the packet tx/rx logs
@@ -227,7 +232,7 @@ class Application(Sim.Process):
         else:
             return {}
 
-    def packetGen(self, period, destination, *args, **kwargs):
+    def generate_next_packet(self, period, destination, *args, **kwargs):
         """
         Packet Generator with periodicity
         Called from the lifecycle with defaults None,None
@@ -242,7 +247,7 @@ class Application(Sim.Process):
 class AccessibilityTest(Application):
     default_destination = broadcast_address
 
-    def packetGen(self, period, destination, data=None, *args, **kwargs):
+    def generate_next_packet(self, period, destination, data=None, *args, **kwargs):
         """
         Copy of behaviour from AUVNetSim for default class,
         exhibiting poisson departure behaviour
@@ -252,13 +257,13 @@ class AccessibilityTest(Application):
         :param args:
         :param kwargs:
         """
-        packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
-        packet = {"ID": packet_ID, "dest": destination, "source": self.layercake.hostname, "route": [
+        packet_id = self.layercake.hostname + str(self.stats['packets_sent'])
+        packet = {"ID": packet_id, "dest": destination, "source": self.layercake.hostname, "route": [
         ], "type": "DATA", "time_stamp": Sim.now(), "length": self.packet_length}
         period = poisson(float(period))
         return packet, period
 
-    def packetRecv(self, packet):
+    def packet_recv(self, packet):
         """
 
         :param packet:
@@ -285,7 +290,7 @@ class RoutingTest(Application):
         self.received_counter = Counter()
         self.total_counter = Counter()
 
-    def packetGen(self, period, destination=None, data=None, *args, **kwargs):
+    def generate_next_packet(self, period, destination=None, data=None, *args, **kwargs):
         """
         Lowest-count node gets a message
         :param period:
@@ -306,7 +311,7 @@ class RoutingTest(Application):
             for node in indirect_nodes:
                 self.total_counter[node] = 0
 
-        self.mergeCounters()
+        self.merge_counters()
 
         if len(self.received_counter) > 1:
             most_common = self.received_counter.most_common()
@@ -326,8 +331,8 @@ class RoutingTest(Application):
                 "No Packet Count List set up yet; fudging it with an broadcast first")
             destination = broadcast_address
 
-        packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
-        packet = {"ID": packet_ID,
+        packet_id = self.layercake.hostname + str(self.stats['packets_sent'])
+        packet = {"ID": packet_id,
                   "dest": destination,
                   "source": self.layercake.hostname,
                   "route": [], "type": "DATA",
@@ -337,16 +342,16 @@ class RoutingTest(Application):
         period = poisson(float(period))
         return packet, period
 
-    def packetRecv(self, packet):
+    def packet_recv(self, packet):
         """
 
         :param packet:
         """
-        self.mergeCounters()
+        self.merge_counters()
         self.received_counter[packet['source']] += 1
         del packet
 
-    def mergeCounters(self):
+    def merge_counters(self):
         """
 
 
@@ -415,7 +420,7 @@ class CommsTrust(RoutingTest):
                                   'collisions': []
         }
 
-        self.forced_nodes = self.layercake.host.fleet.nodeNames()
+        self.forced_nodes = self.layercake.host.fleet.node_names()
         if self.forced_nodes:
             for node in self.forced_nodes:
                 if node != self.layercake.hostname:
@@ -523,7 +528,7 @@ class CommsTrust(RoutingTest):
             self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
 
 
-    def packetGen(self, period, destination=None, data=None, *args, **kwargs):
+    def generate_next_packet(self, period, destination=None, data=None, *args, **kwargs):
         """
         Lowest-count node gets a message indicating what number packet it is that
         is addressed to it with a particular stream length.
@@ -548,7 +553,7 @@ class CommsTrust(RoutingTest):
                 self.total_counter[node] = 0
 
         # DOES NOT MERGE TARGET COUNTER
-        self.mergeCounters()
+        self.merge_counters()
 
         most_common = self.total_counter.most_common()
         if not self.current_target:
@@ -560,8 +565,8 @@ class CommsTrust(RoutingTest):
             )
 
         destination = self.current_target
-        packet_ID = self.layercake.hostname + str(self.stats['packets_sent'])
-        packet = {"ID": packet_ID,
+        packet_id = self.layercake.hostname + str(self.stats['packets_sent'])
+        packet = {"ID": packet_id,
                   "dest": destination,
                   "source": self.layercake.hostname,
                   "route": [], "type": "DATA",
@@ -586,12 +591,12 @@ class CommsTrust(RoutingTest):
             self.current_target = None
         return packet, period
 
-    def packetRecv(self, packet):
+    def packet_recv(self, packet):
         """
 
         :param packet:
         """
-        self.mergeCounters()
+        self.merge_counters()
         self.received_counter[packet['source']] += 1
         self.result_packet_dl[packet['source']].append(packet['data'])
 
@@ -626,7 +631,7 @@ class Null(Application):
     HAS_LAYERCAKE = False
     default_destination = None
 
-    def packetGen(self, period, destination, data=None, *args, **kwargs):
+    def generate_next_packet(self, period, destination, data=None, *args, **kwargs):
         """
         Does Nothing, says nothing
         :param period:
@@ -638,7 +643,7 @@ class Null(Application):
         return None, 1
 
     @staticmethod
-    def packetRecv(packet):
+    def packet_recv(packet):
         """
 
         :param packet:

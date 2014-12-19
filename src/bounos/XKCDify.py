@@ -82,8 +82,8 @@ def xkcd_line(x, y, xlim=None, ylim=None,
     dist_tot = np.sum(np.sqrt(dx * dx + dy * dy))
 
     # number of interpolated points is proportional to the distance
-    Nu = int(200 * dist_tot)
-    u = np.arange(-1, Nu + 1) * 1. / (Nu - 1)
+    nu = int(200 * dist_tot)
+    u = np.arange(-1, nu + 1) * 1. / (nu - 1)
 
     # interpolate curve at sampled points
     k = min(3, len(x) - 1)
@@ -110,7 +110,7 @@ def xkcd_line(x, y, xlim=None, ylim=None,
     return x_int, y_int
 
 
-def XKCDify(ax, mag=1.0,
+def xkcdify(ax, mag=1.0,
             f1=50, f2=0.01, f3=15,
             bgcolor='w',
             xaxis_loc=None,
@@ -186,8 +186,8 @@ def XKCDify(ax, mag=1.0,
             ha='center', va='bottom', fontsize=16)
     ax.set_title('')
 
-    Nlines = len(ax.lines)
-    lines = [xaxis, yaxis] + [ax.lines.pop(0) for i in range(Nlines)]
+    n_lines = len(ax.lines)
+    lines = [xaxis, yaxis] + [ax.lines.pop(0) for i in range(n_lines)]
 
     for line in lines:
         x, y = line.get_data()

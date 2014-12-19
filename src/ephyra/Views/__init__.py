@@ -205,7 +205,7 @@ class EphyraNotebook(wx.Frame):
         # Create a panel and a Notebook on the Panel
         self.p = wx.Panel(self)
         self.nb = wx.Notebook(self.p)
-        self.CreateMenuBar()
+        self.create_menubar()
 
         self.Bind(wx.EVT_MAXIMIZE, self.on_resize)
         self.Bind(wx.EVT_SIZE, self.on_resize)
@@ -237,7 +237,7 @@ class EphyraNotebook(wx.Frame):
         self.Show()
         self.nb.SetSelection(0)
 
-    def CreateMenuBar(self):
+    def create_menubar(self):
         """
 
 

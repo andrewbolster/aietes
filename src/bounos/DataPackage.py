@@ -24,13 +24,14 @@ import logging
 from scipy.spatial.distance import pdist, squareform
 
 
+
 # used to reconstitute config from NP object
 from ast import literal_eval
 
 import numpy as np
 import pandas as pd
 
-from aietes.Tools import mag, add_ndarray_to_set, unext, validateConfig, results_file
+from aietes.Tools import mag, add_ndarray_to_set, unext, validate_config, results_file
 import Analyses.Trust
 from configobj import ConfigObj
 
@@ -89,7 +90,7 @@ class DataPackage(object):
             # the same name
             potential_config_file = unext(source_filename) + ".conf"
             logging.error("Potential Config %s" % potential_config_file)
-            self.config = validateConfig(potential_config_file)
+            self.config = validate_config(potential_config_file)
         elif sink is "drift_positions":
             logging.debug("Non-drifting Datapackage")
             self.drifting = False
@@ -239,7 +240,7 @@ class DataPackage(object):
     # Data has the format:
     # [n][x,y,z][t]
 
-    def getBehaviourDict(self):
+    def get_behaviour_dict(self):
         """
 
 
@@ -264,7 +265,7 @@ class DataPackage(object):
                     behaviours[n_bev] = [name]
         return behaviours
 
-    def getExtent(self):
+    def get_extent(self):
         """
         Return the 3D Limits of the experiment
         """
@@ -582,7 +583,7 @@ class DataPackage(object):
         else:
             raise ValueError("Not Drifting")
 
-    def drift_RMS(self, source="drift"):
+    def drift_rms(self, source="drift"):
         """
         Returns the RMS of drift across all nodes over time
         :param source:
@@ -640,17 +641,17 @@ class DataPackage(object):
             data.update({'ecea_positions': self.ecea_positions})
         savemat(path, data)
 
-    def generate_animation(self, filename=None, fps=24, gif=False, movieFile=True, xRes=1024, yRes=768, extent=True, displayFrames=None):
+    def generate_animation(self, filename=None, fps=24, gif=False, movie_file=True, xres=1024, yres=768, extent=True, display_frames=None):
         """
 
 
-        :param displayFrames:
+        :param display_frames:
         :param filename: Defaults to Title if not given; appended with mp4 / gif
         :param fps:
         :param gif: Bool to build gif
-        :param movieFile: bool to build movie
-        :param xRes: Frame Size
-        :param yRes: Frame Size
+        :param movie_file: bool to build movie
+        :param xres: Frame Size
+        :param yres: Frame Size
         :param extent: Automatically zoom to the extent of operation rather than the environment
         :return:
         """
@@ -661,18 +662,18 @@ class DataPackage(object):
         import matplotlib.pyplot as plt
         import mpl_toolkits.mplot3d.axes3d as axes3
 
-        def updatelines(i, positions, lines, displayFrames):
+        def updatelines(i, positions, lines, display_frames):
             """
             Update the currently displayed line positions
             positions contains [x,y,z],[t] positions for each vector
-            displayFrames configures the display cache size
+            display_frames configures the display cache size
             :param i:
             :param positions:
             :param lines:
-            :param displayFrames:
+            :param display_frames:
             """
-            if isinstance(displayFrames, int):
-                j = max(i - displayFrames, 0)
+            if isinstance(display_frames, int):
+                j = max(i - display_frames, 0)
             else:
                 j = 0
             for line, dat in zip(lines, positions):
@@ -689,7 +690,7 @@ class DataPackage(object):
         dpi = 80
         ipp = 80
         n_frames = self.tmax
-        fig = plt.figure(dpi=dpi, figsize=(xRes / ipp, yRes / ipp))
+        fig = plt.figure(dpi=dpi, figsize=(xres / ipp, yres / ipp))
         ax = axes3.Axes3D(fig)
         lines = [ax.plot(dat[0, 0:1], dat[1, 0:1], dat[2, 0:1], label=self.names[i])[0] for i, dat in
                  enumerate(self.p)]
@@ -715,9 +716,9 @@ class DataPackage(object):
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
-        line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(self.p, lines, displayFrames),
+        line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(self.p, lines, display_frames),
                                    interval=1000 / fps, repeat_delay=300, blit=True, )
-        if movieFile:
+        if movie_file:
             logging.info("Writing animation to %s.mp4" % filename)
             line_ani.save(
                 filename=filename,
@@ -728,13 +729,13 @@ class DataPackage(object):
             return_dict['ani_file'] = "%s.mp4" % filename
         if gif:
             logging.info("Writing animation to %s.gif" % filename)
-            from matplotlib import animation as MPLanimation
+            from matplotlib import animation as mplanimation
             from matplotlib import verbose
 
             verbose.level = "DEBUG"
 
             return_dict['ani_file'] = "%s.gif" % filename
-            MPLanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8",
+            mplanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8",
                                             writer='imagemagick', bitrate=-1, fps=fps)
         return plt, return_dict
 

@@ -21,7 +21,7 @@ def comms_log_to_trust(comms_log):
 @click.command()
 @click.option('--comms_pkl', help="Comms Log to swap for hd5")
 def comms_log_split_to_hdf5(comms_pkl):
-    comms_log = Tools.unCpickle(comms_pkl)
+    comms_log = Tools.uncpickle(comms_pkl)
     click.echo("Loaded")
     inverted_logs = {}
     for var, runs in comms_log.iteritems():

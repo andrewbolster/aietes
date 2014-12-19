@@ -9,14 +9,14 @@ def set_exp():
             title="FleetLawnmowerFilterIterVar-1-4",
             parallel=True, future=True,
             retain_data='files')
-    e.updateDefaultNode({
+    e.update_default_node({
         'behaviour': 'FleetLawnmower',
         'waypoint_style': 'lawnmower',
         'positioning': 'surface',
         'drifting': 'DriftFactorPy',
     })
-    e.addVariableRangeScenario('ecea', ["Simple{}".format(n) for n in range(1, 4)])
-    e.updateDuration(21600)
+    e.add_variable_range_scenario('ecea', ["Simple{}".format(n) for n in range(1, 4)])
+    e.update_duration(21600)
     return e
 
 

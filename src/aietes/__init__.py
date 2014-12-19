@@ -93,21 +93,21 @@ class Simulation(object):
         # If given nothing, assume default.conf
         if self.config_file is None and self.config is None:
             self.logger.info("creating instance from default")
-            self.config = validateConfig(None)
-            self.config = self.populateConfig(self.config)
+            self.config = validate_config(None)
+            self.config = self.populate_config(self.config)
         # If given a manual, **string** config, use it.
         elif self.config_file is None and self.config is not None:
             self.logger.info("using given config")
-            config = validateConfig(self.config, final_check=True)
+            config = validate_config(self.config, final_check=True)
             config['Node']['Nodes'].pop('__default__')
-            self.config = dotdict(config.dict())
+            self.config = Dotdict(config.dict())
         # Otherwise the config is (hopefully) in a given file
         else:
             if os.path.isfile(self.config_file):
                 self.logger.info("creating instance from %s" %
                                  self.config_file)
-                self.config = validateConfig(self.config_file)
-                self.config = self.populateConfig(self.config)
+                self.config = validate_config(self.config_file)
+                self.config = self.populate_config(self.config)
             else:
                 raise ConfigError(
                     "Cannot open given config file:%s", self.config_file)
@@ -153,8 +153,8 @@ class Simulation(object):
         self.duration_intervals = np.ceil(
             self.config.Simulation.sim_duration / self.config.Simulation.sim_interval)
 
-        self.environment = self.configureEnvironment(self.config.Environment)
-        self.nodes = self.configureNodes()
+        self.environment = self.configure_environment(self.config.Environment)
+        self.nodes = self.configure_nodes()
 
         #
         # Configure Fleet Behaviour
@@ -240,7 +240,7 @@ class Simulation(object):
         """
         return Sim.now()
 
-    def currentState(self):
+    def current_state(self):
         """
 
 
@@ -264,7 +264,7 @@ class Simulation(object):
 
         for fleet in self.fleets:
             # Environmental State Log; 'guaranteed perfect'
-            positions.extend(fleet.nodePosLogs(shared=False))
+            positions.extend(fleet.node_poslogs(shared=False))
 
         state = {'p': np.asarray(positions),
                  'v': np.asarray(vectors),
@@ -310,7 +310,7 @@ class Simulation(object):
             # therefore use the shared map data that tracks the error
             # information (hopefully)
             state.update(
-                {'ecea_positions': self.fleets[0].nodePosLogs(shared=True)})
+                {'ecea_positions': self.fleets[0].node_poslogs(shared=True)})
 
             state.update(
                 {'additional': [node.ecea.dump() for node in self.nodes if node.ecea]})
@@ -339,7 +339,7 @@ class Simulation(object):
         return state
 
     @classmethod
-    def populateConfig(cls, config, retain_default=False):
+    def populate_config(cls, config, retain_default=False):
         """
 
         :param config:
@@ -416,7 +416,7 @@ class Simulation(object):
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
-        #   len(app)==len(dist)
+        # len(app)==len(dist)
         #   len(app) % nodes_count-preconfigured_nodes_count = 0
         if isinstance(app, list) and isinstance(dist, list):
             if len(app) == len(dist) and (nodes_count - preconfigured_nodes_count) % len(app) == 0:
@@ -489,7 +489,7 @@ class Simulation(object):
             raise ConfigError("Something is badly wrong")
 
         # Generate Names for any remaining auto-config nodes
-        auto_node_names = nameGeneration(
+        auto_node_names = generate_names(
             count=nodes_count - preconfigured_nodes_count,
             naming_convention=config_dict['Node']['naming_convention']
         )
@@ -523,9 +523,9 @@ class Simulation(object):
         if retain_default:
             config_dict['Node']['Nodes']['__default__'] = ConfigObj(node_default_config_dict)
         cls.logger.debug("Built Config: %s" % pformat(config))
-        return dotdict(config_dict)
+        return Dotdict(config_dict)
 
-    def configureEnvironment(self, env_config):
+    def configure_environment(self, env_config):
         """
         Configure the physical environment within which the simulation executed
         Assumes empty unless told otherwise
@@ -538,7 +538,7 @@ class Simulation(object):
             base_depth=env_config.base_depth
         )
 
-    def configureNodes(self):
+    def configure_nodes(self):
         """
         Configure 'fleets' of nodes for simulation
         Fleets are purely logical in this case
@@ -552,7 +552,7 @@ class Simulation(object):
                 node_name,
                 self,
                 config,
-                vector=self.vectorGen(node_name, config)
+                vector=self.generate_a_node(node_name, config)
             )
             node_list.append(new_node)
 
@@ -562,7 +562,7 @@ class Simulation(object):
             raise ConfigError(
                 "Node Generation failed: Zero nodes with config %s" % str(self.config))
 
-    def vectorGen(self, node_name, node_config):
+    def generate_a_node(self, node_name, node_config):
         """
         If a node is named in the configuration file, use the defined initial vector
         otherwise, use configured behaviour to assign an initial vector
@@ -599,7 +599,7 @@ class Simulation(object):
 
         return vector
 
-    def generateDataPackage(self, *args, **kwargs):
+    def generate_datapackage(self, *args, **kwargs):
         """
         Creates a bounos.DataPackage object from the current sim
         :param args:
@@ -607,41 +607,41 @@ class Simulation(object):
         """
         from bounos.DataPackage import DataPackage
 
-        dp = DataPackage(**(self.currentState()))
+        dp = DataPackage(**(self.current_state()))
         return dp
 
-    def postProcess(self, log=None, outputFile=None, outputPath=None, displayFrames=None, dataFile=False, movieFile=False, gif=False,
-                    inputFile=None, plot=False, xRes=1024, yRes=768, fps=24, extent=True):
+    def postprocess(self, log=None, output_file=None, output_path=None, display_frames=None, data_file=False, movie_file=False, gif=False,
+                    input_file=None, plot=False, xres=1024, yres=768, fps=24, extent=True):
         """
         Performs output and positions generation for a given simulation
         :param log:
-        :param outputFile:
-        :param outputPath:
-        :param displayFrames:
-        :param dataFile:
-        :param movieFile:
+        :param output_file:
+        :param output_path:
+        :param display_frames:
+        :param data_file:
+        :param movie_file:
         :param gif:
-        :param inputFile:
+        :param input_file:
         :param plot:
-        :param xRes:
-        :param yRes:
+        :param xres:
+        :param yres:
         :param fps:
         :param extent:
         """
 
-        dp = DataPackage(**(self.currentState()))
+        dp = DataPackage(**(self.current_state()))
 
-        filename = outputFile if outputFile is not None else dp.title
-        filename = "%s.aietes" % results_file(filename, results_dir=outputPath)
+        filename = output_file if output_file is not None else dp.title
+        filename = "%s.aietes" % results_file(filename, results_dir=output_path)
         return_dict = {}
 
-        if movieFile or plot or gif:
+        if movie_file or plot or gif:
             plt, ani_dict = dp.generate_animation(
-                filename, fps, gif, movieFile, xRes, yRes, extent, displayFrames)
+                filename, fps, gif, movie_file, xres, yres, extent, display_frames)
             return_dict.update(ani_dict)
 
-        if outputFile is not None:
-            if dataFile:
+        if output_file is not None:
+            if data_file:
                 ret_val = dp.write(filename)
                 return_dict['data_file'] = ret_val[0]
                 return_dict['config_file'] = ret_val[1]
@@ -650,7 +650,7 @@ class Simulation(object):
             plt.show()
         return return_dict
 
-    def deltaT(self, now, then):
+    def delta_t(self, now, then):
         """
         Time in seconds between two simulation times
         :param now:
@@ -701,12 +701,12 @@ def go(options, args=None):
 
     if options.movie or options.data or options.gif:
         print("Storing output in %s" % sim.title)
-        sim.postProcess(inputFile=options.input, outputFile=sim.title, dataFile=options.data,
-                        movieFile=options.movie, gif=options.gif, fps=options.fps, outputPath=options.outputPath)
+        sim.postprocess(input_file=options.input, output_file=sim.title, data_file=options.data,
+                        movie_file=options.movie, gif=options.gif, fps=options.fps, output_path=options.outputPath)
 
     if options.plot:
-        sim.postProcess(
-            inputFile=options.input, displayFrames=720, plot=True, fps=options.fps)
+        sim.postprocess(
+            input_file=options.input, display_frames=720, plot=True, fps=options.fps)
 
     return ran_time
 

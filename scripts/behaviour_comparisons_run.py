@@ -24,7 +24,7 @@ def setup_exp():
             parallel=True,
             future=True
     )
-    e.addMinorityNBehaviourSuite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
+    e.add_minority_n_behaviour_suite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
     return e
 
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     exp.dump_analysis()
 
     with redirected(stdout=logpath):
-        EXP.printStats(exp, verbose=True)
+        EXP.print_stats(exp, verbose=True)
 
     with open(logpath, 'r') as fin:
         print fin.read()

@@ -93,14 +93,14 @@ def interactive_plot(data):
         """
         Update Vector Heading display across time
         """
-        vectors = data.heading_slice(timeslider.val)
+        heading_vectors = data.heading_slice(timeslider.val)
         axh.cla()
-        rectX = axh.barh(
-            ind, tuple([vec[0] for vec in vectors]), width, color='r')
-        rectY = axh.barh(
-            ind + width, tuple([vec[1] for vec in vectors]), width, color='g')
-        rectZ = axh.barh(
-            ind + 2 * width, tuple([vec[2] for vec in vectors]), width, color='b')
+        rect_x = axh.barh(
+            ind, tuple([vec[0] for vec in heading_vectors]), width, color='r')
+        rect_y = axh.barh(
+            ind + width, tuple([vec[1] for vec in heading_vectors]), width, color='g')
+        rect_z = axh.barh(
+            ind + 2 * width, tuple([vec[2] for vec in heading_vectors]), width, color='b')
 
         axh.set_ylabel("Vector")
         axh.set_yticks(ind + width)

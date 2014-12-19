@@ -68,7 +68,7 @@ class Fleet(Sim.Process):
         Sim.activate(self, self.lifecycle())
 
     def lifecycle(self):
-        def allPassive():
+        def all_nodes_passive():
             return all([n.passive() for n in self.nodes])
 
         def not_waiting():
@@ -95,25 +95,25 @@ class Fleet(Sim.Process):
             progress_bar = None
 
         # Canary for mission completeness
-        USS_Abraham_Lincoln = True
+        uss_abraham_lincoln = True
 
         while True:
             self.simulation.waiting = True
             if DEBUG:
                 self.logger.debug(
-                    "Yield for allPassive: Environment Processing")
-            yield Sim.waituntil, self, allPassive
+                    "Yield for all_nodes_passive: Environment Processing")
+            yield Sim.waituntil, self, all_nodes_passive
 
             if DEBUG:
-                self.logger.debug("Yield for allPassive: Node Processing")
-            yield Sim.waituntil, self, allPassive
+                self.logger.debug("Yield for all_nodes_passive: Node Processing")
+            yield Sim.waituntil, self, all_nodes_passive
 
             # If all nodes have completed their missions, notify the user
-            if self.isMissionComplete():
-                if USS_Abraham_Lincoln:
+            if self.is_mission_complete():
+                if uss_abraham_lincoln:
                     self.logger.critical(
                         "Mission accomplished at {}".format(seconds_to_str(Sim.now())))
-                    USS_Abraham_Lincoln = False
+                    uss_abraham_lincoln = False
                     Sim.stopSimulation()
 
             # Pretty Printing
@@ -122,7 +122,7 @@ class Fleet(Sim.Process):
                     (100 * Sim.now()) / self.simulation.duration_intervals)
                 if DEBUG and percent_now % 5 == 0:
                     self.logger.info("Fleet  %d%%: %s" %
-                                     (percent_now, self.currentStats()))
+                                     (percent_now, self.current_stats()))
                 if not DEBUG and percent_now % 1 == 0 and progress_bar is not None:
                     progress_bar.render(int(percent_now),
                                         'step %s Processing %s...' % (percent_now, self.simulation.title))
@@ -136,8 +136,8 @@ class Fleet(Sim.Process):
             for node in self.nodes:
                 Sim.reactivate(node)
             if DEBUG:
-                self.logger.debug("Yield for allPassive: Fleet Updates")
-            yield Sim.waituntil, self, allPassive
+                self.logger.debug("Yield for all_nodes_passive: Fleet Updates")
+            yield Sim.waituntil, self, all_nodes_passive
 
     def nodenum(self, node):
         """
@@ -151,20 +151,20 @@ class Fleet(Sim.Process):
         """
         return map(attrgetter('id'), self.nodes).index(node_id)
 
-    def nodeCount(self):
+    def node_count(self):
         """
         Return the number of nodes in the fleet
         """
         return len(self.nodes)
 
-    def nodeNames(self):
+    def node_names(self):
         """
         Return the node names in this fleet
         :return:
         """
         return [node.name for node in self.nodes]
 
-    def nodePositions(self, shared=True):
+    def node_positions(self, shared=True):
         """
         Return the fleet-list array of latest reported positions
         :param shared:
@@ -174,8 +174,8 @@ class Fleet(Sim.Process):
             latest_logs = self.shared_map.latest_logs()
         else:
             latest_logs = self.environment.latest_logs()
-        positions = [None for _ in range(self.nodeCount())]
-        times = [-1 for _ in range(self.nodeCount())]
+        positions = [None for _ in range(self.node_count())]
+        times = [-1 for _ in range(self.node_count())]
         for id, log in latest_logs.items():
             index = self.nodenum_from_id(id)
             positions[index] = log.position
@@ -191,7 +191,7 @@ class Fleet(Sim.Process):
 
         return np.asarray(positions)
 
-    def nodePositionsAt(self, t, shared=True):
+    def node_positions_at(self, t, shared=True):
         """
         Return the fleet-list array of reported positions at a given time
         :param t:
@@ -201,12 +201,12 @@ class Fleet(Sim.Process):
             kb = self.shared_map.logs_at_time(t)
         else:
             kb = self.environment.logs_at_time(t)
-        positions = [None for _ in range(self.nodeCount())]
+        positions = [None for _ in range(self.node_count())]
         for id, log in kb.items():
             positions[self.nodenum_from_id(id)] = log.position
         return np.asarray(positions)
 
-    def nodePosLogs(self, shared=True):
+    def node_poslogs(self, shared=True):
         """
         Return the fleet-list array of reported position logs
         :param shared:
@@ -215,38 +215,38 @@ class Fleet(Sim.Process):
             kb = self.shared_map
         else:
             kb = self.environment
-        positions = [None for _ in range(self.nodeCount())]
+        positions = [None for _ in range(self.node_count())]
         for nodeid in map(attrgetter('id'), self.nodes):
             positions[self.nodenum_from_id(nodeid)] = kb.node_pos_log(nodeid)
         return np.asarray(positions).swapaxes(2, 1)
 
-    def nodeCheatDriftPositions(self):
+    def node_cheat_drift_positions(self):
         """
         I hate this so much
         """
         return np.asarray([node.get_pos() for node in self.nodes])
 
-    def nodeCheatPositions(self):
+    def node_cheat_positions(self):
         """
         I Hate this so much
         """
         return np.asarray([node.get_pos(true=True) for node in self.nodes])
 
-    def nodeCheatLastECEAEstimates(self, update_index):
+    def node_cheat_last_ecea_estimates(self, update_index):
         """
         I Hate this so much
         :param update_index:
         """
         return np.asarray([node.ecea.pos_log[:, update_index] for node in self.nodes])
 
-    def nodeCheatDriftPositionsAt(self, t):
+    def node_cheat_drift_positions_at(self, t):
         """
         I hate this so much
         :param t:
         """
         return np.asarray([node.pos_log[:, t] for node in self.nodes])
 
-    def nodeCheatPositionsAt(self, t):
+    def node_cheat_positions_at(self, t):
         """
         I Hate this so much
         :param t:
@@ -254,7 +254,7 @@ class Fleet(Sim.Process):
         return np.asarray([node.drift.pos_log[:, t] for node in self.nodes])
 
     # noinspection PyNoneFunctionAssignment
-    def nodePositionErrors(self, shared=True, error=0.001):
+    def node_position_errors(self, shared=True, error=0.001):
         """
         Fleet order Node position errors based on generic accuracy from origin of each node.
 
@@ -262,10 +262,10 @@ class Fleet(Sim.Process):
         :param shared:
         :param error:
         """
-        original_positions = self.nodePositionsAt(0, shared=False)
+        original_positions = self.node_positions_at(0, shared=False)
         t = Sim.now()
         if t > 0:
-            current_positions = self.nodePositions(shared=shared)
+            current_positions = self.node_positions(shared=shared)
         else:
             current_positions = original_positions.copy()
 
@@ -274,7 +274,7 @@ class Fleet(Sim.Process):
         delta *= [1, 1, 0]
         return np.abs(delta)
 
-    def timeOfFlightMatrix(self, shared=False, speed_of_sound=1490.0, guess_index=0):
+    def time_of_flight_matrix(self, shared=False, speed_of_sound=1490.0, guess_index=0):
         """
         Fleet order time of flight matrix
         There are very few reasons why this would ever need to be from the shared database....
@@ -283,7 +283,7 @@ class Fleet(Sim.Process):
         :param speed_of_sound:
         :param guess_index:
         """
-        latest_positions = self.nodeCheatPositions()
+        latest_positions = self.node_cheat_positions()
         if guess_index > 0:
             if not ghia:
                 raise NotImplementedError("This functionality requires the Ghia module")
@@ -294,38 +294,38 @@ class Fleet(Sim.Process):
             tof /= speed_of_sound
         return tof
 
-    def isMissionComplete(self):
+    def is_mission_complete(self):
         """
         Mission is complete when all waypoints finished and returned to mothership
         """
         on_mission = [n.on_mission for n in self.nodes]
         return not any(on_mission)
 
-    def currentStats(self):
+    def current_stats(self):
         """
         Print Current Vector Statistics
         """
-        avgHeading = np.array([0, 0, 0], dtype=np.float)
-        fleetCenter = np.array([0, 0, 0], dtype=np.float)
+        avgheading = np.array([0, 0, 0], dtype=np.float)
+        fleetcenter = np.array([0, 0, 0], dtype=np.float)
         for node in self.nodes:
-            avgHeading += node.velocity
-            fleetCenter += node.position
+            avgheading += node.velocity
+            fleetcenter += node.position
 
-        avgHeading /= float(len(self.nodes))
-        fleetCenter /= float(len(self.nodes))
+        avgheading /= float(len(self.nodes))
+        fleetcenter /= float(len(self.nodes))
 
-        maxDistance = np.float(0.0)
-        maxDeviation = np.float(0.0)
+        maxdistance = np.float(0.0)
+        maxdeviation = np.float(0.0)
         for node in self.nodes:
-            maxDistance = max(
-                maxDistance, distance(node.position, fleetCenter))
+            maxdistance = max(
+                maxdistance, distance(node.position, fleetcenter))
             v = node.velocity
             try:
-                c = np.dot(avgHeading, v) / mag(avgHeading) / mag(v)
-                maxDeviation = max(maxDeviation, np.arccos(c))
+                c = np.dot(avgheading, v) / mag(avgheading) / mag(v)
+                maxdeviation = max(maxdeviation, np.arccos(c))
             except FloatingPointError:
                 # In the event of v=0 (i.e. first time), fire back a - maxD
                 # array.
-                maxDeviation = avgHeading
+                maxdeviation = avgheading
 
-        return "V:%s,C:%s,D:%s,A:%s" % (avgHeading, fleetCenter, maxDistance, maxDeviation)
+        return "V:%s,C:%s,D:%s,A:%s" % (avgheading, fleetcenter, maxdistance, maxdeviation)

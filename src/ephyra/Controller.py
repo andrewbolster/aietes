@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -199,7 +200,7 @@ class EphyraController(object):
             return self.model.tmax - 1
 
     @check_model()
-    def get_3D_trail(self, node=None, time_start=None, length=None):
+    def get_3d_trail(self, node=None, time_start=None, length=None):
         """
 
 
@@ -374,7 +375,7 @@ class EphyraController(object):
         return self.model.ecea
 
     @check_model()
-    def get_3D_drift(self, source=None, node=None, time_start=None, length=None):
+    def get_3d_drift(self, source=None, node=None, time_start=None, length=None):
         """
 
 

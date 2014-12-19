@@ -99,7 +99,7 @@ class Layercake(object):
         """
         Initialise payload transmission down the stack
         """
-        self.net.SendPacket(payload)
+        self.net.send_packet(payload)
 
     def recv(self, payload):
         """

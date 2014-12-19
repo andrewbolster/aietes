@@ -10,15 +10,15 @@ def set_exp():
             title="FleetLawnmowerNodeVar-{}".format(variations),
             parallel=True, future=True,
             retain_data='files')
-    e.updateDefaultNode({
+    e.update_default_node({
         'behaviour': 'FleetLawnmower',
         'waypoint_style': 'lawnmower',
         'positioning': 'surface',
         'drifting': 'DriftFactorPy',
         'ecea': 'Simple2'
     })
-    e.addVariableNodeScenario(variations)
-    e.updateDuration(21600)
+    e.add_variable_node_scenario(variations)
+    e.update_duration(21600)
     return e
 
 

@@ -9,7 +9,7 @@ def set_exp():
             title="FleetLawnmowerDriftNoiseVar",
             parallel=True, future=True,
             retain_data='files')
-    e.updateDefaultNode({
+    e.update_default_node({
         'behaviour': 'FleetLawnmower',
         'waypoint_style': 'lawnmower',
         'positioning': 'surface',
@@ -42,11 +42,11 @@ def set_exp():
         'dvl_across': 0.0,
     }
 
-    e.addVariableRangeScenario('drift_noises',
+    e.add_variable_range_scenario('drift_noises',
                                [zeroed_noises, no_dvl, no_gyro, default_noises],
                                ["No Noise", "No DVL Noise", "No Gyro Noise", "Standard Noises"]
     )
-    e.updateDuration(21600)  # 6hrs
+    e.update_duration(21600)  # 6hrs
     return e
 
 

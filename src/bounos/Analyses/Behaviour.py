@@ -129,7 +129,7 @@ def detect_misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
             'metrics': metric.data}
 
 
-def Deviation(data, *args, **kwargs):
+def deviation_from_metric(data, *args, **kwargs):
     """
     Calculate simple, absolute, deviance across the metric set.
 
@@ -151,7 +151,7 @@ def Deviation(data, *args, **kwargs):
     """
 
     metric_arg = kwargs.get("metric", "PerNode_Internode_Distance_Avg")
-    metric = get_valid_metric(metric_arg)
+    metric = Analyses.get_valid_metric(metric_arg)
     metric.update(data)
     # IND has the highlight data to be the average of internode distances
     # TODO implement scrolling stddev calc to adjust smearing value (5)
@@ -171,7 +171,7 @@ def Deviation(data, *args, **kwargs):
             'metrics': metric.data}
 
 
-def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs):
+def combined_detection_rank(data, metrics, suspects_only=False, *args, **kwargs):
     # Combine multiple metrics detections into a general trust rating per node
     # over time.
     """
@@ -197,7 +197,7 @@ def Combined_Detection_Rank(data, metrics, suspects_only=False, *args, **kwargs)
         # Get Detections, Stddevs, Misbehavors, Deviance from
         # Detect_MisBehaviour
         if override_detection:
-            results = Deviation(data, metric=metric)
+            results = deviation_from_metric(data, metric=metric)
             print("No misbehavors given, assuming everything")
             misbehavors = {suspect: range(data.tmax)
                            for suspect in range(data.n)}

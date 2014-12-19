@@ -23,7 +23,7 @@ from wx.lib.intctrl import IntCtrl
 from wx.lib.agw.floatspin import FloatSpin
 
 from ephyra import wx
-from aietes.Tools import nameGeneration, timestamp, itersubclasses
+from aietes.Tools import generate_names, timestamp, itersubclasses
 from aietes.Behaviour import Behaviour
 
 
@@ -107,8 +107,8 @@ class Configurator(wx.Panel):
         self.config_tree.append(self.defaults)
 
         self.tree = CustomTreeCtrl(self.window)
-        self.root = root = self.tree.AddRoot(self.config_tree.GetLabel(),
-                                             data=self.config_tree.GetData())
+        self.root = root = self.tree.AddRoot(self.config_tree.get_label(),
+                                             data=self.config_tree.get_data())
         self.build_tree(self.config_tree, self.root)
 
         self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_click, self.tree)
@@ -131,7 +131,7 @@ class Configurator(wx.Panel):
         prefix = prefix if prefix is not None else ""
         for item in root:
             try:
-                print "%s:" % str([prefix, item.GetLabel()])
+                print "%s:" % str([prefix, item.get_label()])
                 if len(item):
                     self.print_tree(item, prefix=prefix + "+")
             except AttributeError:
@@ -142,8 +142,8 @@ class Configurator(wx.Panel):
     def build_tree(self, config, tree_node):
         for config_node in config:
             new_node = self.tree.AppendItem(
-                tree_node, config_node.GetLabel(), data=config_node.GetData())
-            if not config_node.IsLeaf():
+                tree_node, config_node.get_label(), data=config_node.get_data())
+            if not config_node.is_leaf():
                 self.build_tree(config_node, new_node)
 
     def update_tree(self, item, recurse=None):
@@ -151,14 +151,14 @@ class Configurator(wx.Panel):
         try:
             node = self.tree.GetPyData(item)
         except Exception as e:
-            print("%s:%s" % (item.GetLabel(), e))
+            print("%s:%s" % (item.get_label(), e))
 
         child, boza = self.tree.GetFirstChild(item)
         for s in node:
             if child is not None and child.IsOk():
                 ni = child
                 child, boza = self.tree.GetNextChild(item, boza)
-                self.tree.SetItemText(ni, s.GetLabel())
+                self.tree.SetItemText(ni, s.get_label())
                 self.tree.SetPyData(ni, s)
                 # for wx 2.2.1
                 # self.tree.SetItemData( ni, wxTreeItemData( s ) )
@@ -166,7 +166,7 @@ class Configurator(wx.Panel):
                 if len(s) and recurse:
                     self.update_tree(ni, recurse)
             else:
-                ni = self.tree.AppendItem(item, s.GetLabel())
+                ni = self.tree.AppendItem(item, s.get_label())
                 self.tree.SetPyData(ni, s)
                 self.tree.SetItemHasChildren(ni, len(s))
         if child is not None and child.IsOk():
@@ -186,7 +186,8 @@ class Configurator(wx.Panel):
         """
         self.Layout()
 
-    def on_idle(self, event):
+    @staticmethod
+    def on_idle(event):
         """
 
         :param event:
@@ -204,7 +205,7 @@ class Configurator(wx.Panel):
         fleetid = self.fleets.append(ListNode("%s" % kw.get("name", "Fleet %d" % index), [
             ListNode("Nodes"),
             ListNode("Behaviours", data=kw.get(
-                "behaviours", self.defaults[2].GetData()))
+                "behaviours", self.defaults[2].get_data()))
         ])
         )
         for i in range(kw.get("nodes", 1)):
@@ -217,12 +218,12 @@ class Configurator(wx.Panel):
         :param args:
         :param kw:
         """
-        node_names = [n.GetLabel() for n in self.fleets[fleetid][0]]
+        node_names = [n.get_label() for n in self.fleets[fleetid][0]]
         myname = kw.get(
-            "name", str(nameGeneration(1, existing_names=node_names)[0]))
+            "name", str(generate_names(1, existing_names=node_names)[0]))
         logging.info("Added %s to fleet %d" % (myname, fleetid))
         self.fleets[fleetid][0].append(
-            ListNode("%s" % myname, data=self.defaults[1].GetData()))
+            ListNode("%s" % myname, data=self.defaults[1].get_data()))
 
     def set_config_panel(self, item):
         """
@@ -234,29 +235,29 @@ class Configurator(wx.Panel):
         try:
             data = self.tree.GetPyData(item)
         except Exception as e:
-            print("%s:%s" % (item.GetLabel(), e))
+            print("%s:%s" % (item.get_label(), e))
 
         logging.info("Clicked on %s" % data)
         self.current_selection = item
 
-        mainSizer = self.config_panel.GetSizer()
-        if mainSizer:
+        main_sizer = self.config_panel.GetSizer()
+        if main_sizer:
             widgets = self.config_panel.GetChildren()
             for widget in widgets:
                 logging.info("Destroying: %s" % (str(widget)))
                 widget.Destroy()
                 self.Layout()
             logging.info("Removing: MainSizer")
-            self.sizer.Remove(mainSizer)
+            self.sizer.Remove(main_sizer)
 
-        btnSizer = wx.StdDialogButtonSizer()
+        btn_sizer = wx.StdDialogButtonSizer()
 
         if data is not None:
             logging.info("Item has data")
 
             values = data["Config"]
-            gridSizer = wx.FlexGridSizer(rows=len(values), cols=2)
-            colSizer = wx.BoxSizer(wx.HORIZONTAL)
+            gridsizer = wx.FlexGridSizer(rows=len(values), cols=2)
+            colsizer = wx.BoxSizer(wx.HORIZONTAL)
 
             self.widgetNames = values
             font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD)
@@ -276,9 +277,9 @@ class Configurator(wx.Panel):
                     default = value[0]
                     choices = value[1:]
                     input_choice = wx.ComboBox(self.config_panel, value=default,
-                                        choices=choices,
-                                        style=wx.CB_READONLY,
-                                        name=key)
+                                               choices=choices,
+                                               style=wx.CB_READONLY,
+                                               name=key)
                 # STRING VALUES
                 elif isinstance(value, (basestring, unicode)):
                     input_choice = wx.TextCtrl(
@@ -310,27 +311,27 @@ class Configurator(wx.Panel):
                         str(value),
                         type(value)
                     )
-                gridSizer.AddMany(
+                gridsizer.AddMany(
                     [(thing, 0, wx.ALL | wx.ALIGN_RIGHT, 5) for thing in (lbl, input_choice)])
 
-            colSizer.Add(gridSizer, 1, wx.EXPAND)
+            colsizer.Add(gridsizer, 1, wx.EXPAND)
 
-            saveBtn = wx.Button(self.config_panel, wx.ID_OK, label="Save")
-            saveBtn.Bind(wx.EVT_BUTTON, self.on_save)
-            btnSizer.AddButton(saveBtn)
+            save_btn = wx.Button(self.config_panel, wx.ID_OK, label="Save")
+            save_btn.Bind(wx.EVT_BUTTON, self.on_save)
+            btn_sizer.AddButton(save_btn)
 
-            updateBtn = wx.Button(self.config_panel, wx.ID_ANY, label="Update")
-            updateBtn.Bind(wx.EVT_BUTTON, self.on_update)
-            btnSizer.AddButton(updateBtn)
+            update_btn = wx.Button(self.config_panel, wx.ID_ANY, label="Update")
+            update_btn.Bind(wx.EVT_BUTTON, self.on_update)
+            btn_sizer.AddButton(update_btn)
 
-            cancelBtn = wx.Button(self.config_panel, wx.ID_CANCEL)
-            btnSizer.AddButton(cancelBtn)
-            btnSizer.Realize()
+            cancel_btn = wx.Button(self.config_panel, wx.ID_CANCEL)
+            btn_sizer.AddButton(cancel_btn)
+            btn_sizer.Realize()
 
-            mainSizer = wx.BoxSizer(wx.VERTICAL)
-            mainSizer.Add(colSizer, 0, wx.EXPAND | wx.ALL | wx.ALIGN_RIGHT)
-            mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
-            self.config_panel.SetSizer(mainSizer)
+            main_sizer = wx.BoxSizer(wx.VERTICAL)
+            main_sizer.Add(colsizer, 0, wx.EXPAND | wx.ALL | wx.ALIGN_RIGHT)
+            main_sizer.Add(btn_sizer, 0, wx.ALL | wx.ALIGN_RIGHT, 5)
+            self.config_panel.SetSizer(main_sizer)
         else:
             logging.info("Item has no data")
 
@@ -410,11 +411,11 @@ class ListNode(object):
         :param item:
         :return:
         """
-        print item.GetLabel()
+        print item.get_label()
         self._nl.append(item)
         return len(self) - 1
 
-    def GetLabel(self):
+    def get_label(self):
         """
 
 
@@ -422,7 +423,7 @@ class ListNode(object):
         """
         return self._tt
 
-    def GetData(self):
+    def get_data(self):
         """
 
 
@@ -430,7 +431,7 @@ class ListNode(object):
         """
         return self._data
 
-    def IsLeaf(self):
+    def is_leaf(self):
         """
 
 

@@ -40,8 +40,8 @@ import numpy as np
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded
-from aietes.Tools import _results_dir, nameGeneration, updateDict, kwarger, getConfig, ConfigError, try_x_times, seconds_to_str, dotdict, notify_desktop, AutoSyncShelf
-from bounos import DataPackage, printAnalysis, load_sources, npz_in_dir
+from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
+from bounos import DataPackage, print_analysis, load_sources, npz_in_dir
 
 try:
     from contrib.Ghia.ecea.data_grapher import data_grapher
@@ -106,18 +106,18 @@ class Scenario(object):
 
         if default_config_file is None and default_config is None:
             logging.info("Assume that the user wants a generic default")
-            self._default_config = getConfig()
+            self._default_config = get_config()
         elif isinstance(default_config, ConfigObj):
             logging.info("User provided a (hopefully complete) confobj")
             self._default_config = deepcopy(default_config)
-        elif isinstance(default_config, dotdict):
+        elif isinstance(default_config, Dotdict):
             logging.info("User provided a (hopefully complete) dotdict")
             self._default_config = deepcopy(ConfigObj(default_config))
         elif default_config_file is not None:
             logging.info("User provided a config file that we have to interpolate "
                          "against the defaults to generate a full config")
-            intermediate_config = getConfig(default_config_file)
-            self._default_config = Simulation.populateConfig(
+            intermediate_config = get_config(default_config_file)
+            self._default_config = Simulation.populate_config(
                 intermediate_config, retain_default=True
             )
         else:
@@ -157,7 +157,7 @@ class Scenario(object):
                 self.nodes[node_name] = deepcopy(ConfigObj(node_config))
 
         # May be unnecessary
-        self._default_behaviour_dict = self.getBehaviourDict()
+        self._default_behaviour_dict = self.get_behaviour_dict()
 
 
     def run(self, runcount=None, runtime=None, *args, **kwargs):
@@ -176,13 +176,13 @@ class Scenario(object):
             kwargs.get("basepath", tempfile.mkdtemp()), self.title)
         os.makedirs(self.mypath)
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get(
-            "dataFile", True), 'outputPath': self.mypath}
+        pp_defaults = {'output_file': self.title, 'data_file': kwargs.get(
+            "data_file", True), 'output_path': self.mypath}
         self.datarun = [None for _ in range(runcount)]
         for run in range(runcount):
             if runcount > 1:
-                pp_defaults.update({'outputFile': "%s-%d" % (self.title, run)})
-            sys.stdout.write("%s," % pp_defaults['outputFile'])
+                pp_defaults.update({'output_file': "%s-%d" % (self.title, run)})
+            sys.stdout.write("%s," % pp_defaults['output_file'])
             sys.stdout.flush()
             try:
                 title = self.title + "-%s" % run
@@ -197,16 +197,16 @@ class Scenario(object):
                 protected_run = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
                                             sim.simulate)
                 sim_time = protected_run()
-                return_dict = sim.postProcess(**pp_defaults)
+                return_dict = sim.postprocess(**pp_defaults)
                 data_retention_policy = kwargs.get("retain_data", False)
                 # Implicitly implies boolean datatype
                 if data_retention_policy is True:
-                    self.datarun[run] = sim.generateDataPackage()
+                    self.datarun[run] = sim.generate_datapackage()
                 elif data_retention_policy == "additional_only":
-                    dp = sim.generateDataPackage()
+                    dp = sim.generate_datapackage()
                     self.datarun[run] = dp.additional.copy()
                 elif data_retention_policy == "file":
-                    self.datarun[run] = sim.generateDataPackage().write(title)
+                    self.datarun[run] = sim.generate_datapackage().write(title)
                 else:
                     self.datarun[run] = return_dict
                 log.info("%s(%s):%f%%"
@@ -241,14 +241,14 @@ class Scenario(object):
         if runcount is None:
             runcount = self._default_run_count
 
-        pp_defaults = {'outputFile': self.title, 'dataFile': kwargs.get(
-            "dataFile", True), 'outputPath': self.mypath}
+        pp_defaults = {'output_file': self.title, 'data_file': kwargs.get(
+            "data_file", True), 'output_path': self.mypath}
         self.datarun = [None for _ in range(runcount)]
         self.runlist = []
         for run in range(runcount):
             if runcount > 1:
                 pp_defaults.update(
-                    {'outputFile': "%s(%d:%d)" % (self.title, run, runcount)})
+                    {'output_file': "%s(%d:%d)" % (self.title, run, runcount)})
             try:
                 title = self.title + "-%s" % run
                 self.runlist.append(
@@ -273,7 +273,7 @@ class Scenario(object):
 
         print("done %d runs in parallel" % runcount)
 
-    def generateRunStats(self, sim_run_dataset=None):
+    def generate_run_stats(self, sim_run_dataset=None):
         """
         Recieving a bounos.datapackage, generate relevant stats
         This is nasty and I can't remember why I did it this way
@@ -285,7 +285,7 @@ class Scenario(object):
         if sim_run_dataset is None:
             stats = []
             for i, d in enumerate(self.datarun):
-                stats.append(self.generateRunStats(d))
+                stats.append(self.generate_run_stats(d))
             return stats
         elif isinstance(sim_run_dataset, DataPackage):
             return sim_run_dataset.package_statistics()
@@ -316,12 +316,12 @@ class Scenario(object):
                                                                                      )),
                                                                                      self.node_count))
         if self.node_count > len(self.nodes.keys()):
-            self.addDefaultNode(count=self.node_count - len(self.nodes.keys()))
+            self.add_default_node(count=self.node_count - len(self.nodes.keys()))
 
-        self.config = self.generateConfig()
+        self.config = self.generate_config()
         self.committed = True
 
-    def generateConfig(self):
+    def generate_config(self):
         """
         Generate a config dict from the current state of the planned scenario
         Returns:
@@ -335,18 +335,18 @@ class Scenario(object):
         }
         return config
 
-    def generateConfigObj(self):
+    def generate_configobj(self):
         """
         Generate a ConfigObj from the current state of the planned scenario
         Returns:
             DataPackage compatible ConfigObj
         """
-        rawconf = self.generateConfig()
-        updateDict(
+        rawconf = self.generate_config()
+        update_dict(
             rawconf, ['Node', 'Nodes', '__default__'], self._default_node_config)
         return ConfigObj(rawconf)
 
-    def getBehaviourDict(self):
+    def get_behaviour_dict(self):
         """
         Generate and return a dict of currently configured behaviours wrt names of nodes
         eg. {'Waypoing':['alpha','beta','gamma'],'Flock':['omega']}
@@ -385,7 +385,7 @@ class Scenario(object):
                     behaviours[n_bev] = [name]
         return behaviours
 
-    def setNodeCount(self, count):
+    def set_node_count(self, count):
         """
         Set the scenario node count, but does not update the configuration (this is satisfied in
             the commit method)
@@ -401,7 +401,7 @@ class Scenario(object):
                   (self.node_count, count))
         self.node_count = count
 
-    def setDuration(self, tmax):
+    def set_duration(self, tmax):
         """
         Set the scenario simulation duration,
         :param tmax:
@@ -416,7 +416,7 @@ class Scenario(object):
                   % (self.simluation['sim_duration'], tmax))
         self.simulation['sim_duration'] = tmax
 
-    def setEnvironment(self, environment):
+    def set_environment(self, environment):
         """
         Set the scenario simulation environment extent,
         :param environment:
@@ -429,7 +429,7 @@ class Scenario(object):
 
         self.environment = environment
 
-    def updateNode(self, node_conf, mutable, value):
+    def update_node(self, node_conf, mutable, value):
         """
         Used to update selected field mappings between scenario definition and
             the scenario configspec, as defined in mutable_node_configs
@@ -447,11 +447,11 @@ class Scenario(object):
             pass
         if mutable in self.mutable_node_configs:
             keys = self.mutable_node_configs[mutable]
-            updateDict(node_conf, keys, value)
+            update_dict(node_conf, keys, value)
         else:
             raise NotImplementedError("Have no mutable map for %s" % mutable)
 
-    def addCustomNode(self, variable_map, count=1):
+    def add_custom_node(self, variable_map, count=1):
         """
         Adds a node to the scenario based on a dict of mutable key,values
         :param variable_map:
@@ -463,10 +463,10 @@ class Scenario(object):
         node_conf = deepcopy(self._default_node_config)
         count = int(count)
         for variable, value in variable_map.iteritems():
-            self.updateNode(node_conf, variable, value)
-        self.addNode(node_conf=node_conf, count=count)
+            self.update_node(node_conf, variable, value)
+        self.add_node(node_conf=node_conf, count=count)
 
-    def addDefaultNode(self, count=1):
+    def add_default_node(self, count=1):
         """
         Adds a default node
         :param count:
@@ -474,9 +474,9 @@ class Scenario(object):
             count(int): if set, creates count instances of the default node
         """
         node_conf = deepcopy(self._default_node_config)
-        self.addNode(node_conf, count=count)
+        self.add_node(node_conf, count=count)
 
-    def addNode(self, node_conf, names=None, count=1):
+    def add_node(self, node_conf, names=None, count=1):
         """
         Adds a node to the scenario based on a (hopefully valid) node configuration
         :param node_conf:
@@ -490,7 +490,7 @@ class Scenario(object):
             RuntimeError if name definition doesn't make sense
         """
         if names is None:
-            node_names = nameGeneration(
+            node_names = generate_names(
                 count, existing_names=self.nodes.keys())
             if len(node_names) != count:
                 raise RuntimeError("Names don't make any sense: Asked for %d, got %d: %s"
@@ -503,7 +503,7 @@ class Scenario(object):
         for i, node_name in enumerate(node_names):
             self.nodes[node_name] = node_conf
 
-    def updateDefaultNode(self, variable, value):
+    def update_default_node(self, variable, value):
         """
         Update the default node for the scenario.
         :param variable:
@@ -517,7 +517,7 @@ class Scenario(object):
         if self.committed:
             raise RuntimeError(
                 "Attempting to update default node config after committing")
-        self.updateNode(self._default_node_config, variable, value)
+        self.update_node(self._default_node_config, variable, value)
 
 
 class ExperimentManager(object):
@@ -576,13 +576,13 @@ class ExperimentManager(object):
         self.scenarios = {}
 
         if node_count is None:
-            self._default_scenario.setNodeCount(self._default_scenario.node_count)
+            self._default_scenario.set_node_count(self._default_scenario.node_count)
         else:
-            self._default_scenario.setNodeCount(node_count)
+            self._default_scenario.set_node_count(node_count)
         self.node_count = self._default_scenario.node_count
         self.parallel = parallel
 
-    def updateDefaultNode(self, config_dict):
+    def update_default_node(self, config_dict):
         """
         Applys a behaviour (given as a string) to the experimental default for node generation
         :param config_dict:
@@ -590,16 +590,16 @@ class ExperimentManager(object):
             behaviour(str): new default behaviour
         """
         for k, v in config_dict.iteritems():
-            self._default_scenario.updateDefaultNode(k, v)
+            self._default_scenario.update_default_node(k, v)
 
-    def updateDefaultBehaviour(self, behaviour):
+    def update_default_behaviour(self, behaviour):
         """
         Applys a behaviour (given as a string) to the experimental default for node generation
         :param behaviour:
         Args:
             behaviour(str): new default behaviour
         """
-        self._default_scenario.updateDefaultNode('behaviour', behaviour)
+        self._default_scenario.update_default_node('behaviour', behaviour)
 
     def run(self, runtime=None, runcount=None, retain_data=True, **kwargs):
         """
@@ -654,14 +654,14 @@ class ExperimentManager(object):
         notify_desktop(msg)
         print(msg)
 
-    def generateSimulationStats(self):
+    def generate_simulation_stats(self):
         """
         Returns:
             List of scenario stats (i.e. list of lists of run statistics dicts)
         """
-        return {t: s.generateRunStats() for t, s in self.scenarios.items()}
+        return {t: s.generate_run_stats() for t, s in self.scenarios.items()}
 
-    def updateNodeCounts(self, new_count):
+    def update_node_counts(self, new_count):
         """
         Updates the node-count across all scenarios
 
@@ -670,9 +670,9 @@ class ExperimentManager(object):
             new_count(int):new value to be used across scenarios
         """
         for t in self.scenarios.keys():
-            self.scenarios[t].updateNodeCounts(new_count)
+            self.scenarios[t].update_node_counts(new_count)
 
-    def updateDuration(self, tmax):
+    def update_duration(self, tmax):
         """
         Update the simulation time of currently configured scenarios
         :param tmax:
@@ -680,9 +680,9 @@ class ExperimentManager(object):
             tmax(int): update experiment simulation duration for all scenarios
         """
         for t in self.scenarios.keys():
-            self.scenarios[t].setDuration(tmax)
+            self.scenarios[t].set_duration(tmax)
 
-    def updateEnvironment(self, environment):
+    def update_environment(self, environment):
         """
         Update the environment extent of currently configured scenarios
         :param environment:
@@ -691,12 +691,12 @@ class ExperimentManager(object):
         """
         if isinstance(environment, np.ndarray) and environment.shape == (3,):
             for t in self.scenarios.items():
-                self.scenarios[t].setEnvironment(environment)
+                self.scenarios[t].set_environment(environment)
         else:
             raise ValueError(
                 "Incorrect Environment Type given:{}{}".format(environment, type(environment)))
 
-    def addVariableRangeScenario(self, variable, value_range, title_range=None):
+    def add_variable_range_scenario(self, variable, value_range, title_range=None):
         """
         Add a scenario with a range of configuration values to the experimental run
 
@@ -711,11 +711,11 @@ class ExperimentManager(object):
             title_range = ["{}({})".format(variable, v) for v in value_range]
         for i, v in enumerate(value_range):
             s = Scenario(title=title_range[i],
-                         default_config=self._default_scenario.generateConfigObj())
-            s.addCustomNode({variable: v}, count=self.node_count)
+                         default_config=self._default_scenario.generate_configobj())
+            s.add_custom_node({variable: v}, count=self.node_count)
             self.scenarios[s.title] = s
 
-    def addApplicationVariableScenario(self, variable, value_range, title_range=None):
+    def add_application_variable_scenario(self, variable, value_range, title_range=None):
         """
         Add a scenario with a range of application/Node configuration values to the
         experimental run
@@ -733,12 +733,12 @@ class ExperimentManager(object):
             title_range = ["{}({})".format(variable, v) for v in value_range]
         for i, v in enumerate(value_range):
             s = Scenario(title=title_range[i],
-                         default_config=self._default_scenario.generateConfigObj())
+                         default_config=self._default_scenario.generate_configobj())
             for node, node_config in s.nodes.items():
-                s.updateNode(node_config, variable, v)
+                s.update_node(node_config, variable, v)
             self.scenarios[s.title] = s
 
-    def addVariableNodeScenario(self, node_range):
+    def add_variable_node_scenario(self, node_range):
         """
         Add a scenario with a range of configuration values to the experimental run
 
@@ -749,11 +749,11 @@ class ExperimentManager(object):
         """
         for node_count in node_range:
             s = Scenario(title="{}({})".format("Nodes", node_count),
-                         default_config=self._default_scenario.generateConfigObj())
-            s.addDefaultNode(node_count)
+                         default_config=self._default_scenario.generate_configobj())
+            s.add_default_node(node_count)
             self.scenarios[s.title] = s
 
-    def addMinorityNBehaviourSuite(self, behaviour_list, n_minority=1, title="Behaviour"):
+    def add_minority_n_behaviour_suite(self, behaviour_list, n_minority=1, title="Behaviour"):
         """
         Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
 
@@ -766,12 +766,12 @@ class ExperimentManager(object):
         """
         for v in behaviour_list:
             s = Scenario(title="%s(%s)" % (title, v),
-                         default_config=self._default_scenario.generateConfigObj())
-            s.addCustomNode({"behaviour": v}, count=n_minority)
-            s.addDefaultNode(count=self.node_count - n_minority)
+                         default_config=self._default_scenario.generate_configobj())
+            s.add_custom_node({"behaviour": v}, count=n_minority)
+            s.add_default_node(count=self.node_count - n_minority)
             self.scenarios[s.title] = s
 
-    def addVariable2RangeScenarios(self, v_dict):
+    def add_variable_2_range_scenarios(self, v_dict):
         """
         Add a 2dim range of scenarios based on a dictionary of value ranges.
         This generates a meshgrid and samples scenarios across the 2dim space
@@ -794,11 +794,11 @@ class ExperimentManager(object):
         for tup in scelist:
             d = dict(zip(meshkeys, tup))
             s = Scenario(title=str(["%s(%f)" % (variable, v) for variable, v in d.iteritems()]),
-                         default_config=self._default_scenario.generateConfigObj())
-            s.addCustomNode(d, count=self.node_count)
+                         default_config=self._default_scenario.generate_configobj())
+            s.add_custom_node(d, count=self.node_count)
             self.scenarios[s.title] = s
 
-    def addRatioScenarios(self, badbehaviour, goodbehaviour=None):
+    def add_ratio_scenarios(self, badbehaviour, goodbehaviour=None):
         """
         Add scenarios based on a ratio of behaviours of identical nodes
 
@@ -814,29 +814,29 @@ class ExperimentManager(object):
             title = "%s(%.2f%%)" % (badbehaviour, float(ratio) * 100)
             print(title)
             s = Scenario(
-                title=title, default_config=self._default_scenario.generateConfigObj())
+                title=title, default_config=self._default_scenario.generate_configobj())
             count = int(ratio * self.node_count)
             invcount = int((1.0 - ratio) * self.node_count)
-            s.addCustomNode({"behaviour": badbehaviour}, count=count)
+            s.add_custom_node({"behaviour": badbehaviour}, count=count)
 
             if goodbehaviour is not None:
-                s.addCustomNode({"behaviour": goodbehaviour}, count=invcount)
+                s.add_custom_node({"behaviour": goodbehaviour}, count=invcount)
             else:
-                s.addDefaultNode(count=invcount)
+                s.add_default_node(count=invcount)
             self.scenarios[s.title] = s
 
-    def addDefaultScenario(self, runcount=1, title=None):
+    def add_default_scenario(self, runcount=1, title=None):
         """
         Stick to the defaults
         :param runcount:
         :param title:
         """
         for i in range(runcount):
-            s = Scenario(default_config=self._default_scenario.generateConfigObj(),
+            s = Scenario(default_config=self._default_scenario.generate_configobj(),
                          title=title if title is not None else "{}({})".format(self.title, i))
             self.scenarios[s.title] = s
 
-    def addPositionScalingRange(self, scale_range, title=None, basis_node_name='n1'):
+    def add_position_scaling_range(self, scale_range, title=None, basis_node_name='n1'):
         """
         Using the base_config_file, generate a range of scaled positions for nodes that are
         manually set (i.e. operates only on the 'initial_position' value
@@ -847,7 +847,7 @@ class ExperimentManager(object):
         :param title:
         :return:
         """
-        base_config = getConfig(self._base_config_file)
+        base_config = get_config(self._base_config_file)
         env_shape = np.asarray(base_config['Environment']['shape'])
         node_positions = {k: np.asarray(v['initial_position'], dtype=float)
                           for k, v in base_config['Node']['Nodes'].items()
@@ -863,7 +863,7 @@ class ExperimentManager(object):
                 for k, v in new_positions.items():
                     new_config['Node']['Nodes'][k]['initial_position'] = list(v)  # ndarrays make literal_eval cry
 
-                s = Scenario(default_config=Simulation.populateConfig(new_config, retain_default=True),
+                s = Scenario(default_config=Simulation.populate_config(new_config, retain_default=True),
                              title="{}({:.2f})".format(self.title, scale)
                 )
                 self.scenarios[s.title] = s
@@ -871,7 +871,7 @@ class ExperimentManager(object):
                 raise ConfigError("Scale {} is outside the defined environment: {}".format(scale, new_positions))
 
     @staticmethod
-    def printStats(experiment, verbose=False):
+    def print_stats(experiment, verbose=False):
         """
         Perform and print a range of summary experiment statistics including
             Fleet Distance (sum of velocities),
@@ -937,7 +937,7 @@ class ExperimentManager(object):
                 # Running on a real scenario so use information we shouldn't
                 # have
                 suspect_behaviour_list = [(bev, nodelist)
-                                          for bev, nodelist in s.getBehaviourDict().iteritems()
+                                          for bev, nodelist in s.get_behaviour_dict().iteritems()
                                           if '__default__' not in nodelist]
                 for _, nodelist in suspect_behaviour_list:
                     for node in nodelist:
@@ -945,7 +945,7 @@ class ExperimentManager(object):
             print("%s,%s" % (t, suspects))
 
             for i, r in enumerate(stats):
-                analysis = printAnalysis(s.datarun[i])
+                analysis = print_analysis(s.datarun[i])
                 confident = analysis['trust_stdev'] > 100
                 correct_detection = (not bool(suspects) and not confident) or analysis[
                                                                                   'suspect_name'] in suspects
@@ -1061,7 +1061,7 @@ class ExperimentManager(object):
                 os.path.join(self.exp_path, s.title + ".anl"))
             print("Writing analysis %s to %s" % (s.title, s_path))
             stats = [dict(
-                printAnalysis(d).items() + d.package_statistics().items()) for d in s.datarun]
+                print_analysis(d).items() + d.package_statistics().items()) for d in s.datarun]
 
             pickle.dump(stats, open(s_path, "wb"))
             print("Done in %f seconds" % (time.clock() - start))

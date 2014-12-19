@@ -91,7 +91,7 @@ class Metric(object):
             self.ndim = 1
 
 
-class StdDev_of_Distance(Metric):
+class StddevOfDistance(Metric):
     """
     Measures the level of variation (stddev) of the distance between each node and the centre of
         the fleet
@@ -102,7 +102,7 @@ class StdDev_of_Distance(Metric):
         return data.distance_from_average_stddev_range()
 
 
-class StdDev_of_Heading(Metric):
+class StddevOfHeading(Metric):
     """
     Measures the level of variation (stddev) of the mag of the heading distance from fleet
         average heading
@@ -112,7 +112,7 @@ class StdDev_of_Heading(Metric):
         return data.heading_stddev_range()
 
 
-class Avg_Mag_of_Heading(Metric):
+class AvgMagOfHeading(Metric):
     """
     Measures the average node speed in the fleet across time
     """
@@ -121,7 +121,7 @@ class Avg_Mag_of_Heading(Metric):
         return data.heading_mag_range()
 
 
-class Deviation_Of_Heading(Metric):
+class DeviationOfHeading(Metric):
     """
     Measured the per node deviation from the fleet path, therefore the 'average' is zero
     However, since INHD is unsigned, this isn're really the case, so take the avg of the vals
@@ -136,7 +136,7 @@ class Deviation_Of_Heading(Metric):
         return vals
 
 
-class PerNode_Speed(Metric):
+class PernodeSpeed(Metric):
     label = "Node Speed ($ms^-1$)"
     signed = False
 
@@ -146,7 +146,7 @@ class PerNode_Speed(Metric):
         return [map(mag, data.heading_slice(time)) for time in range(int(data.tmax))]
 
 
-class PerNode_Internode_Distance_Avg(Metric):
+class PernodeInternodeDistanceAvg(Metric):
     label = "INDD ($m$)"
     signed = True
 
@@ -156,7 +156,7 @@ class PerNode_Internode_Distance_Avg(Metric):
         return [data.distances_from_average_at(time) for time in range(int(data.tmax))]
 
 
-class Drift_Error(Metric):
+class DriftError(Metric):
     label = "Drift($m$)"
     signed = False
     drift_enabled = True
@@ -167,11 +167,11 @@ class Drift_Error(Metric):
         :param data:
         :return:
         """
-        self.highlight_data = data.drift_RMS()
+        self.highlight_data = data.drift_rms()
         return data.drift_error().swapaxes(0, 1)
 
 
-class ECEA_Error(Metric):
+class EceaError(Metric):
     label = "Corrected Drift ($m$)"
     signed = False
     ecea_enabled = True
@@ -182,13 +182,13 @@ class ECEA_Error(Metric):
         :param data:
         :return:
         """
-        self.highlight_data = data.drift_RMS(source="intent")
+        self.highlight_data = data.drift_rms(source="intent")
         return data.drift_error(source="intent").swapaxes(0, 1)
 
 #
 # class Packet_Loss_Rate(Metric):
 # label = "Packet Loss Rate (%p\%%)"
-#     signed = False
+# signed = False
 #
 #     def generator(self, data):
 #         return data.plr()

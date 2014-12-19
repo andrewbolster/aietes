@@ -24,7 +24,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from aietes.Tools import map_entry, distance, fudge_normal, DEBUG, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
+from aietes.Tools import MapEntry, distance, fudge_normal, DEBUG, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
 
 DEBUG = True
@@ -63,7 +63,7 @@ class Behaviour(object):
             # self.logger.setLevel(logging.DEBUG)
         self.update_rate = 1
         self.memory = {}
-        self.behaviours = [self.avoidWall]
+        self.behaviours = [self.avoid_wall]
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
@@ -84,8 +84,8 @@ class Behaviour(object):
         self.logger.debug("Launched Behaviour")
 
     @staticmethod
-    def normalize_behaviour(forceVector):
-        return forceVector
+    def normalize_behaviour(force_vector):
+        return force_vector
 
     def neighbour_map(self):
         """
@@ -104,12 +104,12 @@ class Behaviour(object):
 
         return orig_map
 
-    def addMemory(self, object_id, position, velocity):
+    def add_memory(self, object_id, position, velocity):
         """
         Called by node lifecycle to update the internal representation of the environment
         """
         # TODO expand this to do SLAM?
-        self.memory += map_entry(object_id, position, velocity)
+        self.memory += MapEntry(object_id, position, velocity)
 
     def process(self):
         """
@@ -117,10 +117,10 @@ class Behaviour(object):
         """
         self.debug = self.debug and self.node == self.node.fleet.nodes[0]
         self.neighbours = self.neighbour_map()
-        self.nearest_neighbours = self.getNearestNeighbours(self.node.position,
+        self.nearest_neighbours = self.get_nearest_neighbours(self.node.position,
                                                             n_neighbours=self.n_nearest_neighbours)
         contributions = {}
-        forceVector = np.zeros(3)
+        force_vector = np.zeros(3)
 
         for behaviour in self.behaviours:
             try:
@@ -131,12 +131,12 @@ class Behaviour(object):
                     "%s(%s,%s)" % (behaviour.__name__, self.node.position, self.node.velocity))
                 raise
 
-        forceVector += sum(contributions.values())
+        force_vector += sum(contributions.values())
 
         # TODO Under Drift, it's probably better to do wall-detection twice: once on node and once on environment
-        # forceVector = self.avoidWall(self.node.get_pos(), self.node.velocity, forceVector)
+        # force_vector = self.avoid_wall(self.node.get_pos(), self.node.velocity, force_vector)
         if self.debug and False:
-            self.logger.debug("Response:%s" % forceVector)
+            self.logger.debug("Response:%s" % force_vector)
         if self.debug and True:
             total = sum(map(mag, contributions.values()))
             if total > 0:
@@ -153,11 +153,11 @@ class Behaviour(object):
             for func, value in contributions.iteritems():
                 self.logger.debug(
                     "%s:%.2f:%s" % (func, 100 * mag(value) / total, sixvec(value)))
-        forceVector = fudge_normal(forceVector, 0.012)  # Random factor
-        self.node.push(forceVector, contributions=contributions)
+        force_vector = fudge_normal(force_vector, 0.012)  # Random factor
+        self.node.push(force_vector, contributions=contributions)
         return
 
-    def getNearestNeighbours(self, position, n_neighbours=None, distance=np.inf):
+    def get_nearest_neighbours(self, position, n_neighbours=None, distance=np.inf):
         """
         Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         :param position:
@@ -165,7 +165,7 @@ class Behaviour(object):
         :param distance:
         """
         # Sort and filter Neighbours from self.map by distance
-        neighbours_with_distance = [map_entry(key,
+        neighbours_with_distance = [MapEntry(key,
                                               value.position, value.velocity,
                                               name=self.simulation.reverse_node_lookup(
                                                   key).name,
@@ -182,7 +182,7 @@ class Behaviour(object):
             nearest_neighbours = nearest_neighbours[:n_neighbours]
         return nearest_neighbours
 
-    def repulseFromPosition(self, position, repulsive_position, d_limit=1):
+    def repulse_from_position(self, position, repulsive_position, d_limit=1):
         """
 
         :param position:
@@ -190,27 +190,27 @@ class Behaviour(object):
         :param d_limit:
         :return: :raise RuntimeError:
         """
-        forceVector = np.array([0, 0, 0], dtype=np.float)
-        distanceVal = distance(position, repulsive_position)
-        forceVector = unit(position - repulsive_position) * \
-                      d_limit / float(min(distanceVal, self.neighbourhood_max_rad))
+        force_vector = np.array([0, 0, 0], dtype=np.float)
+        distance_val = distance(position, repulsive_position)
+        force_vector = unit(position - repulsive_position) * \
+                      d_limit / float(min(distance_val, self.neighbourhood_max_rad))
 
-        if distanceVal < 1:
+        if distance_val < 1:
             raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
-                               (self.getNearestNeighbours(repulsive_position)[0].name,
-                                self.getNearestNeighbours(
+                               (self.get_nearest_neighbours(repulsive_position)[0].name,
+                                self.get_nearest_neighbours(
                                     repulsive_position)[0].position,
                                 sixvec(
-                                    self.getNearestNeighbours(repulsive_position)[0].velocity),
+                                    self.get_nearest_neighbours(repulsive_position)[0].velocity),
                                 self.node.position,
                                 sixvec(self.node.velocity)
                                ))
         if self.debug:
             self.logger.debug(
-                "Repulsion from %s: %s, at range of %s" % (forceVector, repulsive_position, distanceVal))
-        return forceVector
+                "Repulsion from %s: %s, at range of %s" % (force_vector, repulsive_position, distance_val))
+        return force_vector
 
-    def attractToPosition(self, position, attractive_position, d_limit=1):
+    def attract_to_position(self, position, attractive_position, d_limit=1):
         """
 
         :param position:
@@ -218,16 +218,16 @@ class Behaviour(object):
         :param d_limit:
         :return:
         """
-        forceVector = np.array([0, 0, 0], dtype=np.float)
-        distanceVal = distance(position, attractive_position)
-        forceVector = unit(attractive_position - position) * \
-                      (min(distanceVal, self.neighbourhood_max_rad) / float(d_limit))
+        force_vector = np.array([0, 0, 0], dtype=np.float)
+        distance_val = distance(position, attractive_position)
+        force_vector = unit(attractive_position - position) * \
+                      (min(distance_val, self.neighbourhood_max_rad) / float(d_limit))
         if self.debug:
             self.logger.debug(
-                "Attraction to %s: %s, at range of %s" % (forceVector, attractive_position, distanceVal))
-        return forceVector
+                "Attraction to %s: %s, at range of %s" % (force_vector, attractive_position, distance_val))
+        return force_vector
 
-    def avoidWall(self, position, velocity):
+    def avoid_wall(self, position, velocity):
         """
         Called by responseVector to avoid walls to a distance of half min distance
         :param position:
@@ -258,7 +258,7 @@ class Behaviour(object):
             # response = 0.5 * (position-avoiding_position)
             self.debug = True
             try:
-                response = self.repulseFromPosition(
+                response = self.repulse_from_position(
                     position, avoiding_position, 2 * min_dist)
             except RuntimeError:
                 raise RuntimeError(
@@ -280,11 +280,11 @@ class RandomWalk(Behaviour):
 
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
-        self.behaviours.append(self.randomWalk)
+        self.behaviours.append(self.random_walk)
         self.wallCheckDisabled = True
         self.my_random_direction = random_three_vector()
 
-    def randomWalk(self, position, velocity):
+    def random_walk(self, position, velocity):
         # Roughly 6 degrees or pi/32 rad
         """
 
@@ -304,11 +304,11 @@ class RandomFlatWalk(Behaviour):
 
     def __init__(self, *args, **kwargs):
         Behaviour.__init__(self, *args, **kwargs)
-        self.behaviours.append(self.randomWalk)
+        self.behaviours.append(self.random_walk)
         self.wallCheckDisabled = False
         self.my_direction = random_xy_vector()
 
-    def randomWalk(self, position, velocity):
+    def random_walk(self, position, velocity):
         # Roughly 6 degrees or pi/32 rad
         """
 
@@ -334,16 +334,16 @@ class RandomFlatCentredWalk(RandomFlatWalk):
         super(RandomFlatCentredWalk, self).__init__(*args, **kwargs)
         self.wallCheckDisabled = False
         self.original_position = self.node.get_pos()
-        self.behaviours.append(self.attractToOrigin)
+        self.behaviours.append(self.attract_to_origin)
 
-    def attractToOrigin(self, position, velocity):
+    def attract_to_origin(self, position, velocity):
         """
 
         :param position:
         :param velocity:
         :return:
         """
-        return np.asarray(self.attractToPosition(position, self.original_position)) * 0.01
+        return np.asarray(self.attract_to_position(position, self.original_position)) * 0.01
 
 
 class Nothing(Behaviour):
@@ -373,15 +373,15 @@ class Flock(Behaviour):
         self.collision_avoidance_d = listfix(
             float, self.bev_config['collision_avoidance_d'])
 
-        self.behaviours.append(self.clumpingVector)
-        self.behaviours.append(self.repulsiveVector)
-        self.behaviours.append(self.localHeading)
+        self.behaviours.append(self.clumping_vector)
+        self.behaviours.append(self.repulsive_vector)
+        self.behaviours.append(self.local_heading)
 
         assert self.n_nearest_neighbours > 0
         assert self.neighbourhood_max_rad > 0
         assert self.neighbour_min_rad > 0
 
-    def clumpingVector(self, position, velocity):
+    def clumping_vector(self, position, velocity):
         """
 
 
@@ -406,20 +406,20 @@ class Flock(Behaviour):
                     self.neighbourhood_com, vector, self.clumping_factor, len(self.nearest_neighbours)))
                 # Return the fudged, relative vector to the centre of the
                 # cluster
-            forceVector = self.attractToPosition(
+            force_vector = self.attract_to_position(
                 position, self.neighbourhood_com, self.collision_avoidance_d)
         except ZeroDivisionError:
             self.logger.error("Zero Division Error: Returning zero vector")
-            forceVector = position - position
+            force_vector = position - position
         except FloatingPointError:
             self.logger.error("FPE: vector=%s" % str(vector))
             raise
 
         if self.debug:
-            self.logger.debug("Clump:%s" % forceVector)
-        return self.normalize_behaviour(forceVector) * self.clumping_factor
+            self.logger.debug("Clump:%s" % force_vector)
+        return self.normalize_behaviour(force_vector) * self.clumping_factor
 
-    def repulsiveVector(self, position, velocity):
+    def repulsive_vector(self, position, velocity):
         """
 
 
@@ -428,23 +428,23 @@ class Flock(Behaviour):
         Represents the Short Range Repulsion behaviour:
             Steer away from it based on a repulsive desire curve
         """
-        forceVector = np.array([0, 0, 0], dtype=np.float)
+        force_vector = np.array([0, 0, 0], dtype=np.float)
         for neighbour in self.nearest_neighbours:
             if distance(position, neighbour.position) < self.collision_avoidance_d:
-                partVector = self.repulseFromPosition(
+                part_vector = self.repulse_from_position(
                     position, neighbour.position, self.collision_avoidance_d)
                 if self.debug:
                     self.logger.debug(
                         "Avoiding %s:%f:%s" % (
-                            neighbour.name, distance(position, neighbour.position), sixvec(partVector)))
-                forceVector += partVector
+                            neighbour.name, distance(position, neighbour.position), sixvec(part_vector)))
+                force_vector += part_vector
 
                 # Return an inverse vector to the obstacles
-        if self.debug and not mag(forceVector) > 0.0:
-            self.logger.debug("Repulse:%s" % forceVector)
-        return self.normalize_behaviour(forceVector) * self.repulsive_factor
+        if self.debug and not mag(force_vector) > 0.0:
+            self.logger.debug("Repulse:%s" % force_vector)
+        return self.normalize_behaviour(force_vector) * self.repulsive_factor
 
-    def localHeading(self, position, velocity):
+    def local_heading(self, position, velocity):
         """
         Represents Local Average Heading
         :param position:
@@ -454,14 +454,14 @@ class Flock(Behaviour):
         for neighbour in self.nearest_neighbours:
             vector += fudge_normal(unit(neighbour.velocity),
                                    max(abs(unit(neighbour.velocity))) / 3)
-        forceVector = (vector / (len(self.nearest_neighbours)))
+        force_vector = (vector / (len(self.nearest_neighbours)))
         if self.debug:
-            self.logger.debug("Schooling:%s" % forceVector)
+            self.logger.debug("Schooling:%s" % force_vector)
         if self.debug:
             self.logger.debug("V:%s,F:%s, %f" % (
-                unit(velocity), unit(forceVector), spherical_distance(unit(velocity), unit(forceVector))))
-        d = spherical_distance(unit(velocity), unit(forceVector))
-        return self.normalize_behaviour(forceVector) * self.schooling_factor
+                unit(velocity), unit(force_vector), spherical_distance(unit(velocity), unit(force_vector))))
+        d = spherical_distance(unit(velocity), unit(force_vector))
+        return self.normalize_behaviour(force_vector) * self.schooling_factor
 
     def _percieved_vector(self, node_id, time):
         """
@@ -483,15 +483,15 @@ class AlternativeFlockMixin(object):
     def __init__(self, *args, **kwargs):
         self.behaviours.remove(self.clumpingVector)
         self.behaviours.remove(self.repulsiveVector)
-        self.behaviours.append(self.potentialVector)
+        self.behaviours.append(self.potential_vector)
 
-    def potentialVector(self, position, velocity):
+    def potential_vector(self, position, velocity):
         """
         Computed singular collision/formation control vector instead of joint clumping/repulsive vectors
         :param position:
         :param velocity:
         """
-        forceVector = np.array([0, 0, 0], dtype=np.float)
+        force_vector = np.array([0, 0, 0], dtype=np.float)
         for neighbour in self.nearest_neighbours:
             d = distance(position, neighbour.position)
             v = unit(neighbour.position - position)  # Direction to go
@@ -499,12 +499,12 @@ class AlternativeFlockMixin(object):
                 v = -v
             # force to go
             f = np.log(d) + (self.collision_avoidance_d / float(d))
-            nforceVector = f * v
+            nforce_vector = f * v
             if self.debug:
                 self.logger.debug(
-                    "PotentialV: %s, for D:%s, F:%s, V:%s" % (nforceVector, d, f, v))
-            forceVector += nforceVector
-        return forceVector * self.clumping_factor
+                    "PotentialV: %s, for D:%s, F:%s, V:%s" % (nforce_vector, d, f, v))
+            force_vector += nforce_vector
+        return force_vector * self.clumping_factor
 
 
 class AlternativeFlock(Flock, AlternativeFlockMixin):
@@ -530,7 +530,7 @@ class WaypointMixin(object):
         self.nextwaypoint = None
         self.waypointloop = True
         self._nwpc = 0
-        self.behaviours.append(self.waypointVector)
+        self.behaviours.append(self.waypoint_vector)
 
     def activate(self, *args, **kwargs):
         """
@@ -549,7 +549,7 @@ class WaypointMixin(object):
                 self.logger.debug("Generating waypoints: %s" % g.__name__)
             g()
 
-    def patrolCube(self):
+    def patrol_cube(self):
         """
         Generates a cubic patrol loop within the environment
         """
@@ -563,7 +563,7 @@ class WaypointMixin(object):
             waypoint(shape * (((vertex - 0.5) / 3) + 0.5), prox) for vertex in cubedef]
         self.nextwaypoint = 0
 
-    def thereAndBackAgain(self):
+    def there_and_back_again(self):
         """
         Generates a linear patrol path, assumed to be from the centre of the environment, to an x-dimension face, and back to centre
         """
@@ -573,14 +573,14 @@ class WaypointMixin(object):
                           for vertex in np.asarray([[0.5, 0, 0.5], [0.5, 0.5, 0.5]])]
         self.nextwaypoint = 0
 
-    def waypointVector(self, position, velocity):
+    def waypoint_vector(self, position, velocity):
         """
 
         :param position:
         :param velocity:
         :return:
         """
-        forceVector = np.array([0, 0, 0], dtype=np.float)
+        force_vector = np.array([0, 0, 0], dtype=np.float)
         if self.nextwaypoint is not None:
             if isinstance(self, SoloWaypoint) or len(self.nearest_neighbours) == 0:
                 neighbourhood_avg = position
@@ -594,13 +594,13 @@ class WaypointMixin(object):
             if neighbourhood_d < target.prox or real_d < target.prox:
                 self.goto_next_waypoint(target.position, real_d)
             else:
-                forceVector = self.attractToPosition(
+                force_vector = self.attract_to_position(
                     position, target.position, target.prox / 2)
         else:
             if self.node.on_mission:
                 self.logger.info("No Waypoint")
 
-        return self.normalize_behaviour(forceVector) * self.waypoint_factor
+        return self.normalize_behaviour(force_vector) * self.waypoint_factor
 
     def goto_next_waypoint(self, position, real_d):
         # GRANT ACHIEVEMENT
@@ -707,7 +707,7 @@ class FleetLawnmower(Flock, WaypointMixin):
         """
         if self.debug:
             self.logger.debug("Generating waypoints: Lawnmower")
-        self.lawnmower(self.node.fleet.nodeCount(), overlap=30, twister=False)
+        self.lawnmower(self.node.fleet.node_count(), overlap=30, twister=False)
 
     def boresight(self, position, velocity):
 
@@ -717,17 +717,17 @@ class FleetLawnmower(Flock, WaypointMixin):
         :param velocity:
         :return:
         """
-        forceVector = np.array([0, 0, 0], dtype=np.float)
+        force_vector = np.array([0, 0, 0], dtype=np.float)
         # We only care about boresight tracking while we're in survey
-        careAboutBoresight = self.nextwaypoint is not None and self.node.on_mission
-        if careAboutBoresight:
+        careaboutboresight = self.nextwaypoint is not None and self.node.on_mission
+        if careaboutboresight:
             target = self.waypoints[self.nextwaypoint]
             angle = angle_between(target.position - position, velocity)
             if self.debug:
                 self.logger.info("Boresight:{}@{}".format(
                     np.rad2deg(angle), distance(target.position, position)))
-            forceVector = -velocity * np.pi * angle * self.waypoint_factor
-        return forceVector
+            force_vector = -velocity * np.pi * angle * self.waypoint_factor
+        return force_vector
 
     def tracked_avoidance(self, position, velocity):
         """
@@ -736,22 +736,22 @@ class FleetLawnmower(Flock, WaypointMixin):
         :param velocity:
         :return:
         """
-        forceVector = np.array([0, 0, 0], dtype=np.float)
+        force_vector = np.array([0, 0, 0], dtype=np.float)
         for neighbour in self.nearest_neighbours:
             if distance(position, neighbour.position) < self.collision_avoidance_d:
-                partVector = self.repulseFromPosition(
+                part_vector = self.repulse_from_position(
                     position, neighbour.position, self.collision_avoidance_d)
-                partVector = unit(-velocity) * mag(partVector)
+                part_vector = unit(-velocity) * mag(part_vector)
                 if self.debug:
                     self.logger.debug(
                         "Avoiding %s:%f:%s" % (
-                            neighbour.name, distance(position, neighbour.position), sixvec(partVector)))
-                forceVector += partVector
+                            neighbour.name, distance(position, neighbour.position), sixvec(part_vector)))
+                force_vector += part_vector
 
                 # Return an inverse vector to the obstacles
-        if self.debug and not mag(forceVector) > 0.0:
-            self.logger.debug("Repulse:%s" % forceVector)
-        return self.normalize_behaviour(forceVector) * self.repulsive_factor
+        if self.debug and not mag(force_vector) > 0.0:
+            self.logger.debug("Repulse:%s" % force_vector)
+        return self.normalize_behaviour(force_vector) * self.repulsive_factor
 
     @staticmethod
     def per_node_lawnmower(environment, swath, base_axis=0, altitude=None):
@@ -922,22 +922,22 @@ class Tail(Flock):
 
     def __init__(self, *args, **kwargs):
         Flock.__init__(self, *args, **kwargs)
-        self.behaviours.append(self.tailVector)
+        self.behaviours.append(self.tail_vector)
 
-    def tailVector(self, position, velocity):
+    def tail_vector(self, position, velocity):
         """
 
         :param position:
         :param velocity:
         :return:
         """
-        clumpingVector = self.clumpingVector(position, velocity)
-        localheadingVector = self.localHeading(position, velocity)
-        forceVector = np.array([0, 0, 0], dtype=np.float)
-        forceVector = -(clumpingVector + localheadingVector)
+        clumping_vector = self.clumping_vector(position, velocity)
+        local_heading_vector = self.local_heading(position, velocity)
+        force_vector = np.array([0, 0, 0], dtype=np.float)
+        force_vector = -(clumping_vector + local_heading_vector)
         if self.debug:
-            self.logger.debug("Tail:%s" % forceVector)
-        return self.normalize_behaviour(forceVector) * self.clumping_factor
+            self.logger.debug("Tail:%s" % force_vector)
+        return self.normalize_behaviour(force_vector) * self.clumping_factor
 
 
 class SlowCoach(Flock):
@@ -949,20 +949,20 @@ class SlowCoach(Flock):
 
     def __init__(self, *args, **kwargs):
         Flock.__init__(self, *args, **kwargs)
-        self.behaviours.append(self.slowcoachVector)
+        self.behaviours.append(self.slowcoach_vector)
 
-    def slowcoachVector(self, position, velocity):
+    def slowcoach_vector(self, position, velocity):
         """
 
         :param position:
         :param velocity:
         :return:
         """
-        forceVector = np.array([0, 0, 0], dtype=np.float)
-        forceVector = -velocity
+        force_vector = np.array([0, 0, 0], dtype=np.float)
+        force_vector = -velocity
         if self.debug:
-            self.logger.debug("SlowCoach:%s" % forceVector)
-        return self.normalize_behaviour(forceVector) * self.clumping_factor
+            self.logger.debug("SlowCoach:%s" % force_vector)
+        return self.normalize_behaviour(force_vector) * self.clumping_factor
 
 ####
 # Malicious Class Aliases because I'm Lazy

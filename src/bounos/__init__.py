@@ -46,9 +46,9 @@ from matplotlib.ticker import FuncFormatter
 
 plot_alpha = 0.9
 
-_metrics = [Metrics.Deviation_Of_Heading,
-            Metrics.PerNode_Speed,
-            Metrics.PerNode_Internode_Distance_Avg]
+_metrics = [Metrics.DeviationOfHeading,
+            Metrics.PernodeSpeed,
+            Metrics.PernodeInternodeDistanceAvg]
 
 
 class BounosModel(DataPackage):
@@ -338,9 +338,9 @@ def main():
     args = custom_parser().parse_args()
 
     if args.xkcd:
-        from XKCDify import XKCDify
+        from xkcdify import xkcdify
     else:
-        XKCDify = None
+        xkcdify = None
 
     if args.multirun:
         multirun(args)
@@ -410,7 +410,7 @@ def plot_detections(ax, metric, orig_data,
         pass
 
     if good_behaviour:
-        for bev, nodelist in orig_data.getBehaviourDict().iteritems():
+        for bev, nodelist in orig_data.get_behaviour_dict().iteritems():
             if str(good_behaviour) != str(bev):  # Bloody String Comparison...
                 print("Adding %s to nodelist because \"%s\" is not \"%s\""
                       % (nodelist, bev, good_behaviour))
@@ -452,7 +452,7 @@ def detect_and_identify(d):
     :param d:
     :return:
     """
-    per_metric_deviations, deviation_windowed = Analyses.Behaviour.Combined_Detection_Rank(d,
+    per_metric_deviations, deviation_windowed = Analyses.Behaviour.combined_detection_rank(d,
                                                                                            _metrics,
                                                                                            stddev_frac=2)
     trust_values = Analyses.Trust.dev_to_trust(per_metric_deviations)
@@ -561,8 +561,8 @@ def run_detection_fusion(data, args=None):
             else:
                 [l.set_visible(False) for l in ax.get_xticklabels()]
 
-            if 'XKCDify' in sys.modules:
-                ax = sys.modules.get("XKCDify")(ax)
+            if 'xkcdify' in sys.modules:
+                ax = sys.modules.get("xkcdify")(ax)
             axes[i][j] = ax
         j = len(_metrics)
         ax = fig.add_subplot(gs[j, i],
@@ -858,8 +858,8 @@ def global_adjust(figure, axes, scale=2):
         for ax in axe:
             if 'args' in locals():
                 ax.set_ylabel(ax.get_ylabel(), size=args.font_size)
-            if 'XKCDify' in sys.modules:
-                ax = sys.modules.get("XKCDify")(ax)
+            if 'xkcdify' in sys.modules:
+                ax = sys.modules.get("xkcdify")(ax)
             ax.yaxis.set_major_formatter(FuncFormatter(math_formatter))
 
     figure.set_size_inches(figure.get_size_inches() * scale)
@@ -867,13 +867,13 @@ def global_adjust(figure, axes, scale=2):
         left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
 
 
-def printAnalysis(d):
+def print_analysis(d):
     """
 
     :param d:
     :return:
     """
-    deviation, trust = Analyses.Behaviour.Combined_Detection_Rank(
+    deviation, trust = Analyses.Behaviour.combined_detection_rank(
         d, _metrics, stddev_frac=2)
     result_dict = Analyses.Behaviour.behaviour_identification(
         deviation, trust, _metrics, names=d.names)

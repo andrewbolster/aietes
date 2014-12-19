@@ -215,7 +215,7 @@ class VisualNavigator(wx.Panel):
         self.plot_axes.set_zlabel('Z')
 
         # Initialise 3D Plot Lines
-        (xs, ys, zs) = self.ctl.get_3D_trail()
+        (xs, ys, zs) = self.ctl.get_3d_trail()
         self.names = self.ctl.get_vector_names()
         self.log.info("Got %s" % str(xs.shape))
 
@@ -287,7 +287,7 @@ class VisualNavigator(wx.Panel):
         # MAIN PLOT AREA
         ###
         for n, (line, label) in enumerate(zip(self.lines, self.labels)):
-            (xs, ys, zs) = self.ctl.get_3D_trail(
+            (xs, ys, zs) = self.ctl.get_3d_trail(
                 node=n, time_start=self.t, length=self.trail_length)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
@@ -352,7 +352,7 @@ class VisualNavigator(wx.Panel):
 
         wx.CallAfter(self.canvas.draw)
 
-    def move_T(self, delta_t=None):
+    def move_t(self, delta_t=None):
         """ Seek the visual plot by delta_t while doing bounds checking and redraw
 
         :param delta_t:
@@ -755,7 +755,7 @@ class VisualNavigator(wx.Panel):
         """
         if not self.paused:
             if self._plot_initialised:
-                self.move_T()
+                self.move_t()
             elif self.ctl.model_is_ready():
                 self.initialise_3d_plot()
             else:
@@ -786,7 +786,7 @@ class DriftingNavigator(VisualNavigator):
         """
         VisualNavigator.initialise_3d_plot(self)
         # Get Drift Plot info
-        (xs, ys, zs) = self.ctl.get_3D_drift()
+        (xs, ys, zs) = self.ctl.get_3d_drift()
         self.drift_lines = [
             self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
@@ -800,7 +800,7 @@ class DriftingNavigator(VisualNavigator):
         """
         VisualNavigator.redraw_page(self, t=t)
         for n, (line, label) in enumerate(zip(self.drift_lines, self.labels)):
-            (xs, ys, zs) = self.ctl.get_3D_drift(
+            (xs, ys, zs) = self.ctl.get_3d_drift(
                 node=n, time_start=self.t, length=self.trail_length)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
@@ -827,7 +827,7 @@ class ECEANavigator(DriftingNavigator):
         """
         DriftingNavigator.initialise_3d_plot(self)
         # Get Drift Plot info
-        (xs, ys, zs) = self.ctl.get_3D_drift(source=self.source)
+        (xs, ys, zs) = self.ctl.get_3d_drift(source=self.source)
         self.intent_lines = [
             self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
@@ -841,7 +841,7 @@ class ECEANavigator(DriftingNavigator):
         """
         DriftingNavigator.redraw_page(self, t=t)
         for n, (line, label) in enumerate(zip(self.intent_lines, self.labels)):
-            (xs, ys, zs) = self.ctl.get_3D_drift(
+            (xs, ys, zs) = self.ctl.get_3d_drift(
                 node=n, time_start=self.t, length=self.trail_length, source=self.source)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)

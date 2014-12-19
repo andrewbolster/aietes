@@ -37,11 +37,11 @@ class ChartBuilders(unittest.TestCase):
         """
         # Make up a datapackage and hope for the best
         sim = aietes.Simulation(title=self.__class__.__name__,
-                                config_file=aietes.Tools.getConfigFile('bella_static.conf'),
+                                config_file=aietes.Tools.get_config_file('bella_static.conf'),
                                 progress_display=False)
         sim.prepare(sim_time=1000)
         sim.simulate()
-        self.dp=sim.generateDataPackage()
+        self.dp = sim.generate_datapackage()
 
 
     def test_lost_packet_distribution(self):

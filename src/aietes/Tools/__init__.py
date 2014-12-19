@@ -33,11 +33,11 @@ import pickle
 import cPickle
 import collections
 import weakref
-import notify2
 from tempfile import mkdtemp
 from shelve import DbfilenameShelf
 from ast import literal_eval
 
+import notify2
 import numpy as np
 from configobj import ConfigObj
 import validate
@@ -46,6 +46,7 @@ from joblib import Memory
 from colorlog import ColoredFormatter
 
 from aietes.Tools.humanize_time import seconds_to_str
+
 
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
@@ -321,7 +322,7 @@ def add_ndarray_to_set(ndarray, list):
 #
 
 
-def recordsCheck(pos_log):
+def records_check(pos_log):
     """
 
     :param pos_log:
@@ -331,16 +332,16 @@ def recordsCheck(pos_log):
             superentry.time == 0]
 
 
-def namedLog(pos_log):
+def named_log(pos_log):
     """
 
     :param pos_log:
     :return:
     """
-    return [objectLog(pos_log, object_id) for object_id in nodeIDs(pos_log)]
+    return [object_log(pos_log, object_id) for object_id in node_ids(pos_log)]
 
 
-def nodeIDs(pos_log):
+def node_ids(pos_log):
     """
 
     :param pos_log:
@@ -349,7 +350,7 @@ def nodeIDs(pos_log):
     return (entry.object_id for entry in pos_log)
 
 
-def objectLog(pos_log, object_id):
+def object_log(pos_log, object_id):
     """
 
     :param pos_log:
@@ -359,58 +360,23 @@ def objectLog(pos_log, object_id):
     return [(entry.time, entry.position) for entry in pos_log if entry.object_id == object_id]
 
 
-#
-# Propagation functions
-#
 
-
-def Attenuation(f, d):
-    """Attenuation(P0,f,d)
-
-    Calculates the acoustic signal path loss
-    as a function of frequency & distance
-
-    f - Frequency in kHz
-    d - Distance in m
-
-    SHOULD RETURN DB
-    :param f:
-    :param d:
+def db2linear(db):
     """
 
-    f2 = f ** 2
-    # Practical Spreading, see
-    # http://www.mit.edu/~millitsa/resources/pdfs/bwdx.pdf
-    k = 1.5
-    DistanceInKm = d / 1000.0
-
-    # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on
-    # the frequency
-    if f > 1:
-        absorption_coeff = 0.11 * \
-                           (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
-    else:
-        absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
-
-    return k * Linear2DB(d) + DistanceInKm * absorption_coeff
-
-
-def DB2Linear(dB):
-    """
-
-    :param dB:
+    :param db:
     :return:
     """
-    return 10.0 ** (dB / 10.0)
+    return 10.0 ** (db / 10.0)
 
 
-def Linear2DB(Linear):
+def linear2db(linear):
     """
 
-    :param Linear:
+    :param linear:
     :return:
     """
-    return 10.0 * math.log10(Linear + 0.0)
+    return 10.0 * math.log10(linear + 0.0)
 
 
 #
@@ -418,7 +384,7 @@ def Linear2DB(Linear):
 #
 
 
-class dotdictify(dict):
+class Dotdictify(dict):
     """
 
     :param value:
@@ -428,7 +394,7 @@ class dotdictify(dict):
     marker = object()
 
     def __init__(self, value=None, **kwargs):
-        super(dotdictify, self).__init__(**kwargs)
+        super(Dotdictify, self).__init__(**kwargs)
         if value is None:
             pass
         elif isinstance(value, dict):
@@ -438,8 +404,8 @@ class dotdictify(dict):
             raise TypeError, "expected dict, got {}"
 
     def __setitem__(self, key, value):
-        if isinstance(value, dict) and not isinstance(value, dotdictify):
-            value = dotdictify(value)
+        if isinstance(value, dict) and not isinstance(value, Dotdictify):
+            value = Dotdictify(value)
         try:
             dict.__setitem__(self, key, value)
         except TypeError:
@@ -448,14 +414,14 @@ class dotdictify(dict):
             raise
 
     def __getitem__(self, key):
-        found = self.get(key, dotdictify.marker)
-        if found is dotdictify.marker:
+        found = self.get(key, Dotdictify.marker)
+        if found is Dotdictify.marker:
             raise AttributeError("Key {} not found".format(key))
 
         return found
 
     def __copy__(self):
-        newone = dotdictify()
+        newone = Dotdictify()
         newone.__dict__.update(dict(self.__dict__))
         return newone
 
@@ -477,7 +443,7 @@ class dotdictify(dict):
             try:
                 if isinstance(self[k], np.ndarray) and not np.allclose(self[k], other[k]):
                     return False
-                elif isinstance(self[k], dotdictify) and not self[k] == other[k]:
+                elif isinstance(self[k], Dotdictify) and not self[k] == other[k]:
                     return False
                 else:
                     if not self[k] == other[k]:
@@ -493,7 +459,7 @@ class dotdictify(dict):
     __getattr__ = __getitem__
 
 
-class dotdict(dict):
+class Dotdict(dict):
     """
 
     :param arg:
@@ -501,10 +467,10 @@ class dotdict(dict):
     """
 
     def __init__(self, arg, **kwargs):
-        super(dotdict, self).__init__(**kwargs)
+        super(Dotdict, self).__init__(**kwargs)
         for k in arg.keys():
             if type(arg[k]) is dict:
-                self[k] = dotdict(arg[k])
+                self[k] = Dotdict(arg[k])
             else:
                 self[k] = arg[k]
 
@@ -518,7 +484,7 @@ class dotdict(dict):
         return self.keys(), dir(dict(self))
 
 
-class memory_entry(object):
+class MemoryEntry(object):
     """
 
     :param object_id:
@@ -539,7 +505,7 @@ class memory_entry(object):
         return "%s:%s:%s" % (self.name, self.position, self.distance)
 
 
-class map_entry(object):
+class MapEntry(object):
     """
 
     :param object_id:
@@ -632,7 +598,7 @@ def randomstr(length):
     return word
 
 
-def nameGeneration(count, naming_convention=None, existing_names=None):
+def generate_names(count, naming_convention=None, existing_names=None):
     """
 
     :param count:
@@ -781,7 +747,7 @@ class KeepRefs(object):
                 yield inst
 
 
-def updateDict(d, keys, value, safe=False):
+def update_dict(d, keys, value, safe=False):
     """
 
     :param d:
@@ -824,7 +790,7 @@ def kwarger(**kwargs):
     return kwargs
 
 
-def unCpickle(filename):
+def uncpickle(filename):
     """
 
     :param filename:
@@ -835,7 +801,7 @@ def unCpickle(filename):
     return data
 
 
-def mkCpickle(filename, thing):
+def mkcpickle(filename, thing):
     """
 
     :param filename:
@@ -866,7 +832,7 @@ def mkpickle(filename, thing):
     :return:
     """
     with open(filename, 'wb') as f:
-        data = pickle.dump(thing, f)
+        pickle.dump(thing, f)
     return f
 
 
@@ -900,7 +866,7 @@ def results_file(proposed_name, results_dir=None):
     return proposed_name
 
 
-def getConfigFile(config):
+def get_config_file(config):
     """
     Return the full path to a config of a given filename if its in the default config path
     :param config:
@@ -909,13 +875,14 @@ def getConfigFile(config):
     # If file is defined but not a file then something is wrong
     config = os.path.abspath(os.path.join(_config_dir, config))
     if not os.path.isfile(config):
-        raise OSError(errno.ENOENT,"Given Source File {} is not present in {}".format(
+        raise OSError(errno.ENOENT, "Given Source File {} is not present in {}".format(
             config, _config_dir
-        ),config)
+        ), config)
 
     return config
 
-def getConfig(source_config=None, config_spec=_config_spec):
+
+def get_config(source_config=None, config_spec=_config_spec):
     """
     Get a configuration, either using default values from aietes.configs or
         by taking a configobj compatible file path
@@ -924,7 +891,7 @@ def getConfig(source_config=None, config_spec=_config_spec):
     """
 
     if source_config and not os.path.isfile(source_config):
-        source_config_file = getConfigFile(source_config)
+        source_config_file = get_config_file(source_config)
     else:
         source_config_file = source_config
     config = ConfigObj(source_config_file,
@@ -940,7 +907,7 @@ def getConfig(source_config=None, config_spec=_config_spec):
     return config
 
 
-def validateConfig(config=None, final_check=False):
+def validate_config(config=None, final_check=False):
     """
     Generate valid confobj configuration information by interpolating a given config
     file with the defaults
@@ -1111,7 +1078,7 @@ _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
           'KB': 1024.0, 'MB': 1024.0 * 1024.0}
 
 
-def _VmB(VmKey):
+def _vmb(vmkey):
     """Private.
     """
     global _proc_status, _scale
@@ -1122,8 +1089,8 @@ def _VmB(VmKey):
         t.close()
     except:
         return 0.0  # non-Linux?
-        # get VmKey line e.g. 'VmRSS:  9999  kB\n ...'
-    i = v.index(VmKey)
+        # get vmkey line e.g. 'VmRSS:  9999  kB\n ...'
+    i = v.index(vmkey)
     v = v[i:].split(None, 3)  # whitespace
     if len(v) < 3:
         return 0.0  # invalid format?
@@ -1135,28 +1102,28 @@ def memory(since=0.0):
     """Return memory usage in Megabytes.
     :param since:
     """
-    return _VmB('VmSize:') - since
+    return _vmb('VmSize:') - since
 
 
 def swapsize(since=0.0):
     """Return memory usage in Megabytes.
     :param since:
     """
-    return _VmB('VmSwap:') - since
+    return _vmb('VmSwap:') - since
 
 
 def resident(since=0.0):
     """Return resident memory usage in Megabytes.
     :param since:
     """
-    return _VmB('VmRSS:') - since
+    return _vmb('VmRSS:') - since
 
 
 def stacksize(since=0.0):
     """Return stack size in Megabytes.
     :param since:
     """
-    return _VmB('VmStk:') - since
+    return _vmb('VmStk:') - since
 
 
 def literal_eval_walk(node, tabs=0):

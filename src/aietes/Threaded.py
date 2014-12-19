@@ -49,14 +49,14 @@ def sim_mask(args):
             logging.info("{} starting {}".format(current_process(), sim.title))
             prep_stats = sim.prepare(sim_time=sim_time)
             sim_time = sim.simulate()
-            return_dict = sim.postProcess(**pp_defaults)
+            return_dict = sim.postprocess(**pp_defaults)
             if retain_data is True:  # Implicitly implies boolean datatype
-                return_val = sim.generateDataPackage()
+                return_val = sim.generate_datapackage()
             elif retain_data == "additional_only":
-                dp = sim.generateDataPackage()
+                dp = sim.generate_datapackage()
                 return_val = dp.additional.copy()
             elif retain_data == "file":
-                return_val = sim.generateDataPackage().write(
+                return_val = sim.generate_datapackage().write(
                     kwargs.get("title"))
             else:
                 return_val = return_dict

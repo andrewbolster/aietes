@@ -9,7 +9,7 @@ from polybos import ExperimentManager as EXP
 def set_exp():
     e = EXP(node_count=8,
             title="Waypointing Test")
-    e.addVariable2RangeScenarios({"waypointing": numpy.linspace(0.0, 0.3, 20),
+    e.add_variable_2_range_scenarios({"waypointing": numpy.linspace(0.0, 0.3, 20),
                                   "clumping": numpy.linspace(0.0, 0.3, 20)})
     return e
 
@@ -25,4 +25,4 @@ def run_exp(e):
 if __name__ == "__main__":
     exp = set_exp()
     exp = run_exp(exp)
-    EXP.printStats(exp)
+    EXP.print_stats(exp)

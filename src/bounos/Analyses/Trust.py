@@ -141,7 +141,7 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
     tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var', 'run', 'observer', 't', 'target'])
     tf.index = tf.index.set_levels([
         tf.index.levels[0].astype(np.float64),  # Var
-        tf.index.levels[1].astype(np.int32),  #Run
+        tf.index.levels[1].astype(np.int32),  # Run
         tf.index.levels[2],  #Observer
         tf.index.levels[3].astype(np.int32),  # T (should really be a time)
         tf.index.levels[4]  #Target
@@ -150,7 +150,7 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
 
     # The following:
     # Transforms the target id into the column space,
-    #   Groups each nodes independent observations together
+    # Groups each nodes independent observations together
     #   Fills in the gaps IN EACH ASSESSMENT with the previous assessment of that node by that node at the previous time
     if fillna:
         tf = tf.unstack('target').groupby(level=['var', 'run', 'observer']).apply(lambda x: x.fillna(method='ffill'))
@@ -272,16 +272,16 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
 
     network_list = [observer] + recommendation_nodes + indirect_nodes
 
-    T_avg = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].mean(axis=1)
-    T_network = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].applymap(t_whitenized).mean(axis=1)
-    T_direct = trust_run.xs('n0', level='observer')['n1'].apply(t_direct)
-    T_recommend = trust_run.unstack('observer').xs(target, level='target', axis=1)[recommendation_nodes].applymap(t_recommend).mean(axis=1)
-    T_indirect = trust_run.unstack('observer').xs(target, level='target', axis=1)[indirect_nodes].applymap(t_indirect).mean(axis=1)
+    t_avg = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].mean(axis=1)
+    t_network = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].applymap(t_whitenized).mean(axis=1)
+    t_direct = trust_run.xs('n0', level='observer')['n1'].apply(t_direct)
+    t_recommend = trust_run.unstack('observer').xs(target, level='target', axis=1)[recommendation_nodes].applymap(t_recommend).mean(axis=1)
+    t_indirect = trust_run.unstack('observer').xs(target, level='target', axis=1)[indirect_nodes].applymap(t_indirect).mean(axis=1)
 
-    T_total = pd.DataFrame.from_dict({
-        'Direct': T_direct,
-        'Recommend': T_recommend,
-        'Indirect': T_indirect
+    t_total = pd.DataFrame.from_dict({
+        'Direct': t_direct,
+        'Recommend': t_recommend,
+        'Indirect': t_indirect
     })
 
     # The driving philosophy of the following apparrant mess is that explicit is better that implicit;
@@ -293,9 +293,9 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
         ("t13", trust_run.xs('n3', level='observer')[target]),
         ("t14", trust_run.xs('n4', level='observer')[target]),
         ("t15", trust_run.xs('n5', level='observer')[target]),
-        ("t1-route_net", T_total.sum(axis=1)),  # Eq 4.7 guo; Takes relationships into account
-        ("t1-white_net", pd.Series(T_network)),  # Eq 4.8 guo: Blind Whitenised Trust
-        ("t1-avg", pd.Series(T_avg))  # Simple Average
+        ("t1-route_net", t_total.sum(axis=1)),  # Eq 4.7 guo; Takes relationships into account
+        ("t1-white_net", pd.Series(t_network)),  # Eq 4.8 guo: Blind Whitenised Trust
+        ("t1-avg", pd.Series(t_avg))  # Simple Average
     )))
     assert any(_d > 1), "All Resultantant Trust Values should be less than 1"
     assert any(0 > _d), "All Resultantant Trust Values should be greater than 0"
