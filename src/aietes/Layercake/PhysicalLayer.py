@@ -23,6 +23,7 @@
 # along with AUVNetSim.  If not, see <http://www.gnu.org/licenses/>.
 #
 ###########################################################################
+from __future__ import division
 import math
 from copy import deepcopy
 
@@ -532,20 +533,26 @@ def attenuation(f, d):
     :param d:
     """
 
-    f2 = f ** 2
-    k = 1.5
+    k = 1.5 # "Practical Spreading" Stojanovic 08
     distanceinkm = d / 1000
 
+    return k * linear2db(d) + distanceinkm * thorpe(f,d)
+
+def thorpe(f,heel=0):
+
     # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on
-    # the frequency
-    if f > 1:
+    # the frequency (kHz)
+    # From : "On the relationship between capacity and distance in an uncerwater acoustic communications channel: Stojanovic
+    # Using the heel creates a discontinuous graph. From the text:"
+    #       [the first] formula is generally valid for frequencies abovce a few hundred Hz
+
+    f2 = f ** 2
+    if f > heel:
         absorption_coeff = 0.11 * \
                            (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
     else:
         absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
-
-    return k * linear2db(d) + distanceinkm * absorption_coeff
-
+    return absorption_coeff
 
 def channel_noise(f):
     """Noise(f)

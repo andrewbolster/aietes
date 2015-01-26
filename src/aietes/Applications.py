@@ -469,7 +469,12 @@ class CommsTrust(RoutingTest):
 
         if throughput:
             try:
-                s = pd.concat(nodepktstats,axis=1).mean(axis=1)
+                # Bring individual observations into a frame
+                df = pd.concat(nodepktstats,axis=1)
+                s = df.mean(axis=1)
+                # Prepend the keys with "A" to denote average values
+                s.index = ["A"+k for k in s.keys()]
+                # Append the Throughput to the series and return
                 s['RXThroughput']=throughput
                 return s
             except:
@@ -482,7 +487,7 @@ class CommsTrust(RoutingTest):
 
     def tick(self):
         """
-
+        Processing performed periodically depending on the
 
         """
         if not Sim.now() % self.trust_assessment_period:

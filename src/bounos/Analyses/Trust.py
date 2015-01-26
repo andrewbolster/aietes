@@ -70,7 +70,15 @@ def weight_calculator(metric_index, ignore=None):
     return bin_weight / float(np.sum(bin_weight))
 
 
-def generate_single_run_trust_perspective(gf, metric_weights=None, flip_metrics=None, rho=0.5):
+def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_metrics=None, rho=0.5):
+    """
+    Generate an individual observer perspective i.e per node record
+    :param gf:
+    :param metric_weights:
+    :param flip_metrics:
+    :param rho:
+    :return:
+    """
     trusts = []
     for ki, gi in gf.groupby(level='t'):
         gmx = gi.max()
@@ -129,13 +137,13 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
     exec_args = {'metric_weights': metric_weights, 'flip_metrics': flip_metrics, 'rho': rho}
 
     if par:
-        trusts = Parallel(n_jobs=-1)(delayed(generate_single_run_trust_perspective)
+        trusts = Parallel(n_jobs=-1)(delayed(generate_single_observer_trust_perspective)
                                      (g, **exec_args) for k, g in tf.dropna().groupby(level=['var', 'run', 'observer'])
         )
         trusts = [item for sublist in trusts for item in sublist]
     else:
         for k, g in tf.dropna().groupby(level=['var', 'run', 'observer']):
-            trusts.extend(generate_single_run_trust_perspective(g, **exec_args))
+            trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
 
     tf = pd.concat(trusts)
     tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var', 'run', 'observer', 't', 'target'])
@@ -207,16 +215,12 @@ def generate_trust_logs_from_comms_logs(comms_logs):
     """
     obs = {}
     trust = {node: log['trust'] for node, log in comms_logs.items()}
-    for i_node, i_t in trust.items():
-        # first pass to invert the observations
-        if not obs.has_key(i_node):
-            obs[i_node] = []
-        for j_node, j_t in i_t.items():
-            for o, observation in enumerate(j_t):
-                while len(obs[i_node]) <= o:
-                    obs[i_node].append({})
-                obs[i_node][o][j_node] = observation
-    return obs
+
+    return pd.concat(
+        [pd.concat(
+            [pd.DataFrame(target_metrics) for target_metrics in observer_metrics.itervalues()],
+            keys=observer_metrics.keys())for observer_metrics in trust.itervalues()],
+        keys=trust.keys(), names=['observer','target', 't'])
 
 
 def explode_metrics_from_trust_log(df, metrics_string=None):
