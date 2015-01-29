@@ -133,6 +133,7 @@ def generate_dataframes_from_inverted_log(tup):
         # Fixes for storage and sanity
         if k == 'stats':
             df.drop(['total_counts', u'sent_counts', 'received_counts'], axis=1, inplace=True)
+
         if k == 'trust':
             df = Trust.explode_metrics_from_trust_log(df)
 

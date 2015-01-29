@@ -24,6 +24,7 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
+from collections import OrderedDict
 
 import bounos
 
@@ -311,7 +312,7 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
     return f
 
 
-def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=(16, 13)):
+def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=None, hide_annotations=False):
     """
 
     :param stats:
@@ -321,26 +322,28 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=(
     :return:
     """
     f, ax = plt.subplots(1, 1, figsize=figsize)
-    grp = stats.groupby(level='var')[['collisions', 'tx_counts', 'rx_counts', 'enqueued']].mean()
+    grp = stats.groupby(level='var')[['collisions', 'rx_counts', 'enqueued']].mean()
     grp.index = grp.index.astype(np.float64)
     grp.plot(ax=ax,
              secondary_y=['collisions'],  # subplots=True,
              grid='on',
              title="Performance Comparison of Varying {},{} \n(general counts on left, collision counts on right)".format(var, (':' + title if title is not None else ""))
     )
-    maxes = stats.groupby(level='var')['rx_counts'].max()
-    maxes.index = maxes.index.astype(np.float64)
-    differential = maxes.diff()
-    diffmax = differential.argmax()
-    maxmax = maxes.argmax()
-    ax.axvline(diffmax, alpha=0.2, linestyle=':')
-    ax.text(diffmax, maxes.mean() / 2, 'd(RX) Heel @ {:.4f}'.format(diffmax), rotation=90)
-    ax.axvline(maxmax, alpha=0.2, linestyle=':')
-    ax.text(maxmax, maxes.mean() / 2, 'RX Max @ {:.4f}'.format(maxmax), rotation=90)
+    ax.set_xlabel(var)
+    if not hide_annotations:
+        maxes = stats.groupby(level='var')['rx_counts'].max()
+        maxes.index = maxes.index.astype(np.float64)
+        differential = maxes.diff()
+        diffmax = differential.argmax()
+        maxmax = maxes.argmax()
+        ax.axvline(diffmax, alpha=0.2, linestyle=':')
+        ax.text(diffmax, maxes.mean() / 2, 'd(RX) Heel @ {:.4f}'.format(diffmax), rotation=90)
+        ax.axvline(maxmax, alpha=0.2, linestyle=':')
+        ax.text(maxmax, maxes.mean() / 2, 'RX Max @ {:.4f}'.format(maxmax), rotation=90)
     return f
 
 
-def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize=(16, 13)):
+def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize=None):
     """
 
     :param stats:
@@ -608,7 +611,7 @@ def plot_positions(d, bounds=None):
 
     area = area_of_centroid(my_d)
     avg_dist = avg_range(my_d)
-    f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(avg_dist, area), fontsize=18)
+    f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(np.around(avg_dist), np.around(area)), fontsize=18)
     ax1.set_title("X-Y (Top)")
     ax1.set_aspect('equal', adjustable='datalim')
     ax2.set_title("Y-Z (Side)")
@@ -617,6 +620,104 @@ def plot_positions(d, bounds=None):
     ax3.set_aspect('equal', adjustable='datalim')
 
     return f
+
+#####
+##  LATEXIFY from http://nipunbatra.github.io/2014/08/latexify/
+## Extended based on http://damon-is-a-geek.com/publication-ready-the-first-time-beautiful-reproducible-plots-with-matplotlib.html
+#####
+
+def latexify(fig_width=347, fig_height=None, columns=1, factor=0.45):
+    """Set up matplotlib's RC params for LaTeX plotting.
+    Call this before plotting a figure.
+
+    Parameters
+    ----------
+    fig_width : float, optional, pts
+    fig_height : float,  optional, pts
+    columns : {1, 2}
+    """
+
+    # code adapted from http://www.scipy.org/Cookbook/Matplotlib/LaTeX_Examples
+
+    # Width and max height in inches for IEEE journals taken from
+    # computer.org/cms/Computer.org/Journal%20templates/transactions_art_guide.pdf
+
+    assert(columns in [1,2])
+
+    inches_per_pt = 1.0 / 72.27
+
+    fig_width_in = fig_width * inches_per_pt * factor
+
+    if fig_height is None:
+        golden_mean = (np.sqrt(5)-1.0)/2.0    # Aesthetic ratio
+        fig_height_in = fig_width_in * golden_mean
+
+    MAX_HEIGHT_INCHES = 8.0
+    if fig_height_in > MAX_HEIGHT_INCHES:
+        print("WARNING: fig_height too large:" + fig_height_in +
+              "so will reduce to" + MAX_HEIGHT_INCHES + "inches.")
+        fig_height = MAX_HEIGHT_INCHES
+
+    params = {'backend': 'ps',
+              'text.latex.preamble': ['\usepackage{gensymb}'],
+              'axes.labelsize': 8, # fontsize for x and y labels (was 10)
+              'axes.titlesize': 8,
+              'font.size': 10, # was 10/8
+              'legend.fontsize': 8, # was 10
+              'xtick.labelsize': 8,
+              'ytick.labelsize': 8,
+              'text.usetex': True,
+              'figure.figsize': [fig_width_in,fig_height_in],
+              'font.family': 'serif'
+    }
+
+    mpl.rcParams.update(params)
+
+
+def format_axes(ax, spine_color = 'gray'):
+
+    for spine in ['top', 'right']:
+        ax.spines[spine].set_visible(False)
+
+    for spine in ['left', 'bottom']:
+        ax.spines[spine].set_color(spine_color)
+        ax.spines[spine].set_linewidth(0.5)
+
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+
+    for axis in [ax.xaxis, ax.yaxis]:
+        axis.set_tick_params(direction='out', color=spine_color)
+
+    return ax
+
+def plot_nodes(node_positions, node_links = None, radius=1.0, scalefree=False):
+    fig, ax = plt.subplots()
+    nodes = []
+    node_positions = OrderedDict(sorted(node_positions.items()))
+    for node, position in node_positions.items():
+        x,y,z = position
+        ax.scatter(x,y)
+        ax.annotate(node, xy=(x, y), xytext=(-10, 5), textcoords='offset points', ha='center', va='bottom')
+        ax.add_patch(plt.Circle((x,y),radius=radius,edgecolor='b', fill=False, alpha=0.2))
+
+    if node_links:
+        for node, links in node_links.items():
+            for link in links:
+                x,y = zip(node_positions.values()[node][0:2], node_positions.values()[link][0:2])
+                ax.plot(x,y, color='k', lw=1, alpha=0.4, linestyle='--')
+
+
+
+
+    ax.set_aspect('equal', adjustable='datalim')
+
+    if scalefree:
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax=format_axes(ax)
+
+    return fig
 
 
 def area_of_centroid(d):

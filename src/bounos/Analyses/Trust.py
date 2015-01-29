@@ -123,12 +123,18 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
     Parallel Performs significantly better on large(r) datasets, i.e. multi-var.
     ie. Linear- ~2:20s/run vs 50s/run parallel
 
-    :param node_observations: node observations [t][target][x,x,x,x,x,x]
+    :param tf: Trust Metrics DataFrame; can be single or ['var','run'] indexed
     :param metric_weights: per-metric weighting array (default None)
     :param n_metrics: number of metrics assessed in each observation
     :return:
     """
     assert isinstance(tf, pd.DataFrame)
+
+    if 'var' not in tf.index.names and 'run' not in tf.index.names:
+        # Dealing with a single run; pad it with 0's
+        dff=pd.concat([tf], keys= [0]+tf.index.names, names = ['run']+tf.index.names)
+        tf=pd.concat([dff], keys= [0]+dff.index.names, names = ['var']+dff.index.names)
+
     trusts = []
 
     if flip_metrics is None:
@@ -146,14 +152,14 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
             trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
 
     tf = pd.concat(trusts)
-    tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var', 'run', 'observer', 't', 'target'])
-    tf.index = tf.index.set_levels([
-        tf.index.levels[0].astype(np.float64),  # Var
-        tf.index.levels[1].astype(np.int32),  # Run
-        tf.index.levels[2],  #Observer
-        tf.index.levels[3].astype(np.int32),  # T (should really be a time)
-        tf.index.levels[4]  #Target
-    ])
+    # tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var', 'run', 'observer', 't', 'target'])
+    # tf.index = tf.index.set_levels([
+    #     tf.index.levels[0].astype(np.float64),  # Var
+    #     tf.index.levels[1].astype(np.int32),  # Run
+    #     tf.index.levels[2],  #Observer
+    #     tf.index.levels[3].astype(np.int32),  # T (should really be a time)
+    #     tf.index.levels[4]  #Target
+    # ])
     tf.sort(inplace=True)
 
     # The following:
@@ -234,16 +240,13 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     :return tf:
     """
     tf = pd.DataFrame.from_dict({k: pd.Series(v) for k, v in df.stack().iterkv()}, orient='index')
-    if metrics_string is None:
-        metrics_string = "ATXP,ARXP,ADelay,ALength,RXThroughput,PLR"
-    tf.columns = [metrics_string.split(',')]
     tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var', 'run', 'observer', 't', 'target'])
     tf.index = tf.index.set_levels([
-        tf.index.levels[0].astype(np.float64),
-        tf.index.levels[1].astype(np.int32),
-        tf.index.levels[2],
-        tf.index.levels[3].astype(np.int32),
-        tf.index.levels[4]
+        tf.index.levels[0].astype(np.float64),  # var
+        tf.index.levels[1].astype(np.int32),    # run
+        tf.index.levels[2],                     # observer
+        tf.index.levels[3].astype(np.int32),    # t
+        tf.index.levels[4]                      # target
     ])
     tf.sort(inplace=True)
     return tf

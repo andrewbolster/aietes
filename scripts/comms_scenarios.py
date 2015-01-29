@@ -23,7 +23,7 @@ def redirected(stdout):
     sys.stdout = saved_stdout
 
 
-def exec_comms_range(scenario, title):
+def exec_comms_range(scenario, title, dontrun=False):
     e = EXP(title="{}-{}".format(title, re.split('\.|\/', scenario)[-2]),
             parallel=True,
             base_config_file=scenario

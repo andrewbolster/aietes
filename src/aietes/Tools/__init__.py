@@ -44,6 +44,7 @@ import validate
 from SimPy import SimulationStep as Sim
 from joblib import Memory
 from colorlog import ColoredFormatter
+import matplotlib
 
 from aietes.Tools.humanize_time import seconds_to_str
 
@@ -1162,3 +1163,4 @@ class Capturing(list):
     def __exit__(self, *args):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
+
