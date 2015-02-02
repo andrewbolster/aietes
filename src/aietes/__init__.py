@@ -194,6 +194,8 @@ class Simulation(object):
             Sim.simulate(until=self.duration_intervals, callback=callback)
             self.logger.info("Finished Simulation at %s(%s) after %s" % (
                 Sim.now(), seconds_to_str(Sim.now()), seconds_to_str(time() - starttime)))
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except RuntimeError as err:
             self.logger.critical(
                 "Expected Exception, Quitting gracefully: {}".format(err))
@@ -432,7 +434,6 @@ class Simulation(object):
         else:
             applications = [
                 str(app) for i in range(int(nodes_count - preconfigured_nodes_count))]
-            cls.logger.info("Using Application:%s" % applications)
 
         #
         # Check and generate behaviour distribution
@@ -464,7 +465,6 @@ class Simulation(object):
         else:
             behaviours = [
                 str(bev) for i in range(int(nodes_count - preconfigured_nodes_count))]
-            cls.logger.info("Using Behaviour:%s" % behaviours)
             #
 
         # Fix MAC Duplication
@@ -695,6 +695,10 @@ def go(options, args=None):
         if not options.noexecution:
             try:
                 ran_time = sim.simulate()
+
+            except (KeyboardInterrupt, SystemExit):
+                raise
+
             except RuntimeError as exp:
                 print(exp)
                 print("Will try to postprocess anyway")

@@ -26,6 +26,8 @@ import pandas as pd
 from scipy.spatial.distance import pdist, squareform
 from collections import OrderedDict
 
+from aietes import Tools
+
 import bounos
 
 
@@ -312,7 +314,7 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
     return f
 
 
-def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=None, hide_annotations=False):
+def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_labels=None, figsize=None, hide_annotations=False):
     """
 
     :param stats:
@@ -321,15 +323,23 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', figsize=N
     :param figsize:
     :return:
     """
+    labels={s:s for s in stats.keys()}
+    labels.update(rename_labels)
+
     f, ax = plt.subplots(1, 1, figsize=figsize)
     grp = stats.groupby(level='var')[['collisions', 'rx_counts', 'enqueued']].mean()
+    if rename_labels:
+        grp.rename(columns=rename_labels, inplace=True)
+
     grp.index = grp.index.astype(np.float64)
     grp.plot(ax=ax,
-             secondary_y=['collisions'],  # subplots=True,
+             secondary_y=labels['collisions'],  # subplots=True,
+             style=["-","--","-.",":"],
              grid='on',
-             title="Performance Comparison of Varying {},{} \n(general counts on left, collision counts on right)".format(var, (':' + title if title is not None else ""))
+             title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
     )
     ax.set_xlabel(var)
+    ax.set_ylabel("Total")
     if not hide_annotations:
         maxes = stats.groupby(level='var')['rx_counts'].max()
         maxes.index = maxes.index.astype(np.float64)
@@ -354,15 +364,13 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
     """
     f, ax = plt.subplots(1, 1, figsize=figsize)
     packet_error_rates = (stats.rx_counts / stats.tx_counts).groupby(level='var').mean()
-    ax.scatter(list(packet_error_rates.index), packet_error_rates.values)
+    packet_error_vars = (stats.rx_counts / stats.tx_counts).groupby(level='var').std()
+    ax.scatter(list(packet_error_rates.index), packet_error_rates.values, s=packet_error_vars*1000)
     ax.set_ylabel("Probability of Timely Arrival")
     ax.set_xlabel(var)
     ax.set_ylim(0, 1)
-    ax.set_title("Probability of Timely Arrival of Varying {},{}".format(var, (':' + title if title is not None else "")))
 
-    ax.xaxis.set_minor_locator(MultipleLocator(0.005))
-    ax.xaxis.set_major_locator(MultipleLocator(0.01))
-    ax.grid(True, which='both')
+    ax.set_title("Probability of Timely Arrival of Varying {},{}. \nSize of point denotes standard deviation of result, with a max of {}".format(var, (':' + title if title is not None else ""), np.around(np.max(packet_error_vars),decimals=2)))
     return f
 
 

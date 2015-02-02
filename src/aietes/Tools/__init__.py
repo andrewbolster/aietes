@@ -110,7 +110,7 @@ class ConfigError(Exception):
     Contains a 'status' with the boolean dict representation of the error
     """
 
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=None):
         super(ConfigError, self).__init__(message)
 
         logging.critical("Invalid Config; Dying: %s" % message)
@@ -1149,6 +1149,10 @@ def literal_eval_walk(node, tabs=0):
             except:
                 print '*' * tabs, key, "EOL FAIL"
 
+def map_levels(df, dct, level=0):
+    index = df.index
+    index.set_levels([[dct.get(item, item) for item in names] if i==level else names
+                      for i, names in enumerate(index.levels)], inplace=True)
 
 from cStringIO import StringIO
 import sys

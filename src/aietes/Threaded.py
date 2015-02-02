@@ -62,6 +62,8 @@ def sim_mask(args):
                 return_val = return_dict
             del sim
             return return_val
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except RuntimeError:
             lives -= 1
             if lives <= 0:
@@ -85,6 +87,8 @@ def parallel_sim(arglist):
     try:
         results = Parallel(
             n_jobs=-1, verbose=10)(delayed(sim_mask)(args) for args in arglist)
+    except (KeyboardInterrupt, SystemExit):
+        raise
     except Exception as e:
         logging.critical(
             "Caught Exception: results is {}".format(len(results)))

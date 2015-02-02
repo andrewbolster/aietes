@@ -213,6 +213,8 @@ class Scenario(object):
                          % (run, return_dict['data_file'],
                             100.0 * float(sim_time) / prep_stats['sim_time']))
 
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except Exception:
                 raise
         log.info("done %d runs for %d each" % (runcount, sim_time))
@@ -636,6 +638,8 @@ class ExperimentManager(object):
                 self.scenarios[scenario_title] = scenario
                 gc.collect()
 
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except ConfigError as e:
             print("Caught Configuration error %s on scenario config \n%s" %
                   (str(e), pformat(scenario.config)))
@@ -836,7 +840,7 @@ class ExperimentManager(object):
                          title=title if title is not None else "{}({})".format(self.title, i))
             self.scenarios[s.title] = s
 
-    def add_position_scaling_range(self, scale_range, title=None, basis_node_name='n1'):
+    def add_position_scaling_range(self, scale_range, title=None, basis_node_name='n1', scale_environment=True):
         """
         Using the base_config_file, generate a range of scaled positions for nodes that are
         manually set (i.e. operates only on the 'initial_position' value
@@ -856,10 +860,22 @@ class ExperimentManager(object):
         node_centroids = {k: np.append((v[0:2] - env_shape[0:2] / 2), 0.0) for k, v in node_positions.items()}
         delta = np.asarray(node_positions[basis_node_name])
         for scale in scale_range:
-            new_positions = {k: v * scale + delta for k, v in node_centroids.items()}
+            if scale_environment:
+                new_env = env_shape * scale
+                delta_offset = (env_shape / 2) - delta #Distance from the original centre to the delta
+                delta_offset *= scale
+                env_offset = (new_env/2) + delta_offset # Stick the scaled delta against the new env centre
+                env_offset[2] = delta[2]
 
-            if np.all(0 < new_positions.values() < env_shape):
+            else:
+                new_env = deepcopy(env_shape)
+                env_offset = 0
+
+            new_positions = {k: v * scale + env_offset for k, v in node_centroids.items()}
+
+            if np.all(0 < new_positions.values() < new_env):
                 new_config = deepcopy(base_config)
+                new_config['Environment']['shape'] = new_env.tolist()
                 for k, v in new_positions.items():
                     new_config['Node']['Nodes'][k]['initial_position'] = list(v)  # ndarrays make literal_eval cry
 
@@ -868,7 +884,7 @@ class ExperimentManager(object):
                 )
                 self.scenarios[s.title] = s
             else:
-                raise ConfigError("Scale {} is outside the defined environment: {}".format(scale, new_positions))
+                raise ConfigError("Scale {} is outside the defined environment: pos:{}, env:{}, corr:{}".format(scale, new_positions, new_env, env_offset))
 
     @staticmethod
     def print_stats(experiment, verbose=False):
