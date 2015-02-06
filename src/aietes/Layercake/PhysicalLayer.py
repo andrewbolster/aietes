@@ -422,7 +422,7 @@ class OutgoingPacket(Sim.Process):
             bandwidth = self.physical_layer.bandwidth
 
         # Real bit-rate
-        bitrate = bandwidth * 1e3 * self.physical_layer.band2bit
+        bitrate = bandwidth * 1e3 * self.physical_layer.band2bit #Bandwidth stored in KHz
         duration = packet["length"] / bitrate
 
         if DEBUG:

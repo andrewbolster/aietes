@@ -327,7 +327,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
     labels.update(rename_labels)
 
     f, ax = plt.subplots(1, 1, figsize=figsize)
-    grp = stats.groupby(level='var')[['collisions', 'rx_counts', 'enqueued']].mean()
+    grp = stats.groupby(level='var')[['rx_counts', 'enqueued', 'collisions']].mean()
     if rename_labels:
         grp.rename(columns=rename_labels, inplace=True)
 
@@ -339,7 +339,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
              title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
     )
     ax.set_xlabel(var)
-    ax.set_ylabel("Total")
+    ax.set_ylabel("Total Packets")
     if not hide_annotations:
         maxes = stats.groupby(level='var')['rx_counts'].max()
         maxes.index = maxes.index.astype(np.float64)
@@ -365,12 +365,37 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
     f, ax = plt.subplots(1, 1, figsize=figsize)
     packet_error_rates = (stats.rx_counts / stats.tx_counts).groupby(level='var').mean()
     packet_error_vars = (stats.rx_counts / stats.tx_counts).groupby(level='var').std()
-    ax.scatter(list(packet_error_rates.index), packet_error_rates.values, s=packet_error_vars*1000)
+    ax.errorbar(list(packet_error_rates.index), packet_error_rates.values, packet_error_vars)
     ax.set_ylabel("Probability of Timely Arrival")
     ax.set_xlabel(var)
     ax.set_ylim(0, 1)
 
-    ax.set_title("Probability of Timely Arrival of Varying {},{}. \nSize of point denotes standard deviation of result, with a max of {}".format(var, (':' + title if title is not None else ""), np.around(np.max(packet_error_vars),decimals=2)))
+    ax.set_title("Probability of Timely Arrival of Varying {},{}".format(var, (':' + title if title is not None else "")))
+    return f
+
+def average_delays_across_variation(stats, title=None, var='Packet Rates', figsize=None, ylog=False):
+    """
+
+    :param stats:
+    :param title:
+    :param var:
+    :param figsize:
+    :return:
+    """
+    f, ax = plt.subplots(1, 1, figsize=figsize)
+    packet_delays = stats.groupby(level='var').average_rx_delay.mean()
+    packet_delays_std = stats.groupby(level='var').average_rx_delay.std()
+    ax.errorbar(list(packet_delays.index), packet_delays.values, yerr=packet_delays_std.values)
+    ax.set_ylabel("Average End to End Delay(s)")
+    ax.set_xlabel(var)
+    if ylog:
+        ax.set_yscale('log')
+
+    # Cannot have negative delay
+    ax.set_ylim((0,ax.get_ylim()[1]))
+
+
+    ax.set_title("Average End to End Delay of Varying {},{}. \n showing standard deviation of result, with a max of {}".format(var, (':' + title if title is not None else ""), np.around(np.max(packet_delays_std),decimals=2)))
     return f
 
 

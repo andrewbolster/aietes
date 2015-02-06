@@ -10,6 +10,7 @@ import re
 
 from natsort import natsorted
 import pandas as pd
+import numpy as np
 
 from bounos import npz_in_dir, load_sources, generate_sources
 from bounos.Analyses import Trust
@@ -136,6 +137,16 @@ def generate_dataframes_from_inverted_log(tup):
 
         if k == 'trust':
             df = Trust.explode_metrics_from_trust_log(df)
+
+        # Ensure Index Types and Orders
+        df.index = df.index.set_levels([
+                                           df.index.levels[0].astype(np.float64),  # Var
+                                           df.index.levels[1].astype(np.int32) # Run
+                                       ]+(df.index.levels[2:])
+        )
+        df = df.reindex(sorted(df.index.levels[0]),level=0, copy=False) # Var
+        df = df.reindex(sorted(df.index.levels[1]),level=1, copy=False) # Var
+
 
     except:
         log.exception("{k} didn't work".format(k=k))

@@ -320,8 +320,10 @@ class Simulation(object):
         ###
         # Grab Comms Stuff Just Raw
         ###
-        comms_stats = {node.name: node.app.dump_stats()
-                       for node in self.nodes if node.app}
+        comms_stats = pd.DataFrame.from_dict(
+            {node.name: node.app.dump_stats() for node in self.nodes if node.app},
+            orient="index")
+
         comms_logs = {node.name: node.app.dump_logs()
                       for node in self.nodes if node.app}
         comms_pos = pd.concat({
@@ -332,7 +334,7 @@ class Simulation(object):
         comms_pos.index = pd.to_datetime(comms_pos.index, unit='s')
 
         comms = {
-            'stats': pd.DataFrame.from_dict(comms_stats, orient='index'),
+            'stats': comms_stats,
             'positions': comms_pos.stack(level='node'),
             'logs': comms_logs
         }

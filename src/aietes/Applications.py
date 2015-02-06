@@ -202,10 +202,15 @@ class Application(Sim.Process):
                     ))
 
             left_in_q = len(self.layercake.mac.outgoing_packet_queue)
+            try:
+                rts_count = self.layercake.mac.total_channel_access_attempts
+            except AttributeError:
+                rts_count = np.nan
 
             app_stats = {
                 "rx_counts": self.stats['packets_received'],
                 "tx_counts": self.stats['packets_sent'],
+                "rts_counts": rts_count,
                 "average_rx_delay": average_rx_delay,
                 "delay": self.stats['packets_time'],
                 "hops": self.stats['packets_hops'],

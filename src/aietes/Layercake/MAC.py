@@ -54,8 +54,11 @@ def setup_mac(node, config):
     else:
         return ALOHA(node, config)
 
+class MAC(object):
+    total_channel_access_attempts = 0
+    channel_access_retries = 0
 
-class ALOHA(object):
+class ALOHA(MAC):
     """ALOHA:  A very simple MAC Algorithm
     """
 
@@ -70,6 +73,7 @@ class ALOHA(object):
 
         # Number of times that the channel was sensed and found not idle
         self.channel_access_retries = 0
+        self.total_channel_access_attempts = 0
         self.transmission_attempts = 0  # Number of retransmissions
         self.max_transmission_attempts = config["attempts"]
         self.max_wait_to_retransmit = config["max2resend"]
@@ -281,6 +285,7 @@ class ALOHA(object):
 
         # Before transmitting, we check if the channel is idle
         if self.layercake.phy.is_idle():
+            self.total_channel_access_attempts += 1
             self.transmission_attempts += 1
             self.channel_access_retries = 0
             if DEBUG:
@@ -435,6 +440,7 @@ class ALOHA4FBR(ALOHA):
         self.T = self.layercake.phy.level2delay(self.level)
 
         if self.layercake.phy.is_idle():
+            self.total_channel_access_attempts += 1
             self.transmission_attempts += 1
             self.channel_access_retries = 0
 
@@ -627,7 +633,7 @@ class ALOHA4FBR(ALOHA):
         # Sim.now(), self.fsm.input_symbol, self.fsm.current_state
 
 
-class DACAP(object):
+class DACAP(MAC):
     """DACAP : Distance Aware Collision Avoidance Protocol coupled with power control
     """
 
@@ -656,6 +662,7 @@ class DACAP(object):
         self.transmission_attempts = 0
         self.max_wait_to_retransmit = config["max2resend"]
         self.channel_access_retries = 0
+        self.total_channel_access_attempts = 0
         self.next_timeout = 0
         self.pending_packet_ID = None
 
@@ -994,6 +1001,7 @@ class DACAP(object):
         self.T = self.layercake.phy.level2delay(self.level)
 
         if self.layercake.phy.is_idle():
+            self.total_channel_access_attempts += 1
             self.transmission_attempts += 1
             self.channel_access_retries = 0
 
@@ -1723,7 +1731,7 @@ class DACAP4FBR(DACAP):
         DACAP.send_rts(self)
 
 
-class CSMA(object):
+class CSMA(MAC):
     """CSMA: Carrier Sensing Multiple Access - Something between ALOHA and DACAP
 
     This implementation is extremely close to MACA (Karn 1990)
@@ -1754,6 +1762,7 @@ class CSMA(object):
         self.ack_failures = 0
         self.max_wait_to_retransmit = config["max2resend"]
         self.channel_access_retries = 0
+        self.total_channel_access_attempts = 0
         self.next_timeout = 0
         self.pending_data_packet_from = None
         self.pending_ack_packet_from = None
@@ -2033,6 +2042,7 @@ class CSMA(object):
             raise
 
         if self.layercake.phy.is_idle():
+            self.total_channel_access_attempts += 1
             self.transmission_attempts += 1
             self.channel_access_retries = 0
 
