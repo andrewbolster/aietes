@@ -37,6 +37,8 @@ import collections
 from configobj import ConfigObj
 import numpy as np
 
+from multiprocessing import Pool
+
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded
@@ -219,7 +221,7 @@ class Scenario(object):
                 raise
         log.info("done %d runs for %d each" % (runcount, sim_time))
 
-    def run_parallel(self, runcount=None, runtime=None, **kwargs):
+    def run_parallel(self, runcount=None, runtime=None, queueing_pool=False, **kwargs):
         """
         Offload this to AIETES multiprocessing queue
 
@@ -268,12 +270,18 @@ class Scenario(object):
                 )
             except Exception:
                 raise
-        self.datarun = aietes.Threaded.parallel_sim(self.runlist)
-        assert all(
-            r is not None for r in self.datarun), "All dataruns should be completed by now"
-        log.info("Got responses")
+        if not queueing_pool:
+            self.datarun = aietes.Threaded.parallel_sim(self.runlist)
 
-        print("done %d runs in parallel" % runcount)
+            assert all(
+                r is not None for r in self.datarun), "All dataruns should be completed by now"
+            log.info("Got responses")
+
+            print("done %d runs in parallel" % runcount)
+        else:
+            self._pending_queue = aietes.Threaded.queue_sim(self.runlist, queueing_pool)
+            self._pending_queue.launch()
+            print("launched %d runs, pending collection" % runcount)
 
     def generate_run_stats(self, sim_run_dataset=None):
         """
@@ -615,7 +623,7 @@ class ExperimentManager(object):
                 for variable,v in config_dict.items():
                     s.update_node(node_config, variable, v)
 
-    def run(self, runtime=None, runcount=None, retain_data=True, **kwargs):
+    def run(self, runtime=None, runcount=None, retain_data=True, queue=False,  **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
         :param runtime:
@@ -640,15 +648,32 @@ class ExperimentManager(object):
         start = time.time()
         try:
             os.chdir(self.exp_path)
-            # Q: Is this acting on the reference to scenario or the item in scenarios?
-            for scenario_title, scenario in self.scenarios.items():
-                scenario.commit()
-                if self.parallel:
-                    scenario.run_parallel(**kwargs)
-                else:
-                    scenario.run(**kwargs)
-                self.scenarios[scenario_title] = scenario
-                gc.collect()
+            if queue:
+                queue = Pool(processes=4)
+                # Q: Is this acting on the reference to scenario or the item in scenarios?
+                logging.info("Launching Queue")
+                for scenario_title, scenario in self.scenarios.items():
+                    scenario.commit()
+                    scenario.run_parallel(queueing_pool=queue, **kwargs)
+
+                logging.info("Now waiting on Queue")
+                queue.close()
+                queue.join()
+                logging.info("Queue Complete")
+                for title,s in self.scenarios.items():
+                    assert s._pending_queue.finished(), "{} isn't finished!".format(title)
+                    s.datarun = s._pending_queue.results
+                    del s._pending_queue
+
+            else:
+
+                # Q: Is this acting on the reference to scenario or the item in scenarios?
+                for scenario_title, scenario in self.scenarios.items():
+                    scenario.commit()
+                    if self.parallel:
+                        scenario.run_parallel(**kwargs)
+                    else:
+                        scenario.run(**kwargs)
 
         except (KeyboardInterrupt, SystemExit):
             raise
