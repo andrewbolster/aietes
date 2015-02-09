@@ -591,7 +591,7 @@ class ExperimentManager(object):
         Args:
             behaviour(str): new default behaviour
         """
-        for k, v in config_dict.iteritems():
+        for k, v in config_dict.items():
             self._default_scenario.update_default_node(k, v)
 
     def update_default_behaviour(self, behaviour):
@@ -602,6 +602,18 @@ class ExperimentManager(object):
             behaviour(str): new default behaviour
         """
         self._default_scenario.update_default_node('behaviour', behaviour)
+
+    def update_all_nodes(self, config_dict):
+        """
+        Applys a behaviour (given as a string) to the experimental default for node generation
+        :param config_dict:
+        Args:
+            behaviour(str): new default behaviour
+        """
+        for _,s in self.scenarios.items():
+            for node, node_config in s.nodes.items():
+                for variable,v in config_dict.items():
+                    s.update_node(node_config, variable, v)
 
     def run(self, runtime=None, runcount=None, retain_data=True, **kwargs):
         """

@@ -127,6 +127,7 @@ class Application(Sim.Process):
                         "Generated Payload %s: Waiting %s" % (packet['data'], period))
                 self.layercake.send(packet)
                 self.stats['packets_sent'] += 1
+                packet['delivered'] = False
                 self.sent_log.append(packet)
             yield Sim.hold, self, period
 
@@ -516,9 +517,9 @@ class CommsTrust(RoutingTest):
             # TODO NamedTuples for safety
             Pkt=namedtuple('Pkt',['n','dest','length','delivered'])
             relevant_packets = []
-            last_relevant_time = Sim.now() - 2 * self.trust_assessment_period
+            last_relevant_time = Sim.now() - self.trust_assessment_period
             for i, p in enumerate(self.sent_log):
-                if p.has_key('delivered') and p['time_stamp'] > last_relevant_time:
+                if p['time_stamp'] > last_relevant_time:
                     relevant_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
 
             tx_stats = {}
