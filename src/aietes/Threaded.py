@@ -18,6 +18,7 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 from multiprocessing.process import current_process
+from multiprocessing import Pool
 import struct
 import os
 import logging
@@ -74,6 +75,9 @@ def sim_mask(args):
                 del sim
         gc.collect()
 
+def queue_mask(i,args):
+    return (i,sim_mask(args))
+
 
 def parallel_sim(arglist):
     import logging
@@ -95,4 +99,29 @@ def parallel_sim(arglist):
         raise
 
     return results
+
+class queue_sim(object):
+    def __init__(self, arglist, pool):
+        import logging
+
+        logging.basicConfig(level=logging.DEBUG)
+        self.tasklist = arglist
+        self.results = [None]*len(self.tasklist)
+        self.pool = pool
+
+    def _callback(self, result):
+        i, returned = result
+        logging.info("Got result {}".format(i))
+        self.results[i] = returned
+
+    def launch(self):
+        logging.info("Appending Queued Parallel Run of {runcount} at {t}".format(
+            runcount=len(self.tasklist), t=strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
+        ))
+        for i,args in enumerate(self.tasklist):
+            self.pool.apply_async(queue_mask, args=(i,args), callback=self._callback)
+
+    def finished(self):
+        return all([r is not None for r in self.results])
+
 
