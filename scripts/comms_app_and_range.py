@@ -31,13 +31,15 @@ def exec_comms_range(scenario, title, app_rate):
     e.add_position_scaling_range(np.linspace(1, 8, 8), basis_node_name="n1")
     e.update_all_nodes({"app_rate":app_rate})
     e.run(
-        runcount=4,
-        retain_data=False
+        runcount=3,
+        retain_data=False,
+        queue=True
     )
     return e
 
 
 if __name__ == "__main__":
+
     base_scenarios = [
         'bella_static.conf',
 #        'bella_single_mobile.conf',
@@ -47,6 +49,13 @@ if __name__ == "__main__":
     app_range = np.arange(0.015, 0.05, step=0.005).tolist()
     title = "CommsRateAndRangeTest"
     log = logging.getLogger()
+    if len(sys.argv) > 1:
+        N = int(sys.argv[-2])
+        n = int(sys.argv[-1])
+        log.info("Generating section {} of {} for {}".format(n,N,title))
+        span = len(app_range)/N
+        init = n*span
+        app_range = app_range[init:init+span]
     for base_scenario in base_scenarios:
         for app_rate in list(sorted(app_range)):
             try:
