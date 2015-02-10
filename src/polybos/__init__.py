@@ -658,7 +658,14 @@ class ExperimentManager(object):
 
                 logging.info("Now waiting on Queue")
                 queue.close()
-                queue.join()
+                try:
+                    while not queue.empty():
+                        time.sleep(1)
+                except KeyboardInterrupt, e:
+                    queue.terminate()
+                    raise
+                finally:
+                    queue.join()
                 logging.info("Queue Complete")
                 for title,s in self.scenarios.items():
                     assert s._pending_queue.finished(), "{} isn't finished!".format(title)
