@@ -4,7 +4,6 @@ BTrees
 transaction
 persistent
 click
-validate
 gi
 tables
 pandas
