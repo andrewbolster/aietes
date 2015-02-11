@@ -4,7 +4,6 @@ BTrees
 transaction
 persistent
 click
-gi
 tables
 pandas
 pykalman

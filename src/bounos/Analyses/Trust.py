@@ -152,13 +152,6 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
             trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
 
     tf = pd.concat(trusts)
-    tf.index = tf.index.set_levels([
-        tf.index.levels[0].astype(np.float64),  # Var
-        tf.index.levels[1].astype(np.int32),  # Run
-        tf.index.levels[2],  #Observer
-        tf.index.levels[3].astype(np.int32),  # T (should really be a time)
-        tf.index.levels[4]  #Target
-    ])
     tf.sort(inplace=True)
 
     # The following:
@@ -240,8 +233,16 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     """
     tf = pd.DataFrame.from_dict({k: pd.Series(v) for k, v in df.stack().iterkv()}, orient='index')
     tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var', 'run', 'observer', 't', 'target'])
+    try:
+        map(float, df.index.levels[0])
+        var_is_float = True
+    except:
+        var_is_float = False
+
+
+
     tf.index = tf.index.set_levels([
-        tf.index.levels[0].astype(np.float64),  # var
+        tf.index.levels[0].astype(np.float64) if var_is_float else df.index.levels[0],  # Var
         tf.index.levels[1].astype(np.int32),    # run
         tf.index.levels[2],                     # observer
         tf.index.levels[3].astype(np.int32),    # t
