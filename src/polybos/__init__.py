@@ -42,8 +42,8 @@ from multiprocessing import Pool
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded
-from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, \
-    seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
+import aietes.Distributed
+from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
 from bounos import DataPackage, print_analysis, load_sources, npz_in_dir
 
 try:
@@ -271,7 +271,17 @@ class Scenario(object):
                 )
             except Exception:
                 raise
-        if not queueing_pool:
+        if queueing_pool:
+            if isinstance(queueing_pool, type(Pool)):
+                self._pending_queue = aietes.Threaded.queue_sim(self.runlist, queueing_pool)
+                self._pending_queue.launch()
+                print("launched %d runs, pending collection" % runcount)
+            elif queueing_pool == "celery":
+                self._pending_queue = aietes.Distributed.emmitter(self.runlist)
+                self._pending_queue.launch()
+            else:
+                raise NotImplementedError("Invalid queue: {}".format(queueing_pool))
+        else:
             self.datarun = aietes.Threaded.parallel_sim(self.runlist)
 
             assert all(
@@ -279,10 +289,6 @@ class Scenario(object):
             log.info("Got responses")
 
             print("done %d runs in parallel" % runcount)
-        else:
-            self._pending_queue = aietes.Threaded.queue_sim(self.runlist, queueing_pool)
-            self._pending_queue.launch()
-            print("launched %d runs, pending collection" % runcount)
 
     def generate_run_stats(self, sim_run_dataset=None):
         """
@@ -662,7 +668,7 @@ class ExperimentManager(object):
         start = time.time()
         try:
             os.chdir(self.exp_path)
-            if self.parallel and queue:
+            if queue=='pool':
                 queue = Pool(processes=4)
                 # Q: Is this acting on the reference to scenario or the item in scenarios?
                 logging.info("Launching Queue")
@@ -683,6 +689,23 @@ class ExperimentManager(object):
                     s.datarun = s._pending_queue.results
                     del s._pending_queue
 
+            elif queue=='celery':
+                # Q: Is this acting on the reference to scenario or the item in scenarios?
+                logging.info("Dispatching to Celery")
+                for scenario_title, scenario in self.scenarios.items():
+                    scenario.commit()
+                    scenario.run_parallel(queueing_pool=queue, **kwargs)
+
+                logging.info("Now waiting on Celery Tasks")
+                while(not all([s._pending_queue.finished() for s in self.scenarios.itervalues()])):
+                    time.sleep(1)
+                    logging.debug("Tick")
+
+                logging.info("Celery Complete")
+                for title,s in self.scenarios.items():
+                    assert s._pending_queue.finished(), "{} isn't finished!".format(title)
+                    s.datarun = s._pending_queue.results
+                    del s._pending_queue
             else:
 
                 # Q: Is this acting on the reference to scenario or the item in scenarios?
