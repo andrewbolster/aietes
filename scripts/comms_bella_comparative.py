@@ -37,12 +37,12 @@ def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1):
 if __name__ == "__main__":
 
     base_scenarios = [
-        'bella_static.conf',
-        'bella_single_mobile.conf',
-        'bella_allbut1_mobile.conf',
+        #'bella_static.conf',
+        #'bella_single_mobile.conf',
+        #'bella_allbut1_mobile.conf',
         'bella_all_mobile.conf'
     ]
-    app_rate = 0.025
+    app_rate = 0.02
     scale = 6.0
     title = "TrustMobilityTests"
     log = logging.getLogger()

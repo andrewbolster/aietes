@@ -144,11 +144,11 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
 
     if par:
         trusts = Parallel(n_jobs=-1)(delayed(generate_single_observer_trust_perspective)
-                                     (g, **exec_args) for k, g in tf.dropna().groupby(level=['var', 'run', 'observer'])
+                                     (g, **exec_args) for k, g in tf.groupby(level=['var', 'run', 'observer'])
         )
         trusts = [item for sublist in trusts for item in sublist]
     else:
-        for k, g in tf.dropna().groupby(level=['var', 'run', 'observer']):
+        for k, g in tf.groupby(level=['var', 'run', 'observer']):
             trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
 
     tf = pd.concat(trusts)
@@ -252,7 +252,43 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     return tf
 
 
-def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, target='n1', indirect_nodes=None):
+def generate_network_trust(trust_run, observer='n0', recommendation_nodes=None, target='n1',
+                           indirect_nodes=None, ewma=True):
+
+    trust_run = trust_run.unstack('observer').groupby(level=['var','run']).apply(
+        lambda s: s.fillna(method='ffill')
+    ).stack('observer')
+
+    t_whitenized = lambda x: max(_gray_whitenized(x)) * x  # Maps to max_s{f_s(T_{Bi})})T_{Bi}
+    t_direct = lambda x: 0.5 * t_whitenized(x)
+    t_recommend = lambda x: 0.5 * (
+        (2.0 * len(recommendation_nodes))
+        / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
+    t_indirect = lambda x: 0.5 * (
+        float(len(indirect_nodes))
+        / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
+    network_list = [observer] + recommendation_nodes + indirect_nodes
+    t_avg = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].mean(axis=1)
+    t_network = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].applymap(
+        t_whitenized).mean(axis=1)
+    t_direct = trust_run.xs('n0', level='observer')['n1'].apply(t_direct)
+    t_recommend = trust_run.unstack('observer').xs(target, level='target', axis=1)[recommendation_nodes].applymap(
+        t_recommend).mean(axis=1)
+    t_indirect = trust_run.unstack('observer').xs(target, level='target', axis=1)[indirect_nodes].applymap(
+        t_indirect).mean(axis=1)
+    t_total = pd.DataFrame.from_dict({
+        'Direct': t_direct,
+        'Recommend': t_recommend,
+        'Indirect': t_indirect
+    })
+
+    if ewma:
+        t_total = t_total.groupby(level=['var','run']).apply(lambda s: pd.stats.moments.ewma(s.fillna(method="ffill"),span=16))
+
+    return t_avg, t_network, t_total
+
+
+def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, target='n1', indirect_nodes=None, ewma=False):
     """
     Take an individual simulation run and get a dict of the standard network perspectives across given recommenders and indirect nodes
     (you could probably cludge together a few runs and the data format would still be ok, but I wouldn't try plotting it directly)
@@ -268,42 +304,27 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     if not indirect_nodes:
         indirect_nodes = ['n4', 'n5']
 
-    t_whitenized = lambda x: max(_gray_whitenized(x)) * x  # Maps to max_s{f_s(T_{Bi})})T_{Bi}
-    t_direct = lambda x: 0.5 * t_whitenized(x)
-    t_recommend = lambda x: 0.5 * (
-        2 * len(recommendation_nodes)
-        / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
-    t_indirect = lambda x: 0.5 * (
-        len(indirect_nodes)
-        / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
-
-    network_list = [observer] + recommendation_nodes + indirect_nodes
-
-    t_avg = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].mean(axis=1)
-    t_network = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].applymap(t_whitenized).mean(axis=1)
-    t_direct = trust_run.xs('n0', level='observer')['n1'].apply(t_direct)
-    t_recommend = trust_run.unstack('observer').xs(target, level='target', axis=1)[recommendation_nodes].applymap(t_recommend).mean(axis=1)
-    t_indirect = trust_run.unstack('observer').xs(target, level='target', axis=1)[indirect_nodes].applymap(t_indirect).mean(axis=1)
-
-    t_total = pd.DataFrame.from_dict({
-        'Direct': t_direct,
-        'Recommend': t_recommend,
-        'Indirect': t_indirect
-    })
+    t_avg, t_network, t_total = generate_network_trust(trust_run, observer, recommendation_nodes,
+                                                       target, indirect_nodes, ewma)
 
     # The driving philosophy of the following apparrant mess is that explicit is better that implicit;
     # If I screw up the data structure later; pandas will not forgive me.
 
     _d = pd.DataFrame.from_dict(OrderedDict((
-        ("t10", trust_run.xs(observer, level='observer')[target]),
-        ("t12", trust_run.xs('n2', level='observer')[target]),
-        ("t13", trust_run.xs('n3', level='observer')[target]),
-        ("t14", trust_run.xs('n4', level='observer')[target]),
-        ("t15", trust_run.xs('n5', level='observer')[target]),
-        ("t1-route_net", t_total.sum(axis=1)),  # Eq 4.7 guo; Takes relationships into account
-        ("t1-white_net", pd.Series(t_network)),  # Eq 4.8 guo: Blind Whitenised Trust
-        ("t1-avg", pd.Series(t_avg))  # Simple Average
+        ("$T_{1,0}$", trust_run.xs(observer, level='observer')[target]),
+        ("$T_{1,2}$", trust_run.xs('n2', level='observer')[target]),
+        ("$T_{1,3}$", trust_run.xs('n3', level='observer')[target]),
+        ("$T_{1,4}$", trust_run.xs('n4', level='observer')[target]),
+        ("$T_{1,5}$", trust_run.xs('n5', level='observer')[target]),
+        ("$T_{1,Net}$", t_total.sum(axis=1)),  # Eq 4.7 guo; Takes relationships into account
+        ("$T1_{1,MTMF}$", pd.Series(t_network)),  # Eq 4.8 guo: Blind Whitenised Trust
+        ("$T1_{1,Avg}$", pd.Series(t_avg))  # Simple Average
     )))
+
+    # On combining assessments, Nans are added where different nodes have (no) information at a particular timeframe about
+    # a particular target. Fix that.
+    _d.fillna(method="ffill", inplace=True)
+
     assert any(_d > 1), "All Resultantant Trust Values should be less than 1"
     assert any(0 > _d), "All Resultantant Trust Values should be greater than 0"
     return _d
