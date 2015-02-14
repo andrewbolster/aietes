@@ -59,10 +59,6 @@ class Environment(object):
                 raise
         self.shape = shape
 
-    # TODO Random Surface Generation
-    # self.generateSurface()
-    # TODO 'Tidal motion' factor
-
     def _start_log(self, parent, name):
         self.logger = parent.logger.getChild(
             "{}{}".format(name, self.__class__.__name__))
@@ -201,6 +197,7 @@ class Environment(object):
     def latest_logs(self):
         """
         Returns the latest positions (n,3) for the nodes in the fleet
+        #todo this shouldn't be so stupid; keep a 'latest'
         """
         last_log = {oid: None for oid in self.object_ids()}
         for log in reversed(self.pos_log):

@@ -258,17 +258,27 @@ class Behaviour(object):
             # response = 0.5 * (position-avoiding_position)
             self.debug = True
             try:
-                response = self.repulse_from_position(
+                repulse = self.repulse_from_position(
                     position, avoiding_position, 2 * min_dist)
+                # Reflect rather than just bounce; response is the normal vector of the surface
+                r_mag = mag(repulse)
+                response = repulse + velocity - (2 * (np.dot(velocity, repulse))/(r_mag**2))*repulse
             except RuntimeError:
                 raise RuntimeError(
                     "Crashed out of environment with given position:{}, wall position:{}".format(position,
                                                                                                  avoiding_position))
                 # response = (avoiding_position-position)
             self.logger.debug("Wall Avoidance:%s" % response)
-            if hasattr(self, 'my_direction'):
+            if hasattr(self, 'my_direction') and not hasattr(self, 'time_travelled'):
                 # Something planned to go this way, lets stop that and hope it chooses a better direction
                 self.my_direction = unit(response)
+            if hasattr(self, 'time_travelled'):
+                # Is something that cares about timing watching? Because then only register on the
+                # first 'avoid' (which will have the right direction)
+                if self.time_travelled > 10:
+                    self.time_travelled = 0
+                    self.my_direction = unit(response)
+
 
         return response
 
@@ -307,17 +317,27 @@ class RandomFlatWalk(Behaviour):
         self.behaviours.append(self.random_walk)
         self.wallCheckDisabled = False
         self.my_direction = random_xy_vector()
+        self.time_travelled = 0
+        self._time_limit = 600
 
     def random_walk(self, position, velocity):
-        # Roughly 6 degrees or pi/32 rad
         """
+
+        Pick a random direction, get to roughly 6 degrees or pi/32 rad
+        of that vector, and continue for 10 minutes
 
         :param position:
         :param velocity:
         :return:
         """
+
         if angle_between(velocity, self.my_direction) < 0.2:
-            self.my_direction = random_xy_vector()
+            if self.time_travelled > self._time_limit:
+                self.time_travelled = 0
+                self.my_direction = random_xy_vector()
+            else:
+                self.time_travelled += 1
+
         return np.asarray(self.my_direction)
 
 
@@ -343,7 +363,7 @@ class RandomFlatCentredWalk(RandomFlatWalk):
         :param velocity:
         :return:
         """
-        return np.asarray(self.attract_to_position(position, self.original_position)) * 0.01
+        return np.asarray(self.attract_to_position(position, self.original_position)) * 0.001
 
 
 class Nothing(Behaviour):

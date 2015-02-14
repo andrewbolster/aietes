@@ -545,7 +545,7 @@ class CommsTrust(RoutingTest):
                 if tx_throughput:
                     tx_throughput = np.sum(tx_throughput)
                 else:
-                    tx_throughput = np.nan
+                    tx_throughput = 0.0
 
                 tx_stats[node] = pd.Series({
                     'PLR':per if not np.isnan(per) else 0.0,

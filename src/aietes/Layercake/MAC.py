@@ -33,7 +33,7 @@ from aietes.Tools import broadcast_address, DEBUG, distance
 from aietes.Tools.FSM import FSM
 
 
-DEBUG = False
+#DEBUG = True
 
 DEFAULT_PROTO = "ALOHA"
 
@@ -1769,7 +1769,7 @@ class CSMA(MAC):
         self.multicast = False
 
         # Timing parameters
-        self.T = 0  # It will be adapted according to the transmission range
+        self.T = self.layercake.phy.level2delay(0)  # It will be adapted according to the transmission range
         self.t_data = self.data_packet_length / \
                       (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         self.t_control = self.rts_packet_length / \
@@ -2020,7 +2020,6 @@ class CSMA(MAC):
                     "Even after an ACK timeout, the DATA was properly transmitted to: " + self.incoming_packet["source"])
                 self.on_transmit_success()
                 self.pending_ack_packet_from = None
-                self.ack_failures -= 1
         else:
             self.logger.warn("I think I have pending ACK from {src}:{id} but I don't".format(
                 src=self.pending_ack_packet_from,
@@ -2369,7 +2368,7 @@ class CSMA(MAC):
             self.transmission_attempts = 0
 
     def on_ack_timeout(self):
-        """ The timeout has experied and NO ACK has been received.
+        """ The timeout has expireed and NO ACK has been received.
         """
         self.transmission_attempts += 1
 
@@ -2621,8 +2620,10 @@ class CSMA4FBR(CSMA):
         """ More than one CTS is received when looking for the next best hop. We should consider all of them.
         The routing layer decides.
         """
-        self.valid_candidates[self.incoming_packet["through"]] = (
-                                                                     Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+        self.valid_candidates[self.incoming_packet["through"]] = \
+            (Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, \
+            self.incoming_packet["rx_energy"], \
+            self.incoming_packet["through_position"]
         if DEBUG > 1:
             self.logger.debug("Appending CTS to {src} coming from {thru}@{pos}".format(
                 src=self.incoming_packet["source"],
@@ -2721,6 +2722,7 @@ class CSMA4FBR(CSMA):
 
     def get_timeout(self, packet_type, t):
         """ Returns the timeout for a specific state.
+        :rtype : int
         :param packet_type:
         :param t:
         """

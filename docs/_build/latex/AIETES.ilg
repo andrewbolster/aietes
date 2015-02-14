@@ -1,0 +1,7 @@
+This is makeindex, version 2.15 [TeX Live 2014] (kpathsea + Thai support).
+Scanning style file ./python.ist......done (6 attributes redefined, 0 ignored).
+Scanning input file AIETES.idx....done (143 entries accepted, 0 rejected).
+Sorting entries....done (1152 comparisons).
+Generating output file AIETES.ind....done (206 lines written, 0 warnings).
+Output written in AIETES.ind.
+Transcript written in AIETES.ilg.

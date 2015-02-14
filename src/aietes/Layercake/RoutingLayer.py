@@ -32,7 +32,7 @@ from aietes.Layercake.priodict import PriorityDictionary
 from aietes.Tools import distance, broadcast_address, DEBUG
 
 
-DEBUG = False
+#DEBUG = True
 
 
 def setup_routing(node, config):
@@ -580,7 +580,6 @@ class Static(SimpleRoutingTable):
 
         :return:
         """
-        levels = self.layercake.phy.level2distance
         graph = {}
         for fname, fpos in nodes_geo.iteritems():
             graph[fname] = {}
@@ -695,14 +694,6 @@ class Static(SimpleRoutingTable):
         path.reverse()
         return path
 
-    def nodes_pos2str(self):
-        """
-
-
-        """
-        print self.nodes_pos
-
-
 class FBR(SimpleRoutingTable):
     """ In this case, DACAP4FBR should be selected as MAC protocol.
         Variation 0: Transmission cone
@@ -711,26 +702,30 @@ class FBR(SimpleRoutingTable):
 
     def __init__(self, layercake, config):
         SimpleRoutingTable.__init__(self, layercake, config)
-        # Does not make sense with mobile nodes: just for the sinks
-        nodes_geo[layercake.hostname] = layercake.get_current_position()
 
         # Contains already discovered positions
         self.nodes_pos = {layercake.hostname: layercake.get_current_position()}
+        nodes_geo[layercake.hostname] = layercake.get_current_position()
         self.cone_angle = config["coneAngle"]  # The cone aperture
         self.incoming_packet = None
         self.packets = set([])
         self.rx_cone = config["rx_cone"]
 
-    def on_packet_reception(self, packet):
-        # If this is the final destination of the packet,
-        # pass it to the application layer
-        # otherwise, send it on.
-        """
 
-        :param packet:
-        :return:
+    def on_packet_reception(self, packet):
+        """
+        If this is the final destination of the packet,
+        pass it to the application layer
+        otherwise, send it on.
+
+        Also updates the global node_geo map
+
+        :param packet: obj: successfully received packet to go to layercake if for me
+        :return: bool: was the packet for me?
         """
         if not self.have_duplicate_packet(packet):
+            global nodes_geo
+            nodes_geo = self.layercake.host.fleet.node_map()
             self.packets.add(packet["ID"])
             self.logger.debug("Processing packet with ID: " + packet["ID"])
             if packet["through"] == packet["dest"]:
@@ -739,7 +734,8 @@ class FBR(SimpleRoutingTable):
                     return True
             else:
                 self.send_packet(packet)
-                return False
+
+            return False
 
     def send_packet(self, packet):
         """
@@ -750,8 +746,7 @@ class FBR(SimpleRoutingTable):
         self.incoming_packet["route"].append(
             (self.layercake.hostname, self.layercake.get_real_current_position()))
         # Current hop position
-        self.incoming_packet[
-            "source_position"] = self.layercake.get_current_position()
+        self.incoming_packet["source_position"] = self.layercake.get_current_position()
 
         if self.incoming_packet["dest"] == "AnySink":
             self.incoming_packet["dest"] = self.find_closer_sink()
@@ -959,12 +954,12 @@ class FBR(SimpleRoutingTable):
 
         return False
 
-    def select_route(self, candidates, current_through, attemps, destination):
+    def select_route(self, candidates, current_through, attempts, destination):
         """
 
         :param candidates:
         :param current_through:
-        :param attemps:
+        :param attempts:
         :param destination:
         :return:
         """
@@ -984,7 +979,7 @@ class FBR(SimpleRoutingTable):
             if current_through[0:3] != "ANY":
                 # This is not a multicast RTS but a directed RTS which has been
                 # not answered
-                if attemps < 2:
+                if attempts < 2:
                     self.logger.debug("Let's give it another chance.")
                     return "2CHANCE", self.nodes_pos[current_through]
                 else:
@@ -1004,7 +999,7 @@ class FBR(SimpleRoutingTable):
                     self.logger.debug("It is not reachable.")
                     return "ANY" + str(level), 0
             else:
-                self.logger.debug(
+                self.logger.info(
                     "Unable to reach any node within any transmission power. ABORTING transmission.")
                 return "ABORT", 0
 

@@ -708,7 +708,7 @@ def go(options, args=None):
     if options.movie or options.data or options.gif:
         print("Storing output in %s" % sim.title)
         sim.postprocess(input_file=options.input, output_file=sim.title, data_file=options.data,
-                        movie_file=options.movie, gif=options.gif, fps=options.fps, output_path=options.outputPath)
+                        movie_file=options.movie, gif=options.gif, fps=options.fps)
 
     if options.plot:
         sim.postprocess(

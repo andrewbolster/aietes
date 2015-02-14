@@ -151,6 +151,24 @@ class Fleet(Sim.Process):
         """
         return map(attrgetter('id'), self.nodes).index(node_id)
 
+    def nodenum_from_name(self, node_name):
+        """
+        Return the index of the requested node node_id
+        """
+        return map(attrgetter('name'), self.nodes).index(node_name)
+
+    def nodeid_from_name(self, node_name):
+        """
+        Return the id of the requested node by name
+        """
+        return self.nodes[map(attrgetter('name'), self.nodes).index(node_name)].id
+
+    def nodename_from_id(self, node_id):
+        """
+        Return the name of the requested node by id
+        """
+        return self.nodes[self.nodenum_from_id(node_id)].name
+
     def node_count(self):
         """
         Return the number of nodes in the fleet
@@ -190,6 +208,39 @@ class Fleet(Sim.Process):
                 "Latest shared logs not coalesced:{}".format(times))
 
         return np.asarray(positions)
+
+    def node_map(self, shared=True):
+        """
+        Return just the last known position of the fleet
+        :param shared: bool: use shared env rather than global state
+        :return: {'name':np.ndarray([x,y,z]) for all nodes}
+        """
+        if shared:
+            latest_map = self.shared_map.map
+        else:
+            latest_map = self.environment.map
+        return {
+            m.name:m.position for m in latest_map.itervalues()
+        }
+
+
+    def node_position_by_name(self, name, shared=True):
+        """
+        Return just the last known position of the queried node
+        :param name: str: Node Name (as per Fleet.nodes[:].name
+        :param shared: bool: use shared env rather than global state
+        :return: np.ndarray([x,y,z])
+        """
+        if shared:
+            latest_map = self.shared_map.map
+        else:
+            latest_map = self.environment.map
+
+        return latest_map[self.nodeid_from_name(name)]
+
+
+
+
 
     def node_positions_at(self, t, shared=True):
         """
