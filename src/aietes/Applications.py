@@ -48,6 +48,7 @@ class Application(Sim.Process):
         }
         self.received_log = []
         self.last_accessed_rx_packet = None
+        self.last_accessed_tx_packet = None
         self.sent_log = []
         self.config = config
         self.layercake = layercake
@@ -99,6 +100,7 @@ class Application(Sim.Process):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
                 sent['delivered'] = True
+                sent['acknowledged'] = Sim.now()
 
     def signal_lost_tx(self, packetid):
         for sent in self.sent_log:
@@ -127,7 +129,7 @@ class Application(Sim.Process):
                         "Generated Payload %s: Waiting %s" % (packet['data'], period))
                 self.layercake.send(packet)
                 self.stats['packets_sent'] += 1
-                packet['delivered'] = False
+                packet['delivered'] = None
                 self.sent_log.append(packet)
             yield Sim.hold, self, period
 
@@ -518,24 +520,18 @@ class CommsTrust(RoutingTest):
             Pkt=namedtuple('Pkt',['n','dest','length','delivered'])
             relevant_packets = []
             last_relevant_time = Sim.now() - self.trust_assessment_period
-            for i, p in enumerate(self.sent_log):
-                if p['time_stamp'] > last_relevant_time:
+            # Pick up any new late arrivals
+            for i, p in enumerate(self.sent_log[self.last_accessed_tx_packet:]):
+                if getattr(p, 'acknowledged', 0) > last_relevant_time:
                     relevant_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
+            # Pick up TX's done this cycle
+            for i, p in enumerate(self.sent_log[:self.last_accessed_tx_packet]):
+                relevant_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
+            self.last_accessed_tx_packet = len(self.sent_log)
 
             tx_stats = {}
             # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
             for node in self.trust_assessments.keys():
-                per = map(
-                    lambda p: float(not p.delivered),
-                    filter(
-                        lambda p: p.dest == node,
-                        relevant_packets)
-                )
-                if per:
-                    per = np.nanmean(per)
-                else:
-                    per = np.nan
-
                 tx_throughput = map(
                     lambda p: float(p.length),
                     filter(
@@ -547,12 +543,23 @@ class CommsTrust(RoutingTest):
                 else:
                     tx_throughput = 0.0
 
+                per = map(
+                    lambda p: float(p.delivered is False),
+                    filter(
+                        # Do we know the fate of the packet?
+                        lambda p: p.dest == node and p.delivered is not None,
+                        relevant_packets)
+                )
+                if per and tx_throughput>0.0:
+                    per = np.nanmean(per)
+                else:
+                    per = 0.0
+
                 tx_stats[node] = pd.Series({
                     'PLR':per if not np.isnan(per) else 0.0,
                     'TXThroughput':tx_throughput
                 })
 
-                # Packet Error Rate (all time)
                 if len(rx_stats[node]):
                     nodestat = pd.concat([rx_stats[node], tx_stats[node]])
                     # avg(tx pwr, rx pwr, delay, length), rx throughput, PER

@@ -648,7 +648,7 @@ class ExperimentManager(object):
         start = time.time()
         try:
             os.chdir(self.exp_path)
-            if queue:
+            if self.parallel and queue:
                 queue = Pool(processes=4)
                 # Q: Is this acting on the reference to scenario or the item in scenarios?
                 logging.info("Launching Queue")

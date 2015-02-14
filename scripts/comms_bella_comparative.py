@@ -25,7 +25,7 @@ def redirected(stdout):
 
 def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1):
     e = EXP(title="{}-{}-{}".format(title, app_rate, scale),
-            parallel=True
+            parallel=False
     )
     for base_scenario in base_scenarios:
         e.add_position_scaling_range([scale], title="{}({})".format(e.title,re.split('\.|\/', base_scenario)[-2]), base_scenario=base_scenario, basis_node_name="n1")
@@ -51,9 +51,9 @@ if __name__ == "__main__":
                                           app_rate=app_rate, scale = scale)
 
         exp.run(
-            runcount=8,
+            runcount=1,
             retain_data=False,
-            queue=True
+            queue=False
         )
 
         path = exp.exp_path
