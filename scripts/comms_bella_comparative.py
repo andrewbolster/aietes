@@ -25,7 +25,7 @@ def redirected(stdout):
 
 def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1):
     e = EXP(title="{}-{}-{}".format(title, app_rate, scale),
-            parallel=False
+            parallel=True
     )
     for base_scenario in base_scenarios:
         e.add_position_scaling_range([scale], title="{}({})".format(e.title,re.split('\.|\/', base_scenario)[-2]), base_scenario=base_scenario, basis_node_name="n1")
@@ -37,12 +37,12 @@ def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1):
 if __name__ == "__main__":
 
     base_scenarios = [
-        #'bella_static.conf',
-        #'bella_single_mobile.conf',
-        #'bella_allbut1_mobile.conf',
+        'bella_static.conf',
+        'bella_single_mobile.conf',
+        'bella_allbut1_mobile.conf',
         'bella_all_mobile.conf'
     ]
-    app_rate = 0.02
+    app_rate = 0.015
     scale = 6.0
     title = "TrustMobilityTests"
     log = logging.getLogger()
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         exp.run(
             runcount=1,
             retain_data=False,
-            queue=False
+            queue=True,
         )
 
         path = exp.exp_path

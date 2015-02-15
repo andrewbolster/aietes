@@ -238,10 +238,6 @@ class Fleet(Sim.Process):
 
         return latest_map[self.nodeid_from_name(name)]
 
-
-
-
-
     def node_positions_at(self, t, shared=True):
         """
         Return the fleet-list array of reported positions at a given time
@@ -380,3 +376,48 @@ class Fleet(Sim.Process):
                 maxdeviation = avgheading
 
         return "V:%s,C:%s,D:%s,A:%s" % (avgheading, fleetcenter, maxdistance, maxdeviation)
+
+
+    def plot_axes_views(self, res=120):
+        """
+        Plot a physical overview of the fleet and it's motion.
+        :param res: timing resolution multiplier in seconds (default 'every 2 minutes of simulated time')
+        :return: f
+        """
+        import matplotlib.pyplot as plt
+
+        f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+        for n, node_p in enumerate(self.node_poslogs()):
+            x, y, z = node_p[:, -1]
+
+            ax1.annotate(self.nodes[n].name, xy=(x, y), xytext=(-20, 5), textcoords='offset points',
+                         ha='center', va='bottom', bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
+                         arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
+                                         color='red')
+            )
+            ax1.scatter(x, y)
+            ax2.scatter(y, z)
+            ax3.scatter(x, z)
+
+            xs = node_p[0, ::res]
+            ys = node_p[1, ::res]
+            zs = node_p[2, ::res]
+            ax1.plot(xs, ys, alpha=0.6)
+            ax2.plot(ys, zs, alpha=0.6)
+            ax3.plot(xs, zs, alpha=0.6)
+            ax4.plot(
+                np.abs(np.linalg.norm(node_p[:, :], axis=0) - np.linalg.norm(node_p[:, 0])),
+                label=self.nodes[n].name,
+                alpha=0.6
+            )
+
+        ax1.set_title("X-Y (Top)")
+        ax1.set_aspect('equal', adjustable='datalim')
+        ax2.set_title("Y-Z (Side)")
+        ax2.set_aspect('equal', adjustable='datalim')
+        ax3.set_title("X-Z (Front)")
+        ax3.set_aspect('equal', adjustable='datalim')
+        ax4.set_title("Distance from initial position (m)")
+        ax4.legend(loc='upper center', ncol=3)
+
+        return f

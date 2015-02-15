@@ -134,7 +134,7 @@ class Simulation(object):
         # Attempt Validation and construct the simulation from that config.
         try:
             self.logger.setLevel(
-                LOGLEVELS.get(self.config.get("log_level"), logging.NOTSET))
+                LOGLEVELS.get(self.config.get("log_level","notset").lower(), logging.NOTSET))
         except ConfigError as err:
             self.logger.error(
                 "Error in configuration, cannot continue: %s" % err)

@@ -129,7 +129,7 @@ I_ref = 172.0
 # Transducer Capacity (Arbitrary)
 transducer_capacity = 1000
 broadcast_address = 'Any'
-LOGLEVELS = {'DEBUG': logging.DEBUG,
+LOGLEVELS = {'debug': logging.DEBUG,
              'info': logging.INFO,
              'warning': logging.WARNING,
              'error': logging.ERROR,

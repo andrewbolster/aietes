@@ -65,6 +65,7 @@ class PhysicalLayer(object):
         self.variable_power = self.config["variable_power"]
         # Levels defined in terms of distance (m)
         self.level2distance = dict(self.config["var_power"])
+        self.distance2level = { v: k for k,v in self.level2distance.items()}
 
         # Detection Specifications (dB)
         # Minimum signal to interference ratio to properly receive a packet
@@ -281,7 +282,7 @@ class Transducer(Sim.Resource):
             if not doomed and linear2db(min_sir) >= self.SIR_thresh and arg[1].power >= self.physical_layer.receiving_threshold:
                 # Properly received: enough power, not enough interference
                 self.collision = False
-                self.logger.debug("received packet {}".format(new_packet))
+                #self.logger.debug("received packet {}".format(new_packet))
                 self.on_success(new_packet)
 
             elif arg[1].power >= self.physical_layer.receiving_threshold:
@@ -342,7 +343,10 @@ class IncomingPacket(Sim.Process):
         :param physical_layer: PhysicalLayer instance
         :return:
         """
-        Sim.Process.__init__(self, name="ReceiveMessage: " + str(packet))
+        Sim.Process.__init__(self, name="({})RX from {}".format(
+            physical_layer.layercake.hostname,
+            packet['source']
+        ))
         self.power = power #linear
         self.packet = packet
         self.physical_layer = physical_layer
@@ -409,7 +413,9 @@ class OutgoingPacket(Sim.Process):
     """
 
     def __init__(self, physical_layer):
-        Sim.Process.__init__(self)
+        Sim.Process.__init__(self, name="({})TX".format(
+            physical_layer.layercake.hostname
+        ))
         self.physical_layer = physical_layer
         self.logger = physical_layer.logger.getChild(
             "{}".format(self.__class__.__name__))

@@ -261,3 +261,4 @@ class Environment(object):
         """
         assert filename is not None
         np.savez(filename, self.pos_log)
+

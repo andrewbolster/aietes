@@ -27,7 +27,7 @@ import numpy as np
 from aietes.Tools import MapEntry, distance, fudge_normal, DEBUG, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
 
-DEBUG = True
+DEBUG = False
 
 
 class BasicWaypoint(object):
@@ -135,9 +135,9 @@ class Behaviour(object):
 
         # TODO Under Drift, it's probably better to do wall-detection twice: once on node and once on environment
         # force_vector = self.avoid_wall(self.node.get_pos(), self.node.velocity, force_vector)
-        if self.debug and False:
+        if self.debug and DEBUG:
             self.logger.debug("Response:%s" % force_vector)
-        if self.debug and True:
+        if self.debug and DEBUG:
             total = sum(map(mag, contributions.values()))
             if total > 0:
                 self.logger.debug("contributions: %s of %3f" % (
@@ -148,7 +148,7 @@ class Behaviour(object):
                 )
             else:
                 self.logger.debug("contributions: None")
-        if self.debug and False:
+        if self.debug and DEBUG:
             total = sum(map(mag, contributions.values()))
             for func, value in contributions.iteritems():
                 self.logger.debug(
@@ -262,7 +262,12 @@ class Behaviour(object):
                     position, avoiding_position, 2 * min_dist)
                 # Reflect rather than just bounce; response is the normal vector of the surface
                 r_mag = mag(repulse)
-                response = repulse + velocity - (2 * (np.dot(velocity, repulse))/(r_mag**2))*repulse
+                # If we're at too narrow an angle we'll get stuck on a wall
+                angle = angle_between(repulse, -velocity)
+                if angle < 2.0*np.pi/5.0:            # 72 degrees of wall norm
+                    response = repulse + velocity - (2 * (np.dot(velocity, repulse))/(r_mag**2))*repulse
+                else:
+                    response = repulse
             except RuntimeError:
                 raise RuntimeError(
                     "Crashed out of environment with given position:{}, wall position:{}".format(position,

@@ -39,7 +39,10 @@ class Application(Sim.Process):
 
     def __init__(self, node, config, layercake):
         self._start_log(node)
-        Sim.Process.__init__(self)
+        Sim.Process.__init__(self, name= "{}({})".format(
+            self.__class__.__name__,
+            node.name)
+        )
         self.stats = {'packets_sent': 0,
                       'packets_received': 0,
                       'packets_time': 0,
@@ -48,7 +51,6 @@ class Application(Sim.Process):
         }
         self.received_log = []
         self.last_accessed_rx_packet = None
-        self.last_accessed_tx_packet = None
         self.sent_log = []
         self.config = config
         self.layercake = layercake
@@ -106,6 +108,7 @@ class Application(Sim.Process):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
                 sent['delivered'] = False
+                sent['acknowledged'] = Sim.now()
 
     def tick(self):
         """ Method called at each simulation instance"""
@@ -192,8 +195,7 @@ class Application(Sim.Process):
             offeredload = total_bits_out / Sim.now() * self.stats['packets_hops']
             try:
                 avg_length = total_bits_in / self.stats['packets_received']
-                average_rx_delay = self.stats[
-                                       'packets_time'] / self.stats['packets_received']
+                average_rx_delay = self.stats['packets_time'] / self.stats['packets_received']
             except ZeroDivisionError:
                 if self.stats['packets_received'] == 0:
                     avg_length = 0
@@ -407,10 +409,14 @@ class CommsTrust(RoutingTest):
     Trust Values retained per interval:
         Packet Loss Rate
 
+    Default Trust Assessment Period of 10 minutes
+    Default to Random Delay < 60 s before first cycle - reduces contension.
+
     """
     test_stream_length = 6
     stream_period_ratio = 0.1
     trust_assessment_period = 600
+    random_delay = 60
     metrics_string = "ATXP,ARXP,ADelay,ALength,Throughput,PLR"
 
     def activate(self):
@@ -422,7 +428,6 @@ class CommsTrust(RoutingTest):
         self.current_target = None
         self.last_trust_assessment = None
         self.last_accessed_rx_packet = None
-        self.last_accessed_tx_packet = None
 
         self.trust_assessments = {}  # My generated trust metrics, [node][t][n_observation_arrays]
         # Extra information that might be interesting in the longer term.
@@ -491,7 +496,7 @@ class CommsTrust(RoutingTest):
                 ))
                 raise
         else:
-            return []
+            return pd.Series([])
 
     def tick(self):
         """
@@ -499,6 +504,8 @@ class CommsTrust(RoutingTest):
 
         """
         if not Sim.now() % self.trust_assessment_period:
+            if self.layercake.hostname=='n0' and DEBUG:
+                self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
 
             # Set up the data structures
             for node in self.total_counter.keys():
@@ -507,65 +514,63 @@ class CommsTrust(RoutingTest):
                 if not self.trust_assessments.has_key(node):
                     self.trust_assessments[node] = []
 
-            relevant_packets = self.received_log[self.last_accessed_rx_packet:]
+            relevant_rx_packets = self.received_log[self.last_accessed_rx_packet:]
             self.last_accessed_rx_packet = len(self.received_log)
 
             rx_stats = {}
             for node in self.trust_assessments.keys():
-                pkt_batch = [packet for packet in relevant_packets if packet['source'] == node]
+                pkt_batch = [packet for packet in relevant_rx_packets if packet['source'] == node]
                 rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
                 # avg(tx pwr, rx pwr, delay, length), rx throughput
 
-            # TODO NamedTuples for safety
             Pkt=namedtuple('Pkt',['n','dest','length','delivered'])
-            relevant_packets = []
             last_relevant_time = Sim.now() - self.trust_assessment_period
-            # Pick up any new late arrivals
-            for i, p in enumerate(self.sent_log[self.last_accessed_tx_packet:]):
-                if getattr(p, 'acknowledged', 0) > last_relevant_time:
-                    relevant_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
-            # Pick up TX's done this cycle
-            for i, p in enumerate(self.sent_log[:self.last_accessed_tx_packet]):
-                relevant_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
-            self.last_accessed_tx_packet = len(self.sent_log)
+
+
+            # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
+            acked_packets = filter(lambda d: d.has_key("acknowledged"), self.sent_log)
+            relevant_acked_packets = []
+            for i, p in enumerate(acked_packets):
+                if p['acknowledged'] > last_relevant_time:
+                    relevant_acked_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
 
             tx_stats = {}
             # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
             for node in self.trust_assessments.keys():
+                # Throughput is the total length of data transmitted this frame
                 tx_throughput = map(
                     lambda p: float(p.length),
                     filter(
                         lambda p: p.dest == node,
-                        relevant_packets)
+                        relevant_acked_packets)
                 )
                 if tx_throughput:
                     tx_throughput = np.sum(tx_throughput)
                 else:
                     tx_throughput = 0.0
 
-                per = map(
-                    lambda p: float(p.delivered is False),
+                # PLR is the average amount of packets we are sure have been lost in the last time frame
+                # Including pkts that have been acked since last time.
+                plr = map(
+                    lambda p: float(not p.delivered),
                     filter(
-                        # Do we know the fate of the packet?
-                        lambda p: p.dest == node and p.delivered is not None,
-                        relevant_packets)
+                        # We know the fate of all acked packets
+                        lambda p: p.dest == node,
+                        relevant_acked_packets)
                 )
-                if per and tx_throughput>0.0:
-                    per = np.nanmean(per)
+                if plr and tx_throughput>0.0:
+                    plr = np.nanmean(plr)
                 else:
-                    per = 0.0
+                    plr = 0.0
 
                 tx_stats[node] = pd.Series({
-                    'PLR':per if not np.isnan(per) else 0.0,
+                    'PLR':plr if not np.isnan(plr) else 0.0,
                     'TXThroughput':tx_throughput
                 })
 
-                if len(rx_stats[node]):
-                    nodestat = pd.concat([rx_stats[node], tx_stats[node]])
-                    # avg(tx pwr, rx pwr, delay, length), rx throughput, PER
-
-                else:
-                    nodestat = pd.Series([])
+            for node in self.trust_assessments.keys():
+                nodestat = pd.concat([rx_stats[node], tx_stats[node]])
+                # avg(tx pwr, rx pwr, delay, length), rx throughput, PER
                 self.trust_assessments[node].append(nodestat)
 
             self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))

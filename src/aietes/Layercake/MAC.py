@@ -2331,8 +2331,9 @@ class CSMA(MAC):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
         """
         if DEBUG:
-            self.logger.debug(
-                "Successfully Transmitted to " + self.incoming_packet["source"])
+            self.logger.debug("Successfully transmitted to {}".format(
+                self.outgoing_packet_queue[0]["dest"]
+            ))
 
         # We got an ACK, we should stop the timer.
         p = Sim.Process()
@@ -2342,11 +2343,12 @@ class CSMA(MAC):
         self.post_success_or_fail()
 
     def on_transmit_fail(self):
-        """ All the transmission attemps have been completed. It's impossible to reach the node.
+        """ All the transmission attempts have been completed. It's impossible to reach the node.
         """
         self.layercake.signal_lost_tx(self.outgoing_packet_queue[0]['ID'])
-        self.logger.debug(
-            "Failed to transmit to " + self.outgoing_packet_queue[0]["dest"])
+        self.logger.debug("Failed to transmit to {}".format(
+            self.outgoing_packet_queue[0]["dest"]
+        ))
         self.post_success_or_fail()
 
     def post_success_or_fail(self):
@@ -2358,7 +2360,7 @@ class CSMA(MAC):
             self.logger.fatal("Over Popped: {sm.current_state}".format(
                 sm=self.fsm
             ))
-            raise e
+            raise
         self.transmission_attempts = 0
 
         # Is there anything else to do?
@@ -2368,7 +2370,7 @@ class CSMA(MAC):
             self.transmission_attempts = 0
 
     def on_ack_timeout(self):
-        """ The timeout has expireed and NO ACK has been received.
+        """ The timeout has expired and NO ACK has been received.
         """
         self.transmission_attempts += 1
 
