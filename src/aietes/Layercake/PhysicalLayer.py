@@ -33,7 +33,7 @@ import SimPy.Simulation as Sim
 from aietes.Tools import distance, DEBUG
 
 
-#DEBUG = False
+# DEBUG = False
 
 
 class PhysicalLayer(object):
@@ -64,7 +64,7 @@ class PhysicalLayer(object):
         self.variable_power = self.config["variable_power"]
         # Levels defined in terms of distance (m)
         self.level2distance = dict(self.config["var_power"])
-        self.distance2level = { v: k for k,v in self.level2distance.items()}
+        self.distance2level = {v: k for k, v in self.level2distance.items()}
 
         # Detection Specifications (dB)
         # Minimum signal to interference ratio to properly receive a packet
@@ -133,7 +133,8 @@ class PhysicalLayer(object):
         if len(self.transducer.activeQ) > 0:
             if DEBUG:
                 self.logger.debug(
-                    "The channel is not idle. Currently receiving: " + str(len(self.transducer.activeQ)) + " packet(s).")
+                    "The channel is not idle. Currently receiving: " + str(
+                        len(self.transducer.activeQ)) + " packet(s).")
             return False
 
         return True
@@ -207,7 +208,8 @@ class Transducer(Sim.Resource):
     any outgoing transmission is completed.
     """
 
-    def __init__(self, physical_layer, ambient_noise, channel_event, position_query, sir_thresh, on_success, name="a_transducer"):
+    def __init__(self, physical_layer, ambient_noise, channel_event, position_query, sir_thresh, on_success,
+                 name="a_transducer"):
         # A resource with large capacity, because we don't want incoming messages to queue,
         # We want them to interfere.
 
@@ -278,22 +280,25 @@ class Transducer(Sim.Resource):
 
         # If it isn't doomed due to transmission & it is not interfered
         if min_sir > 0:
-            if not doomed and linear2db(min_sir) >= self.SIR_thresh\
+            if not doomed and linear2db(min_sir) >= self.SIR_thresh \
                     and arg[1].power >= self.physical_layer.receiving_threshold:
                 # Properly received: enough power, not enough interference
                 self.collision = False
-                #self.logger.debug("received packet {}".format(new_packet))
+                # self.logger.debug("received packet {}".format(new_packet))
                 self.on_success(new_packet)
 
             elif arg[1].power >= self.physical_layer.receiving_threshold:
                 # Too much interference but enough power to receive it: it
                 # suffered a collision
-                if self.physical_layer.layercake.hostname == new_packet["through"] or self.physical_layer.layercake.hostname == new_packet["dest"]:
+                if self.physical_layer.layercake.hostname == new_packet[
+                    "through"] or self.physical_layer.layercake.hostname == new_packet["dest"]:
                     self.collision = True
                     self.collisions.append(new_packet)
                     if DEBUG:
-                        self.logger.debug("A " + new_packet["type"] + " packet to " + new_packet["through"] + " from " + new_packet['source']
-                                          + " was discarded due to interference.")
+                        self.logger.debug(
+                            "A " + new_packet["type"] + " packet to " + new_packet["through"] + " from " + new_packet[
+                                'source']
+                            + " was discarded due to interference.")
             else:
                 # Not enough power to be properly received: just heard.
                 if DEBUG and False:
@@ -307,8 +312,10 @@ class Transducer(Sim.Resource):
         else:
             # This should never appear, and in fact, it doesn't, but just to
             # detect bugs (we cannot have a negative SIR in lineal scale).
-            raise RuntimeError("This really shouldn't happen: Negative min_sir from type {} from {} to {} through {} detected by {}".format(
-                new_packet["type"], new_packet["source"], new_packet["dest"], new_packet["through"], self.physical_layer.layercake.hostname)
+            raise RuntimeError(
+                "This really shouldn't happen: Negative min_sir from type {} from {} to {} through {} detected by {}".format(
+                    new_packet["type"], new_packet["source"], new_packet["dest"], new_packet["through"],
+                    self.physical_layer.layercake.hostname)
             )
 
     def on_transmit_begin(self):
@@ -347,7 +354,7 @@ class IncomingPacket(Sim.Process):
             physical_layer.layercake.hostname,
             packet['source']
         ))
-        self.power = power #linear
+        self.power = power  # linear
         self.packet = packet
         self.physical_layer = physical_layer
         self.doomed = False
@@ -436,7 +443,7 @@ class OutgoingPacket(Sim.Process):
             bandwidth = self.physical_layer.bandwidth
 
         # Real bit-rate
-        bitrate = bandwidth * 1e3 * self.physical_layer.band2bit #Bandwidth stored in KHz
+        bitrate = bandwidth * 1e3 * self.physical_layer.band2bit  # Bandwidth stored in KHz
         duration = packet["length"] / bitrate
 
         if DEBUG:
@@ -449,9 +456,10 @@ class OutgoingPacket(Sim.Process):
         # Need to add this info in for higher layers
         packet['tx_pwr_db'] = power
 
-        self.physical_layer.transducer.channel_event.signal({"pos": self.physical_layer.layercake.get_real_current_position,
-                                                             "power": power, "duration": duration, "frequency": self.physical_layer.freq,
-                                                             "packet": packet})
+        self.physical_layer.transducer.channel_event.signal(
+            {"pos": self.physical_layer.layercake.get_real_current_position,
+             "power": power, "duration": duration, "frequency": self.physical_layer.freq,
+             "packet": packet})
 
         # Hold onto the transducer for the duration of the transmission
         self.physical_layer.transducer.on_transmit_begin()
@@ -558,17 +566,17 @@ def attenuation_db(f, d):
     :returns: dB
     """
 
-    k = 1.5 # "Practical Spreading" Stojanovic 08
+    k = 1.5  # "Practical Spreading" Stojanovic 08
     d_km = d / 1000.0
 
     a = thorpe(f)
     k_prod = k * linear2db(d_km)
     d_prod = d_km * a
 
+    return k_prod + d_prod  # dB
 
-    return k_prod + d_prod #dB
 
-def thorpe(f,heel=1):
+def thorpe(f, heel=1):
     """
     Thorp's formula for attenuation_db rate (in dB/km) -> Changes depending on
     the frequency (kHz)
@@ -588,14 +596,14 @@ def thorpe(f,heel=1):
     :return: float dB/km
     """
 
-
     f2 = f ** 2
     if f > heel:
         absorption_coeff = 0.11 * \
                            (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
     else:
         absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
-    return absorption_coeff #dB/km
+    return absorption_coeff  # dB/km
+
 
 def channel_noise_db(f):
     """Noise(f)

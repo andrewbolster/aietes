@@ -59,7 +59,8 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
     elif dp is None:
         df = tx
         title = "FIXME" if title is None else title
-        tmax = int(np.ceil(tx.time_stamp.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
+        tmax = int(np.ceil(
+            tx.time_stamp.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
     else:
         raise ValueError("I've got no idea how you got here...")
 
@@ -67,7 +68,9 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
     all_pkts = df.count().max()
 
     f, ax = plt.subplots(figsize=(13, 7))
-    ax.set_title("Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title, died / float(all_pkts), all_pkts))
+    ax.set_title(
+        "Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title, died / float(all_pkts),
+                                                                                         all_pkts))
     ax.set_ylabel("Count (n)")
     ax.set_xlabel("Simulation Time (s)")
     sns.distplot(df.time_stamp[df.delivered == False], kde=False, rug=True, bins=10, ax=ax)
@@ -86,7 +89,8 @@ def end_to_end_delay_distribution(dp):
     f, ax = plt.subplots(figsize=(13, 7))
     nsources = len(df.source.unique())
     c = sns.color_palette("Set1", nsources)
-    ax.set_title("End-To-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title, float(df[["delay"]].mean())))
+    ax.set_title("End-To-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title, float(
+        df[["delay"]].mean())))
 
     for i, source in enumerate(sorted(df.source.unique())):
         sns.distplot(df[df.source == source]['delay'], color=c[i], ax=ax, label=source, kde=False)
@@ -108,7 +112,8 @@ def source_and_dest_delay_violin_plot(dp):
     sns.violinplot(df.delay, df.source, color="Paired", ax=ax_l)
     sns.violinplot(df.delay, df.dest, color="Paired", ax=ax_r)
 
-    f.suptitle("Per-Node End-to-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title, float(df[["delay"]].mean())))
+    f.suptitle("Per-Node End-to-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title, float(
+        df[["delay"]].mean())))
 
     ax_l.set_xlabel("Source Node")
     ax_r.set_xlabel("Destination Node")
@@ -137,12 +142,14 @@ def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12, 4)
     elif dp is None:
         df = rx
         title = "FIXME" if title is None else title
-        tmax = int(np.ceil(rx.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
+        tmax = int(np.ceil(
+            rx.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
     else:
         raise ValueError("I've got no idea how you got here...")
 
     f, (ax_l, ax_r) = plt.subplots(1, 2, sharey=True, sharex=True, figsize=figsize)
-    f.suptitle("Per-Node End-to-End Delay Cumulative Distribution for {} model: average={:.2f}s".format(title, float(df[["delay"]].mean())))
+    f.suptitle("Per-Node End-to-End Delay Cumulative Distribution for {} model: average={:.2f}s".format(title, float(
+        df[["delay"]].mean())))
 
     # Delays groups by source
     for i, group in df.delay.groupby(df.source):
@@ -212,14 +219,16 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
     elif dp is None:
         df = rx
         title = "FIXME" if title is None else title
-        tmax = int(np.ceil(rx.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
+        tmax = int(np.ceil(
+            rx.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
     else:
         raise ValueError("I've got no idea how you got here...")
 
     if 'var' in df.index.names and len(df.groupby(level='var')) > 1:
-        raise ValueError("It's really not a good idea for multiple var's to go into this; groupby-apply this instead {}".format(
-            len(df.index.levels[df.index.names.index('var')])
-        ))
+        raise ValueError(
+            "It's really not a good idea for multiple var's to go into this; groupby-apply this instead {}".format(
+                len(df.index.levels[df.index.names.index('var')])
+            ))
 
     if 'run' in df.index.names:
         channel_occupancy = df.groupby(level=['var', 'run']).apply(_channel_occupancy_calc).unstack('run').sum(axis=1)
@@ -237,7 +246,8 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
     return f
 
 
-def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, target=None, title=None, sampleperiod=None, metric_weights=None):
+def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, target=None, title=None,
+                                       sampleperiod=None, metric_weights=None):
     """
 
     :param dp:
@@ -271,7 +281,8 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
         assert isinstance(trust_log, pd.DataFrame)
         assert isinstance(pos_log, pd.DataFrame)
         title = "FIXME" if title is None else title
-        tmax = int(np.ceil(trust_log.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
+        tmax = int(np.ceil(
+            trust_log.received.max() / 3600) * 3600)  # assume we're not masochists and it's rounded up to an hour within
     else:
         raise ValueError("I've got no idea how you got here...")
 
@@ -283,7 +294,8 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
 
     f.suptitle("Trust overview for target {} (highlighted) in {} model".format(target, dp.title))
     for i, i_node in enumerate(names):
-        map(lambda (k, v): lines.append(ax[i][0].plot(v, label=k, alpha=0.5 if k != target else 0.9)), trust[i_node].items())
+        map(lambda (k, v): lines.append(ax[i][0].plot(v, label=k, alpha=0.5 if k != target else 0.9)),
+            trust[i_node].items())
         ax[i][0].legend(loc="lower center", mode="expand", ncol=6)
         ax[i][0].set_title("Trust Perspective: {}".format(i_node))
         ax[i][0].set_ylim(0, 1)
@@ -314,7 +326,8 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
     return f
 
 
-def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_labels=None, figsize=None, hide_annotations=False):
+def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_labels=None, figsize=None,
+                                hide_annotations=False):
     """
 
     :param stats:
@@ -323,7 +336,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
     :param figsize:
     :return:
     """
-    labels={s:s for s in stats.keys()}
+    labels = {s: s for s in stats.keys()}
     labels.update(rename_labels)
 
     f, ax = plt.subplots(1, 1, figsize=figsize)
@@ -334,7 +347,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
     grp.index = grp.index.astype(np.float64)
     grp.plot(ax=ax,
              secondary_y=labels['collisions'],  # subplots=True,
-             style=["-","--","-.",":"],
+             style=["-", "--", "-.", ":"],
              grid='on',
              title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
     )
@@ -370,8 +383,10 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
     ax.set_xlabel(var)
     ax.set_ylim(0, 1)
 
-    ax.set_title("Probability of Timely Arrival of Varying {},{}".format(var, (':' + title if title is not None else "")))
+    ax.set_title(
+        "Probability of Timely Arrival of Varying {},{}".format(var, (':' + title if title is not None else "")))
     return f
+
 
 def average_delays_across_variation(stats, title=None, var='Packet Rates', figsize=None, ylog=False):
     """
@@ -392,11 +407,13 @@ def average_delays_across_variation(stats, title=None, var='Packet Rates', figsi
         ax.set_yscale('log')
 
     # Cannot have negative delay
-    ax.set_ylim((0,ax.get_ylim()[1]))
+    ax.set_ylim((0, ax.get_ylim()[1]))
 
-
-    ax.set_title("Average End to End Delay for Varying {},{}. \n showing standard deviation of result, with a max of {}".format(var, (':' + title if title is not None else ""), np.around(np.max(packet_delays_std),decimals=2)))
+    ax.set_title(
+        "Average End to End Delay for Varying {},{}. \n showing standard deviation of result, with a max of {}".format(
+            var, (':' + title if title is not None else ""), np.around(np.max(packet_delays_std), decimals=2)))
     return f
+
 
 def rts_ratio_across_variation(stats, title=None, var='Packet Rates', figsize=None, ylog=False):
     """
@@ -418,16 +435,16 @@ def rts_ratio_across_variation(stats, title=None, var='Packet Rates', figsize=No
         ax.set_yscale('log')
 
     # Cannot have negative ratio
-    ax.set_ylim((0,ax.get_ylim()[1]))
-
+    ax.set_ylim((0, ax.get_ylim()[1]))
 
     ax.set_title("RTS / Data Ratio of Varying {},{}. "
                  "\n showing standard deviation of result, with a max of {}".format(
         var,
         (':' + title if title is not None else ""),
-        np.around(np.max(r_std.values),decimals=2))
+        np.around(np.max(r_std.values), decimals=2))
     )
     return f
+
 
 def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
     """
@@ -486,7 +503,6 @@ def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
     return f
 
 
-
 def trust_perspectives_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
@@ -509,9 +525,10 @@ def trust_perspectives_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
         if i + 1 < len(groups):
             ax[i][0].set_xlabel("Target")
         ax[i][0].set_ylabel("{:.4f}".format(float(var)))
-    f.suptitle("Plots of Per-Node Subjective Trust Values {}\n(Each sub plot is a single nodes trust viewpoint of other nodes)".format(
-        title if title is None else ": " + title
-    ), fontsize=24)
+    f.suptitle(
+        "Plots of Per-Node Subjective Trust Values {}\n(Each sub plot is a single nodes trust viewpoint of other nodes)".format(
+            title if title is None else ": " + title
+        ), fontsize=24)
     return f
 
 
@@ -535,8 +552,11 @@ def trust_perspectives_wrt_targets(trust_frame):
         if i + 1 < len(groups):
             ax[i][0].set_xlabel("Observer")
         ax[i][0].set_ylabel("{:.4f}".format(float(var)))
-    f.suptitle("Plots of Per-Node Objective Trust Values\n(Each sub plot is a nodes trust value from the perspective of other nodes)", fontsize=24)
+    f.suptitle(
+        "Plots of Per-Node Objective Trust Values\n(Each sub plot is a nodes trust value from the perspective of other nodes)",
+        fontsize=24)
     return f
+
 
 def trust_network_wrt_observers(trust_group, var, title=None, figsize=(16, 2), texify=True):
     """
@@ -549,18 +569,18 @@ def trust_network_wrt_observers(trust_group, var, title=None, figsize=(16, 2), t
     if texify:
         pass
 
-
     f, ax = plt.subplots(1, 1, figsize=(figsize[0], figsize[1] * 1), sharey=True)
     # plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
-    sns.boxplot(trust_group.dropna(), ax=ax)#, **_boxplot_kwargs)
+    sns.boxplot(trust_group.dropna(), ax=ax)  # , **_boxplot_kwargs)
     ax.set_xlabel("Assessment Type")
     ax.set_ylabel("Trust Value")
-    ax.set_ylim((0.0,1.0))
+    ax.set_ylim((0.0, 1.0))
     if title is not False:
         ax.set_title("{}".format(
             var if title is None else ": " + title
         ))
     return f
+
 
 def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
     """
@@ -698,7 +718,8 @@ def plot_positions(d, bounds=None):
 
     area = area_of_centroid(my_d)
     avg_dist = avg_range(my_d)
-    f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(np.around(avg_dist), np.around(area)), fontsize=18)
+    f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(np.around(avg_dist), np.around(area)),
+               fontsize=18)
     ax1.set_title("X-Y (Top)")
     ax1.set_aspect('equal', adjustable='datalim')
     ax2.set_title("Y-Z (Side)")
@@ -707,6 +728,7 @@ def plot_positions(d, bounds=None):
     ax3.set_aspect('equal', adjustable='datalim')
 
     return f
+
 
 #####
 ##  LATEXIFY from http://nipunbatra.github.io/2014/08/latexify/
@@ -729,14 +751,14 @@ def latexify(fig_width=347, fig_height=None, columns=1, factor=0.45):
     # Width and max height in inches for IEEE journals taken from
     # computer.org/cms/Computer.org/Journal%20templates/transactions_art_guide.pdf
 
-    assert(columns in [1,2])
+    assert (columns in [1, 2])
 
     inches_per_pt = 1.0 / 72.27
 
     fig_width_in = fig_width * inches_per_pt * factor
 
     if fig_height is None:
-        golden_mean = (np.sqrt(5)-1.0)/2.0    # Aesthetic ratio
+        golden_mean = (np.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
         fig_height_in = fig_width_in * golden_mean
 
     MAX_HEIGHT_INCHES = 8.0
@@ -747,22 +769,21 @@ def latexify(fig_width=347, fig_height=None, columns=1, factor=0.45):
 
     params = {'backend': 'ps',
               'text.latex.preamble': ['\usepackage{gensymb}'],
-              'axes.labelsize': 8, # fontsize for x and y labels (was 10)
+              'axes.labelsize': 8,  # fontsize for x and y labels (was 10)
               'axes.titlesize': 8,
-              'font.size': 10, # was 10/8
-              'legend.fontsize': 8, # was 10
+              'font.size': 10,  # was 10/8
+              'legend.fontsize': 8,  # was 10
               'xtick.labelsize': 8,
               'ytick.labelsize': 8,
               'text.usetex': True,
-              'figure.figsize': [fig_width_in,fig_height_in],
+              'figure.figsize': [fig_width_in, fig_height_in],
               'font.family': 'serif'
     }
 
     mpl.rcParams.update(params)
 
 
-def format_axes(ax, spine_color = 'gray'):
-
+def format_axes(ax, spine_color='gray'):
     for spine in ['top', 'right']:
         ax.spines[spine].set_visible(False)
 
@@ -778,31 +799,29 @@ def format_axes(ax, spine_color = 'gray'):
 
     return ax
 
-def plot_nodes(node_positions, node_links = None, radius=1.0, scalefree=False):
+
+def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False):
     fig, ax = plt.subplots()
     nodes = []
     node_positions = OrderedDict(sorted(node_positions.items()))
     for node, position in node_positions.items():
-        x,y,z = position
-        ax.scatter(x,y)
+        x, y, z = position
+        ax.scatter(x, y)
         ax.annotate(node, xy=(x, y), xytext=(-10, 5), textcoords='offset points', ha='center', va='bottom')
-        ax.add_patch(plt.Circle((x,y),radius=radius,edgecolor='b', fill=False, alpha=0.2))
+        ax.add_patch(plt.Circle((x, y), radius=radius, edgecolor='b', fill=False, alpha=0.2))
 
     if node_links:
         for node, links in node_links.items():
             for link in links:
-                x,y = zip(node_positions.values()[node][0:2], node_positions.values()[link][0:2])
-                ax.plot(x,y, color='k', lw=1, alpha=0.4, linestyle='--')
-
-
-
+                x, y = zip(node_positions.values()[node][0:2], node_positions.values()[link][0:2])
+                ax.plot(x, y, color='k', lw=1, alpha=0.4, linestyle='--')
 
     ax.set_aspect('equal', adjustable='datalim')
 
     if scalefree:
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-        ax=format_axes(ax)
+        ax = format_axes(ax)
 
     return fig
 

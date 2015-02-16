@@ -132,8 +132,8 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
 
     if 'var' not in tf.index.names and 'run' not in tf.index.names:
         # Dealing with a single run; pad it with 0's
-        dff=pd.concat([tf], keys= [0]+tf.index.names, names = ['run']+tf.index.names)
-        tf=pd.concat([dff], keys= [0]+dff.index.names, names = ['var']+dff.index.names)
+        dff = pd.concat([tf], keys=[0] + tf.index.names, names=['run'] + tf.index.names)
+        tf = pd.concat([dff], keys=[0] + dff.index.names, names=['var'] + dff.index.names)
 
     trusts = []
 
@@ -157,7 +157,7 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
     # The following:
     # Transforms the target id into the column space,
     # Groups each nodes independent observations together
-    #   Fills in the gaps IN EACH ASSESSMENT with the previous assessment of that node by that node at the previous time
+    # Fills in the gaps IN EACH ASSESSMENT with the previous assessment of that node by that node at the previous time
     if fillna:
         tf = tf.unstack('target').groupby(level=['var', 'run', 'observer']).apply(lambda x: x.fillna(method='ffill'))
     else:
@@ -217,8 +217,8 @@ def generate_trust_logs_from_comms_logs(comms_logs):
     return pd.concat(
         [pd.concat(
             [pd.DataFrame(target_metrics) for target_metrics in observer_metrics.itervalues()],
-            keys=observer_metrics.keys())for observer_metrics in trust.itervalues()],
-        keys=trust.keys(), names=['observer','target', 't'])
+            keys=observer_metrics.keys()) for observer_metrics in trust.itervalues()],
+        keys=trust.keys(), names=['observer', 'target', 't'])
 
 
 def explode_metrics_from_trust_log(df, metrics_string=None):
@@ -239,14 +239,12 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     except:
         var_is_float = False
 
-
-
     tf.index = tf.index.set_levels([
         tf.index.levels[0].astype(np.float64) if var_is_float else df.index.levels[0],  # Var
-        tf.index.levels[1].astype(np.int32),    # run
-        tf.index.levels[2],                     # observer
-        tf.index.levels[3].astype(np.int32),    # t
-        tf.index.levels[4]                      # target
+        tf.index.levels[1].astype(np.int32),  # run
+        tf.index.levels[2],  # observer
+        tf.index.levels[3].astype(np.int32),  # t
+        tf.index.levels[4]  # target
     ])
     tf.sort(inplace=True)
     return tf
@@ -268,7 +266,7 @@ def generate_network_trust(trust_run, observer='n0', recommendation_nodes=None, 
     :param ewma:
     :return: tuple: (t_average, t_white, t_mtmf
     """
-    trust_run = trust_run.unstack('observer').groupby(level=['var','run']).apply(
+    trust_run = trust_run.unstack('observer').groupby(level=['var', 'run']).apply(
         lambda s: s.fillna(method='ffill')
     ).stack('observer')
 
@@ -300,12 +298,14 @@ def generate_network_trust(trust_run, observer='n0', recommendation_nodes=None, 
     })
 
     if ewma:
-        t_mtmf = t_mtmf.groupby(level=['var','run']).apply(lambda s: pd.stats.moments.ewma(s.fillna(method="ffill"),span=16))
+        t_mtmf = t_mtmf.groupby(level=['var', 'run']).apply(
+            lambda s: pd.stats.moments.ewma(s.fillna(method="ffill"), span=16))
 
     return t_avg, t_network, t_mtmf
 
 
-def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, target='n1', indirect_nodes=None, ewma=False):
+def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, target='n1',
+                       indirect_nodes=None, ewma=False):
     """
     Take an individual simulation run and get a dict of the standard network perspectives across given recommenders and indirect nodes
     (you could probably cludge together a few runs and the data format would still be ok, but I wouldn't try plotting it directly)

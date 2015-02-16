@@ -270,10 +270,13 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
                     m_subtot], detection_totals[i]) for i, m_subtot in enumerate(detection_subtot)]))
                 print("Prime Suspect:%s:%s" % (
                     names[prime_distrusted_node], str(trust_average[prime_distrusted_node])))
+
+    confidence = (trust_average[prime_distrusted_node] - np.average(trust_average)) / np.std(trust_average)
+
     result = {"suspect": prime_distrusted_node,
               "suspect_name": names[prime_distrusted_node] if names is not None else None,
               "suspect_distrust": trust_average[prime_distrusted_node],
-              "suspect_confidence": (trust_average[prime_distrusted_node] - np.average(trust_average)) / np.std(trust_average),
+              "suspect_confidence": confidence,
               "trust_stdev": trust_stdev,
               "trust_average": trust_average,
               "detection_totals": detection_totals}

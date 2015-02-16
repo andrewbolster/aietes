@@ -24,7 +24,8 @@ from collections import namedtuple
 
 import numpy as np
 
-from aietes.Tools import MapEntry, distance, fudge_normal, DEBUG, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
+from aietes.Tools import MapEntry, distance, fudge_normal, DEBUG, unit, mag, listfix, sixvec, spherical_distance, \
+    ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
 
 DEBUG = False
@@ -156,7 +157,7 @@ class Behaviour(object):
         self.node.push(force_vector, contributions=contributions)
         return
 
-    def get_nearest_neighbours(self, position = None, n_neighbours=None):
+    def get_nearest_neighbours(self, position=None, n_neighbours=None):
         """
         Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         :param position:
@@ -170,10 +171,10 @@ class Behaviour(object):
             target_pos = position
         # Sort and filter Neighbours from self.map by distance
         neighbours_with_distance = [MapEntry(key,
-                                              value.position, value.velocity,
-                                              name=self.simulation.reverse_node_lookup(
-                                                  key).name,
-                                              distance=distance(target_pos, value.position)
+                                             value.position, value.velocity,
+                                             name=self.simulation.reverse_node_lookup(
+                                                 key).name,
+                                             distance=distance(target_pos, value.position)
 
         ) for key, value in self.neighbours.items()]
         # self.logger.DEBUG("Got Distances: %s"%neighbours_with_distance)
@@ -196,7 +197,7 @@ class Behaviour(object):
         force_vector = np.array([0, 0, 0], dtype=np.float)
         distance_val = distance(position, repulsive_position)
         force_vector = unit(position - repulsive_position) * \
-                      d_limit / float(min(distance_val, self.neighbourhood_max_rad))
+                       d_limit / float(min(distance_val, self.neighbourhood_max_rad))
 
         if distance_val < 1:
             raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
@@ -224,7 +225,7 @@ class Behaviour(object):
         force_vector = np.array([0, 0, 0], dtype=np.float)
         distance_val = distance(position, attractive_position)
         force_vector = unit(attractive_position - position) * \
-                      (min(distance_val, self.neighbourhood_max_rad) / float(d_limit))
+                       (min(distance_val, self.neighbourhood_max_rad) / float(d_limit))
         if self.debug:
             self.logger.debug(
                 "Attraction to %s: %s, at range of %s" % (force_vector, attractive_position, distance_val))
@@ -267,8 +268,8 @@ class Behaviour(object):
                 r_mag = mag(repulse)
                 # If we're at too narrow an angle we'll get stuck on a wall
                 angle = angle_between(repulse, -velocity)
-                if angle < 2.0*np.pi/5.0:            # 72 degrees of wall norm
-                    response = repulse + velocity - (2 * (np.dot(velocity, repulse))/(r_mag**2))*repulse
+                if angle < 2.0 * np.pi / 5.0:  # 72 degrees of wall norm
+                    response = repulse + velocity - (2 * (np.dot(velocity, repulse)) / (r_mag ** 2)) * repulse
                 else:
                     response = repulse
             except RuntimeError:
@@ -286,7 +287,6 @@ class Behaviour(object):
                 if self.time_travelled > 10:
                     self.time_travelled = 0
                     self.my_direction = unit(response)
-
 
         return response
 
@@ -327,7 +327,7 @@ class RandomFlatWalk(Behaviour):
         self.wallCheckDisabled = False
         self.my_direction = random_xy_vector()
         self.time_travelled = 0
-        self._time_limit = self.node.simulation.environment.shape[0]/5
+        self._time_limit = self.node.simulation.environment.shape[0] / 5
 
     def random_walk(self, position, velocity):
         """

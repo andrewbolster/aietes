@@ -64,7 +64,8 @@ class EphyraController(object):
         self.view = None
         self._metrics_availiable = list(itersubclasses(Metric))
         self._metrics_enabled = [metric for metric in self._metrics_availiable
-                                 if not getattr(metric, 'drift_enabled', False) and not getattr(metric, 'ecea_enabled', False)]
+                                 if not getattr(metric, 'drift_enabled', False) and not getattr(metric, 'ecea_enabled',
+                                                                                                False)]
         self.metrics = []
         self.args = kw.get("exec_args", None)
 

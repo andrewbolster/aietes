@@ -146,12 +146,13 @@ def generate_dataframes_from_inverted_log(tup):
             var_is_float = False
 
         df.index = df.index.set_levels([
-                                           df.index.levels[0].astype(np.float64) if var_is_float else df.index.levels[0],  # Var
-                                           df.index.levels[1].astype(np.int32) # Run
-                                       ]+(df.index.levels[2:])
+                                           df.index.levels[0].astype(np.float64) if var_is_float else df.index.levels[
+                                               0],  # Var
+                                           df.index.levels[1].astype(np.int32)  # Run
+                                       ] + (df.index.levels[2:])
         )
-        df = df.reindex(sorted(df.index.levels[0]),level=0, copy=False) # Var
-        df = df.reindex(sorted(df.index.levels[1]),level=1, copy=False) # Var
+        df = df.reindex(sorted(df.index.levels[0]), level=0, copy=False)  # Var
+        df = df.reindex(sorted(df.index.levels[1]), level=1, copy=False)  # Var
 
 
     except:
@@ -180,6 +181,7 @@ def dump_trust_logs_and_stats_from_exp_paths(paths, title=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load multiple scenarios or experiments into a single output hdfstore")
-    parser.add_argument('paths', metavar='P', type=str, nargs='+', default=[os.curdir], help="List of directories to walk for dataruns")
+    parser.add_argument('paths', metavar='P', type=str, nargs='+', default=[os.curdir],
+                        help="List of directories to walk for dataruns")
     args = parser.parse_args()
     dump_trust_logs_and_stats_from_exp_paths(args.paths)

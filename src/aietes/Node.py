@@ -28,6 +28,7 @@ from aietes.Tools import *
 FULL = 0
 SIMPLE = 1
 
+
 class Node(Sim.Process):
     """
     Generic Representation of a network node
@@ -239,7 +240,9 @@ class Node(Sim.Process):
         Are we still in the bloody box?
         True if within bounds of the environment while we're doing wall checking (as defined by the behaviour)
         """
-        return self.wallCheckDisabled or all(self.position < np.asarray(self.simulation.environment.shape)) and all(np.zeros(3) < self.position)
+        return self.wallCheckDisabled or \
+               all(self.position < np.asarray(self.simulation.environment.shape)) and \
+               all(np.zeros(3) < self.position)
 
     def distance_to(self, their_position):
         """

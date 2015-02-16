@@ -134,7 +134,7 @@ class Simulation(object):
         # Attempt Validation and construct the simulation from that config.
         try:
             self.logger.setLevel(
-                LOGLEVELS.get(self.config.get("log_level","notset").lower(), logging.NOTSET))
+                LOGLEVELS.get(self.config.get("log_level", "notset").lower(), logging.NOTSET))
         except ConfigError as err:
             self.logger.error(
                 "Error in configuration, cannot continue: %s" % err)
@@ -421,7 +421,7 @@ class Simulation(object):
 
         # Boundary checks:
         # len(app)==len(dist)
-        #   len(app) % nodes_count-preconfigured_nodes_count = 0
+        # len(app) % nodes_count-preconfigured_nodes_count = 0
         if isinstance(app, list) and isinstance(dist, list):
             if len(app) == len(dist) and (nodes_count - preconfigured_nodes_count) % len(app) == 0:
                 applications = [str(a)
@@ -439,7 +439,7 @@ class Simulation(object):
 
         #
         # Check and generate behaviour distribution
-        #   i.e. bev = ["Bev A","Bev B"]
+        # i.e. bev = ["Bev A","Bev B"]
         #        dist = [ 4, 5 ]
         try:
             bev = node_default_config_dict['Behaviour']['protocol']
@@ -612,8 +612,9 @@ class Simulation(object):
         dp = DataPackage(**(self.current_state()))
         return dp
 
-    def postprocess(self, log=None, output_file=None, output_path=None, display_frames=None, data_file=False, movie_file=False, gif=False,
-                    input_file=None, plot=False, xres=1024, yres=768, fps=24, extent=True):
+    def postprocess(self, log=None, output_file=None, output_path=None, display_frames=None,
+                    data_file=False, movie_file=False, gif=False, input_file=None, plot=False,
+                    xres=1024, yres=768, fps=24, extent=True):
         """
         Performs output and positions generation for a given simulation
         :param log:

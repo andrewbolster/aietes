@@ -361,7 +361,6 @@ def object_log(pos_log, object_id):
     return [(entry.time, entry.position) for entry in pos_log if entry.object_id == object_id]
 
 
-
 def db2linear(db):
     """
 
@@ -1149,10 +1148,12 @@ def literal_eval_walk(node, tabs=0):
             except:
                 print '*' * tabs, key, "EOL FAIL"
 
+
 def map_levels(df, dct, level=0):
     index = df.index
-    index.set_levels([[dct.get(item, item) for item in names] if i==level else names
+    index.set_levels([[dct.get(item, item) for item in names] if i == level else names
                       for i, names in enumerate(index.levels)], inplace=True)
+
 
 from cStringIO import StringIO
 import sys
@@ -1178,5 +1179,5 @@ def map_level(df, dct, level=0):
     :return:
     """
     index = df.index
-    index.set_levels([[dct.get(item, item) for item in names] if i==level else names
+    index.set_levels([[dct.get(item, item) for item in names] if i == level else names
                       for i, names in enumerate(index.levels)], inplace=True)

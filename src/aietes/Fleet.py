@@ -220,7 +220,7 @@ class Fleet(Sim.Process):
         else:
             latest_map = self.environment.map
         return {
-            m.name:m.position for m in latest_map.itervalues()
+            m.name: m.position for m in latest_map.itervalues()
         }
 
 

@@ -32,7 +32,7 @@ from aietes.Layercake.priodict import PriorityDictionary
 from aietes.Tools import distance, broadcast_address, DEBUG
 
 
-#DEBUG = True
+# DEBUG = True
 
 
 def setup_routing(node, config):
@@ -428,11 +428,13 @@ class Static(SimpleRoutingTable):
         # Check if the power level needed for each next hop allows us to
         # directly reaching destination, even being out of the cone
         for i in self:
-            if self.get_level_for(nodes_geo[i]) is not None and self.get_level_for(nodes_geo[i]) <= self.get_level_for(nodes_geo[self[i]]):
+            if self.get_level_for(nodes_geo[i]) is not None and self.get_level_for(nodes_geo[i]) <= self.get_level_for(
+                    nodes_geo[self[i]]):
                 self[i] = i
 
         if DEBUG:
-            print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(), nodes_geo[self[i]])
+            print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(),
+                                                                     nodes_geo[self[i]])
 
     def build_routing_table_1(self):
         # Reception Cone
@@ -501,7 +503,8 @@ class Static(SimpleRoutingTable):
                                             # if
                                             # nodes_geo[i].distanceto(nodes_geo[next_hop_name])
                                             # < next_dist:
-                                            if abs(abs(recep_angle) - abs(rel_pos_item[2])) < abs(abs(next_angle) - abs(rel_pos_item[2])):
+                                            if abs(abs(recep_angle) - abs(rel_pos_item[2])) < abs(
+                                                            abs(next_angle) - abs(rel_pos_item[2])):
                                                 next_hop_name = i
                                                 next_hop_rel_pos = j
                                                 next_dist = dist(
@@ -541,11 +544,13 @@ class Static(SimpleRoutingTable):
         # Check if the power level needed for each next hop allows us to
         # directly reaching destination, even being out of the cone
         for i in self:
-            if self.get_level_for(nodes_geo[i]) is not None and self.get_level_for(nodes_geo[i]) <= self.get_level_for(nodes_geo[self[i]]):
+            if self.get_level_for(nodes_geo[i]) is not None and self.get_level_for(nodes_geo[i]) <= self.get_level_for(
+                    nodes_geo[self[i]]):
                 self[i] = i
 
         if DEBUG:
-            print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(), nodes_geo[self[i]])
+            print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(),
+                                                                     nodes_geo[self[i]])
 
     def build_routing_table_2(self):
         # Shortest path with level constraints
@@ -693,6 +698,7 @@ class Static(SimpleRoutingTable):
             end = p[end]
         path.reverse()
         return path
+
 
 class FBR(SimpleRoutingTable):
     """ In this case, DACAP4FBR should be selected as MAC protocol.
@@ -850,13 +856,13 @@ class FBR(SimpleRoutingTable):
             new_level = int(destination[3])
         else:
             r = distance(self.layercake.get_current_position(), destination)
-            levels=zip(                                             #From the re-zipped
-                    *filter(                                        # unzipped filtered
-                        lambda i: i[1]>r,                           # list (l,d) where d > r
-                        self.layercake.phy.level2distance.items()   # from available levels
-                    )
-                )[0]                                                # first value of unzipped lists (levels)
-            new_level = min(levels)                                 #Lowest Value Level
+            levels = zip(  # From the re-zipped
+                           *filter(  # unzipped filtered
+                                     lambda i: i[1] > r,  # list (l,d) where d > r
+                                     self.layercake.phy.level2distance.items()  # from available levels
+                           )
+            )[0]  # first value of unzipped lists (levels)
+            new_level = min(levels)  # Lowest Value Level
 
         return new_level
 
@@ -993,7 +999,6 @@ class FBR(SimpleRoutingTable):
                 else:
                     self.logger.debug("Starting multicast selection")
                     return "ANY0", 0
-
 
             if int(current_through[3]) != (len(self.layercake.phy.level2distance) - 1):
                 # This is a multicast selection, but not with the maximum

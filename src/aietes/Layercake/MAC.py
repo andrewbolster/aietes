@@ -33,7 +33,7 @@ from aietes.Tools import broadcast_address, DEBUG, distance
 from aietes.Tools.FSM import FSM
 
 
-#DEBUG = True
+# DEBUG = True
 
 DEFAULT_PROTO = "ALOHA"
 
@@ -54,9 +54,11 @@ def setup_mac(node, config):
     else:
         return ALOHA(node, config)
 
+
 class MAC(object):
     total_channel_access_attempts = 0
     channel_access_retries = 0
+
 
 class ALOHA(MAC):
     """ALOHA:  A very simple MAC Algorithm
@@ -182,7 +184,8 @@ class ALOHA(MAC):
         """
         if self.incoming_packet["type"] == "DATA" and self.fsm.current_state == "WAIT_ACK":
             packet_origin = self.incoming_packet["route"][-1][0]
-            if packet_origin == self.outgoing_packet_queue[0]["through"] and self.incoming_packet["dest"] == self.outgoing_packet_queue[0]["dest"]:
+            if packet_origin == self.outgoing_packet_queue[0]["through"] and self.incoming_packet["dest"] == \
+                    self.outgoing_packet_queue[0]["dest"]:
                 if self.incoming_packet["ID"] == self.outgoing_packet_queue[0]["ID"]:
                     # This is an implicit ACK
                     self.logger.debug("An implicit ACK has arrived.")
@@ -210,23 +213,24 @@ class ALOHA(MAC):
         if DEBUG:
             self.logger.debug("ACK to " + packet_origin)
         ack_packet = {"type": "ACK",
-                     "source": self.layercake.hostname,
-                     "source_position": self.layercake.get_current_position(),
-                     "dest": packet_origin,
-                     "dest_position": self.incoming_packet["source_position"],
-                     "through": packet_origin,
-                     "through_position": self.incoming_packet["source_position"],
-                     "length": self.ack_packet_length,
-                     "level": self.incoming_packet["level"],
-                     "ID": self.incoming_packet["ID"]}
+                      "source": self.layercake.hostname,
+                      "source_position": self.layercake.get_current_position(),
+                      "dest": packet_origin,
+                      "dest_position": self.incoming_packet["source_position"],
+                      "through": packet_origin,
+                      "through_position": self.incoming_packet["source_position"],
+                      "length": self.ack_packet_length,
+                      "level": self.incoming_packet["level"],
+                      "ID": self.incoming_packet["ID"]}
 
         self.layercake.phy.transmit_packet(ack_packet)
 
     def on_error(self):
         """ This function is called when the FSM has an unexpected input_symbol in a determined state.
         """
-        self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(
-            sm=self.fsm, pkt=self.incoming_packet))
+        self.logger.error(
+            "Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(
+                sm=self.fsm, pkt=self.incoming_packet))
 
     def on_transmit_success(self):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
@@ -450,14 +454,19 @@ class ALOHA4FBR(ALOHA):
                 self.multicast = False
 
             rts_packet = {"type": "RTS", "ID": self.outgoing_packet_queue[0]["ID"],
-                         "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
-                         "dest": self.outgoing_packet_queue[0]["dest"], "dest_position": self.outgoing_packet_queue[0]["dest_position"],
-                         "through": self.outgoing_packet_queue[0]["through"], "through_position": self.outgoing_packet_queue[0]["through_position"],
-                         "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"], "time_stamp": Sim.now()}
+                          "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
+                          "dest": self.outgoing_packet_queue[0]["dest"],
+                          "dest_position": self.outgoing_packet_queue[0]["dest_position"],
+                          "through": self.outgoing_packet_queue[0]["through"],
+                          "through_position": self.outgoing_packet_queue[0]["through_position"],
+                          "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"],
+                          "time_stamp": Sim.now()}
 
             if DEBUG:
-                self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[
-                    0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
+                self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " +
+                                  self.outgoing_packet_queue[
+                                      0]["through"] + " with power level " + str(
+                    self.outgoing_packet_queue[0]["level"]))
 
             self.layercake.phy.transmit_packet(rts_packet)
 
@@ -511,11 +520,13 @@ class ALOHA4FBR(ALOHA):
 
         if self.layercake.phy.is_idle():
             cts_packet = {"type": "CTS",
-                         "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
-                         "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
-                         "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
-                         "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
-                         "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
+                          "source": self.incoming_packet["dest"],
+                          "source_position": self.incoming_packet["dest_position"],
+                          "dest": self.incoming_packet["source"],
+                          "dest_position": self.incoming_packet["source_position"],
+                          "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
+                          "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
+                          "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
             if DEBUG:
                 self.logger.debug(
@@ -529,7 +540,10 @@ class ALOHA4FBR(ALOHA):
         The routing layer decides.
         """
         self.valid_candidates[self.incoming_packet["through"]] = (
-                                                                     Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+                                                                     Sim.now() - self.incoming_packet[
+                                                                         "time_stamp"]) / 2.0, self.incoming_packet[
+                                                                     "rx_energy"], self.incoming_packet[
+                                                                     "through_position"]
         self.logger.debug("Appending CTS to " + self.incoming_packet[
             "source"] + " coming from " + self.incoming_packet["through"])
         self.layercake.net.add_node(
@@ -548,8 +562,10 @@ class ALOHA4FBR(ALOHA):
         """
 
         current_through = self.outgoing_packet_queue[0]["through"]
-        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.select_route(
-            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
+        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0][
+            "through_position"] = self.layercake.net.select_route(
+            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts,
+            self.outgoing_packet_queue[0]["dest"])
 
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
             # We have consumed all the attemps
@@ -581,8 +597,10 @@ class ALOHA4FBR(ALOHA):
     def transmit(self):
         """ Real Transmission of the Packet.
         """
-        self.layercake.net.process_update_from_packet(self.outgoing_packet_queue[0]["dest"], self.outgoing_packet_queue[0][
-            "dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
+        self.layercake.net.process_update_from_packet(self.outgoing_packet_queue[0]["dest"],
+                                                      self.outgoing_packet_queue[0][
+                                                          "dest_position"], self.outgoing_packet_queue[0]["through"],
+                                                      self.outgoing_packet_queue[0]["through_position"])
         ALOHA.transmit(self)
 
     def can_i_help(self, packet):
@@ -1011,14 +1029,19 @@ class DACAP(MAC):
                 self.multicast = False
 
             rts_packet = {"type": "RTS", "ID": self.outgoing_packet_queue[0]["ID"],
-                         "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
-                         "dest": self.outgoing_packet_queue[0]["dest"], "dest_position": self.outgoing_packet_queue[0]["dest_position"],
-                         "through": self.outgoing_packet_queue[0]["through"], "through_position": self.outgoing_packet_queue[0]["through_position"],
-                         "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"], "time_stamp": Sim.now()}
+                          "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
+                          "dest": self.outgoing_packet_queue[0]["dest"],
+                          "dest_position": self.outgoing_packet_queue[0]["dest_position"],
+                          "through": self.outgoing_packet_queue[0]["through"],
+                          "through_position": self.outgoing_packet_queue[0]["through_position"],
+                          "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"],
+                          "time_stamp": Sim.now()}
 
             if DEBUG:
-                self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " + self.outgoing_packet_queue[
-                    0]["through"] + " with power level " + str(self.outgoing_packet_queue[0]["level"]))
+                self.logger.debug("Transmitting RTS to " + self.outgoing_packet_queue[0]["dest"] + " through " +
+                                  self.outgoing_packet_queue[
+                                      0]["through"] + " with power level " + str(
+                    self.outgoing_packet_queue[0]["level"]))
 
             self.level = self.outgoing_packet_queue[0]["level"]
             self.T = self.layercake.phy.level2delay(self.level)
@@ -1044,7 +1067,8 @@ class DACAP(MAC):
             p = Sim.Process()
             p.interrupt(self.timer)
             self.fsm.process("accept")
-        elif self.last_packet["type"] == "DATA" and self.last_packet["through"] == self.incoming_packet["source"] and self.last_packet["dest"] == self.incoming_packet["dest"]:
+        elif self.last_packet["type"] == "DATA" and self.last_packet["through"] == self.incoming_packet["source"] and \
+                        self.last_packet["dest"] == self.incoming_packet["dest"]:
             # I was sleeping because one of my neighbors was receiving a packet
             # which I also overheard.
             p = Sim.Process()
@@ -1139,10 +1163,10 @@ class DACAP(MAC):
             it is not necessary anymore. Otherwise, implicit WAR can be used.
         """
         war_packet = {"type": "WAR",
-                     "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
-                     "dest": self.last_cts["dest"], "dest_position": self.last_cts["dest_position"],
-                     "through": self.last_cts["dest"], "through_position": self.last_cts["dest_position"],
-                     "length": self.war_packet_length, "level": self.last_cts["level"]}
+                      "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
+                      "dest": self.last_cts["dest"], "dest_position": self.last_cts["dest_position"],
+                      "through": self.last_cts["dest"], "through_position": self.last_cts["dest_position"],
+                      "length": self.war_packet_length, "level": self.last_cts["level"]}
 
         self.logger.debug(
             "Transmitting Warning Packet to " + self.last_cts["dest"])
@@ -1182,12 +1206,12 @@ class DACAP(MAC):
         p.interrupt(self.timer)
 
         cts_packet = {"type": "CTS",
-                     "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
-                     "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
-                     "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
-                     "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
-                     "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"],
-                     "ID": self.incoming_packet["ID"]}
+                      "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
+                      "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
+                      "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
+                      "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
+                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"],
+                      "ID": self.incoming_packet["ID"]}
 
         if DEBUG:
             self.logger.debug(
@@ -1214,11 +1238,11 @@ class DACAP(MAC):
             self.logger.debug("ACK to {}".format(packet_origin[0]))
 
         ack_packet = {"type": "ACK",
-                     "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
-                     "dest": packet_origin[0], "dest_position": packet_origin[1],
-                     "through": packet_origin[0], "through_position": packet_origin[1],
-                     "length": self.ack_packet_length, "level": self.incoming_packet["level"],
-                     "ID": self.incoming_packet["ID"]}
+                      "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
+                      "dest": packet_origin[0], "dest_position": packet_origin[1],
+                      "through": packet_origin[0], "through_position": packet_origin[1],
+                      "length": self.ack_packet_length, "level": self.incoming_packet["level"],
+                      "ID": self.incoming_packet["ID"]}
 
         self.layercake.phy.transmit_packet(ack_packet)
 
@@ -1260,7 +1284,8 @@ class DACAP(MAC):
         """ Valuable information can be obtained from overhearing the channel.
         """
         if self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
-            if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet["dest"] == self.outgoing_packet_queue[0]["dest"]:
+            if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
+                "dest"] == self.outgoing_packet_queue[0]["dest"]:
                 # This is an implicit ACK
                 self.fsm.process("got_ACK")
         else:
@@ -1280,7 +1305,8 @@ class DACAP(MAC):
         # ACK
         packet_origin = self.incoming_packet["route"][-1]
 
-        if self.layercake.net.need_explicit_ack(self.incoming_packet["level"], self.incoming_packet["dest"]) or len(self.outgoing_packet_queue) != 0:
+        if self.layercake.net.need_explicit_ack(self.incoming_packet["level"], self.incoming_packet["dest"]) or len(
+                self.outgoing_packet_queue) != 0:
             self.send_ack(packet_origin)
 
         self.layercake.net.on_packet_reception(self.incoming_packet)
@@ -1531,11 +1557,11 @@ class DACAP4FBR(DACAP):
         """ Please be quiet!
         """
         sil_packet = {"type": "SIL",
-                     "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
-                     "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
-                     "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
-                     "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
-                     "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
+                      "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
+                      "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
+                      "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
+                      "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
+                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
         self.logger.debug(
             "Transmitting SIL to " + self.incoming_packet["source"])
@@ -1556,7 +1582,10 @@ class DACAP4FBR(DACAP):
         The routing layer decides.
         """
         self.valid_candidates[self.incoming_packet["through"]] = (
-                                                                     Sim.now() - self.incoming_packet["time_stamp"]) / 2.0, self.incoming_packet["rx_energy"], self.incoming_packet["through_position"]
+                                                                     Sim.now() - self.incoming_packet[
+                                                                         "time_stamp"]) / 2.0, self.incoming_packet[
+                                                                     "rx_energy"], self.incoming_packet[
+                                                                     "through_position"]
         self.logger.debug("Appending CTS to " + self.incoming_packet[
             "source"] + " coming from " + self.incoming_packet["through"])
         self.layercake.net.add_node(
@@ -1574,8 +1603,10 @@ class DACAP4FBR(DACAP):
         """ Once we have wait enough, that is, 2 times the distance at which the best next hop should be, we should select it.
         """
         current_through = self.outgoing_packet_queue[0]["through"]
-        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.select_route(
-            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
+        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0][
+            "through_position"] = self.layercake.net.select_route(
+            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts,
+            self.outgoing_packet_queue[0]["dest"])
 
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
             # We have consumed all the attemps
@@ -1624,8 +1655,10 @@ class DACAP4FBR(DACAP):
     def transmit(self):
         """ Real Transmission of the Packet.
         """
-        self.layercake.net.process_update_from_packet(self.outgoing_packet_queue[0]["dest"], self.outgoing_packet_queue[0][
-            "dest_position"], self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"])
+        self.layercake.net.process_update_from_packet(self.outgoing_packet_queue[0]["dest"],
+                                                      self.outgoing_packet_queue[0][
+                                                          "dest_position"], self.outgoing_packet_queue[0]["through"],
+                                                      self.outgoing_packet_queue[0]["through_position"])
         DACAP.transmit(self)
 
     def overhearing(self):
@@ -1638,11 +1671,13 @@ class DACAP4FBR(DACAP):
                 self.fsm.process("ignored")
 
         elif self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
-            if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet["dest"] == self.outgoing_packet_queue[0]["dest"]:
+            if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
+                "dest"] == self.outgoing_packet_queue[0]["dest"]:
                 # This is an implicit ACK
                 self.fsm.process("got_ACK")
 
-        elif self.incoming_packet["type"] == "CTS" and self.fsm.current_state == "WAIT_DATA" and self.last_cts["dest"] == self.incoming_packet["dest"]:
+        elif self.incoming_packet["type"] == "CTS" and self.fsm.current_state == "WAIT_DATA" and self.last_cts[
+            "dest"] == self.incoming_packet["dest"]:
             # This is another candidate proposing himself as a good candidate
             self.fsm.process("got_CTS")
 
@@ -1890,7 +1925,8 @@ class CSMA(MAC):
         self.fsm.add_transition("send_DATA", "BACKOFF", self.queue_data, "BACKOFF")
         self.fsm.add_transition("got_RTS", "BACKOFF", self.process_rts, "BACKOFF")
         # self.fsm.add_transition("got_CTS", "BACKOFF", self.ignore_cts,"BACKOFF")  ### This line is more important that what it seems: if we ignore it, we tend to defer all transmissions.
-        self.fsm.add_transition("got_CTS", "BACKOFF", self.transmit, "WAIT_ACK")  # This line is more important that what it seems: if we Accept it, we tend to make all transmissions.
+        self.fsm.add_transition("got_CTS", "BACKOFF", self.transmit,
+                                "WAIT_ACK")  # This line is more important that what it seems: if we Accept it, we tend to make all transmissions.
         self.fsm.add_transition("got_DATA", "BACKOFF", self.check_pending_data, "BACKOFF")
         # Be careful with this
         self.fsm.add_transition("got_ACK", "BACKOFF", self.check_pending_ack, "READY_WAIT")
@@ -2015,9 +2051,11 @@ class CSMA(MAC):
 
         """
         if self.pending_ack_packet_from is not None:
-            if self.incoming_packet["source"] == self.pending_ack_packet_from or self.pending_ack_packet_from[0:3] == "ANY":
+            if self.incoming_packet["source"] == self.pending_ack_packet_from or self.pending_ack_packet_from[
+                                                                                 0:3] == "ANY":
                 self.logger.info(
-                    "Even after an ACK timeout, the DATA was properly transmitted to: " + self.incoming_packet["source"])
+                    "Even after an ACK timeout, the DATA was properly transmitted to: " + self.incoming_packet[
+                        "source"])
                 self.on_transmit_success()
                 self.pending_ack_packet_from = None
         else:
@@ -2051,10 +2089,13 @@ class CSMA(MAC):
                 self.multicast = False
 
             rts_packet = {"type": "RTS", "ID": self.outgoing_packet_queue[0]["ID"],
-                         "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
-                         "dest": self.outgoing_packet_queue[0]["dest"], "dest_position": self.outgoing_packet_queue[0]["dest_position"],
-                         "through": self.outgoing_packet_queue[0]["through"], "through_position": self.outgoing_packet_queue[0]["through_position"],
-                         "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"], "time_stamp": Sim.now()}
+                          "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
+                          "dest": self.outgoing_packet_queue[0]["dest"],
+                          "dest_position": self.outgoing_packet_queue[0]["dest_position"],
+                          "through": self.outgoing_packet_queue[0]["through"],
+                          "through_position": self.outgoing_packet_queue[0]["through_position"],
+                          "length": self.rts_packet_length, "level": self.outgoing_packet_queue[0]["level"],
+                          "time_stamp": Sim.now()}
 
             self.last_data_to = self.outgoing_packet_queue[0]["through"]
             self.level = self.outgoing_packet_queue[0]["level"]
@@ -2097,7 +2138,8 @@ class CSMA(MAC):
             p = Sim.Process()
             p.interrupt(self.timer)
             self.fsm.process("accept")
-        elif self.last_packet["type"] == "DATA" and self.last_packet["through"] == self.incoming_packet["source"] and self.last_packet["dest"] == self.incoming_packet["dest"]:
+        elif self.last_packet["type"] == "DATA" and self.last_packet["through"] == self.incoming_packet["source"] and \
+                        self.last_packet["dest"] == self.incoming_packet["dest"]:
             p = Sim.Process()
             p.interrupt(self.timer)
             self.fsm.process("accept")
@@ -2177,11 +2219,11 @@ class CSMA(MAC):
             self.multicast = False
 
         cts_packet = {"type": "CTS", "ID": self.incoming_packet["ID"],
-                     "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
-                     "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
-                     "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
-                     "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
-                     "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
+                      "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
+                      "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
+                      "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
+                      "length": self.cts_packet_length, "rx_energy": self.layercake.phy.rx_energy,
+                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
         if DEBUG:
             self.logger.debug("Transmitting CTS to {src} in response to {id}".format(
@@ -2219,11 +2261,11 @@ class CSMA(MAC):
             self.multicast = False
 
         ack_packet = {"type": "ACK",
-                     "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
-                     "dest": packet_origin, "dest_position": None,
-                     "through": packet_origin, "through_position": None,
-                     "length": self.ack_packet_length, "level": self.incoming_packet["level"],
-                     "ID": self.incoming_packet["ID"]}
+                      "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
+                      "dest": packet_origin, "dest_position": None,
+                      "through": packet_origin, "through_position": None,
+                      "length": self.ack_packet_length, "level": self.incoming_packet["level"],
+                      "ID": self.incoming_packet["ID"]}
 
         self.layercake.phy.transmit_packet(ack_packet)
 
@@ -2272,7 +2314,8 @@ class CSMA(MAC):
         """ Valuable information can be obtained from overhearing the channel.
         """
         if self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK" \
-                and self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet["dest"] == self.outgoing_packet_queue[0]["dest"]:
+                and self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
+            "dest"] == self.outgoing_packet_queue[0]["dest"]:
             # This is an implicit ACK
             self.fsm.process("got_ACK")
         else:
@@ -2296,7 +2339,8 @@ class CSMA(MAC):
         packet_origin = self.incoming_packet["route"][-1][0]
 
         try:
-            if self.layercake.net.need_explicit_ack(self.incoming_packet["level"], self.incoming_packet["dest"]) or len(self.outgoing_packet_queue) != 0:
+            if self.layercake.net.need_explicit_ack(self.incoming_packet["level"], self.incoming_packet["dest"]) or len(
+                    self.outgoing_packet_queue) != 0:
                 self.send_ack(packet_origin)
         except KeyError:
             self.logger.error("Fucked up on {}, net had {}".format(
@@ -2312,19 +2356,21 @@ class CSMA(MAC):
         """
         try:
             if DEBUG:
-                self.logger.error("Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {src} {thru} {dest} {id}".format(
-                    sm=self.fsm,
-                    src=self.incoming_packet['source'],
-                    thru=self.incoming_packet['through'],
-                    dest=self.incoming_packet['dest'],
-                    id=self.incoming_packet['ID']
-                )
+                self.logger.error(
+                    "Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {src} {thru} {dest} {id}".format(
+                        sm=self.fsm,
+                        src=self.incoming_packet['source'],
+                        thru=self.incoming_packet['through'],
+                        dest=self.incoming_packet['dest'],
+                        id=self.incoming_packet['ID']
+                    )
                 )
         except:
-            raise RuntimeError("REALLY Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(
-                sm=self.fsm,
-                pkt=self.incoming_packet
-            )
+            raise RuntimeError(
+                "REALLY Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(
+                    sm=self.fsm,
+                    pkt=self.incoming_packet
+                )
             )
 
     def on_transmit_success(self):
@@ -2600,11 +2646,11 @@ class CSMA4FBR(CSMA):
         """ Please be quiet!
         """
         sil_packet = {"type": "SIL",
-                     "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
-                     "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
-                     "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
-                     "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
-                     "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
+                      "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
+                      "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
+                      "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
+                      "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
+                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
 
         self.logger.debug(
             "Transmitting SIL to " + self.incoming_packet["source"])
@@ -2649,8 +2695,10 @@ class CSMA4FBR(CSMA):
         """ Once we have wait enough, that is, 2 times the distance at which the best next hop should be, we should select it.
         """
         current_through = self.outgoing_packet_queue[0]["through"]
-        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0]["through_position"] = self.layercake.net.select_route(
-            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts, self.outgoing_packet_queue[0]["dest"])
+        self.outgoing_packet_queue[0]["through"], self.outgoing_packet_queue[0][
+            "through_position"] = self.layercake.net.select_route(
+            self.valid_candidates, self.outgoing_packet_queue[0]["through"], self.transmission_attempts,
+            self.outgoing_packet_queue[0]["dest"])
 
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
             # We have consumed all the attemps
@@ -2747,17 +2795,20 @@ class CSMA4FBR(CSMA):
         """ Valuable information can be obtained from overhearing the channel.
         """
         if self.incoming_packet["type"] == "DATA" and self.fsm.current_state == "WAIT_DATA":
-            if self.incoming_packet["route"][-1][0] == self.last_cts_to and self.incoming_packet["through"] == self.last_cts_from:
+            if self.incoming_packet["route"][-1][0] == self.last_cts_to and self.incoming_packet[
+                "through"] == self.last_cts_from:
                 # I have not been selected as the next hop. I read it from the
                 # data.
                 self.fsm.process("ignored")
 
         elif self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
-            if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet["dest"] == self.outgoing_packet_queue[0]["dest"]:
+            if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
+                "dest"] == self.outgoing_packet_queue[0]["dest"]:
                 # This is an implicit ACK
                 self.fsm.process("got_ACK")
 
-        elif self.incoming_packet["type"] == "CTS" and self.fsm.current_state == "WAIT_DATA" and self.last_cts_to == self.incoming_packet["dest"]:
+        elif self.incoming_packet["type"] == "CTS" and self.fsm.current_state == "WAIT_DATA" and self.last_cts_to == \
+                self.incoming_packet["dest"]:
             # This is another candidate proposing himself as a good candidate
             self.fsm.process("got_CTS")
 

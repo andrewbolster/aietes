@@ -139,5 +139,5 @@ class Layercake(object):
         :param packet:
         :return: bool
         """
-        return(any([ hdlr(packet) for hdlr in self.fwd_signal_hdlrs]))
+        return (any([hdlr(packet) for hdlr in self.fwd_signal_hdlrs]))
 

@@ -54,9 +54,10 @@ def get_valid_metric(metric):
     elif isinstance(metric_arg, str):
         metric_class = getattr(Metrics, metric_arg)
     else:
-        raise ValueError("Invalid object give for metric, should be either subclass of bounos.Metrics.Metric or string: got type {} containing {}:{}".format(
-            type(metric_arg), metric_arg, metric_arg.__bases__
-        ))
+        raise ValueError(
+            "Invalid object give for metric, should be either subclass of bounos.Metrics.Metric or string: got type {} containing {}:{}".format(
+                type(metric_arg), metric_arg, metric_arg.__bases__
+            ))
     metric = metric_class()
     if metric is None:
         raise ValueError("No Metric! Cannot Contine")

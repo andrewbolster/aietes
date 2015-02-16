@@ -190,5 +190,5 @@ class EceaError(Metric):
 # label = "Packet Loss Rate (%p\%%)"
 # signed = False
 #
-#     def generator(self, data):
+# def generator(self, data):
 #         return data.plr()

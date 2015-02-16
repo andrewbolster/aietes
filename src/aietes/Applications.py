@@ -17,7 +17,7 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-from collections import Counter,namedtuple
+from collections import Counter, namedtuple
 
 import numpy as np
 from numpy.random import poisson
@@ -39,7 +39,7 @@ class Application(Sim.Process):
 
     def __init__(self, node, config, layercake):
         self._start_log(node)
-        Sim.Process.__init__(self, name= "{}({})".format(
+        Sim.Process.__init__(self, name="{}({})".format(
             self.__class__.__name__,
             node.name)
         )
@@ -124,8 +124,8 @@ class Application(Sim.Process):
 
         while True:
             (packet, period) = self.generate_next_packet(period=self.period,
-                                              data=randomstr(24),
-                                              destination=destination)
+                                                         data=randomstr(24),
+                                                         destination=destination)
             if packet is not None:
                 if DEBUG:
                     self.logger.debug(
@@ -458,12 +458,12 @@ class CommsTrust(RoutingTest):
         :return:
         """
         pkt_indexes_map = {
-            'tx_pwr_db':"TXP",
-            'rx_pwr_db':"RXP",
-            'delay':"Delay",
-            'length':"Length"
+            'tx_pwr_db': "TXP",
+            'rx_pwr_db': "RXP",
+            'delay': "Delay",
+            'length': "Length"
         }
-        return pd.Series({v:packet[k] for k,v in pkt_indexes_map.items()})
+        return pd.Series({v: packet[k] for k, v in pkt_indexes_map.items()})
 
     def get_metrics_from_batch(self, batch):
         """
@@ -483,12 +483,12 @@ class CommsTrust(RoutingTest):
         if throughput:
             try:
                 # Bring individual observations into a frame
-                df = pd.concat(nodepktstats,axis=1)
+                df = pd.concat(nodepktstats, axis=1)
                 s = df.mean(axis=1)
                 # Prepend the keys with "A" to denote average values
-                s.index = ["A"+k for k in s.keys()]
+                s.index = ["A" + k for k in s.keys()]
                 # Append the Throughput to the series and return
-                s['RXThroughput']=throughput
+                s['RXThroughput'] = throughput
                 return s
             except:
                 self.logger.exception("PKTS:{},TP:{},NANMEAN:{}".format(
@@ -504,7 +504,7 @@ class CommsTrust(RoutingTest):
 
         """
         if not Sim.now() % self.trust_assessment_period:
-            if self.layercake.hostname=='n0' and DEBUG:
+            if self.layercake.hostname == 'n0' and DEBUG:
                 self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
 
             # Set up the data structures
@@ -523,7 +523,7 @@ class CommsTrust(RoutingTest):
                 rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
                 # avg(tx pwr, rx pwr, delay, length), rx throughput
 
-            Pkt=namedtuple('Pkt',['n','dest','length','delivered'])
+            Pkt = namedtuple('Pkt', ['n', 'dest', 'length', 'delivered'])
             last_relevant_time = Sim.now() - self.trust_assessment_period
 
 
@@ -558,14 +558,14 @@ class CommsTrust(RoutingTest):
                         lambda p: p.dest == node,
                         relevant_acked_packets)
                 )
-                if plr and tx_throughput>0.0:
+                if plr and tx_throughput > 0.0:
                     plr = np.nanmean(plr)
                 else:
                     plr = 0.0
 
                 tx_stats[node] = pd.Series({
-                    'PLR':plr if not np.isnan(plr) else 0.0,
-                    'TXThroughput':tx_throughput
+                    'PLR': plr if not np.isnan(plr) else 0.0,
+                    'TXThroughput': tx_throughput
                 })
 
             for node in self.trust_assessments.keys():
@@ -684,10 +684,11 @@ class CommsTrust(RoutingTest):
 class CommsTrustRoundRobin(CommsTrust):
     test_stream_length = 1
 
+
 class SelfishCommsTrustRoundRobin(CommsTrustRoundRobin):
     def select_target(self):
         neighbours_by_distance = self.layercake.host.behaviour.get_nearest_neighbours()
-        choices = [(v.name, 1.0/np.power(v.distance, 2)) for v in neighbours_by_distance]
+        choices = [(v.name, 1.0 / np.power(v.distance, 2)) for v in neighbours_by_distance]
         names, inv_sq_distances = zip(*choices)
 
         norm_distances = inv_sq_distances / sum(inv_sq_distances)
@@ -720,15 +721,11 @@ class SelfishCommsTrustRoundRobin(CommsTrustRoundRobin):
 
             else:
                 self.logger.warn("Dropping Packet to {} as they're not a neighbour".format(packet["dest"]))
-                if self.layercake.hostname=='n1' and DEBUG:
+                if self.layercake.hostname == 'n1' and DEBUG:
                     self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
                 drop_it = True
 
         return drop_it
-
-
-
-
 
 
 class Null(Application):

@@ -78,10 +78,15 @@ class DefaultBehaviour(unittest.TestCase):
                                                   data_file=True)
         expected_filename = "{}.aietes".format(self.__class__.__name__)
         expected_path = os.path.join(empty_dir, expected_filename)
-        self.assertEqual(output_dict['data_file'], expected_path + '.npz', "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
-        self.assertEqual(output_dict['config_file'], expected_path + '.conf', "ConfigFile Paths don't match {}:{}".format(output_dict['config_file'], expected_path + '.npz'))
-        self.assertTrue(os.path.isfile(expected_path + '.npz'), "Didn't store datapackage in generated temp directory {}".format(expected_path))
-        self.assertTrue(os.path.isfile(expected_path + '.conf'), "Didn't store conf file in generated temp directory {}".format(expected_path))
+        self.assertEqual(output_dict['data_file'], expected_path + '.npz',
+                         "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
+        self.assertEqual(output_dict['config_file'], expected_path + '.conf',
+                         "ConfigFile Paths don't match {}:{}".format(output_dict['config_file'],
+                                                                     expected_path + '.npz'))
+        self.assertTrue(os.path.isfile(expected_path + '.npz'),
+                        "Didn't store datapackage in generated temp directory {}".format(expected_path))
+        self.assertTrue(os.path.isfile(expected_path + '.conf'),
+                        "Didn't store conf file in generated temp directory {}".format(expected_path))
         shutil.rmtree(empty_dir)
 
     def testDefaultDataPackageDestination(self):
@@ -90,10 +95,15 @@ class DefaultBehaviour(unittest.TestCase):
                                                   data_file=True)
         expected_filename = "{}.aietes".format(self.__class__.__name__)
         expected_path = os.path.join(aietes.Tools._results_dir, expected_filename)
-        self.assertEqual(output_dict['data_file'], expected_path + '.npz', "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
-        self.assertEqual(output_dict['config_file'], expected_path + '.conf', "ConfigFile Paths don't match {}:{}".format(output_dict['config_file'], expected_path + '.npz'))
-        self.assertTrue(os.path.isfile(expected_path + '.npz'), "Didn't store datapackage in generated temp directory {}".format(expected_path))
-        self.assertTrue(os.path.isfile(expected_path + '.conf'), "Didn't store conf file in generated temp directory {}".format(expected_path))
+        self.assertEqual(output_dict['data_file'], expected_path + '.npz',
+                         "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
+        self.assertEqual(output_dict['config_file'], expected_path + '.conf',
+                         "ConfigFile Paths don't match {}:{}".format(output_dict['config_file'],
+                                                                     expected_path + '.npz'))
+        self.assertTrue(os.path.isfile(expected_path + '.npz'),
+                        "Didn't store datapackage in generated temp directory {}".format(expected_path))
+        self.assertTrue(os.path.isfile(expected_path + '.conf'),
+                        "Didn't store conf file in generated temp directory {}".format(expected_path))
         os.remove(expected_path + '.npz')
         os.remove(expected_path + '.conf')
 

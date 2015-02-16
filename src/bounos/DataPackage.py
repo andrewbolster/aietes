@@ -341,7 +341,8 @@ class DataPackage(object):
         # Standard Variation of the Internode Distance Average would represent
         # the variability of the fleet
         mot_stat = {"std_of_INDA": np.std([self.inter_distance_average(t) for t in xrange(self.tmax)]),
-                    "std_of_INDD": np.std([self.position_matrix(t) / self.inter_distance_average(t) for t in xrange(self.tmax)])}
+                    "std_of_INDD": np.std(
+                        [self.position_matrix(t) / self.inter_distance_average(t) for t in xrange(self.tmax)])}
         # Fleet speed (i.e. total distance covered) would represent comparative
         # efficiency
         mot_f_distance = np.sum(map(mag, self.v))
@@ -641,7 +642,8 @@ class DataPackage(object):
             data.update({'ecea_positions': self.ecea_positions})
         savemat(path, data)
 
-    def generate_animation(self, filename=None, fps=24, gif=False, movie_file=True, xres=1024, yres=768, extent=True, display_frames=None):
+    def generate_animation(self, filename=None, fps=24, gif=False, movie_file=True, xres=1024, yres=768, extent=True,
+                           display_frames=None):
         """
 
 
@@ -752,7 +754,8 @@ class DataPackage(object):
         for n, node_p in enumerate(self.p):
             x, y, z = node_p[:, 0]
 
-            ax1.annotate(self.names[n], xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center', va='bottom',
+            ax1.annotate(self.names[n], xy=(x, y), xytext=(-20, 5), textcoords='offset points', ha='center',
+                         va='bottom',
                          bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                          arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                          color='red')

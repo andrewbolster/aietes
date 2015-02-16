@@ -42,7 +42,8 @@ from multiprocessing import Pool
 # Must use the aietes path to get the config files
 from aietes import Simulation
 import aietes.Threaded
-from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
+from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, \
+    seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
 from bounos import DataPackage, print_analysis, load_sources, npz_in_dir
 
 try:
@@ -618,9 +619,9 @@ class ExperimentManager(object):
         Args:
             behaviour(str): new default behaviour
         """
-        for _,s in self.scenarios.items():
+        for _, s in self.scenarios.items():
             for node, node_config in s.nodes.items():
-                for variable,v in config_dict.items():
+                for variable, v in config_dict.items():
                     s.update_node(node_config, variable, v)
 
     def update_explicit_node(self, node, config_dict):
@@ -630,13 +631,13 @@ class ExperimentManager(object):
         :param config_dict:
         :return:
         """
-        for _,s in self.scenarios.items():
+        for _, s in self.scenarios.items():
             for candidate_node, node_config in s.nodes.items():
                 if candidate_node == node:
-                    for variable,v in config_dict.items():
+                    for variable, v in config_dict.items():
                         s.update_node(node_config, variable, v)
 
-    def run(self, runtime=None, runcount=None, retain_data=True, queue=False,  **kwargs):
+    def run(self, runtime=None, runcount=None, retain_data=True, queue=False, **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
         :param runtime:
@@ -673,7 +674,7 @@ class ExperimentManager(object):
                 queue.close()
                 queue.join()
                 logging.info("Queue Complete")
-                for title,s in self.scenarios.items():
+                for title, s in self.scenarios.items():
                     assert s._pending_queue.finished(), "{} isn't finished!".format(title)
                     s.datarun = s._pending_queue.results
                     del s._pending_queue
@@ -891,7 +892,8 @@ class ExperimentManager(object):
                          title=title if title is not None else "{}({})".format(self.title, i))
             self.scenarios[s.title] = s
 
-    def add_position_scaling_range(self, scale_range, title=None, basis_node_name='n1', scale_environment=True, base_scenario=None):
+    def add_position_scaling_range(self, scale_range, title=None, basis_node_name='n1', scale_environment=True,
+                                   base_scenario=None):
         """
         Using the base_config_file, generate a range of scaled positions for nodes that are
         manually set (i.e. operates only on the 'initial_position' value
@@ -916,9 +918,9 @@ class ExperimentManager(object):
         for scale in scale_range:
             if scale_environment:
                 new_env = env_shape * scale
-                delta_offset = (env_shape / 2) - delta #Distance from the original centre to the delta
+                delta_offset = (env_shape / 2) - delta  # Distance from the original centre to the delta
                 delta_offset *= scale
-                env_offset = (new_env/2) + delta_offset # Stick the scaled delta against the new env centre
+                env_offset = (new_env / 2) + delta_offset  # Stick the scaled delta against the new env centre
                 env_offset[2] = delta[2]
 
             else:
@@ -938,7 +940,9 @@ class ExperimentManager(object):
                 )
                 self.scenarios[s.title] = s
             else:
-                raise ConfigError("Scale {} is outside the defined environment: pos:{}, env:{}, corr:{}".format(scale, new_positions, new_env, env_offset))
+                raise ConfigError(
+                    "Scale {} is outside the defined environment: pos:{}, env:{}, corr:{}".format(scale, new_positions,
+                                                                                                  new_env, env_offset))
 
     @staticmethod
     def print_stats(experiment, verbose=False):
@@ -1085,7 +1089,8 @@ class ExperimentManager(object):
             total, cct / total
         ))
 
-        print("True-Confidence pct with {} runs factoring in the Waypoint state (i.e. positive negatives or missed-detections via lack of confidence): {:.2%}".format(
+        print(
+        "True-Confidence pct with {} runs factoring in the Waypoint state (i.e. positive negatives or missed-detections via lack of confidence): {:.2%}".format(
             total, (cnt - (total * (1 / n_scenarios))) / total
         ))
 

@@ -175,7 +175,8 @@ class Environment(object):
             ))
         else:
             self.logger.debug(
-                "Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t, t, t + 1))
+                "Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t, t,
+                                                                                                               t + 1))
 
     def node_pos_log(self, uid):
         """

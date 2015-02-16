@@ -445,7 +445,8 @@ class VisualNavigator(wx.Panel):
             colorval = self.plot_head_mag_norm(magnitude)
             if self.frame.args.verbose:
                 self.log.debug(
-                    "Average heading: %s, Color: [%s], Speed: %s" % (str(headings[node]), str(colorval), str(magnitude)))
+                    "Average heading: %s, Color: [%s], Speed: %s" % (
+                    str(headings[node]), str(colorval), str(magnitude)))
 
             xs, ys, zs = zip(
                 positions[node], np.add(positions[node], (np.asarray(headings[node]) * 50)))
@@ -788,7 +789,8 @@ class DriftingNavigator(VisualNavigator):
         # Get Drift Plot info
         (xs, ys, zs) = self.ctl.get_3d_drift()
         self.drift_lines = [
-            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
+            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(),
+                                alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
         ]
 
@@ -829,7 +831,8 @@ class ECEANavigator(DriftingNavigator):
         # Get Drift Plot info
         (xs, ys, zs) = self.ctl.get_3d_drift(source=self.source)
         self.intent_lines = [
-            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(), alpha=self.trail_opacity)[0] for
+            self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(),
+                                alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
         ]
 

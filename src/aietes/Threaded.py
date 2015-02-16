@@ -75,13 +75,13 @@ def sim_mask(args):
                 del sim
         gc.collect()
 
-def queue_mask(i,args):
+
+def queue_mask(i, args):
     try:
         results = sim_mask(args)
-        return i,results
-    except :
+        return i, results
+    except:
         return
-
 
 
 def parallel_sim(arglist):
@@ -105,14 +105,15 @@ def parallel_sim(arglist):
 
     return results
 
+
 class queue_sim(object):
     def __init__(self, arglist, pool):
         import logging
 
         logging.basicConfig(level=logging.DEBUG)
         self.tasklist = arglist
-        self.results = [None]*len(self.tasklist)
-        self.pending_results = [None]*len(self.tasklist)
+        self.results = [None] * len(self.tasklist)
+        self.pending_results = [None] * len(self.tasklist)
         self.pool = pool
 
     def _callback(self, result):
@@ -128,8 +129,8 @@ class queue_sim(object):
         logging.info("Appending Queued Parallel Run of {runcount} at {t}".format(
             runcount=len(self.tasklist), t=strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
         ))
-        for i,args in enumerate(self.tasklist):
-            self.pending_results[i]=self.pool.apply_async(queue_mask, args=(i,args), callback=self._callback)
+        for i, args in enumerate(self.tasklist):
+            self.pending_results[i] = self.pool.apply_async(queue_mask, args=(i, args), callback=self._callback)
 
     def finished(self):
         return all([r.ready() for r in self.pending_results])

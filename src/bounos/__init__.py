@@ -456,7 +456,8 @@ def detect_and_identify(d):
                                                                                            _metrics,
                                                                                            stddev_frac=2)
     trust_values = Analyses.Trust.dev_to_trust(per_metric_deviations)
-    identification_dict = Analyses.Behaviour.behaviour_identification(per_metric_deviations, deviation_windowed, _metrics,
+    identification_dict = Analyses.Behaviour.behaviour_identification(per_metric_deviations, deviation_windowed,
+                                                                      _metrics,
                                                                       names=d.names,
                                                                       verbose=False)
     return trust_values, per_metric_deviations, deviation_windowed, identification_dict
