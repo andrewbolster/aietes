@@ -623,6 +623,19 @@ class ExperimentManager(object):
                 for variable,v in config_dict.items():
                     s.update_node(node_config, variable, v)
 
+    def update_explicit_node(self, node, config_dict):
+        """
+        Update all existing scenarios to edit a given nodes characteristics
+        :param node:
+        :param config_dict:
+        :return:
+        """
+        for _,s in self.scenarios.items():
+            for candidate_node, node_config in s.nodes.items():
+                if candidate_node == node:
+                    for variable,v in config_dict.items():
+                        s.update_node(node_config, variable, v)
+
     def run(self, runtime=None, runcount=None, retain_data=True, queue=False,  **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
@@ -778,6 +791,7 @@ class ExperimentManager(object):
             for node, node_config in s.nodes.items():
                 s.update_node(node_config, variable, v)
             self.scenarios[s.title] = s
+
 
     def add_variable_node_scenario(self, node_range):
         """

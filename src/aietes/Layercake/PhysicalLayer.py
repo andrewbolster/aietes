@@ -33,8 +33,7 @@ import SimPy.Simulation as Sim
 from aietes.Tools import distance, DEBUG
 
 
-#DEBUG = True
-DEBUG = False
+#DEBUG = False
 
 
 class PhysicalLayer(object):
@@ -279,7 +278,8 @@ class Transducer(Sim.Resource):
 
         # If it isn't doomed due to transmission & it is not interfered
         if min_sir > 0:
-            if not doomed and linear2db(min_sir) >= self.SIR_thresh and arg[1].power >= self.physical_layer.receiving_threshold:
+            if not doomed and linear2db(min_sir) >= self.SIR_thresh\
+                    and arg[1].power >= self.physical_layer.receiving_threshold:
                 # Properly received: enough power, not enough interference
                 self.collision = False
                 #self.logger.debug("received packet {}".format(new_packet))
@@ -296,7 +296,7 @@ class Transducer(Sim.Resource):
                                           + " was discarded due to interference.")
             else:
                 # Not enough power to be properly received: just heard.
-                if DEBUG:
+                if DEBUG and False:
                     if self.physical_layer.layercake.hostname in new_packet.items():
                         self.logger.info("Packet {id} from {src} to {dest} heard below reception threshold".format(
                             id=new_packet['ID'],
@@ -390,9 +390,8 @@ class IncomingPacket(Sim.Process):
 
     def get_min_sir(self):
         """
-
-
-        :return:
+        Get the minimum SIR for successful reception
+        :return: float
         """
         return self.power / (self.MaxInterference - self.power + 1)
 

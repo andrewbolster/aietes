@@ -94,7 +94,8 @@ class Node(Sim.Process):
         # Application and(or) Comms stack
         #
         try:
-            app_mod = getattr(Applications, str(node_config['app']))
+            application = self.config['Application']['protocol']
+            app_mod = getattr(Applications, application)
         except AttributeError:
             raise ConfigError("Can't find Application: %s" %
                               node_config['app'])

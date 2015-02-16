@@ -566,7 +566,7 @@ class ALOHA4FBR(ALOHA):
             self.outgoing_packet_queue[0]["through"] = current_through
             self.fsm.process("retransmit")
 
-        elif self.outgoing_packet_queue[0]["through"] == "NEIGH":
+        elif self.outgoing_packet_queue[0]["through"][0:5] == "NEIGH":
             # With current transmission power level, the destination has become
             # a neighbor
             self.outgoing_packet_queue[0][
@@ -2379,7 +2379,9 @@ class CSMA(MAC):
             self.TimerRequest.signal((random_delay, "send_DATA"))
         else:
             self.ack_failures += 1
-            self.logger.warn("Timed Out after {}: No Ack: Have lost {} acks".format(
+            self.logger.warn("ACK-TO {}: from {}, Lost {} sent at {}".format(
+                self.outgoing_packet_queue[0]['dest'],
+                self.outgoing_packet_queue[0]['time_stamp'],
                 self.transmission_attempts, self.ack_failures))
 
     def on_data_timeout(self):
@@ -2685,7 +2687,7 @@ class CSMA4FBR(CSMA):
                 ))
             self.fsm.process("retransmit")
 
-        elif self.outgoing_packet_queue[0]["through"] == "NEIGH":
+        elif self.outgoing_packet_queue[0]["through"][0:5] == "NEIGH":
             # With current transmission power level, the destination has become
             # a neighbor
             self.outgoing_packet_queue[0][
@@ -2718,7 +2720,7 @@ class CSMA4FBR(CSMA):
             )
         except IndexError:
             self.logger.error(
-                "Problem with the queue: {}".format(self.outgoing_packet_queue))
+                "Problem with the queue on trying to transmit: {}".format(self.outgoing_packet_queue))
             raise
         CSMA.transmitnotimer(self)
 

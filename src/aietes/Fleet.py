@@ -236,7 +236,7 @@ class Fleet(Sim.Process):
         else:
             latest_map = self.environment.map
 
-        return latest_map[self.nodeid_from_name(name)]
+        return latest_map[self.nodeid_from_name(name)].position
 
     def node_positions_at(self, t, shared=True):
         """

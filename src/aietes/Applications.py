@@ -577,6 +577,21 @@ class CommsTrust(RoutingTest):
             self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
 
 
+    def select_target(self):
+        """
+        Selects a new target based on the least communicated with
+
+        :return: str
+        """
+        most_common = self.total_counter.most_common()
+        new_target = np.random.choice(
+            [n
+             for n, c in most_common
+             if c == most_common[-1][1]
+            ]
+        )
+        return new_target
+
     def generate_next_packet(self, period, destination=None, data=None, *args, **kwargs):
         """
         Lowest-count node gets a message indicating what number packet it is that
@@ -604,14 +619,8 @@ class CommsTrust(RoutingTest):
         # DOES NOT MERGE TARGET COUNTER
         self.merge_counters()
 
-        most_common = self.total_counter.most_common()
-        if not self.current_target:
-            self.current_target = np.random.choice(
-                [n
-                 for n, c in most_common
-                 if c == most_common[-1][1]
-                ]
-            )
+        if self.current_target is None:
+            self.current_target = self.select_target()
 
         destination = self.current_target
         packet_id = self.layercake.hostname + str(self.stats['packets_sent'])
@@ -674,6 +683,52 @@ class CommsTrust(RoutingTest):
 
 class CommsTrustRoundRobin(CommsTrust):
     test_stream_length = 1
+
+class SelfishCommsTrustRoundRobin(CommsTrustRoundRobin):
+    def select_target(self):
+        neighbours_by_distance = self.layercake.host.behaviour.get_nearest_neighbours()
+        choices = [(v.name, 1.0/np.power(v.distance, 2)) for v in neighbours_by_distance]
+        names, inv_sq_distances = zip(*choices)
+
+        norm_distances = inv_sq_distances / sum(inv_sq_distances)
+        new_target = np.random.choice(names, p=norm_distances)
+        self.logger.warn("Selected {}".format(new_target))
+        return new_target
+
+    def activate(self):
+        """
+        Custom activation to set up fwd handler
+        :return:
+        """
+
+        self.layercake.fwd_signal_hdlrs.append(self.query_fwd)
+
+        super(SelfishCommsTrustRoundRobin, self).activate()
+
+    def query_fwd(self, packet):
+        """
+        Only allow forwarding packets to neighbours
+        :return:bool
+        """
+        if packet['dest'] == self.layercake.hostname or packet['source'] == self.layercake.hostname:
+            drop_it = False
+        else:
+            fwd_pos = self.layercake.host.fleet.node_position_by_name(packet['dest'])
+            neighbourly = self.layercake.net.is_neighbour(fwd_pos)
+            if bool(neighbourly):
+                drop_it = False
+
+            else:
+                self.logger.warn("Dropping Packet to {} as they're not a neighbour".format(packet["dest"]))
+                if self.layercake.hostname=='n1' and DEBUG:
+                    self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
+                drop_it = True
+
+        return drop_it
+
+
+
+
 
 
 class Null(Application):

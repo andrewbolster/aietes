@@ -732,6 +732,8 @@ class FBR(SimpleRoutingTable):
                 if packet["dest"] == self.layercake.hostname:
                     self.layercake.recv(packet)
                     return True
+            elif self.layercake.query_drop_forward(packet=packet):
+                self.logger.debug("Dropping packet with ID: " + packet["ID"])
             else:
                 self.logger.debug("Forwarding packet with ID: " + packet["ID"])
                 self.send_packet(packet)
@@ -797,9 +799,10 @@ class FBR(SimpleRoutingTable):
         """
         level_that_would_work = self.get_level_for(dest_pos)
         if level_that_would_work is None:
+            self.logger.warn("No Level will work to get to {}".format(dest_pos))
             return False
         else:
-            return level_that_would_work <= current_level
+            return int(level_that_would_work) <= current_level
 
     def is_neighbour(self, dest_pos):
         """
@@ -847,14 +850,13 @@ class FBR(SimpleRoutingTable):
             new_level = int(destination[3])
         else:
             r = distance(self.layercake.get_current_position(), destination)
-            new_level = min(                                        #Lowest Value Level
-                zip(                                                #From the re-zipped
+            levels=zip(                                             #From the re-zipped
                     *filter(                                        # unzipped filtered
                         lambda i: i[1]>r,                           # list (l,d) where d > r
                         self.layercake.phy.level2distance.items()   # from available levels
                     )
                 )[0]                                                # first value of unzipped lists (levels)
-            )
+            new_level = min(levels)                                 #Lowest Value Level
 
         return new_level
 
@@ -882,8 +884,9 @@ class FBR(SimpleRoutingTable):
         :param packet:
         :return:
         """
+        valid = False
         if packet["dest"] == self.layercake.hostname:
-            return True
+            valid = True
         elif self.rx_cone == 0:
             """
             I will be a valid candidate if I am within the transmission cone.
@@ -902,16 +905,7 @@ class FBR(SimpleRoutingTable):
                     a = math.degrees(
                         math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)))
 
-                if a <= self.cone_angle / 2.0:
-                    self.logger.debug("I'm a valid candidate for {}".format(
-                        packet["dest"]
-                    ))
-                    return True
-                else:
-                    self.logger.debug("I'm not a valid candidate for {}".format(
-                        packet["dest"]
-                    ))
-                    return False
+                valid = a <= self.cone_angle / 2.0
 
         elif self.rx_cone == 1:
             """
@@ -919,17 +913,20 @@ class FBR(SimpleRoutingTable):
             """
             source_pos = packet["source_position"]
             dest_pos = packet["dest_position"]
+            valid = (distance(self.layercake.get_current_position(), dest_pos) < distance(source_pos, dest_pos))
 
-            if distance(self.layercake.get_current_position(), dest_pos) < distance(source_pos, dest_pos):
-                return True
+        if valid:
+            if self.layercake.query_drop_forward(packet):
+                self.logger.debug("I'm a valid candidate for {} BUT IM IGNORING IT".format(
+                    packet["dest"]
+                ))
+                valid = False
             else:
-                return False
+                self.logger.debug("I'm a valid candidate for {}".format(
+                    packet["dest"]
+                ))
 
-                # This information comes from the Multicast RTS and I may be interested in using it, or not.
-                ##        self.nodes_pos[packet["source"]] = packet["source_position"]
-                ##        self.nodes_pos[packet["dest"]] = packet["dest_position"]
-                # self[packet["source"]] = packet["source"] # This is a
-                # neighbor
+        return valid
 
     def add_node(self, name, pos):
         """
@@ -992,10 +989,11 @@ class FBR(SimpleRoutingTable):
                 # not answered
                 if attempts < 2:
                     self.logger.debug("Let's give it another chance.")
-                    return "2CHANCE", self.nodes_pos[current_through]
+                    return "2CHANCE", 0
                 else:
                     self.logger.debug("Starting multicast selection")
                     return "ANY0", 0
+
 
             if int(current_through[3]) != (len(self.layercake.phy.level2distance) - 1):
                 # This is a multicast selection, but not with the maximum

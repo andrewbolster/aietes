@@ -117,8 +117,7 @@ class Behaviour(object):
         """
         self.debug = self.debug and self.node == self.node.fleet.nodes[0]
         self.neighbours = self.neighbour_map()
-        self.nearest_neighbours = self.get_nearest_neighbours(self.node.position,
-                                                            n_neighbours=self.n_nearest_neighbours)
+        self.nearest_neighbours = self.get_nearest_neighbours(n_neighbours=self.n_nearest_neighbours)
         contributions = {}
         force_vector = np.zeros(3)
 
@@ -157,20 +156,24 @@ class Behaviour(object):
         self.node.push(force_vector, contributions=contributions)
         return
 
-    def get_nearest_neighbours(self, position, n_neighbours=None, distance=np.inf):
+    def get_nearest_neighbours(self, position = None, n_neighbours=None):
         """
         Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         :param position:
         :param n_neighbours:
         :param distance:
         """
+
+        if position is None:
+            target_pos = self.node.position
+        else:
+            target_pos = position
         # Sort and filter Neighbours from self.map by distance
         neighbours_with_distance = [MapEntry(key,
                                               value.position, value.velocity,
                                               name=self.simulation.reverse_node_lookup(
                                                   key).name,
-                                              distance=self.node.distance_to(
-                                                  value.position)
+                                              distance=distance(target_pos, value.position)
 
         ) for key, value in self.neighbours.items()]
         # self.logger.DEBUG("Got Distances: %s"%neighbours_with_distance)
@@ -315,6 +318,7 @@ class RandomWalk(Behaviour):
 class RandomFlatWalk(Behaviour):
     """
     Generic Wandering Behaviour on a plane
+    travels for about a 5th of the size of the environment before turning
     """
 
     def __init__(self, *args, **kwargs):
@@ -323,13 +327,13 @@ class RandomFlatWalk(Behaviour):
         self.wallCheckDisabled = False
         self.my_direction = random_xy_vector()
         self.time_travelled = 0
-        self._time_limit = 600
+        self._time_limit = self.node.simulation.environment.shape[0]/5
 
     def random_walk(self, position, velocity):
         """
 
         Pick a random direction, get to roughly 6 degrees or pi/32 rad
-        of that vector, and continue for 10 minutes
+        of that vector, and continue for a given timelimit
 
         :param position:
         :param velocity:
