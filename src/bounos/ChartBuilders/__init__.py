@@ -538,7 +538,7 @@ def trust_perspectives_wrt_targets(trust_frame):
     f.suptitle("Plots of Per-Node Objective Trust Values\n(Each sub plot is a nodes trust value from the perspective of other nodes)", fontsize=24)
     return f
 
-def trust_network_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
+def trust_network_wrt_observers(trust_group, var, title=None, figsize=(16, 2), texify=True):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
     :param title:
@@ -546,23 +546,20 @@ def trust_network_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
     :param trust_frame:
     :return:
     """
-    groups = trust_frame.groupby(level=['var'])
-    n_nodes = trust_frame.shape[1]
+    if texify:
+        pass
 
-    f, ax = plt.subplots(len(groups), 1, figsize=(figsize[0], figsize[1] * len(groups)), sharey=True)
-    plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
-    for i, (var, group) in enumerate(groups):
-        sns.boxplot(group.dropna(), ax=ax[i], **_boxplot_kwargs)
-        if not i:  # first plot
-            ax[i].set_title(var)
-        if i + 1 < len(groups):
-            ax[i].set_xlabel("Target")
-        ax[i].set_ylabel("{:.4f}".format(float(var)))
-        ax[i].set_ylim((0.0,1.0))
-    map(lambda a: a.set_xlabel(""), ax)
-    f.suptitle("Plots of Per-Node Subjective Trust Values {}\n(Each sub plot is a single nodes trust viewpoint of other nodes)".format(
-        title if title is None else ": " + title
-    ), fontsize=24)
+
+    f, ax = plt.subplots(1, 1, figsize=(figsize[0], figsize[1] * 1), sharey=True)
+    # plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
+    sns.boxplot(trust_group.dropna(), ax=ax)#, **_boxplot_kwargs)
+    ax.set_xlabel("Assessment Type")
+    ax.set_ylabel("Trust Value")
+    ax.set_ylim((0.0,1.0))
+    if title is not False:
+        ax.set_title("{}".format(
+            var if title is None else ": " + title
+        ))
     return f
 
 def plot_axes_views_from_packet_frames(df, title=None, figsize=None):

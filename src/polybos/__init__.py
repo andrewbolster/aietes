@@ -623,6 +623,19 @@ class ExperimentManager(object):
                 for variable,v in config_dict.items():
                     s.update_node(node_config, variable, v)
 
+    def update_explicit_node(self, node, config_dict):
+        """
+        Update all existing scenarios to edit a given nodes characteristics
+        :param node:
+        :param config_dict:
+        :return:
+        """
+        for _,s in self.scenarios.items():
+            for candidate_node, node_config in s.nodes.items():
+                if candidate_node == node:
+                    for variable,v in config_dict.items():
+                        s.update_node(node_config, variable, v)
+
     def run(self, runtime=None, runcount=None, retain_data=True, queue=False,  **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
@@ -648,7 +661,7 @@ class ExperimentManager(object):
         start = time.time()
         try:
             os.chdir(self.exp_path)
-            if queue:
+            if self.parallel and queue:
                 queue = Pool(processes=4)
                 # Q: Is this acting on the reference to scenario or the item in scenarios?
                 logging.info("Launching Queue")
@@ -779,6 +792,7 @@ class ExperimentManager(object):
                 s.update_node(node_config, variable, v)
             self.scenarios[s.title] = s
 
+
     def add_variable_node_scenario(self, node_range):
         """
         Add a scenario with a range of configuration values to the experimental run
@@ -877,7 +891,7 @@ class ExperimentManager(object):
                          title=title if title is not None else "{}({})".format(self.title, i))
             self.scenarios[s.title] = s
 
-    def add_position_scaling_range(self, scale_range, title=None, basis_node_name='n1', scale_environment=True):
+    def add_position_scaling_range(self, scale_range, title=None, basis_node_name='n1', scale_environment=True, base_scenario=None):
         """
         Using the base_config_file, generate a range of scaled positions for nodes that are
         manually set (i.e. operates only on the 'initial_position' value
@@ -888,7 +902,10 @@ class ExperimentManager(object):
         :param title:
         :return:
         """
-        base_config = get_config(self._base_config_file)
+        if base_scenario is None:
+            base_config = get_config(self._base_config_file)
+        else:
+            base_config = get_config(base_scenario)
         env_shape = np.asarray(base_config['Environment']['shape'])
         node_positions = {k: np.asarray(v['initial_position'], dtype=float)
                           for k, v in base_config['Node']['Nodes'].items()
@@ -917,7 +934,7 @@ class ExperimentManager(object):
                     new_config['Node']['Nodes'][k]['initial_position'] = list(v)  # ndarrays make literal_eval cry
 
                 s = Scenario(default_config=Simulation.populate_config(new_config, retain_default=True),
-                             title="{}({:.2f})".format(self.title, scale)
+                             title="{}({:.2f})".format(self.title, scale) if title is None else title
                 )
                 self.scenarios[s.title] = s
             else:

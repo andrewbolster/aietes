@@ -27,7 +27,7 @@ import numpy as np
 from aietes.Tools import MapEntry, distance, fudge_normal, DEBUG, unit, mag, listfix, sixvec, spherical_distance, ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
 
-DEBUG = True
+DEBUG = False
 
 
 class BasicWaypoint(object):
@@ -117,8 +117,7 @@ class Behaviour(object):
         """
         self.debug = self.debug and self.node == self.node.fleet.nodes[0]
         self.neighbours = self.neighbour_map()
-        self.nearest_neighbours = self.get_nearest_neighbours(self.node.position,
-                                                            n_neighbours=self.n_nearest_neighbours)
+        self.nearest_neighbours = self.get_nearest_neighbours(n_neighbours=self.n_nearest_neighbours)
         contributions = {}
         force_vector = np.zeros(3)
 
@@ -135,9 +134,9 @@ class Behaviour(object):
 
         # TODO Under Drift, it's probably better to do wall-detection twice: once on node and once on environment
         # force_vector = self.avoid_wall(self.node.get_pos(), self.node.velocity, force_vector)
-        if self.debug and False:
+        if self.debug and DEBUG:
             self.logger.debug("Response:%s" % force_vector)
-        if self.debug and True:
+        if self.debug and DEBUG:
             total = sum(map(mag, contributions.values()))
             if total > 0:
                 self.logger.debug("contributions: %s of %3f" % (
@@ -148,7 +147,7 @@ class Behaviour(object):
                 )
             else:
                 self.logger.debug("contributions: None")
-        if self.debug and False:
+        if self.debug and DEBUG:
             total = sum(map(mag, contributions.values()))
             for func, value in contributions.iteritems():
                 self.logger.debug(
@@ -157,20 +156,24 @@ class Behaviour(object):
         self.node.push(force_vector, contributions=contributions)
         return
 
-    def get_nearest_neighbours(self, position, n_neighbours=None, distance=np.inf):
+    def get_nearest_neighbours(self, position = None, n_neighbours=None):
         """
         Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         :param position:
         :param n_neighbours:
         :param distance:
         """
+
+        if position is None:
+            target_pos = self.node.position
+        else:
+            target_pos = position
         # Sort and filter Neighbours from self.map by distance
         neighbours_with_distance = [MapEntry(key,
                                               value.position, value.velocity,
                                               name=self.simulation.reverse_node_lookup(
                                                   key).name,
-                                              distance=self.node.distance_to(
-                                                  value.position)
+                                              distance=distance(target_pos, value.position)
 
         ) for key, value in self.neighbours.items()]
         # self.logger.DEBUG("Got Distances: %s"%neighbours_with_distance)
@@ -258,17 +261,32 @@ class Behaviour(object):
             # response = 0.5 * (position-avoiding_position)
             self.debug = True
             try:
-                response = self.repulse_from_position(
+                repulse = self.repulse_from_position(
                     position, avoiding_position, 2 * min_dist)
+                # Reflect rather than just bounce; response is the normal vector of the surface
+                r_mag = mag(repulse)
+                # If we're at too narrow an angle we'll get stuck on a wall
+                angle = angle_between(repulse, -velocity)
+                if angle < 2.0*np.pi/5.0:            # 72 degrees of wall norm
+                    response = repulse + velocity - (2 * (np.dot(velocity, repulse))/(r_mag**2))*repulse
+                else:
+                    response = repulse
             except RuntimeError:
                 raise RuntimeError(
                     "Crashed out of environment with given position:{}, wall position:{}".format(position,
                                                                                                  avoiding_position))
                 # response = (avoiding_position-position)
             self.logger.debug("Wall Avoidance:%s" % response)
-            if hasattr(self, 'my_direction'):
+            if hasattr(self, 'my_direction') and not hasattr(self, 'time_travelled'):
                 # Something planned to go this way, lets stop that and hope it chooses a better direction
                 self.my_direction = unit(response)
+            if hasattr(self, 'time_travelled'):
+                # Is something that cares about timing watching? Because then only register on the
+                # first 'avoid' (which will have the right direction)
+                if self.time_travelled > 10:
+                    self.time_travelled = 0
+                    self.my_direction = unit(response)
+
 
         return response
 
@@ -300,6 +318,7 @@ class RandomWalk(Behaviour):
 class RandomFlatWalk(Behaviour):
     """
     Generic Wandering Behaviour on a plane
+    travels for about a 5th of the size of the environment before turning
     """
 
     def __init__(self, *args, **kwargs):
@@ -307,17 +326,27 @@ class RandomFlatWalk(Behaviour):
         self.behaviours.append(self.random_walk)
         self.wallCheckDisabled = False
         self.my_direction = random_xy_vector()
+        self.time_travelled = 0
+        self._time_limit = self.node.simulation.environment.shape[0]/5
 
     def random_walk(self, position, velocity):
-        # Roughly 6 degrees or pi/32 rad
         """
+
+        Pick a random direction, get to roughly 6 degrees or pi/32 rad
+        of that vector, and continue for a given timelimit
 
         :param position:
         :param velocity:
         :return:
         """
+
         if angle_between(velocity, self.my_direction) < 0.2:
-            self.my_direction = random_xy_vector()
+            if self.time_travelled > self._time_limit:
+                self.time_travelled = 0
+                self.my_direction = random_xy_vector()
+            else:
+                self.time_travelled += 1
+
         return np.asarray(self.my_direction)
 
 
@@ -343,7 +372,7 @@ class RandomFlatCentredWalk(RandomFlatWalk):
         :param velocity:
         :return:
         """
-        return np.asarray(self.attract_to_position(position, self.original_position)) * 0.01
+        return np.asarray(self.attract_to_position(position, self.original_position)) * 0.001
 
 
 class Nothing(Behaviour):

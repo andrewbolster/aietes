@@ -42,11 +42,11 @@ if __name__ == "__main__":
 
     base_scenarios = [
         'bella_static.conf',
-#        'bella_single_mobile.conf',
-#        'bella_allbut1_mobile.conf',
-#        'bella_all_mobile.conf'
+        'bella_single_mobile.conf',
+        'bella_allbut1_mobile.conf',
+        'bella_all_mobile.conf'
     ]
-    app_range = np.arange(0.015, 0.05, step=0.005).tolist()
+    app_range = np.arange(0.005, 0.03, step=0.0025).tolist()
     title = "CommsRateAndRangeTest"
     log = logging.getLogger()
     if len(sys.argv) > 1:
@@ -72,6 +72,4 @@ if __name__ == "__main__":
                 dump_trust_logs_and_stats_from_exp_paths([path], title="{}-{}-{}".format(title, base_name, app_rate))
             except:
                 log.exception("Crashed in trust logging, moving on")
-
-
 

@@ -52,6 +52,7 @@ class Layercake(object):
         ###
         self.tx_good_signal_hdlrs = []
         self.tx_lost_signal_hdlrs = []
+        self.fwd_signal_hdlrs = []
 
         ##############################
         # Phy
@@ -131,3 +132,12 @@ class Layercake(object):
         :return:
         """
         return self.host.get_pos(True)
+
+    def query_drop_forward(self, packet):
+        """
+        Application Layer Call Back for Packet Forwarding
+        :param packet:
+        :return: bool
+        """
+        return(any([ hdlr(packet) for hdlr in self.fwd_signal_hdlrs]))
+

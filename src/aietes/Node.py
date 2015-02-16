@@ -41,15 +41,10 @@ class Node(Sim.Process):
         Sim.Process.__init__(self, name=name)
         self.logger = kwargs.get(
             "logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
-        fh = logging.FileHandler("Node[{}].log".format(name))
-        fh.setFormatter(log_fmt)
-        fh.addFilter(SimTimeFilter())
-        fh.setLevel(logging.DEBUG)
-        self.logger.addHandler(fh)
 
         self.simulation = simulation
         self.config = node_config
-        self.mass = 10  # kg modeling remus 100
+        self.mass = 37  # kg modeling remus 100
 
         self.settling_time = 0
 
@@ -99,7 +94,8 @@ class Node(Sim.Process):
         # Application and(or) Comms stack
         #
         try:
-            app_mod = getattr(Applications, str(node_config['app']))
+            application = self.config['Application']['protocol']
+            app_mod = getattr(Applications, application)
         except AttributeError:
             raise ConfigError("Can't find Application: %s" %
                               node_config['app'])

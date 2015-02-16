@@ -47,3 +47,6 @@ distribute*.tar.gz
 
 # Results
 results/
+
+# Sphinx
+_build

@@ -129,7 +129,7 @@ I_ref = 172.0
 # Transducer Capacity (Arbitrary)
 transducer_capacity = 1000
 broadcast_address = 'Any'
-LOGLEVELS = {'DEBUG': logging.DEBUG,
+LOGLEVELS = {'debug': logging.DEBUG,
              'info': logging.INFO,
              'warning': logging.WARNING,
              'error': logging.ERROR,
@@ -525,7 +525,7 @@ class MapEntry(object):
         self.time = Sim.now()
 
     def __repr__(self):
-        return "%s:%s:%s" % (self.object_id, self.position, self.time)
+        return "%s:%s:%s" % (self.name, self.position, self.time)
 
 
 class AutoSyncShelf(DbfilenameShelf):
@@ -1168,3 +1168,15 @@ class Capturing(list):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
 
+
+def map_level(df, dct, level=0):
+    """
+    Renames items in a index/multiindex of a DataFrame in place
+    :param df: pd.DataFrame
+    :param dct: dict: Pairs of Item Names to Swap
+    :param level: int: pd.MultiIndex level
+    :return:
+    """
+    index = df.index
+    index.set_levels([[dct.get(item, item) for item in names] if i==level else names
+                      for i, names in enumerate(index.levels)], inplace=True)

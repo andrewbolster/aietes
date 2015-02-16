@@ -1,27 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="IpnbSettings">
-    <option name="URL" value="http://localhost:888" />
+    <option name="URL" value="http://localhost:8888" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 2.7.5+ (/usr/bin/python)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 2.7.8 (/usr/bin/python2.7)" project-jdk-type="Python SDK" />
   <component name="SvnBranchConfigurationManager">
-    <option name="myConfigurationMap">
-      <map>
-        <entry key="$PROJECT_DIR$/../auvnetsim-code">
-          <value>
-            <SvnBranchConfiguration>
-              <option name="branchUrls">
-                <list>
-                  <option value="svn://svn.code.sf.net/p/auvnetsim/code/branches" />
-                  <option value="svn://svn.code.sf.net/p/auvnetsim/code/tags" />
-                </list>
-              </option>
-              <option name="trunkUrl" value="svn://svn.code.sf.net/p/auvnetsim/code/trunk" />
-            </SvnBranchConfiguration>
-          </value>
-        </entry>
-      </map>
-    </option>
     <option name="mySupportsUserInfoFilter" value="true" />
   </component>
 </project>

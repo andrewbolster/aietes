@@ -24,6 +24,7 @@
 #
 ###########################################################################
 from __future__ import division
+import numpy as np
 import math
 from copy import deepcopy
 
@@ -32,8 +33,7 @@ import SimPy.Simulation as Sim
 from aietes.Tools import distance, DEBUG
 
 
-DEBUG = True
-DEBUG = False
+#DEBUG = False
 
 
 class PhysicalLayer(object):
@@ -64,15 +64,18 @@ class PhysicalLayer(object):
         self.variable_power = self.config["variable_power"]
         # Levels defined in terms of distance (m)
         self.level2distance = dict(self.config["var_power"])
+        self.distance2level = { v: k for k,v in self.level2distance.items()}
 
-        # Detection Specifications
+        # Detection Specifications (dB)
         # Minimum signal to interference ratio to properly receive a packet
         self.SIR_threshold = self.config["threshold"]["SIR"]
-        # Minimum signal to noise ratio to properly receove a packet
+        # Minimum signal to noise ratio to properly receive a packet
         self.SNR_threshold = self.config["threshold"]["SNR"]
         # Minimum signal to noise ratio to properly detect a packet
         self.LIS_threshold = self.config["threshold"]["LIS"]
 
+
+        #
         self.receiving_threshold = db2linear(
             receiving_threshold(self.freq, self.bandwidth, self.SNR_threshold))
         self.listening_threshold = db2linear(
@@ -80,7 +83,7 @@ class PhysicalLayer(object):
 
         # Definition of system parameters
         self.ambient_noise = db2linear(
-            channel_noise(self.freq) + 10 * math.log10(self.bandwidth * 1e3))  # In linear scale
+            channel_noise_db(self.freq) + 10 * math.log10(self.bandwidth * 1e3))  # In linear scale (mw)
         # Initially, interference and noise are the same
         self.interference = self.ambient_noise
         self.collision = False  # Emulates collision detection
@@ -89,7 +92,8 @@ class PhysicalLayer(object):
         self.modem = Sim.Resource(name="a_modem")
 
         self.transducer = Transducer(self, self.ambient_noise, channel_event,
-                                     self.layercake.get_real_current_position, self.SIR_threshold, self.on_successful_receipt)
+                                     self.layercake.get_real_current_position,
+                                     self.SIR_threshold, self.on_successful_receipt)
 
         self.messages = []
         self.event = Sim.SimEvent("TransducerEvent" + self.layercake.hostname)
@@ -124,7 +128,7 @@ class PhysicalLayer(object):
 
         return data
 
-    # Before transmissting, we should check if the system is idle or not
+    # Before transmitting, we should check if the system is idle or not
     def is_idle(self):
         if len(self.transducer.activeQ) > 0:
             if DEBUG:
@@ -142,7 +146,7 @@ class PhysicalLayer(object):
             # The MAC protocol is the one that should check this before
             # transmitting
             self.logger.warn(
-                "I should not do this... the channel is not idle!")
+                "I should not do this... the channel is not idle! {}".format(packet))
 
         self.collision = False
 
@@ -186,10 +190,7 @@ class PhysicalLayer(object):
         :param level:
         :return:
         """
-        try:
-            distance = self.level2distance[str(level)]
-        except AttributeError:
-            distance = self.range
+        distance = self.level2distance[str(level)]
 
         return distance / self.medium_speed
 
@@ -277,10 +278,11 @@ class Transducer(Sim.Resource):
 
         # If it isn't doomed due to transmission & it is not interfered
         if min_sir > 0:
-            if not doomed and linear2db(min_sir) >= self.SIR_thresh and arg[1].power >= self.physical_layer.receiving_threshold:
+            if not doomed and linear2db(min_sir) >= self.SIR_thresh\
+                    and arg[1].power >= self.physical_layer.receiving_threshold:
                 # Properly received: enough power, not enough interference
                 self.collision = False
-                self.logger.debug("received packet {}".format(new_packet))
+                #self.logger.debug("received packet {}".format(new_packet))
                 self.on_success(new_packet)
 
             elif arg[1].power >= self.physical_layer.receiving_threshold:
@@ -294,12 +296,13 @@ class Transducer(Sim.Resource):
                                           + " was discarded due to interference.")
             else:
                 # Not enough power to be properly received: just heard.
-                if DEBUG:
-                    self.logger.info("Packet {id} from {src} to {dest} heard below reception threshold".format(
-                        id=new_packet['ID'],
-                        src=new_packet['source'],
-                        dest=new_packet['through']
-                    ))
+                if DEBUG and False:
+                    if self.physical_layer.layercake.hostname in new_packet.items():
+                        self.logger.info("Packet {id} from {src} to {dest} heard below reception threshold".format(
+                            id=new_packet['ID'],
+                            src=new_packet['source'],
+                            dest=new_packet['through']
+                        ))
 
         else:
             # This should never appear, and in fact, it doesn't, but just to
@@ -333,8 +336,18 @@ class IncomingPacket(Sim.Process):
     """
 
     def __init__(self, power, packet, physical_layer):
-        Sim.Process.__init__(self, name="ReceiveMessage: " + str(packet))
-        self.power = power
+        """
+
+        :param power: float: linear power for transmission
+        :param packet: object
+        :param physical_layer: PhysicalLayer instance
+        :return:
+        """
+        Sim.Process.__init__(self, name="({})RX from {}".format(
+            physical_layer.layercake.hostname,
+            packet['source']
+        ))
+        self.power = power #linear
         self.packet = packet
         self.physical_layer = physical_layer
         self.doomed = False
@@ -377,9 +390,8 @@ class IncomingPacket(Sim.Process):
 
     def get_min_sir(self):
         """
-
-
-        :return:
+        Get the minimum SIR for successful reception
+        :return: float
         """
         return self.power / (self.MaxInterference - self.power + 1)
 
@@ -400,7 +412,9 @@ class OutgoingPacket(Sim.Process):
     """
 
     def __init__(self, physical_layer):
-        Sim.Process.__init__(self)
+        Sim.Process.__init__(self, name="({})TX".format(
+            physical_layer.layercake.hostname
+        ))
         self.physical_layer = physical_layer
         self.logger = physical_layer.logger.getChild(
             "{}".format(self.__class__.__name__))
@@ -499,7 +513,7 @@ class ArrivalScheduler(Sim.Process):
 
         if distance_to > 0.01:  # I should not receive my own transmissions
             receive_power = params["power"] - \
-                            attenuation(params["frequency"], distance_to)
+                            attenuation_db(params["frequency"], distance_to)
             # Speed of sound in water = 1482.0 m/s
             travel_time = distance_to / transducer.physical_layer.medium_speed
 
@@ -521,30 +535,59 @@ class ArrivalScheduler(Sim.Process):
 # Propagation functions
 #####################################################################
 
-def attenuation(f, d):
-    """attenuation(P0,f,d)
+def attenuation_db(f, d):
+    """
 
     Calculates the acoustic signal path loss
     as a function of frequency & distance
 
+    .. math::
+        A(f,d)=d^k * a(f)^d
+
+        A_{dB}(f,d) = k * 10 \log(d) + d * 10\log(a(f))
+
+    Cite Stojanovic2007
+
+    >>> np.around(attenuation_db(10.0,5000))
+    -35.0
+
     f - Frequency in kHz
     d - Distance in m
-    :param f:
-    :param d:
+    :param f: float
+    :param d: float
+    :returns: dB
     """
 
     k = 1.5 # "Practical Spreading" Stojanovic 08
-    distanceinkm = d / 1000
+    d_km = d / 1000.0
 
-    return k * linear2db(d) + distanceinkm * thorpe(f,d)
+    a = thorpe(f)
+    k_prod = k * linear2db(d_km)
+    d_prod = d_km * a
 
-def thorpe(f,heel=0):
 
-    # Thorp's formula for attenuation rate (in dB/km) -> Changes depending on
-    # the frequency (kHz)
-    # From : "On the relationship between capacity and distance in an uncerwater acoustic communications channel: Stojanovic
-    # Using the heel creates a discontinuous graph. From the text:"
-    #       [the first] formula is generally valid for frequencies abovce a few hundred Hz
+    return k_prod + d_prod #dB
+
+def thorpe(f,heel=1):
+    """
+    Thorp's formula for attenuation_db rate (in dB/km) -> Changes depending on
+    the frequency (kHz)
+    From : "On the relationship between capacity and distance in an uncerwater acoustic communications channel: Stojanovic
+    Using the heel creates a discontinuous graph. From the text:"
+          [the first] formula is generally valid for frequencies abovce a few hundred Hz
+
+    Cite Stojanovic2007
+
+    >>> 51 < thorpe(200) < 51.5
+    True
+    >>> np.around(thorpe(200))
+    51.0
+
+    :param f: float kHz
+    :param heel: float inversion f
+    :return: float dB/km
+    """
+
 
     f2 = f ** 2
     if f > heel:
@@ -552,19 +595,23 @@ def thorpe(f,heel=0):
                            (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
     else:
         absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
-    return absorption_coeff
+    return absorption_coeff #dB/km
 
-def channel_noise(f):
+def channel_noise_db(f):
     """Noise(f)
 
     Calculates the ambient noise at current frequency
 
-    f - Frequency in kHz
-    :param f:
+    Primarily Driven by Surface Wave activity. Approximation of (7) from Stojanovic2007
+
+
+
+    :param f: float: Frequency in kHz
+    :return: float: dB re uPA per Hz
     """
 
     # Noise approximation valid from a few kHz
-    return 50 - 18 * math.log10(f)
+    return 50 - (18 * np.log10(f))
 
 
 def distance2bandwidth(i0, f, d, snr):
@@ -573,18 +620,20 @@ def distance2bandwidth(i0, f, d, snr):
     Calculates the available bandwidth for the acoustic signal as
     a function of acoustic intensity, frequency and distance
 
-    i0 - transmit power in dB
-    f - Frequency in kHz
-    d - Distance to travel in m
-    snr - Signal to noise ratio in dB
-    :param i0:
-    :param f:
-    :param d:
-    :param snr:
+    p
+    f
+    d
+    snr
+
+    :param i0:- transmit power in dB
+    :param f:- Frequency in kHz
+    :param d: - Distance to travel in m
+    :param snr:- Signal to noise ratio in dB
+    :return:
     """
 
-    a = attenuation(f, d)
-    n = channel_noise(f)
+    a = attenuation_db(f, d)
+    n = channel_noise_db(f)
 
     return db2linear(i0 - snr - n - a - 30)  # In kHz
 
@@ -595,18 +644,15 @@ def distance2intensity(b, f, d, snr):
     Calculates the acoustic intensity at the source as
     a function of bandwidth, frequency and distance
 
-    b - Bandwidth in kHz
-    f - Frequency in kHz
-    d - Distance to travel in m
-    SNR - Signal to noise ratio in dB
-    :param b:
-    :param f:
-    :param d:
-    :param snr:
+    :param b: float: Bandwidth in kHz
+    :param f: float: Frequency in kHz
+    :param d: float: Distance to travel in m
+    :param snr: float: Signal to noise ratio in dB
+    :return: float: acoustic intensity (dB@1uPa @1m?)
     """
 
-    a = attenuation(f, d)
-    n = channel_noise(f)
+    a = attenuation_db(f, d)
+    n = channel_noise_db(f)
     b = linear2db(b * 1.0e3)
 
     return snr + a + n + b
@@ -617,7 +663,7 @@ def acoustic_power_db_per_upa(i):
 
     Calculates the acoustic power needed to create an acoustic intensity at a distance dist
 
-    i - Created acoustic pressure
+    i - Created acoustic pressure in dB re uPa
     dist - Distance in m
     :param i:
     """
@@ -640,7 +686,7 @@ def listening_threshold(f, b, min_snr):
     :param min_snr:
     """
 
-    n = channel_noise(f)
+    n = channel_noise_db(f)
     b = linear2db(b * 1.0e3)
 
     return min_snr + n + b
@@ -659,7 +705,7 @@ def receiving_threshold(f, b, snr):
     :param snr:
     """
 
-    n = channel_noise(f)
+    n = channel_noise_db(f)
     b = linear2db(b * 1.0e3)
 
     return snr + n + b

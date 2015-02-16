@@ -139,8 +139,14 @@ def generate_dataframes_from_inverted_log(tup):
             df = Trust.explode_metrics_from_trust_log(df)
 
         # Ensure Index Types and Orders
+        try:
+            map(float, df.index.levels[0])
+            var_is_float = True
+        except:
+            var_is_float = False
+
         df.index = df.index.set_levels([
-                                           df.index.levels[0].astype(np.float64),  # Var
+                                           df.index.levels[0].astype(np.float64) if var_is_float else df.index.levels[0],  # Var
                                            df.index.levels[1].astype(np.int32) # Run
                                        ]+(df.index.levels[2:])
         )

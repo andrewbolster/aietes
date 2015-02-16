@@ -39,7 +39,10 @@ class Application(Sim.Process):
 
     def __init__(self, node, config, layercake):
         self._start_log(node)
-        Sim.Process.__init__(self)
+        Sim.Process.__init__(self, name= "{}({})".format(
+            self.__class__.__name__,
+            node.name)
+        )
         self.stats = {'packets_sent': 0,
                       'packets_received': 0,
                       'packets_time': 0,
@@ -99,11 +102,13 @@ class Application(Sim.Process):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
                 sent['delivered'] = True
+                sent['acknowledged'] = Sim.now()
 
     def signal_lost_tx(self, packetid):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
                 sent['delivered'] = False
+                sent['acknowledged'] = Sim.now()
 
     def tick(self):
         """ Method called at each simulation instance"""
@@ -127,7 +132,7 @@ class Application(Sim.Process):
                         "Generated Payload %s: Waiting %s" % (packet['data'], period))
                 self.layercake.send(packet)
                 self.stats['packets_sent'] += 1
-                packet['delivered'] = False
+                packet['delivered'] = None
                 self.sent_log.append(packet)
             yield Sim.hold, self, period
 
@@ -190,8 +195,7 @@ class Application(Sim.Process):
             offeredload = total_bits_out / Sim.now() * self.stats['packets_hops']
             try:
                 avg_length = total_bits_in / self.stats['packets_received']
-                average_rx_delay = self.stats[
-                                       'packets_time'] / self.stats['packets_received']
+                average_rx_delay = self.stats['packets_time'] / self.stats['packets_received']
             except ZeroDivisionError:
                 if self.stats['packets_received'] == 0:
                     avg_length = 0
@@ -405,10 +409,14 @@ class CommsTrust(RoutingTest):
     Trust Values retained per interval:
         Packet Loss Rate
 
+    Default Trust Assessment Period of 10 minutes
+    Default to Random Delay < 60 s before first cycle - reduces contension.
+
     """
     test_stream_length = 6
     stream_period_ratio = 0.1
     trust_assessment_period = 600
+    random_delay = 60
     metrics_string = "ATXP,ARXP,ADelay,ALength,Throughput,PLR"
 
     def activate(self):
@@ -420,7 +428,6 @@ class CommsTrust(RoutingTest):
         self.current_target = None
         self.last_trust_assessment = None
         self.last_accessed_rx_packet = None
-        self.last_accessed_tx_packet = None
 
         self.trust_assessments = {}  # My generated trust metrics, [node][t][n_observation_arrays]
         # Extra information that might be interesting in the longer term.
@@ -489,7 +496,7 @@ class CommsTrust(RoutingTest):
                 ))
                 raise
         else:
-            return []
+            return pd.Series([])
 
     def tick(self):
         """
@@ -497,6 +504,8 @@ class CommsTrust(RoutingTest):
 
         """
         if not Sim.now() % self.trust_assessment_period:
+            if self.layercake.hostname=='n0' and DEBUG:
+                self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
 
             # Set up the data structures
             for node in self.total_counter.keys():
@@ -505,65 +514,83 @@ class CommsTrust(RoutingTest):
                 if not self.trust_assessments.has_key(node):
                     self.trust_assessments[node] = []
 
-            relevant_packets = self.received_log[self.last_accessed_rx_packet:]
+            relevant_rx_packets = self.received_log[self.last_accessed_rx_packet:]
             self.last_accessed_rx_packet = len(self.received_log)
 
             rx_stats = {}
             for node in self.trust_assessments.keys():
-                pkt_batch = [packet for packet in relevant_packets if packet['source'] == node]
+                pkt_batch = [packet for packet in relevant_rx_packets if packet['source'] == node]
                 rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
                 # avg(tx pwr, rx pwr, delay, length), rx throughput
 
-            # TODO NamedTuples for safety
             Pkt=namedtuple('Pkt',['n','dest','length','delivered'])
-            relevant_packets = []
             last_relevant_time = Sim.now() - self.trust_assessment_period
-            for i, p in enumerate(self.sent_log):
-                if p['time_stamp'] > last_relevant_time:
-                    relevant_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
+
+
+            # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
+            acked_packets = filter(lambda d: d.has_key("acknowledged"), self.sent_log)
+            relevant_acked_packets = []
+            for i, p in enumerate(acked_packets):
+                if p['acknowledged'] > last_relevant_time:
+                    relevant_acked_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
 
             tx_stats = {}
             # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
             for node in self.trust_assessments.keys():
-                per = map(
-                    lambda p: float(not p.delivered),
-                    filter(
-                        lambda p: p.dest == node,
-                        relevant_packets)
-                )
-                if per:
-                    per = np.nanmean(per)
-                else:
-                    per = np.nan
-
+                # Throughput is the total length of data transmitted this frame
                 tx_throughput = map(
                     lambda p: float(p.length),
                     filter(
                         lambda p: p.dest == node,
-                        relevant_packets)
+                        relevant_acked_packets)
                 )
                 if tx_throughput:
                     tx_throughput = np.sum(tx_throughput)
                 else:
-                    tx_throughput = np.nan
+                    tx_throughput = 0.0
+
+                # PLR is the average amount of packets we are sure have been lost in the last time frame
+                # Including pkts that have been acked since last time.
+                plr = map(
+                    lambda p: float(not p.delivered),
+                    filter(
+                        # We know the fate of all acked packets
+                        lambda p: p.dest == node,
+                        relevant_acked_packets)
+                )
+                if plr and tx_throughput>0.0:
+                    plr = np.nanmean(plr)
+                else:
+                    plr = 0.0
 
                 tx_stats[node] = pd.Series({
-                    'PLR':per if not np.isnan(per) else 0.0,
+                    'PLR':plr if not np.isnan(plr) else 0.0,
                     'TXThroughput':tx_throughput
                 })
 
-                # Packet Error Rate (all time)
-                if len(rx_stats[node]):
-                    nodestat = pd.concat([rx_stats[node], tx_stats[node]])
-                    # avg(tx pwr, rx pwr, delay, length), rx throughput, PER
-
-                else:
-                    nodestat = pd.Series([])
+            for node in self.trust_assessments.keys():
+                nodestat = pd.concat([rx_stats[node], tx_stats[node]])
+                # avg(tx pwr, rx pwr, delay, length), rx throughput, PER
                 self.trust_assessments[node].append(nodestat)
 
             self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))
             self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
 
+
+    def select_target(self):
+        """
+        Selects a new target based on the least communicated with
+
+        :return: str
+        """
+        most_common = self.total_counter.most_common()
+        new_target = np.random.choice(
+            [n
+             for n, c in most_common
+             if c == most_common[-1][1]
+            ]
+        )
+        return new_target
 
     def generate_next_packet(self, period, destination=None, data=None, *args, **kwargs):
         """
@@ -592,14 +619,8 @@ class CommsTrust(RoutingTest):
         # DOES NOT MERGE TARGET COUNTER
         self.merge_counters()
 
-        most_common = self.total_counter.most_common()
-        if not self.current_target:
-            self.current_target = np.random.choice(
-                [n
-                 for n, c in most_common
-                 if c == most_common[-1][1]
-                ]
-            )
+        if self.current_target is None:
+            self.current_target = self.select_target()
 
         destination = self.current_target
         packet_id = self.layercake.hostname + str(self.stats['packets_sent'])
@@ -662,6 +683,52 @@ class CommsTrust(RoutingTest):
 
 class CommsTrustRoundRobin(CommsTrust):
     test_stream_length = 1
+
+class SelfishCommsTrustRoundRobin(CommsTrustRoundRobin):
+    def select_target(self):
+        neighbours_by_distance = self.layercake.host.behaviour.get_nearest_neighbours()
+        choices = [(v.name, 1.0/np.power(v.distance, 2)) for v in neighbours_by_distance]
+        names, inv_sq_distances = zip(*choices)
+
+        norm_distances = inv_sq_distances / sum(inv_sq_distances)
+        new_target = np.random.choice(names, p=norm_distances)
+        self.logger.warn("Selected {}".format(new_target))
+        return new_target
+
+    def activate(self):
+        """
+        Custom activation to set up fwd handler
+        :return:
+        """
+
+        self.layercake.fwd_signal_hdlrs.append(self.query_fwd)
+
+        super(SelfishCommsTrustRoundRobin, self).activate()
+
+    def query_fwd(self, packet):
+        """
+        Only allow forwarding packets to neighbours
+        :return:bool
+        """
+        if packet['dest'] == self.layercake.hostname or packet['source'] == self.layercake.hostname:
+            drop_it = False
+        else:
+            fwd_pos = self.layercake.host.fleet.node_position_by_name(packet['dest'])
+            neighbourly = self.layercake.net.is_neighbour(fwd_pos)
+            if bool(neighbourly):
+                drop_it = False
+
+            else:
+                self.logger.warn("Dropping Packet to {} as they're not a neighbour".format(packet["dest"]))
+                if self.layercake.hostname=='n1' and DEBUG:
+                    self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
+                drop_it = True
+
+        return drop_it
+
+
+
+
 
 
 class Null(Application):

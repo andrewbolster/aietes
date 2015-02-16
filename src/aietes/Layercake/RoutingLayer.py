@@ -32,7 +32,7 @@ from aietes.Layercake.priodict import PriorityDictionary
 from aietes.Tools import distance, broadcast_address, DEBUG
 
 
-DEBUG = False
+#DEBUG = True
 
 
 def setup_routing(node, config):
@@ -580,7 +580,6 @@ class Static(SimpleRoutingTable):
 
         :return:
         """
-        levels = self.layercake.phy.level2distance
         graph = {}
         for fname, fpos in nodes_geo.iteritems():
             graph[fname] = {}
@@ -695,14 +694,6 @@ class Static(SimpleRoutingTable):
         path.reverse()
         return path
 
-    def nodes_pos2str(self):
-        """
-
-
-        """
-        print self.nodes_pos
-
-
 class FBR(SimpleRoutingTable):
     """ In this case, DACAP4FBR should be selected as MAC protocol.
         Variation 0: Transmission cone
@@ -711,35 +702,43 @@ class FBR(SimpleRoutingTable):
 
     def __init__(self, layercake, config):
         SimpleRoutingTable.__init__(self, layercake, config)
-        # Does not make sense with mobile nodes: just for the sinks
-        nodes_geo[layercake.hostname] = layercake.get_current_position()
 
         # Contains already discovered positions
         self.nodes_pos = {layercake.hostname: layercake.get_current_position()}
+        nodes_geo[layercake.hostname] = layercake.get_current_position()
         self.cone_angle = config["coneAngle"]  # The cone aperture
         self.incoming_packet = None
         self.packets = set([])
         self.rx_cone = config["rx_cone"]
 
-    def on_packet_reception(self, packet):
-        # If this is the final destination of the packet,
-        # pass it to the application layer
-        # otherwise, send it on.
-        """
 
-        :param packet:
-        :return:
+    def on_packet_reception(self, packet):
+        """
+        If this is the final destination of the packet,
+        pass it to the application layer
+        otherwise, send it on.
+
+        Also updates the global node_geo map
+
+        :param packet: obj: successfully received packet to go to layercake if for me
+        :return: bool: was the packet for me?
         """
         if not self.have_duplicate_packet(packet):
+            global nodes_geo
+            nodes_geo = self.layercake.host.fleet.node_map()
             self.packets.add(packet["ID"])
-            self.logger.debug("Processing packet with ID: " + packet["ID"])
+            # todo check if this check is actually needed.
             if packet["through"] == packet["dest"]:
                 if packet["dest"] == self.layercake.hostname:
                     self.layercake.recv(packet)
                     return True
+            elif self.layercake.query_drop_forward(packet=packet):
+                self.logger.debug("Dropping packet with ID: " + packet["ID"])
             else:
+                self.logger.debug("Forwarding packet with ID: " + packet["ID"])
                 self.send_packet(packet)
-                return False
+
+            return False
 
     def send_packet(self, packet):
         """
@@ -750,8 +749,7 @@ class FBR(SimpleRoutingTable):
         self.incoming_packet["route"].append(
             (self.layercake.hostname, self.layercake.get_real_current_position()))
         # Current hop position
-        self.incoming_packet[
-            "source_position"] = self.layercake.get_current_position()
+        self.incoming_packet["source_position"] = self.layercake.get_current_position()
 
         if self.incoming_packet["dest"] == "AnySink":
             self.incoming_packet["dest"] = self.find_closer_sink()
@@ -794,15 +792,17 @@ class FBR(SimpleRoutingTable):
 
     def is_reachable(self, current_level, dest_pos):
         """
-
-        :param current_level:
-        :param dest_pos:
-        :return:
+        Is this level high enough to get to the destination?
+        :param current_level: int
+        :param dest_pos: ndarray([x,y,z])
+        :return: bool
         """
-        if self.get_level_for(dest_pos) is None:
+        level_that_would_work = self.get_level_for(dest_pos)
+        if level_that_would_work is None:
+            self.logger.warn("No Level will work to get to {}".format(dest_pos))
             return False
         else:
-            return self.get_level_for(dest_pos) <= current_level
+            return int(level_that_would_work) <= current_level
 
     def is_neighbour(self, dest_pos):
         """
@@ -841,18 +841,22 @@ class FBR(SimpleRoutingTable):
         """
 
         :param destination:
-        :return:
+        :return: int
         """
         new_level = None
 
         # ANY0/ANY1 etc
         if destination[0:3] == "ANY":
-            new_level = destination[3]
-
-        # Otherwise check if any known levels will satisfy the distance
-        for level, r in self.layercake.phy.level2distance.iteritems():
-            if distance(self.layercake.get_current_position(), destination) <= r:
-                new_level = level
+            new_level = int(destination[3])
+        else:
+            r = distance(self.layercake.get_current_position(), destination)
+            levels=zip(                                             #From the re-zipped
+                    *filter(                                        # unzipped filtered
+                        lambda i: i[1]>r,                           # list (l,d) where d > r
+                        self.layercake.phy.level2distance.items()   # from available levels
+                    )
+                )[0]                                                # first value of unzipped lists (levels)
+            new_level = min(levels)                                 #Lowest Value Level
 
         return new_level
 
@@ -880,8 +884,9 @@ class FBR(SimpleRoutingTable):
         :param packet:
         :return:
         """
+        valid = False
         if packet["dest"] == self.layercake.hostname:
-            return True
+            valid = True
         elif self.rx_cone == 0:
             """
             I will be a valid candidate if I am within the transmission cone.
@@ -900,12 +905,7 @@ class FBR(SimpleRoutingTable):
                     a = math.degrees(
                         math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)))
 
-                if a <= self.cone_angle / 2.0:
-                    self.logger.debug("I'm a valid candidate.")
-                    return True
-                else:
-                    self.logger.debug("I'm not a valid candidate.")
-                    return False
+                valid = a <= self.cone_angle / 2.0
 
         elif self.rx_cone == 1:
             """
@@ -913,17 +913,20 @@ class FBR(SimpleRoutingTable):
             """
             source_pos = packet["source_position"]
             dest_pos = packet["dest_position"]
+            valid = (distance(self.layercake.get_current_position(), dest_pos) < distance(source_pos, dest_pos))
 
-            if distance(self.layercake.get_current_position(), dest_pos) < distance(source_pos, dest_pos):
-                return True
+        if valid:
+            if self.layercake.query_drop_forward(packet):
+                self.logger.debug("I'm a valid candidate for {} BUT IM IGNORING IT".format(
+                    packet["dest"]
+                ))
+                valid = False
             else:
-                return False
+                self.logger.debug("I'm a valid candidate for {}".format(
+                    packet["dest"]
+                ))
 
-                # This information comes from the Multicast RTS and I may be interested in using it, or not.
-                ##        self.nodes_pos[packet["source"]] = packet["source_position"]
-                ##        self.nodes_pos[packet["dest"]] = packet["dest_position"]
-                # self[packet["source"]] = packet["source"] # This is a
-                # neighbor
+        return valid
 
     def add_node(self, name, pos):
         """
@@ -959,12 +962,12 @@ class FBR(SimpleRoutingTable):
 
         return False
 
-    def select_route(self, candidates, current_through, attemps, destination):
+    def select_route(self, candidates, current_through, attempts, destination):
         """
 
         :param candidates:
         :param current_through:
-        :param attemps:
+        :param attempts:
         :param destination:
         :return:
         """
@@ -984,27 +987,32 @@ class FBR(SimpleRoutingTable):
             if current_through[0:3] != "ANY":
                 # This is not a multicast RTS but a directed RTS which has been
                 # not answered
-                if attemps < 2:
+                if attempts < 2:
                     self.logger.debug("Let's give it another chance.")
-                    return "2CHANCE", self.nodes_pos[current_through]
+                    return "2CHANCE", 0
                 else:
                     self.logger.debug("Starting multicast selection")
                     return "ANY0", 0
 
+
             if int(current_through[3]) != (len(self.layercake.phy.level2distance) - 1):
                 # This is a multicast selection, but not with the maximum
                 # transmission power level
-                self.logger.debug("Increasing transmission power.")
                 level = int(current_through[3]) + 1
+                self.logger.debug("Increasing power to level {}".format(level))
 
                 if self.is_reachable(level, nodes_geo[destination]):
-                    self.logger.debug("It is reachable.")
+                    self.logger.debug("{} is reachable".format(
+                        destination
+                    ))
                     return "NEIGH" + str(level), 0
                 else:
-                    self.logger.debug("It is not reachable.")
+                    self.logger.debug("{} is not reachable".format(
+                        destination
+                    ))
                     return "ANY" + str(level), 0
             else:
-                self.logger.debug(
+                self.logger.info(
                     "Unable to reach any node within any transmission power. ABORTING transmission.")
                 return "ABORT", 0
 
@@ -1012,6 +1020,9 @@ class FBR(SimpleRoutingTable):
             # There have been answers: for a given transmission power, I should
             # always look for the one that is closer to the destination
             if candidates.has_key(destination):
+                self.logger.debug("Selecting {} as direct route".format(
+                    destination
+                ))
                 return destination, candidates[destination][2]
 
             # Now without energy criteria, I multiply by zero
@@ -1036,5 +1047,9 @@ class FBR(SimpleRoutingTable):
 
             sc = dict(map(lambda item: (item[1], item[0]), score.items()))
             min_score = sc[min(sc.keys())]
+            self.logger.debug("Selecting {} as indirect route for {}".format(
+                min_score,
+                destination
+            ))
 
             return min_score, self.nodes_pos[min_score]
