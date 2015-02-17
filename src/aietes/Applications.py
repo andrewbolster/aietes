@@ -101,12 +101,18 @@ class Application(Sim.Process):
     def signal_good_tx(self, packetid):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
+                self.logger.info("Confirmed TX of {} to {} at {} after {}".format(
+                    sent['ID'], sent['dest'], Sim.now(), Sim.now() - sent['time_stamp']
+                ))
                 sent['delivered'] = True
                 sent['acknowledged'] = Sim.now()
 
     def signal_lost_tx(self, packetid):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
+                self.logger.warn("Failed TX of {} to {} at {}".format(
+                    sent['ID'], sent['dest'], Sim.now()
+                ))
                 sent['delivered'] = False
                 sent['acknowledged'] = Sim.now()
 

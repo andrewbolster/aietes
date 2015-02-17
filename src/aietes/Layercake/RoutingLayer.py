@@ -806,9 +806,11 @@ class FBR(SimpleRoutingTable):
         level_that_would_work = self.get_level_for(dest_pos)
         if level_that_would_work is None:
             self.logger.warn("No Level will work to get to {}".format(dest_pos))
-            return False
+            reachable = False
         else:
-            return int(level_that_would_work) <= current_level
+            reachable = int(level_that_would_work) <= current_level
+
+        return reachable
 
     def is_neighbour(self, dest_pos):
         """
@@ -838,6 +840,7 @@ class FBR(SimpleRoutingTable):
             elif self.get_level_for(self.nodes_pos[self[destination]]) < current_level:
                 return True
             else:
+                self.logger.warn("Not ACKing to {}".format(destination))
                 return False
 
         return True

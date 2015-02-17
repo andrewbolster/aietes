@@ -96,6 +96,8 @@ class FSM(object):
         self.initial_state = initial_state
         self.current_state = self.initial_state
         self.last_state = None
+        self.last_symbol = None
+        self.last_action = None
         self.something = something
 
     def reset(self):
@@ -183,15 +185,17 @@ class FSM(object):
         symbols (or a string) by calling process_list().
         :param input_symbol:
         """
+        self.last_symbol = self.input_symbol
+        self.last_state = self.current_state
         self.input_symbol = input_symbol
         (action, next_state) = self.get_transition(
             self.input_symbol, self.current_state)
         # self.logger.info("%s(%s) -> @%s" % (self.current_state, input_symbol, next_state))
-        self.last_state = self.current_state
         self.current_state = next_state
 
         if action is not None:
             action()
+        self.last_action = action
 
     def process_list(self, s):
         """This takes a list and sends each element to process().

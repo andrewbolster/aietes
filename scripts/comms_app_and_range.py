@@ -25,13 +25,13 @@ def redirected(stdout):
 
 def exec_comms_range(scenario, title, app_rate):
     e = EXP(title="{}-{}-{}".format(title, re.split('\.|\/', scenario)[-2], app_rate),
-            parallel=True,
+            parallel=False,
             base_config_file=scenario
     )
     e.add_position_scaling_range(np.linspace(1, 8, 8), basis_node_name="n1")
     e.update_all_nodes({"app_rate":app_rate})
     e.run(
-        runcount=3,
+        runcount=1,
         retain_data=False,
         queue=True
     )
