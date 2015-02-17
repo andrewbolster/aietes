@@ -56,7 +56,6 @@ class Application(Sim.Process):
         self.layercake = layercake
         self.sim_duration = node.simulation.config.Simulation.sim_duration
         if self.HAS_LAYERCAKE:
-            self.packet_length = layercake.packet_length
             try:
                 packet_rate = self.config['packet_rate']
                 packet_count = self.config['packet_count']
@@ -94,6 +93,7 @@ class Application(Sim.Process):
         if self.HAS_LAYERCAKE:
             self.layercake.tx_good_signal_hdlrs.append(self.signal_good_tx)
             self.layercake.tx_lost_signal_hdlrs.append(self.signal_lost_tx)
+            self.layercake.app_rx_handler=self.packet_recv
 
         Sim.activate(self, self.lifecycle())
 
@@ -101,7 +101,7 @@ class Application(Sim.Process):
     def signal_good_tx(self, packetid):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
-                self.logger.info("Confirmed TX of {} to {} at {} after {}".format(
+                self.logger.warn("Confirmed TX of {} to {} at {} after {}".format(
                     sent['ID'], sent['dest'], Sim.now(), Sim.now() - sent['time_stamp']
                 ))
                 sent['delivered'] = True
@@ -110,7 +110,7 @@ class Application(Sim.Process):
     def signal_lost_tx(self, packetid):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
-                self.logger.warn("Failed TX of {} to {} at {}".format(
+                self.logger.error("Failed TX of {} to {} at {}".format(
                     sent['ID'], sent['dest'], Sim.now()
                 ))
                 sent['delivered'] = False
@@ -156,7 +156,7 @@ class Application(Sim.Process):
         self.packet_recv(from_below)
 
     def packet_recv(self, packet):
-        pass
+        raise NotImplementedError("Shouldn't be in the base class!")
 
     def log_received_packet(self, packet):
         """
@@ -277,7 +277,7 @@ class AccessibilityTest(Application):
         """
         packet_id = self.layercake.hostname + str(self.stats['packets_sent'])
         packet = {"ID": packet_id, "dest": destination, "source": self.layercake.hostname, "route": [
-        ], "type": "DATA", "time_stamp": Sim.now(), "length": self.packet_length}
+        ], "type": "DATA", "time_stamp": Sim.now(), "length": self.layercake.packet_length}
         period = poisson(float(period))
         return packet, period
 
@@ -355,7 +355,7 @@ class RoutingTest(Application):
                   "source": self.layercake.hostname,
                   "route": [], "type": "DATA",
                   "time_stamp": Sim.now(),
-                  "length": self.packet_length,
+                  "length": self.layercake.packet_length,
                   "data": None}
         period = poisson(float(period))
         return packet, period
@@ -367,7 +367,6 @@ class RoutingTest(Application):
         """
         self.merge_counters()
         self.received_counter[packet['source']] += 1
-        del packet
 
     def merge_counters(self):
         """
@@ -635,7 +634,7 @@ class CommsTrust(RoutingTest):
                   "source": self.layercake.hostname,
                   "route": [], "type": "DATA",
                   "time_stamp": Sim.now(),
-                  "length": self.packet_length,
+                  "length": self.layercake.packet_length,
                   "data": self.test_packet_counter[destination]}
         self.sent_counter[destination] += 1
         self.test_packet_counter[destination] += 1
@@ -671,7 +670,6 @@ class CommsTrust(RoutingTest):
                     src=packet['source'],
                     delay=Sim.now() - packet['time_stamp']
                 ))
-        del packet
 
     def dump_logs(self):
         """

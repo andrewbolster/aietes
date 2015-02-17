@@ -675,7 +675,11 @@ class ExperimentManager(object):
                 queue.join()
                 logging.info("Queue Complete")
                 for title, s in self.scenarios.items():
-                    assert s._pending_queue.finished(), "{} isn't finished!".format(title)
+                    timeout=0
+                    while not s._pending_queue.populate():
+                        timeout+=1
+                        logging.warn("Not Finished, Sleeping for {}".format(timeout))
+                        time.sleep(timeout)
                     s.datarun = s._pending_queue.results
                     del s._pending_queue
 

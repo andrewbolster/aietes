@@ -43,6 +43,10 @@ class Node(Sim.Process):
         self.logger = kwargs.get(
             "logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
 
+        #fileHandler = logging.FileHandler("{0}/{1}.log".format(logPath, fileName))
+        #fileHandler.setFormatter(log_fmt)
+        #self.logger.addHandler(fileHandler)
+
         self.simulation = simulation
         self.config = node_config
         self.mass = 37  # kg modeling remus 100

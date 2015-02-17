@@ -27,6 +27,7 @@
 import random
 random.seed(123456789)
 
+import logging
 
 import SimPy.Simulation as Sim
 
@@ -584,7 +585,7 @@ class ALOHA4FBR(ALOHA):
             self.outgoing_packet_queue[0]["through"] = current_through
             self.fsm.process("retransmit")
 
-        elif self.outgoing_packet_queue[0]["through"] == "NEIGH":
+        elif self.outgoing_packet_queue[0]["through"][0:5] == "NEIGH":
             # With current transmission power level, the destination has become
             # a neighbor
             self.outgoing_packet_queue[0][
@@ -1625,7 +1626,7 @@ class DACAP4FBR(DACAP):
             self.outgoing_packet_queue[0]["through"] = current_through
             self.fsm.process("retransmit")
 
-        elif self.outgoing_packet_queue[0]["through"] == "NEIGH":
+        elif self.outgoing_packet_queue[0]["through"][0:5] == "NEIGH":
             # With current transmission power level, the destination has become
             # a neighbor
             self.outgoing_packet_queue[0]["level"] = int(
@@ -1776,7 +1777,13 @@ class CSMA(MAC):
 
     def __init__(self, layercake, config):
         self.layercake = layercake
-        self.logger = layercake.logger.getChild("%s" % self.__class__.__name__)
+        self.config = config
+        self.logger = getattr(self.layercake,"logger", None)
+        if self.logger is not None:
+            self.logger=self.logger.getChild("%s" % self.__class__.__name__)
+        else:
+            logging.basicConfig()
+            self.logger = logging.getLogger("%s" % self.__class__.__name__)
 
         self.initialise_state_machine()
         self.timer = self.InternalTimer(self.fsm)
@@ -1788,16 +1795,10 @@ class CSMA(MAC):
 
         self.packet_signal = {
             "ACK": "got_ACK", "RTS": "got_RTS", "CTS": "got_CTS", "DATA": "got_DATA"}
-        self.ack_packet_length = config["ack_packet_length"]
-        self.rts_packet_length = config["rts_packet_length"]
-        self.cts_packet_length = config["cts_packet_length"]
-        self.data_packet_length = config["data_packet_length"]
 
-        self.max_transmission_attempts = config["attempts"]
 
         self.transmission_attempts = 0
         self.ack_failures = 0
-        self.max_wait_to_retransmit = config["max2resend"]
         self.channel_access_retries = 0
         self.total_channel_access_attempts = 0
         self.next_timeout = 0
@@ -1805,18 +1806,37 @@ class CSMA(MAC):
         self.pending_ack_packet_from = None
         self.multicast = False
 
+        # Configs set at activate
+        self.ack_packet_length = None
+        self.rts_packet_length = None
+        self.cts_packet_length = None
+        self.data_packet_length = None
+        self.max_wait_to_retransmit = None
+        self.max_transmission_attempts = None
         # Timing parameters
-        self.T = self.layercake.phy.level2delay(0)  # It will be adapted according to the transmission range
-        self.t_data = self.data_packet_length / \
-                      (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
-        self.t_control = self.rts_packet_length / \
-                         (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        self.T = None
+        self.t_data = None
+        self.t_control = None
+
 
     def activate(self):
         """
 
 
         """
+        self.ack_packet_length = self.config["ack_packet_length"]
+        self.rts_packet_length = self.config["rts_packet_length"]
+        self.cts_packet_length = self.config["cts_packet_length"]
+        self.data_packet_length = self.config["data_packet_length"]
+        self.max_wait_to_retransmit = self.config["max2resend"]
+        self.max_transmission_attempts = self.config["attempts"]
+
+        # Timing parameters
+        self.T = self.layercake.phy.level2delay(0)  # It will be adapted according to the transmission range
+        self.t_data = self.data_packet_length / \
+                      (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        self.t_control = self.rts_packet_length / \
+                         (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         Sim.activate(self.timer, self.timer.lifecycle(self.TimerRequest))
 
     class InternalTimer(Sim.Process):
@@ -1916,6 +1936,8 @@ class CSMA(MAC):
             "got_ACK", "WAIT_ACK", self.on_transmit_success, "READY_WAIT")
         self.fsm.add_transition(
             "got_RTS", "WAIT_ACK", self.ignore_rts, "WAIT_ACK")
+        #self.fsm.add_transition(
+        #    "got_CTS", "WAIT_ACK", self.ignore_cts, "WAIT_ACK")
 
         ######################################################## BAD IDEA
         # ACK Timeouts are causing contensions when two nodes try to talk
@@ -2162,11 +2184,11 @@ class CSMA(MAC):
         :param t:
         """
         if packet_type == "RTS":
-            backoff = 4 * t
+            backoff = 4 * t + 2 * self.t_control + self.t_data
         elif packet_type == "CTS" or packet_type == "SIL":
-            backoff = 3 * t
+            backoff = 3 * t + self.t_control + self.t_data
         elif packet_type == "DATA":
-            backoff = 2 * t
+            backoff = 2 * t + self.t_control
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
 
@@ -2372,12 +2394,12 @@ class CSMA(MAC):
         try:
             if DEBUG:
                 self.logger.error(
-                    "Unexpected transition from {sm.last_state}:{sm.last_action}:{sm.last_symbol} to {sm.current_state} due to {sm.input_symbol}: {src} {thru} {dest} {id} {type}".format(
+                    "TRANS {sm.last_state}:{sm.last_action.__name__}:{sm.last_symbol} to {sm.current_state} due to {sm.input_symbol}: \n{src} {thru} {dest} {id} {type}".format(
                         sm=self.fsm,
                         src=self.incoming_packet['source'],
-                        thru=self.incoming_packet['through'],
+                        thru=self.incoming_packet.get('through'),
                         dest=self.incoming_packet['dest'],
-                        id=self.incoming_packet['ID'],
+                        id=self.incoming_packet.get('ID'),
                         type=self.incoming_packet['type']
                     )
                 )
@@ -2397,7 +2419,7 @@ class CSMA(MAC):
         p = Sim.Process()
         p.interrupt(self.timer)
 
-        self.layercake.signal_good_tx(self.incoming_packet['ID'])
+        self.layercake.signal_good_tx(self.incoming_packet['ID']) # ACKd packets should always have IDs
         self.post_success_or_fail()
 
     def on_transmit_fail(self):
@@ -2435,14 +2457,6 @@ class CSMA(MAC):
         if self.transmission_attempts < self.max_transmission_attempts:
             random_delay = self.transmission_attempts + random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
-        else:
-            self.logger.warn("ACK-TO {}: id {} sent @ {}, after {} now lost {}".format(
-                self.outgoing_packet_queue[0]['dest'],
-                self.outgoing_packet_queue[0]['ID'],
-                self.outgoing_packet_queue[0]['time_stamp'],
-                self.transmission_attempts, self.ack_failures))
-            self.outgoing_packet_queue.pop()
-            self.ack_failures += 1
 
     def on_data_timeout(self):
         """ The timeout has expired and NO DATA has been received.
@@ -2510,7 +2524,7 @@ class CSMA(MAC):
         timeout = self.get_timeout("ACK", self.T)
 
         if DEBUG:
-            self.logger.info("DATA/ACK Timeout for {}:{} to {} for {}".format(
+            self.logger.debug("DATA/ACK Timeout for {}:{} to {} for {}".format(
                 self.outgoing_packet_queue[0]['type'],
                 self.outgoing_packet_queue[0]['ID'],
                 self.outgoing_packet_queue[0]['dest'],
@@ -2529,6 +2543,7 @@ class CSMA(MAC):
                 self.fsm.current_state
 
             ))
+        self.outgoing_packet_queue.append(self.outgoing_packet_queue.pop(0))
 
 
 class FAMA(CSMA):
@@ -2591,7 +2606,7 @@ class CSMA4FBR(CSMA):
 
         # A new packet type
         self.packet_signal["SIL"] = "got_SIL"
-        self.SIL_packet_length = config["sil_packet_length"]
+        self.SIL_packet_length = None
 
         self.valid_candidates = {}
         self.original_through = None
@@ -2629,14 +2644,23 @@ class CSMA4FBR(CSMA):
         self.fsm.add_transition("defer", "BACKOFF", self.x_overheard, "BACKOFF")
 
         self.fsm.add_transition("got_MC_RTS", "WAIT_ACK", self.process_mc_rts, "WAIT_ACK")
+        self.fsm.add_transition("got_SIL", "WAIT_ACK", self.ignore_sil, "WAIT_ACK")
+
+    def activate(self):
+        self.SIL_packet_length = self.config["sil_packet_length"]
+        super(CSMA4FBR, self).activate()
 
     def ignore_sil(self):
         """
 
 
         """
-        self.logger.warn(
-            "Ignoring SIL coming from " + self.incoming_packet["through"])
+        assert self.incoming_packet['type'] == "SIL", "Ignoring a non-SIL packet: {}".format(
+            self.incoming_packet
+        )
+        if DEBUG:
+            self.logger.info(
+                "Ignoring SIL coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
 
     def process_mc_rts(self):
@@ -2651,7 +2675,7 @@ class CSMA4FBR(CSMA):
                     self.multicast = True
                     self.fsm.process("send_CTS")
             else:
-                # self.logger.DEBUG("I can't attend the MultiCast RTS received from " + self.incoming_packet["source"] + " but I will be silent.")
+                self.logger.debug("I can't attend the MultiCast RTS received from " + self.incoming_packet["source"] + " but I will be silent.")
                 self.fsm.process("ignore_RTS")
         elif self.fsm.current_state == "WAIT_DATA":
             if self.last_cts_to == self.incoming_packet["source"]:
@@ -2725,7 +2749,7 @@ class CSMA4FBR(CSMA):
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
             # We have consumed all the attemps
             if DEBUG:
-                self.logger.debug("Aborting {type}-{id} to {dest}".format(
+                self.logger.warn("Aborting {type}-{id} to {dest}".format(
                     type=self.outgoing_packet_queue[0]['type'],
                     id=self.outgoing_packet_queue[0]['ID'],
                     dest=self.outgoing_packet_queue[0]['dest'],
@@ -2757,7 +2781,7 @@ class CSMA4FBR(CSMA):
                 ))
             self.fsm.process("retransmit")
 
-        elif self.outgoing_packet_queue[0]["through"] == "NEIGH":
+        elif self.outgoing_packet_queue[0]["through"][0:5] == "NEIGH":
             # With current transmission power level, the destination has become
             # a neighbor
             self.outgoing_packet_queue[0][

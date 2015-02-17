@@ -116,23 +116,33 @@ class queue_sim(object):
         self.pending_results = [None] * len(self.tasklist)
         self.pool = pool
 
-    def _callback(self, result):
-        if result is None:
-            self.pool.terminate()
-            logging.critical("Terminating!")
-            return
-        i, returned = result
-        logging.info("Got result {}".format(i))
-        self.results[i] = returned
-
     def launch(self):
         logging.info("Appending Queued Parallel Run of {runcount} at {t}".format(
             runcount=len(self.tasklist), t=strftime("%a, %d %b %Y %H:%M:%S +0000", gmtime())
         ))
         for i, args in enumerate(self.tasklist):
-            self.pending_results[i] = self.pool.apply_async(queue_mask, args=(i, args), callback=self._callback)
+            self.pending_results[i] = self.pool.apply_async(queue_mask, args=(i, args))
 
     def finished(self):
+        """
+        Is execution complete? (Note, this may be different than when results are ready)
+        :return: bool
+        """
         return all([r.ready() for r in self.pending_results])
+
+    def populate(self):
+        """
+        Populate the results list from the pending list.
+        Should be blocking after close
+        Unknown behaviour if mask fails.
+        :return: bool: results are ready for processing
+        """
+        if self.finished():
+            for i,p in enumerate(self.pending_results):
+                # If the task raised an exception, it will appear here
+                self.results[i] = p.get()
+            return True
+        else:
+            return False
 
 

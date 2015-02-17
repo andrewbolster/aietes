@@ -96,7 +96,7 @@ class SimpleRoutingTable(dict):
         if not self.have_duplicate_packet(packet):
             self.packets.add(packet["ID"])
             if packet["dest"] == self.layercake.hostname:
-                self.logger.debug(
+                self.logger.warn(
                     "received Packet from {src}".format(src=packet["source"]))
                 self.layercake.recv(packet)
             elif packet["dest"] == broadcast_address:
@@ -110,6 +110,7 @@ class SimpleRoutingTable(dict):
                     src=packet["source"], dest=packet['dest']))
                 self.send_packet(packet)
 
+
     def need_explicit_ack(self, current_level, destination):
         return True
 
@@ -120,7 +121,7 @@ class SimpleRoutingTable(dict):
         if packet["ID"] in self.packets:
             # This packet was already received, I should directly acknolwedge
             # it.
-            self.logger.debug(
+            self.logger.error(
                 "Discarding a duplicated packet. ID: " + packet["ID"])
             return True
 
@@ -730,8 +731,7 @@ class FBR(SimpleRoutingTable):
         :return: bool: was the packet for me?
         """
         if not self.have_duplicate_packet(packet):
-            global nodes_geo
-            nodes_geo = self.layercake.host.fleet.node_map()
+
             self.packets.add(packet["ID"])
             # todo check if this check is actually needed.
             if packet["through"] == packet["dest"]:
@@ -739,18 +739,27 @@ class FBR(SimpleRoutingTable):
                     self.layercake.recv(packet)
                     return True
             elif self.layercake.query_drop_forward(packet=packet):
-                self.logger.debug("Dropping packet with ID: " + packet["ID"])
+                self.logger.info("Dropping packet with ID: " + packet["ID"])
             else:
-                self.logger.debug("Forwarding packet with ID: " + packet["ID"])
+                self.logger.info("Forwarding packet with ID: " + packet["ID"])
                 self.send_packet(packet)
 
-            return False
+        else:
+            self.logger.warn("Rejecting Dup {type} {ID} from {source} to {dest}".format(
+                type=packet['type'],
+                ID=packet.get('ID'),
+                source=packet['source'],
+                dest=packet['dest']
+            ))
+        return False
 
     def send_packet(self, packet):
         """
 
         :param packet:
         """
+        global nodes_geo
+        nodes_geo = self.layercake.host.fleet.node_map()
         self.incoming_packet = packet
         self.incoming_packet["route"].append(
             (self.layercake.hostname, self.layercake.get_real_current_position()))
@@ -805,7 +814,7 @@ class FBR(SimpleRoutingTable):
         """
         level_that_would_work = self.get_level_for(dest_pos)
         if level_that_would_work is None:
-            self.logger.warn("No Level will work to get to {}".format(dest_pos))
+            self.logger.info("No Level will work to get to {}".format(dest_pos))
             reachable = False
         else:
             reachable = int(level_that_would_work) <= current_level
@@ -864,8 +873,9 @@ class FBR(SimpleRoutingTable):
                                      lambda i: i[1] > r,  # list (l,d) where d > r
                                      self.layercake.phy.level2distance.items()  # from available levels
                            )
-            )[0]  # first value of unzipped lists (levels)
-            new_level = min(levels)  # Lowest Value Level
+            )
+            if levels:
+                new_level = min(levels[0])  # Lowest Value Level
 
         return new_level
 
@@ -991,7 +1001,7 @@ class FBR(SimpleRoutingTable):
             if self.layercake.phy.collision_detected():
                 self.logger.debug(
                     "There has been a collision, let's give it another chance!")
-                return "2CHANCE", self.nodes_pos[current_through]
+                return "2CHANCE", self.nodes_pos.get(current_through,0)
 
             if current_through[0:3] != "ANY":
                 # This is not a multicast RTS but a directed RTS which has been

@@ -25,7 +25,7 @@ def redirected(stdout):
 
 def exec_comms_range(scenario, title, app_rate):
     e = EXP(title="{}-{}-{}".format(title, re.split('\.|\/', scenario)[-2], app_rate),
-            parallel=False,
+            parallel=True,
             base_config_file=scenario
     )
     e.add_position_scaling_range(np.linspace(1, 8, 8), basis_node_name="n1")

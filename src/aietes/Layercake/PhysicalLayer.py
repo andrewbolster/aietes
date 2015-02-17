@@ -33,7 +33,7 @@ import SimPy.Simulation as Sim
 from aietes.Tools import distance, DEBUG
 
 
-# DEBUG = False
+DEBUG = False
 
 
 class PhysicalLayer(object):
@@ -86,7 +86,6 @@ class PhysicalLayer(object):
             channel_noise_db(self.freq) + 10 * math.log10(self.bandwidth * 1e3))  # In linear scale (mw)
         # Initially, interference and noise are the same
         self.interference = self.ambient_noise
-        self.collision = False  # Emulates collision detection
 
         # To emulate the half-duplex operation of the modem
         self.modem = Sim.Resource(name="a_modem")
@@ -147,9 +146,13 @@ class PhysicalLayer(object):
             # The MAC protocol is the one that should check this before
             # transmitting
             self.logger.warn(
-                "I should not do this... the channel is not idle! {}".format(packet))
-
-        self.collision = False
+                "I should not do this... the channel is not idle!"
+                "Trying to send {typ} to {dest}"
+                "Currently have {q}".format(
+                    typ=packet['type'],
+                    dest = packet['dest'],
+                    q=self.transducer.activeQ
+                ))
 
         if self.variable_power:
             tx_range = self.level2distance[str(packet["level"])]
@@ -175,7 +178,7 @@ class PhysicalLayer(object):
 
         :return:
         """
-        return self.collision
+        return self.transducer.collision
 
     # When a packet has been received, we should pass it to the MAC layer
     def on_successful_receipt(self, packet):
@@ -238,6 +241,7 @@ class Transducer(Sim.Resource):
         self.transmitting = False
 
         # Takes statistics about the collisions
+        self.collision = False
         self.collisions = []
 
     # Override SimPy Resource's "_request" function to update SIR for all
@@ -364,9 +368,10 @@ class IncomingPacket(Sim.Process):
         self.packet['rx_pwr_db'] = linear2db(self.power)
 
         if DEBUG:
-            self.physical_layer.logger.debug("Packet {id} from {src} to {dest} recieved with power {pwr}".format(
-                id=packet['ID'], src=packet[
-                    'source'], dest=packet['dest'], pwr=power
+            self.physical_layer.logger.debug("{type} {id} from {src} to {dest} recieved with power {pwr}".format(
+                id=packet.get('ID'), src=packet['source'],
+                dest=packet['dest'], pwr=power,
+                type=packet['type']
             )
             )
 
@@ -447,8 +452,9 @@ class OutgoingPacket(Sim.Process):
         duration = packet["length"] / bitrate
 
         if DEBUG:
-            self.logger.debug("Packet {id} to {dest} will take {s} to be transmitted".format(
-                id=packet['ID'],
+            self.logger.debug("{type} {id} to {dest} will take {s} to be transmitted".format(
+                type=packet['type'],
+                id=packet.get('ID'), # SIL doesn't have ID
                 s=duration,
                 dest=packet['dest']
             ))
@@ -527,8 +533,9 @@ class ArrivalScheduler(Sim.Process):
 
             packet = params['packet']
             if DEBUG:
-                transducer.logger.debug("Packet from %s to %s will take %s to get to me %.2fm away" % (
-                    packet['source'], packet['dest'], travel_time, distance_to)
+                transducer.logger.debug("{type} from {source} to {dest} will take {t} to get to me {d}m away".format(
+                    type=packet['type'], source=packet['source'],
+                    dest=packet['dest'], t=travel_time, d=int(distance_to))
                 )
 
             yield Sim.hold, self, travel_time

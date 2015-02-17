@@ -40,6 +40,7 @@ class Layercake(object):
 
         """
 
+        self.app_rx_handler = None
         self.host = host
         self.hostname = host.name
         self.config = config
@@ -89,12 +90,13 @@ class Layercake(object):
         # except AttributeError as e:
         # raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
 
-    def activate(self, rx_handler=None):
+    def activate(self, rx_handler):
         """
         Fired on Sim Start
         """
         self.app_rx_handler = rx_handler
         self.mac.activate()
+        self.packet_length = self.mac.data_packet_length
 
     def send(self, payload):
         """
