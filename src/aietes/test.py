@@ -13,6 +13,8 @@
  * Contributors:
  *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
+from unittest import TestCase
+
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
@@ -165,3 +167,4 @@ class Tools(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

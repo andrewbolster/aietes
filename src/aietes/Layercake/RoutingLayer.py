@@ -89,9 +89,14 @@ class SimpleRoutingTable(dict):
         self.layercake.mac.initiate_transmission(packet)
 
     def on_packet_reception(self, packet):
-        # If this is the final destination of the packet,
-        # pass it to the application layer
-        # otherwise, send it on.
+        """
+        If this is the final destination of the packet,
+        pass it to the application layer
+        otherwise, send it on.
+
+        Note that packet deduplication is only conducted here
+        :param packet: dict: received packet from MAC
+        """
 
         if not self.have_duplicate_packet(packet):
             self.packets.add(packet["ID"])
@@ -725,13 +730,16 @@ class FBR(SimpleRoutingTable):
         pass it to the application layer
         otherwise, send it on.
 
+        Note that packet deduplication is only conducted here
+
         Also updates the global node_geo map
+
+        Finally, implements monitor mode
 
         :param packet: obj: successfully received packet to go to layercake if for me
         :return: bool: was the packet for me?
         """
         if not self.have_duplicate_packet(packet):
-
             self.packets.add(packet["ID"])
             # todo check if this check is actually needed.
             if packet["through"] == packet["dest"]:
@@ -743,6 +751,9 @@ class FBR(SimpleRoutingTable):
             else:
                 self.logger.info("Forwarding packet with ID: " + packet["ID"])
                 self.send_packet(packet)
+
+                if self.layercake.monitor_mode:
+                    self.layercake.monitor_mode(packet)
 
         else:
             self.logger.warn("Rejecting Dup {type} {ID} from {source} to {dest}".format(
@@ -797,8 +808,9 @@ class FBR(SimpleRoutingTable):
                 # If I've been given a silly level, this will trip the exception.
                 self.layercake.phy.level2delay(self.incoming_packet['level'])
             except KeyError:
-                self.logger.debug("WARNING: route to destination " + self.incoming_packet[
-                    "dest"] + " not specified for " + self.layercake.hostname + ". Starting Discovery Process")
+                self.logger.debug("Route to {} not set. Starting Discovery".format(
+                    self.incoming_packet['dest']
+                ))
                 self.incoming_packet["through"] = "ANY0"
                 self.incoming_packet["through_position"] = 0
                 self.incoming_packet["level"] = 0

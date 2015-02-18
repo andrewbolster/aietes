@@ -1840,7 +1840,6 @@ class CSMA(MAC):
         Sim.activate(self.timer, self.timer.lifecycle(self.TimerRequest))
 
     class InternalTimer(Sim.Process):
-
         """
 
         :param fsm:
@@ -1936,17 +1935,8 @@ class CSMA(MAC):
             "got_ACK", "WAIT_ACK", self.on_transmit_success, "READY_WAIT")
         self.fsm.add_transition(
             "got_RTS", "WAIT_ACK", self.ignore_rts, "WAIT_ACK")
-        #self.fsm.add_transition(
-        #    "got_CTS", "WAIT_ACK", self.ignore_cts, "WAIT_ACK")
-
-        ######################################################## BAD IDEA
-        # ACK Timeouts are causing contensions when two nodes try to talk
-        # at the same time....
         self.fsm.add_transition(
             "timeout", "WAIT_ACK", self.on_ack_timeout, "READY_WAIT")
-        #self.fsm.add_transition(
-        #    "timeout", "WAIT_ACK", self.on_ack_timeout, "BACKOFF")
-        ########################################################
 
         self.fsm.add_transition(
             "got_X", "WAIT_ACK", self.x_overheard, "WAIT_ACK")
@@ -2543,7 +2533,6 @@ class CSMA(MAC):
                 self.fsm.current_state
 
             ))
-        self.outgoing_packet_queue.append(self.outgoing_packet_queue.pop(0))
 
 
 class FAMA(CSMA):

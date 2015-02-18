@@ -40,6 +40,7 @@ class Layercake(object):
 
         """
 
+        self.monitor_mode = None
         self.app_rx_handler = None
         self.host = host
         self.hostname = host.name
@@ -90,12 +91,17 @@ class Layercake(object):
         # except AttributeError as e:
         # raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
 
-    def activate(self, rx_handler):
+    def activate(self, rx_handler, monitor_mode=False):
         """
-        Fired on Sim Start
+        Fired on Sim Start, activates the MAC layer and sets the packet length
+        based on that activation.
+
+        :param rx_handler: func: callback function to handle received packets
+        :param monitor_mode: bool: enable notification of routed packets as well
         """
         self.app_rx_handler = rx_handler
         self.mac.activate()
+        self.monitor_mode = monitor_mode
         self.packet_length = self.mac.data_packet_length
 
     def send(self, payload):

@@ -46,7 +46,7 @@ if __name__ == "__main__":
         'bella_allbut1_mobile.conf',
         'bella_all_mobile.conf'
     ]
-    app_range = np.arange(0.005, 0.03, step=0.0025).tolist()
+    app_range = np.arange(0.005, 0.035, step=0.005).tolist()
     title = "CommsRateAndRangeTest"
     log = logging.getLogger()
     if len(sys.argv) > 1:

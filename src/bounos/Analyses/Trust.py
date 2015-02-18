@@ -47,6 +47,8 @@ def t_kt(interval):
     """
     Generate a single trust value from a GRG
     1/ (1+ sigma^2/theta^2)
+
+
     :param interval:
     :return:
     """
@@ -112,7 +114,7 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
     return trusts
 
 
-def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, rho=0.5, fillna=True, par=True):
+def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_metrics=None, rho=0.5, fillna=True, par=True):
     """
     Generate Trust Values based on a big trust_log frame (as acquired from multi_loader or from explode_metrics_...
     Will also accept a selectively filtered trust log for an individual run
@@ -123,14 +125,17 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
     Parallel Performs significantly better on large(r) datasets, i.e. multi-var.
     ie. Linear- ~2:20s/run vs 50s/run parallel
 
-    :param tf: Trust Metrics DataFrame; can be single or ['var','run'] indexed
-    :param metric_weights: per-metric weighting array (default None)
-    :param n_metrics: number of metrics assessed in each observation
-    :return:
+    BY DEFAULT FLIPS DELAY, PLR and RXP METRICS
+
+    :param tf: pandas.DataFrame: Trust Metrics DataFrame; can be single or ['var','run'] indexed
+    :param var: str: optional level name to group by as opposed to the standard 'var'
+    :param metric_weights: numpy.ndarray: per-metric weighting array (default None)
+    :param n_metrics: int: number of metrics assessed in each observation
+    :return: pandas.DataFrame
     """
     assert isinstance(tf, pd.DataFrame)
 
-    if 'var' not in tf.index.names and 'run' not in tf.index.names:
+    if var not in tf.index.names and 'run' not in tf.index.names:
         # Dealing with a single run; pad it with 0's
         dff = pd.concat([tf], keys=[0] + tf.index.names, names=['run'] + tf.index.names)
         tf = pd.concat([dff], keys=[0] + dff.index.names, names=['var'] + dff.index.names)
@@ -138,17 +143,17 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
     trusts = []
 
     if flip_metrics is None:
-        flip_metrics = ['ADelay', 'PLR']
+        flip_metrics = ['ADelay', 'PLR', "ARXP"]
 
     exec_args = {'metric_weights': metric_weights, 'flip_metrics': flip_metrics, 'rho': rho}
 
     if par:
         trusts = Parallel(n_jobs=-1)(delayed(generate_single_observer_trust_perspective)
-                                     (g, **exec_args) for k, g in tf.groupby(level=['var', 'run', 'observer'])
+                                     (g, **exec_args) for k, g in tf.groupby(level=[var, 'run', 'observer'])
         )
         trusts = [item for sublist in trusts for item in sublist]
     else:
-        for k, g in tf.groupby(level=['var', 'run', 'observer']):
+        for k, g in tf.groupby(level=[var, 'run', 'observer']):
             trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
 
     tf = pd.concat(trusts)
@@ -159,7 +164,7 @@ def generate_node_trust_perspective(tf, metric_weights=None, flip_metrics=None, 
     # Groups each nodes independent observations together
     # Fills in the gaps IN EACH ASSESSMENT with the previous assessment of that node by that node at the previous time
     if fillna:
-        tf = tf.unstack('target').groupby(level=['var', 'run', 'observer']).apply(lambda x: x.fillna(method='ffill'))
+        tf = tf.unstack('target').groupby(level=[var, 'run', 'observer']).apply(lambda x: x.fillna(method='ffill'))
     else:
         tf = tf.unstack('target')
 

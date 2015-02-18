@@ -18,6 +18,7 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 from collections import Counter, namedtuple
+from copy import deepcopy
 
 import numpy as np
 from numpy.random import poisson
@@ -35,6 +36,7 @@ class Application(Sim.Process):
     Generic Class for top level application layers
     """
     HAS_LAYERCAKE = True
+    MONITOR_MODE = False
     random_delay = False
 
     def __init__(self, node, config, layercake):
@@ -94,6 +96,8 @@ class Application(Sim.Process):
             self.layercake.tx_good_signal_hdlrs.append(self.signal_good_tx)
             self.layercake.tx_lost_signal_hdlrs.append(self.signal_lost_tx)
             self.layercake.app_rx_handler=self.packet_recv
+            if self.MONITOR_MODE:
+                self.layercake.activate(self.recv, monitor_mode=self.fwd)
 
         Sim.activate(self, self.lifecycle())
 
@@ -101,18 +105,32 @@ class Application(Sim.Process):
     def signal_good_tx(self, packetid):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
-                self.logger.warn("Confirmed TX of {} to {} at {} after {}".format(
-                    sent['ID'], sent['dest'], Sim.now(), Sim.now() - sent['time_stamp']
-                ))
+                if sent['source'] is self.layercake.hostname:
+                    self.logger.info("Confirmed TX of {} to {} at {} after {}".format(
+                        sent['ID'], sent['dest'],
+                        Sim.now(), Sim.now() - sent['time_stamp']
+                    ))
+                else:
+                    self.logger.info("Confirmed FWD for {} of {} to {} at {} after {}".format(
+                        sent['source'], sent['ID'], sent['dest'],
+                        Sim.now(), Sim.now() - sent['time_stamp']
+                    ))
                 sent['delivered'] = True
                 sent['acknowledged'] = Sim.now()
 
     def signal_lost_tx(self, packetid):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
-                self.logger.error("Failed TX of {} to {} at {}".format(
-                    sent['ID'], sent['dest'], Sim.now()
-                ))
+                if sent['source'] is self.layercake.hostname:
+                    self.logger.warn("Failed TX of {} to {} at {} after {}".format(
+                        sent['ID'], sent['dest'],
+                        Sim.now(), Sim.now() - sent['time_stamp']
+                    ))
+                else:
+                    self.logger.warn("Failed FWD for {} of {} to {} at {} after {}".format(
+                        sent['source'], sent['ID'], sent['dest'],
+                        Sim.now(), Sim.now() - sent['time_stamp']
+                    ))
                 sent['delivered'] = False
                 sent['acknowledged'] = Sim.now()
 
@@ -137,9 +155,8 @@ class Application(Sim.Process):
                     self.logger.debug(
                         "Generated Payload %s: Waiting %s" % (packet['data'], period))
                 self.layercake.send(packet)
-                self.stats['packets_sent'] += 1
-                packet['delivered'] = None
-                self.sent_log.append(packet)
+                self.log_sent_packet(packet)
+
             yield Sim.hold, self, period
 
     def recv(self, from_below):
@@ -155,8 +172,26 @@ class Application(Sim.Process):
         self.log_received_packet(from_below)
         self.packet_recv(from_below)
 
+    def fwd(self, from_below):
+        """
+        Called by the routing layer on packet forwarded
+        :param from_below:
+        :return:
+        """
+        raise NotImplementedError("Shouldn't be in the base class!")
+
     def packet_recv(self, packet):
         raise NotImplementedError("Shouldn't be in the base class!")
+
+    def log_sent_packet(self, packet):
+        """
+
+        :param packet:
+        :return:
+        """
+        self.stats['packets_sent'] += 1
+        packet['delivered'] = None
+        self.sent_log.append(deepcopy(packet))
 
     def log_received_packet(self, packet):
         """
@@ -170,7 +205,7 @@ class Application(Sim.Process):
 
         delay = packet['delay'] = packet['received'] - packet['time_stamp']
 
-        self.received_log.append(packet)
+        self.received_log.append(deepcopy(packet))
 
         # Ignore first hop (source)
         hops = len(packet['route'])
@@ -183,7 +218,6 @@ class Application(Sim.Process):
             source, hops, str(delay), str(delay / hops)))
 
     def dump_stats(self):
-
         """
 
 
@@ -423,22 +457,29 @@ class CommsTrust(RoutingTest):
     trust_assessment_period = 600
     random_delay = 60
     metrics_string = "ATXP,ARXP,ADelay,ALength,Throughput,PLR"
+    MONITOR_MODE = True
 
-    def activate(self):
+    def __init__(self, *args, **kwargs):
+        super(CommsTrust, self).__init__(*args, **kwargs)
 
-        """
-
-
-        """
-        self.current_target = None
-        self.last_trust_assessment = None
-        self.last_accessed_rx_packet = None
-
-        self.trust_assessments = {}  # My generated trust metrics, [node][t][n_observation_arrays]
         # Extra information that might be interesting in the longer term.
         self.trust_accessories = {'queue_length': [],
                                   'collisions': []
         }
+        self.trust_assessments = {}  # My generated trust metrics, [node][t][n_observation_arrays]
+        self.current_target = None
+        self.last_trust_assessment = None
+        self.forced_nodes = []
+        self.test_packet_counter = Counter()
+        self.result_packet_dl = {}
+
+    def activate(self):
+        """
+        Called By Node Activation to launch internal timers and configs
+
+        """
+        self.last_accessed_rx_packet = None
+
 
         self.forced_nodes = self.layercake.host.fleet.node_names()
         if self.forced_nodes:
@@ -455,33 +496,34 @@ class CommsTrust(RoutingTest):
     def get_metrics_from_packet(cls, packet):
         """
         Extracts the following measurements from a packet
-            - tx power
-            - rx power
-            - delay
-            - data length
-        :param packet:
-        :return:
+            - tx power (TXP)
+            - rx power (RXP)
+            - delay (Delay)
+            - data length (Length)
+        :param packet: dict: received packet
+        :return:pd.Series : keys=[TXP, RXP, Delay, Length]
+        :raises KeyError
         """
         pkt_indexes_map = {
             'tx_pwr_db': "TXP",
             'rx_pwr_db': "RXP",
             'delay': "Delay",
-            'length': "Length"
+            'length': "Length",
         }
         return pd.Series({v: packet[k] for k, v in pkt_indexes_map.items()})
 
     def get_metrics_from_batch(self, batch):
         """
-        Extracts per-packet metrics, averages them, and tags on the following cross packet metrics
+        Extracts per-packet metrics, [ TXP, RXP, Delay, Length], averages them, and tags on the following cross packet metrics
             - rx-throughput
         :param batch:
-        :return:
+        :return: pd.Series:
         """
 
         nodepktstats = []
         throughput = 0  # SUM Length
 
-        for j_pkt, pkt in enumerate(batch):
+        for pkt in batch:
             nodepktstats.append(self.get_metrics_from_packet(pkt))
             throughput += pkt['length']
 
@@ -508,7 +550,11 @@ class CommsTrust(RoutingTest):
         Processing performed periodically depending on the
 
         """
-        if not Sim.now() % self.trust_assessment_period:
+        if not Sim.now() % self.trust_assessment_period and Sim.now() > 0:
+
+            trust_period = Sim.now() // self.trust_assessment_period
+            last_relevant_time = Sim.now() - self.trust_assessment_period
+
             if self.layercake.hostname == 'n0' and DEBUG:
                 self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
 
@@ -517,20 +563,19 @@ class CommsTrust(RoutingTest):
                 # Relevant Packets RX since last interval
 
                 if not self.trust_assessments.has_key(node):
-                    self.trust_assessments[node] = []
+                    self.trust_assessments[node] = [ pd.Series([]) for _ in range(trust_period)]
 
             relevant_rx_packets = self.received_log[self.last_accessed_rx_packet:]
-            self.last_accessed_rx_packet = len(self.received_log)
+            self.last_accessed_rx_packet = len(self.received_log)-1
 
             rx_stats = {}
             for node in self.trust_assessments.keys():
+                # Take the Mean and total throughput for all messages sent by node
                 pkt_batch = [packet for packet in relevant_rx_packets if packet['source'] == node]
                 rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
                 # avg(tx pwr, rx pwr, delay, length), rx throughput
 
             Pkt = namedtuple('Pkt', ['n', 'dest', 'length', 'delivered'])
-            last_relevant_time = Sim.now() - self.trust_assessment_period
-
 
             # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
             acked_packets = filter(lambda d: d.has_key("acknowledged"), self.sent_log)
@@ -653,6 +698,21 @@ class CommsTrust(RoutingTest):
                 ))
             self.current_target = None
         return packet, period
+
+    def fwd(self, packet):
+        """
+        Interception point for monitor-mode forwards, i.e. packets I'm sending but I didn't
+        initiate.
+
+        Forwarded Packets represent both a packet received and a packet sent; the callbacks
+        and statistics for these are handled separately (i.e. in RX we're concerned with the
+        power, delay, etc., in TX we're concerned about the ack callback)
+
+        :param packet:
+        :return:
+        """
+        self.log_sent_packet(deepcopy(packet))
+        self.log_received_packet(deepcopy(packet))
 
     def packet_recv(self, packet):
         """
