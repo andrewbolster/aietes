@@ -29,6 +29,7 @@ import math
 from copy import deepcopy
 
 import SimPy.Simulation as Sim
+import scipy.special
 
 from aietes.Tools import distance, DEBUG
 
@@ -65,6 +66,7 @@ class PhysicalLayer(object):
         # Levels defined in terms of distance (m)
         self.level2distance = dict(self.config["var_power"])
         self.distance2level = {v: k for k, v in self.level2distance.items()}
+        self.max_level = max(self.level2distance.keys())
 
         # Detection Specifications (dB)
         # Minimum signal to interference ratio to properly receive a packet
@@ -286,6 +288,10 @@ class Transducer(Sim.Resource):
         if min_sir > 0:
             if not doomed and linear2db(min_sir) >= self.SIR_thresh \
                     and arg[1].power >= self.physical_layer.receiving_threshold:
+
+                BER = scipy.special.erfc(np.sqrt(linear2db(min_sir)))
+                made_it = new_packet['length'] * BER
+
                 # Properly received: enough power, not enough interference
                 self.collision = False
                 # self.logger.debug("received packet {}".format(new_packet))
@@ -294,8 +300,8 @@ class Transducer(Sim.Resource):
             elif arg[1].power >= self.physical_layer.receiving_threshold:
                 # Too much interference but enough power to receive it: it
                 # suffered a collision
-                if self.physical_layer.layercake.hostname == new_packet[
-                    "through"] or self.physical_layer.layercake.hostname == new_packet["dest"]:
+                if self.physical_layer.layercake.hostname == new_packet["through"] \
+                        or self.physical_layer.layercake.hostname == new_packet["dest"]:
                     self.collision = True
                     self.collisions.append(new_packet)
                     if DEBUG:
@@ -397,8 +403,8 @@ class IncomingPacket(Sim.Process):
             yield Sim.release, self, self.physical_layer.transducer
 
             # Even if a packet is not received properly, we have consumed power
-            self.physical_layer.rx_energy += db2linear(
-                self.physical_layer.receive_power) * duration
+            self.physical_layer.rx_energy += \
+                db2linear(self.physical_layer.receive_power) * duration
 
     def get_min_sir(self):
         """
@@ -442,8 +448,8 @@ class OutgoingPacket(Sim.Process):
         # Create the acoustic event
         if self.physical_layer.variable_bandwidth:
             distance = self.physical_layer.level2distance[packet["level"]]
-            bandwidth = distance2bandwidth(
-                power, self.physical_layer.freq, distance, self.physical_layer.SNR_threshold)
+            bandwidth = distance2bandwidth(power, self.physical_layer.freq,
+                                           distance, self.physical_layer.SNR_threshold)
         else:
             bandwidth = self.physical_layer.bandwidth
 

@@ -55,6 +55,7 @@ class Layercake(object):
         self.tx_good_signal_hdlrs = []
         self.tx_lost_signal_hdlrs = []
         self.fwd_signal_hdlrs = []
+        self.pwd_signal_hdlr = None
 
         ##############################
         # Phy
@@ -147,5 +148,20 @@ class Layercake(object):
         :param packet:
         :return: bool
         """
-        return (any([hdlr(packet) for hdlr in self.fwd_signal_hdlrs]))
+        if self.fwd_signal_hdlrs:
+            return (any([hdlr(packet) for hdlr in self.fwd_signal_hdlrs]))
+        else:
+            return False
+
+    def query_pwr_adjust(self, packet):
+        """
+        Enables the application to adjust the power of a given outgoing packet
+        :param packet:
+        :return:
+        """
+        if self.pwd_signal_hdlr:
+            return self.pwd_signal_hdlr(packet)
+        else:
+            return packet["level"]
+
 

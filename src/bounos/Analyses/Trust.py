@@ -19,6 +19,7 @@ __email__ = "me@andrewbolster.info"
 n_metrics = 6
 
 from collections import OrderedDict
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -33,8 +34,21 @@ _white_fs = [lambda x: -x + 1,
 ]
 _white_sigmas = [0.0, 0.5, 1.0]
 
-_gray_whitenized = lambda x: map(lambda f: f(x), _white_fs)
+def _gray_whitenized(x):
+    return [f(x) for f in _white_fs]
 
+def _t_whitenized(x):
+    return max(_gray_whitenized(x)) * x  # Maps to max_s{f_s(T_{Bi})})T_{Bi}
+
+def _t_direct(x):
+    return 0.5 * _t_whitenized(x)
+
+def _t_recommend(x, nr = np.inf, ni = np.inf):
+
+    return 0.5 * ((2.0 * nr) / (2.0 * nr + ni)) * _t_whitenized(x)
+
+def _t_indirect(x, nr = np.inf, ni = np.inf):
+    return 0.5 * (ni / (2.0 * nr + ni)) * _t_whitenized(x)
 
 def _gray_class(x):
     try:
@@ -143,7 +157,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     trusts = []
 
     if flip_metrics is None:
-        flip_metrics = ['ADelay', 'PLR', "ARXP"]
+        flip_metrics = ['ADelay', 'PLR', 'ARXP', 'ATXP']
 
     exec_args = {'metric_weights': metric_weights, 'flip_metrics': flip_metrics, 'rho': rho}
 
@@ -255,6 +269,26 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     return tf
 
 
+def generate_mtfm(trust_run, observer, target, recommendation_nodes, indirect_nodes, ewma=False):
+    # Perform MTMF
+    t_recommend = partial(_t_recommend, nr=len(recommendation_nodes), ni=len(indirect_nodes))
+    t_indirect = partial(_t_indirect, nr=len(recommendation_nodes), ni=len(indirect_nodes))
+    t_direct_val = trust_run.xs(observer, level='observer')[target].apply(_t_direct)
+    t_recommend_val = trust_run.unstack('observer').xs(target, level='target', axis=1)[recommendation_nodes].applymap(
+        t_recommend).mean(axis=1)
+    t_indirect_val = trust_run.unstack('observer').xs(target, level='target', axis=1)[indirect_nodes].applymap(
+        t_indirect).mean(axis=1)
+    t_mtfm_val = pd.DataFrame.from_dict({
+        'Direct': t_direct_val,
+        'Recommend': t_recommend_val,
+        'Indirect': t_indirect_val
+    })
+    if ewma:
+        t_mtfm_val = t_mtfm_val.groupby(level=['var', 'run']).apply(
+            lambda s: pd.stats.moments.ewma(s.fillna(method="ffill"), span=16))
+    return t_mtfm_val
+
+
 def generate_network_trust(trust_run, observer='n0', recommendation_nodes=None, target='n1',
                            indirect_nodes=None, ewma=True):
     """
@@ -269,44 +303,26 @@ def generate_network_trust(trust_run, observer='n0', recommendation_nodes=None, 
     :param target:
     :param indirect_nodes:
     :param ewma:
-    :return: tuple: (t_average, t_white, t_mtmf
+    :return: tuple: (t_average, t_white, t_mtfm
     """
     trust_run = trust_run.unstack('observer').groupby(level=['var', 'run']).apply(
         lambda s: s.fillna(method='ffill')
     ).stack('observer')
 
-    t_whitenized = lambda x: max(_gray_whitenized(x)) * x  # Maps to max_s{f_s(T_{Bi})})T_{Bi}
-    t_direct = lambda x: 0.5 * t_whitenized(x)
-    t_recommend = lambda x: 0.5 * (
-        (2.0 * len(recommendation_nodes))
-        / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
-    t_indirect = lambda x: 0.5 * (
-        float(len(indirect_nodes))
-        / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * t_whitenized(x)
+    if not recommendation_nodes:
+        recommendation_nodes = ['n2', 'n3']
+    if not indirect_nodes:
+        indirect_nodes = ['n4', 'n5']
 
     network_list = [observer] + recommendation_nodes + indirect_nodes
 
     t_avg = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].mean(axis=1)
     t_network = trust_run.unstack('observer').xs(target, level='target', axis=1)[network_list].applymap(
-        t_whitenized).mean(axis=1)
+        _t_whitenized).mean(axis=1)
 
-    # Perform MTMF
-    t_direct = trust_run.xs('n0', level='observer')['n1'].apply(t_direct)
-    t_recommend = trust_run.unstack('observer').xs(target, level='target', axis=1)[recommendation_nodes].applymap(
-        t_recommend).mean(axis=1)
-    t_indirect = trust_run.unstack('observer').xs(target, level='target', axis=1)[indirect_nodes].applymap(
-        t_indirect).mean(axis=1)
-    t_mtmf = pd.DataFrame.from_dict({
-        'Direct': t_direct,
-        'Recommend': t_recommend,
-        'Indirect': t_indirect
-    })
+    t_mtfm = generate_mtfm(trust_run, observer, target, recommendation_nodes, indirect_nodes, ewma)
 
-    if ewma:
-        t_mtmf = t_mtmf.groupby(level=['var', 'run']).apply(
-            lambda s: pd.stats.moments.ewma(s.fillna(method="ffill"), span=16))
-
-    return t_avg, t_network, t_mtmf
+    return t_avg, t_network, t_mtfm
 
 
 def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, target='n1',
@@ -321,10 +337,6 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     :param indirect_nodes:
     :return:
     """
-    if not recommendation_nodes:
-        recommendation_nodes = ['n2', 'n3']
-    if not indirect_nodes:
-        indirect_nodes = ['n4', 'n5']
 
     t_avg, t_network, t_total = generate_network_trust(trust_run, observer, recommendation_nodes,
                                                        target, indirect_nodes, ewma)

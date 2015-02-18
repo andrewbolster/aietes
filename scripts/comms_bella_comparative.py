@@ -24,14 +24,16 @@ def redirected(stdout):
 
 
 def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1, malice = False):
-    e = EXP(title="{}{}-{}-{}".format("Malicious" if malice else "", title, app_rate, scale),
-            parallel=True
+    e = EXP(title="{}{}-{}-{}".format(
+            "Malicious{}".format(malice) if malice else "",
+            title, app_rate, scale),
+        parallel=True
     )
     for base_scenario in base_scenarios:
         e.add_position_scaling_range([scale], title="{}({})".format(e.title,re.split('\.|\/', base_scenario)[-2]), base_scenario=base_scenario, basis_node_name="n1")
     e.update_all_nodes({"app_rate":app_rate})
     if malice:
-        e.update_explicit_node("n1",{"app":"SelfishCommsTrustRoundRobin"})
+        e.update_explicit_node("n1",{"app":malice})
 
     return e
 
@@ -45,11 +47,11 @@ if __name__ == "__main__":
         'bella_all_mobile.conf'
     ]
     app_rate = 0.015
-    scale = 5
+    scale = 4
     title = "TrustMobilityTests"
     log = logging.getLogger()
 
-    for malice in [True,False]:
+    for malice in ["BadMouthingPowerControl","SelfishTargetSelection",False]:
         try:
             exp = exec_scaled_behaviour_range(base_scenarios, title,
                                               app_rate=app_rate,

@@ -249,7 +249,7 @@ class ALOHA(MAC):
         self.post_success_or_fail()
 
     def on_transmit_fail(self):
-        """ All the transmission attemps have been completed. It's impossible to reach the node.
+        """ All the transmission attempts have been completed. It's impossible to reach the node.
         """
         self.logger.error("Failed to transmit to {through} with id {id}".format(
             through=self.outgoing_packet_queue[0]["through"],
@@ -1936,6 +1936,8 @@ class CSMA(MAC):
         self.fsm.add_transition(
             "got_RTS", "WAIT_ACK", self.ignore_rts, "WAIT_ACK")
         self.fsm.add_transition(
+            "got_CTS", "WAIT_ACK", self.ignore_cts, "WAIT_ACK")
+        self.fsm.add_transition(
             "timeout", "WAIT_ACK", self.on_ack_timeout, "READY_WAIT")
 
         self.fsm.add_transition(
@@ -2381,26 +2383,18 @@ class CSMA(MAC):
     def on_error(self):
         """ This function is called when the FSM has an unexpected input_symbol in a determined state.
         """
-        try:
-            if DEBUG:
-                self.logger.error(
-                    "TRANS {sm.last_state}:{sm.last_action.__name__}:{sm.last_symbol} to {sm.current_state} due to {sm.input_symbol}: \n{src} {thru} {dest} {id} {type}".format(
-                        sm=self.fsm,
-                        src=self.incoming_packet['source'],
-                        thru=self.incoming_packet.get('through'),
-                        dest=self.incoming_packet['dest'],
-                        id=self.incoming_packet.get('ID'),
-                        type=self.incoming_packet['type']
-                    )
-                )
-                pass
-        except:
-            raise RuntimeError(
-                "REALLY Unexpected transition from {sm.last_state} to {sm.current_state} due to {sm.input_symbol}: {pkt}".format(
+        if DEBUG:
+            self.logger.error(
+                "TRANS {sm.last_state}:{sm.last_symbol}:{sm.last_action} to {sm.current_state} due to {sm.input_symbol}: \n{src} {thru} {dest} {id} {type}".format(
                     sm=self.fsm,
-                    pkt=self.incoming_packet
+                    src=self.incoming_packet['source'],
+                    thru=self.incoming_packet.get('through'),
+                    dest=self.incoming_packet['dest'],
+                    id=self.incoming_packet.get('ID'),
+                    type=self.incoming_packet['type']
                 )
             )
+            pass
 
     def on_transmit_success(self):
         """ When an ACK is received, we can assume that everything has gone fine, so it's all done.
@@ -2416,7 +2410,7 @@ class CSMA(MAC):
         """ All the transmission attempts have been completed. It's impossible to reach the node.
         """
         self.layercake.signal_lost_tx(self.outgoing_packet_queue[0]['ID'])
-        self.logger.debug("Failed to transmit to {}".format(
+        self.logger.warn("Failed to transmit to {}".format(
             self.outgoing_packet_queue[0]["dest"]
         ))
         self.post_success_or_fail()
@@ -2620,6 +2614,7 @@ class CSMA4FBR(CSMA):
         self.fsm.add_transition("retransmit", "WAIT_CTS", self.send_rts, "WAIT_CTS")
         self.fsm.add_transition("abort", "WAIT_CTS", self.on_transmit_fail, "READY_WAIT")
         self.fsm.add_transition("defer", "WAIT_CTS", self.x_overheard, "BACKOFF")
+        self.fsm.add_transition("got_DATA", "WAIT_CTS", self.check_pending_data(), "READY_WAIT")
 
         # New transition from WAIT_DATA: I have been not selected as the next
         # hop
@@ -2736,7 +2731,7 @@ class CSMA4FBR(CSMA):
             self.outgoing_packet_queue[0]["dest"])
 
         if self.outgoing_packet_queue[0]["through"] == "ABORT":
-            # We have consumed all the attemps
+            # We have consumed all the attempts
             if DEBUG:
                 self.logger.warn("Aborting {type}-{id} to {dest}".format(
                     type=self.outgoing_packet_queue[0]['type'],

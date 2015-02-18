@@ -74,7 +74,7 @@ class SimTimeFilter(logging.Filter):
 
 
 log_fmt = ColoredFormatter(
-    "%(log_color)s%(simtime)-8.3f %(levelname)-6s %(name)s:%(message)s (%(lineno)d)",
+    "%(log_color)s%(simtime)-8.2f %(levelname)-6s %(name)s:%(message)s (%(lineno)d)",
     datefmt=None,
     reset=True,
     log_colors={

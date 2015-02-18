@@ -739,6 +739,8 @@ class FBR(SimpleRoutingTable):
         :param packet: obj: successfully received packet to go to layercake if for me
         :return: bool: was the packet for me?
         """
+        global nodes_geo
+        nodes_geo = self.layercake.host.fleet.node_map()
         if not self.have_duplicate_packet(packet):
             self.packets.add(packet["ID"])
             # todo check if this check is actually needed.
@@ -766,11 +768,11 @@ class FBR(SimpleRoutingTable):
 
     def send_packet(self, packet):
         """
+        Launches a packet into the MAC
 
+        Also called by forwards
         :param packet:
         """
-        global nodes_geo
-        nodes_geo = self.layercake.host.fleet.node_map()
         self.incoming_packet = packet
         self.incoming_packet["route"].append(
             (self.layercake.hostname, self.layercake.get_real_current_position()))
@@ -814,6 +816,8 @@ class FBR(SimpleRoutingTable):
                 self.incoming_packet["through"] = "ANY0"
                 self.incoming_packet["through_position"] = 0
                 self.incoming_packet["level"] = 0
+
+        self.incoming_packet["level"] = self.layercake.query_pwr_adjust(packet)
 
         self.layercake.mac.initiate_transmission(self.incoming_packet)
 
@@ -1042,7 +1046,7 @@ class FBR(SimpleRoutingTable):
                     ))
                     return "ANY" + str(level), 0
             else:
-                self.logger.info(
+                self.logger.warn(
                     "Unable to reach any node within any transmission power. ABORTING transmission.")
                 return "ABORT", 0
 

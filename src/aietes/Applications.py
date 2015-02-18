@@ -122,12 +122,12 @@ class Application(Sim.Process):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
                 if sent['source'] is self.layercake.hostname:
-                    self.logger.warn("Failed TX of {} to {} at {} after {}".format(
+                    self.logger.error("Failed TX of {} to {} at {} after {}".format(
                         sent['ID'], sent['dest'],
                         Sim.now(), Sim.now() - sent['time_stamp']
                     ))
                 else:
-                    self.logger.warn("Failed FWD for {} of {} to {} at {} after {}".format(
+                    self.logger.error("Failed FWD for {} of {} to {} at {} after {}".format(
                         sent['source'], sent['ID'], sent['dest'],
                         Sim.now(), Sim.now() - sent['time_stamp']
                     ))
@@ -203,7 +203,7 @@ class Application(Sim.Process):
             self.logger.info("App Packet received from %s" % source)
         self.stats['packets_received'] += 1
 
-        delay = packet['delay'] = packet['received'] - packet['time_stamp']
+        delay = packet['delay'] = packet.get('received',Sim.now()) - packet['time_stamp']
 
         self.received_log.append(deepcopy(packet))
 
@@ -219,9 +219,12 @@ class Application(Sim.Process):
 
     def dump_stats(self):
         """
+        Calculated Throughput/Load based on (Total Bits In/Out / s) * hops
+        Avg Lengths and Delays in the expected way (defaulting to 0,np.inf if no packets recieved)
 
 
-        :return: :raise RuntimeError:
+        :return: dict: Application Stats including any stats from the physical layer
+        :raise RuntimeError:
         """
         if self.HAS_LAYERCAKE:
             total_bits_in = total_bits_out = 0
@@ -577,12 +580,15 @@ class CommsTrust(RoutingTest):
 
             Pkt = namedtuple('Pkt', ['n', 'dest', 'length', 'delivered'])
 
-            # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
-            acked_packets = filter(lambda d: d.has_key("acknowledged"), self.sent_log)
             relevant_acked_packets = []
-            for i, p in enumerate(acked_packets):
-                if p['acknowledged'] > last_relevant_time:
+            late_n_lost_tx_packets = []
+            for i,p in enumerate(self.sent_log):
+                # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
+                if p.get('acknowledged',-1) > last_relevant_time - self.trust_assessment_period:
                     relevant_acked_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
+                elif p.get('delivered', None) in [None, False] \
+                        and p['time_stamp'] > last_relevant_time-self.trust_assessment_period:
+                    late_n_lost_tx_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
 
             tx_stats = {}
             # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
@@ -606,7 +612,7 @@ class CommsTrust(RoutingTest):
                     filter(
                         # We know the fate of all acked packets
                         lambda p: p.dest == node,
-                        relevant_acked_packets)
+                        relevant_acked_packets)# + late_n_lost_tx_packets)
                 )
                 if plr and tx_throughput > 0.0:
                     plr = np.nanmean(plr)
@@ -749,7 +755,7 @@ class CommsTrustRoundRobin(CommsTrust):
     test_stream_length = 1
 
 
-class SelfishCommsTrustRoundRobin(CommsTrustRoundRobin):
+class SelfishTargetSelection(CommsTrustRoundRobin):
     def select_target(self):
         neighbours_by_distance = self.layercake.host.behaviour.get_nearest_neighbours()
         choices = [(v.name, 1.0 / np.power(v.distance, 2)) for v in neighbours_by_distance]
@@ -768,7 +774,7 @@ class SelfishCommsTrustRoundRobin(CommsTrustRoundRobin):
 
         self.layercake.fwd_signal_hdlrs.append(self.query_fwd)
 
-        super(SelfishCommsTrustRoundRobin, self).activate()
+        super(SelfishTargetSelection, self).activate()
 
     def query_fwd(self, packet):
         """
@@ -790,6 +796,45 @@ class SelfishCommsTrustRoundRobin(CommsTrustRoundRobin):
                 drop_it = True
 
         return drop_it
+
+class BadMouthingPowerControl(CommsTrustRoundRobin):
+    """
+    INCREASES the power to everyone except for the given bad_mouth target
+    """
+    bad_mouth_target = 'n0'
+
+    def activate(self):
+        """
+        Custom activation to set up fwd handler
+        :return:
+        """
+
+        self.layercake.pwd_signal_hdlr = self.query_pwr
+
+        super(BadMouthingPowerControl, self).activate()
+
+    def query_pwr(self, packet):
+        """
+        Increase the power to everyone except the target
+        Called by send_packet in RoutingLayer via Layercake
+        :return:bool
+        """
+        if  packet['dest'] != self.bad_mouth_target:
+            try:
+                new_level =str(max(0, min(int(packet['level'])+1, int(self.layercake.phy.max_level))))
+            except:
+                self.logger.error("Something is very very wrong with {}".format(
+                    packet
+                ))
+                raise
+            self.logger.warn("Adjusted {}->{} from {} to {}".format(
+                packet['source'], packet['dest'],
+                packet['level'], new_level
+            ))
+        else:
+            new_level = packet["level"]
+
+        return new_level
 
 
 class Null(Application):
