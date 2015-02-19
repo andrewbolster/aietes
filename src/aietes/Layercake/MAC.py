@@ -36,7 +36,7 @@ from aietes.Tools import broadcast_address, DEBUG, distance
 from aietes.Tools.FSM import FSM
 
 
-DEBUG = True
+# DEBUG = True
 
 DEFAULT_PROTO = "ALOHA"
 

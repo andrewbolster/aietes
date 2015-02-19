@@ -86,37 +86,55 @@ def weight_calculator(metric_index, ignore=None):
     return bin_weight / float(np.sum(bin_weight))
 
 
-def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_metrics=None, rho=0.5):
+def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_metrics=None, rho=0.5, debug=False):
     """
     Generate an individual observer perspective i.e per node record
     :param gf:
     :param metric_weights:
-    :param flip_metrics:
+    :param flip_metrics: Metrics that are more 'good' as they get bigger
     :param rho:
     :return:
     """
     trusts = []
+    if debug:
+        intervals = []
+        goods = []
+        bads = []
+        keys = []
+        maxes = []
+        mins = []
     for ki, gi in gf.groupby(level='t'):
-        gmx = gi.max()
-        gmn = gi.min()
-        width = gmx - gmn
-        with np.errstate(invalid='ignore'):
-            good = gi.apply(
-                lambda o: (0.75 * np.divide(width, (np.abs(o - gmn)) + rho * width) - 0.5).fillna(1),
-                axis=1
-            )
-            bad = gi.apply(
-                lambda o: (0.75 * np.divide(width, (np.abs(o - gmx)) + rho * width) - 0.5).fillna(1),
-                axis=1
-            )
+        gmn = np.nanmin(gi, axis=0) # Generally the 'Good' sequence,
+        gmx = np.nanmax(gi, axis=0)
+        width = np.abs(gmx - gmn)
 
-        if flip_metrics:
-            good[flip_metrics], bad[flip_metrics] = bad[flip_metrics], good[flip_metrics]
+        # While this looks bananas it is EXACTLY how it is in Bellas code.
+        # Apart from the dropna stuff... she just had lots more data to play with
+        good = gi.dropna(axis=0).apply(
+            lambda o: (0.75 * np.divide(width, (np.abs(o - gmn)) + rho * width) - 0.5),
+            axis=1
+        ).dropna(axis=1)
+        bad = gi.dropna(axis=0).apply(
+            lambda o: (0.75 * np.divide(width, (np.abs(o - gmx)) + rho * width) - 0.5),
+            axis=1
+        ).dropna(axis=1)
+
+        for flipper in flip_metrics:
+            if flipper in good.keys():
+                good[flipper], bad[flipper] = bad[flipper], good[flipper]
+
+        if metric_weights is not None:
+            # If the dropnas above have eliminated uninformative rows, they may have been trying to
+            # be weighted on.... Fix that.
+            # ALSO doing it in the same name is really bad for looping....
+            valid_metric_weights = metric_weights.drop(metric_weights.keys().difference(good.keys()))
+        else:
+            valid_metric_weights = None
 
         interval = pd.DataFrame.from_dict({
-            'good': good.apply(np.average, weights=metric_weights, axis=1),
-            'bad': bad.apply(np.average, weights=metric_weights, axis=1)
-        })
+            'good': good.apply(np.average, weights=valid_metric_weights, axis=1),
+            'bad': bad.apply(np.average, weights=valid_metric_weights, axis=1)
+        })[['good','bad']]
         trusts.append(
             pd.Series(
                 interval.apply(
@@ -125,7 +143,24 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
                 name='trust'
             )
         )
-    return trusts
+        if debug:
+            interval.append(interval)
+            goods.append(good)
+            bads.append(bad)
+            keys.append(ki)
+            maxes.append(gmx)
+            mins.append(gmn)
+    if debug:
+        debugging = {'intervals':intervals,
+                     'goods':goods,
+                     'bads': bads,
+                     'keys': keys,
+                     'maxes': maxes,
+                     'mins': mins
+        }
+        return trusts, debugging
+    else:
+        return trusts
 
 
 def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_metrics=None, rho=0.5, fillna=True, par=True):
@@ -139,7 +174,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     Parallel Performs significantly better on large(r) datasets, i.e. multi-var.
     ie. Linear- ~2:20s/run vs 50s/run parallel
 
-    BY DEFAULT FLIPS DELAY, PLR and RXP METRICS
+    BY DEFAULT FLIPS THROUGHPUT METRICS
 
     :param tf: pandas.DataFrame: Trust Metrics DataFrame; can be single or ['var','run'] indexed
     :param var: str: optional level name to group by as opposed to the standard 'var'
@@ -157,7 +192,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     trusts = []
 
     if flip_metrics is None:
-        flip_metrics = ['ADelay', 'PLR', 'ARXP', 'ATXP']
+        flip_metrics = ['TXThroughput', 'RXThroughput'] # These are 'bigger is better' values
 
     exec_args = {'metric_weights': metric_weights, 'flip_metrics': flip_metrics, 'rho': rho}
 
@@ -309,9 +344,9 @@ def generate_network_trust(trust_run, observer='n0', recommendation_nodes=None, 
         lambda s: s.fillna(method='ffill')
     ).stack('observer')
 
-    if not recommendation_nodes:
+    if recommendation_nodes is None:
         recommendation_nodes = ['n2', 'n3']
-    if not indirect_nodes:
+    if not indirect_nodes is None:
         indirect_nodes = ['n4', 'n5']
 
     network_list = [observer] + recommendation_nodes + indirect_nodes

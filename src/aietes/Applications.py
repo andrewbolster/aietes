@@ -103,6 +103,7 @@ class Application(Sim.Process):
 
 
     def signal_good_tx(self, packetid):
+        acked = False
         for sent in self.sent_log:
             if sent['ID'] == packetid:
                 if sent['source'] is self.layercake.hostname:
@@ -117,8 +118,14 @@ class Application(Sim.Process):
                     ))
                 sent['delivered'] = True
                 sent['acknowledged'] = Sim.now()
+                acked = True
+        if not acked:
+            self.logger.error("Have been told that a packet {} I can't remember sending has succeeded".format(
+                packetid)
+            )
 
     def signal_lost_tx(self, packetid):
+        acked = False
         for sent in self.sent_log:
             if sent['ID'] == packetid:
                 if sent['source'] is self.layercake.hostname:
@@ -133,6 +140,11 @@ class Application(Sim.Process):
                     ))
                 sent['delivered'] = False
                 sent['acknowledged'] = Sim.now()
+                acked = True
+        if not acked:
+            self.logger.error("Have been told that a packet {} I can't remember sending has succeeded".format(
+                packetid)
+            )
 
     def tick(self):
         """ Method called at each simulation instance"""
@@ -496,7 +508,7 @@ class CommsTrust(RoutingTest):
         super(CommsTrust, self).activate()
 
     @classmethod
-    def get_metrics_from_packet(cls, packet):
+    def get_metrics_from_received_packet(cls, packet):
         """
         Extracts the following measurements from a packet
             - tx power (TXP)
@@ -504,14 +516,13 @@ class CommsTrust(RoutingTest):
             - delay (Delay)
             - data length (Length)
         :param packet: dict: received packet
-        :return:pd.Series : keys=[TXP, RXP, Delay, Length]
+        :return:pd.Series : keys=[TXP, RXP, Delay]
         :raises KeyError
         """
         pkt_indexes_map = {
             'tx_pwr_db': "TXP",
             'rx_pwr_db': "RXP",
-            'delay': "Delay",
-            'length': "Length",
+            'delay': "Delay"
         }
         return pd.Series({v: packet[k] for k, v in pkt_indexes_map.items()})
 
@@ -527,7 +538,7 @@ class CommsTrust(RoutingTest):
         throughput = 0  # SUM Length
 
         for pkt in batch:
-            nodepktstats.append(self.get_metrics_from_packet(pkt))
+            nodepktstats.append(self.get_metrics_from_received_packet(pkt))
             throughput += pkt['length']
 
         if throughput:
@@ -578,26 +589,20 @@ class CommsTrust(RoutingTest):
                 rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
                 # avg(tx pwr, rx pwr, delay, length), rx throughput
 
-            Pkt = namedtuple('Pkt', ['n', 'dest', 'length', 'delivered'])
 
             relevant_acked_packets = []
-            late_n_lost_tx_packets = []
             for i,p in enumerate(self.sent_log):
                 # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
-                if p.get('acknowledged',-1) > last_relevant_time - self.trust_assessment_period:
-                    relevant_acked_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
-                elif p.get('delivered', None) in [None, False] \
-                        and p['time_stamp'] > last_relevant_time-self.trust_assessment_period:
-                    late_n_lost_tx_packets.append(Pkt(i, p['dest'], p['length'], p['delivered']))
+                if p.get('acknowledged',-1) > last_relevant_time:
+                    relevant_acked_packets.append(p)
 
             tx_stats = {}
-            # Estimate the Packet Error Rate based on the percentage of lost packets sent in the last assessment period
             for node in self.trust_assessments.keys():
-                # Throughput is the total length of data transmitted this frame
+                # Throughput is the total length of data transmitted this frame to this node
                 tx_throughput = map(
-                    lambda p: float(p.length),
+                    lambda p: float(p['length']),
                     filter(
-                        lambda p: p.dest == node,
+                        lambda p: node in [p['dest'],p['through']],
                         relevant_acked_packets)
                 )
                 if tx_throughput:
@@ -608,11 +613,11 @@ class CommsTrust(RoutingTest):
                 # PLR is the average amount of packets we are sure have been lost in the last time frame
                 # Including pkts that have been acked since last time.
                 plr = map(
-                    lambda p: float(not p.delivered),
+                    lambda p: float(not p['delivered']),
                     filter(
                         # We know the fate of all acked packets
-                        lambda p: p.dest == node,
-                        relevant_acked_packets)# + late_n_lost_tx_packets)
+                        lambda p: p['dest'] == node,
+                        relevant_acked_packets)
                 )
                 if plr and tx_throughput > 0.0:
                     plr = np.nanmean(plr)

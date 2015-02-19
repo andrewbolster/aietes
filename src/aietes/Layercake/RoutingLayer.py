@@ -743,11 +743,9 @@ class FBR(SimpleRoutingTable):
         nodes_geo = self.layercake.host.fleet.node_map()
         if not self.have_duplicate_packet(packet):
             self.packets.add(packet["ID"])
-            # todo check if this check is actually needed.
-            if packet["through"] == packet["dest"]:
-                if packet["dest"] == self.layercake.hostname:
-                    self.layercake.recv(packet)
-                    return True
+            if packet["dest"] == self.layercake.hostname:
+                self.layercake.recv(packet)
+                return True
             elif self.layercake.query_drop_forward(packet=packet):
                 self.logger.info("Dropping packet with ID: " + packet["ID"])
             else:
