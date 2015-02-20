@@ -41,13 +41,13 @@ if __name__ == "__main__":
 
     base_scenarios = [
         'bella_static.conf',
-        'bella_single_mobile.conf',
-        'bella_allbut1_mobile.conf',
-        'bella_all_mobile.conf'
+        'bella_all_mobile.conf',
+        'bella_static_median.conf',
+        'bella_all_mobile_median.conf'
     ]
     app_rate = 0.025
     scale = 3
-    title = "TrustMobilityTests"
+    title = "TrustMedianTests"
     log = logging.getLogger()
 
     for malice in ["BadMouthingPowerControl",False]:

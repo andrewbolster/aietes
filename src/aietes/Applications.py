@@ -487,6 +487,7 @@ class CommsTrust(RoutingTest):
         self.forced_nodes = []
         self.test_packet_counter = Counter()
         self.result_packet_dl = {}
+        self.use_median = self.config['median']
 
     def activate(self):
         """
@@ -545,7 +546,10 @@ class CommsTrust(RoutingTest):
             try:
                 # Bring individual observations into a frame
                 df = pd.concat(nodepktstats, axis=1)
-                s = df.mean(axis=1)
+                if self.use_median:
+                    s = df.median(axis=1)
+                else:
+                    s = df.mean(axis=1)
                 # Prepend the keys with "A" to denote average values
                 s.index = ["A" + k for k in s.keys()]
                 # Append the Throughput to the series and return

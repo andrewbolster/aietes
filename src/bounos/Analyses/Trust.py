@@ -108,41 +108,54 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
         gmx = np.nanmax(gi, axis=0)
         width = np.abs(gmx - gmn)
 
-        # While this looks bananas it is EXACTLY how it is in Bellas code.
-        # Apart from the dropna stuff... she just had lots more data to play with
-        good = gi.dropna(axis=0).apply(
-            lambda o: (0.75 * np.divide(width, (np.abs(o - gmn)) + rho * width) - 0.5),
-            axis=1
-        ).dropna(axis=1)
-        bad = gi.dropna(axis=0).apply(
-            lambda o: (0.75 * np.divide(width, (np.abs(o - gmx)) + rho * width) - 0.5),
-            axis=1
-        ).dropna(axis=1)
+        if any(width != 0):
 
-        for flipper in flip_metrics:
-            if flipper in good.keys():
-                good[flipper], bad[flipper] = bad[flipper], good[flipper]
+            # While this looks bananas it is EXACTLY how it is in Bellas code.
+            # Apart from the dropna stuff... she just had lots more data to play with
+            good = gi.dropna(axis=0).apply(
+                lambda o: (0.75 * np.divide(width, (np.abs(o - gmn)) + rho * width) - 0.5),
+                axis=1
+            ).dropna(axis=1)
+            bad = gi.dropna(axis=0).apply(
+                lambda o: (0.75 * np.divide(width, (np.abs(o - gmx)) + rho * width) - 0.5),
+                axis=1
+            ).dropna(axis=1)
 
-        if metric_weights is not None:
-            # If the dropnas above have eliminated uninformative rows, they may have been trying to
-            # be weighted on.... Fix that.
-            # ALSO doing it in the same name is really bad for looping....
-            valid_metric_weights = metric_weights.drop(metric_weights.keys().difference(good.keys()))
-        else:
-            valid_metric_weights = None
+            for flipper in flip_metrics:
+                if flipper in good.keys():
+                    good[flipper], bad[flipper] = bad[flipper], good[flipper]
 
-        interval = pd.DataFrame.from_dict({
-            'good': good.apply(np.average, weights=valid_metric_weights, axis=1),
-            'bad': bad.apply(np.average, weights=valid_metric_weights, axis=1)
-        })[['good','bad']]
-        trusts.append(
-            pd.Series(
-                interval.apply(
-                    t_kt,
-                    axis=1),
-                name='trust'
+            if metric_weights is not None:
+                # If the dropnas above have eliminated uninformative rows, they may have been trying to
+                # be weighted on.... Fix that.
+                # ALSO doing it in the same name is really bad for looping....
+                valid_metric_weights = metric_weights.drop(metric_weights.keys().difference(good.keys()))
+            else:
+                valid_metric_weights = None
+
+            try:
+                interval = pd.DataFrame.from_dict({
+                    'good': good.apply(np.average, weights=valid_metric_weights, axis=1),
+                    'bad': bad.apply(np.average, weights=valid_metric_weights, axis=1)
+                })[['good','bad']]
+            except ValueError:
+                print "Good.keys(){}".format(good.keys())
+                print "Bad.keys(){}".format(bad.keys())
+                print "Orig Weight {}".format(metric_weights)
+                print "New Weight {}".format(valid_metric_weights)
+                print "Width {}".format(width)
+                raise
+            trusts.append(
+                pd.Series(
+                    interval.apply(
+                        t_kt,
+                        axis=1),
+                    name='trust'
+                )
             )
-        )
+        else:
+            # If we don't have any records, there's nothing we can do.
+            trusts.append(pd.Series([], name='trust'))
         if debug:
             interval.append(interval)
             goods.append(good)
@@ -163,7 +176,8 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
         return trusts
 
 
-def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_metrics=None, rho=0.5, fillna=True, par=True):
+def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_metrics=None,
+                                    rho=0.5, fillna=False, par=True):
     """
     Generate Trust Values based on a big trust_log frame (as acquired from multi_loader or from explode_metrics_...
     Will also accept a selectively filtered trust log for an individual run
@@ -187,7 +201,9 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     if var not in tf.index.names and 'run' not in tf.index.names:
         # Dealing with a single run; pad it with 0's
         dff = pd.concat([tf], keys=[0] + tf.index.names, names=['run'] + tf.index.names)
-        tf = pd.concat([dff], keys=[0] + dff.index.names, names=['var'] + dff.index.names)
+        tf = pd.concat([dff], keys=[0] + dff.index.names, names=[var] + dff.index.names)
+    elif var not in tf.index.names:
+        tf = pd.concat([tf], keys=[0] + tf.index.names, names=[var] + tf.index.names)
 
     trusts = []
 
@@ -346,7 +362,7 @@ def generate_network_trust(trust_run, observer='n0', recommendation_nodes=None, 
 
     if recommendation_nodes is None:
         recommendation_nodes = ['n2', 'n3']
-    if not indirect_nodes is None:
+    if indirect_nodes is None:
         indirect_nodes = ['n4', 'n5']
 
     network_list = [observer] + recommendation_nodes + indirect_nodes
@@ -380,14 +396,14 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     # If I screw up the data structure later; pandas will not forgive me.
 
     _d = pd.DataFrame.from_dict(OrderedDict((
-        ("$T_{1,0}$", trust_run.xs(observer, level='observer')[target]),
-        ("$T_{1,2}$", trust_run.xs('n2', level='observer')[target]),
-        ("$T_{1,3}$", trust_run.xs('n3', level='observer')[target]),
-        ("$T_{1,4}$", trust_run.xs('n4', level='observer')[target]),
-        ("$T_{1,5}$", trust_run.xs('n5', level='observer')[target]),
-        ("$T_{1,Net}$", t_total.sum(axis=1)),  # Eq 4.7 guo; Takes relationships into account
-        ("$T1_{1,MTFM}$", pd.Series(t_network)),  # Eq 4.8 guo: Blind Whitenised Trust
-        ("$T1_{1,Avg}$", pd.Series(t_avg))  # Simple Average
+        ("$T_{0}$", trust_run.xs(observer, level='observer')[target]),
+        ("$T_{2}$", trust_run.xs('n2', level='observer')[target]),
+        ("$T_{3}$", trust_run.xs('n3', level='observer')[target]),
+        ("$T_{4}$", trust_run.xs('n4', level='observer')[target]),
+        ("$T_{5}$", trust_run.xs('n5', level='observer')[target]),
+        ("$T_{Net}$", t_total.sum(axis=1)),  # Eq 4.7 guo; Takes relationships into account
+        ("$T_{MTFM}$", pd.Series(t_network)),  # Eq 4.8 guo: Blind Whitenised Trust
+        ("$T_{Avg}$", pd.Series(t_avg))  # Simple Average
     )))
 
     # On combining assessments, Nans are added where different nodes have (no) information at a particular timeframe about

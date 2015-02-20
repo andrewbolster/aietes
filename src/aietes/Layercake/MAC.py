@@ -2074,11 +2074,14 @@ class CSMA(MAC):
 
         """
         if self.pending_ack_packet_from is not None:
-            if self.incoming_packet["source"] == self.pending_ack_packet_from or self.pending_ack_packet_from[
-                                                                                 0:3] == "ANY":
-                self.logger.info(
-                    "Even after an ACK timeout, the DATA was properly transmitted to: " + self.incoming_packet[
-                        "source"])
+            if self.incoming_packet["source"] == self.pending_ack_packet_from \
+                    or self.pending_ack_packet_from[0:3] == "ANY":
+                self.logger.error(
+                    "Rescued Pending ACK from {}: {}-{}".format(
+                        self.pending_ack_packet_from,
+                        self.incoming_packet["source"],
+                        self.incoming_packet["ID"])
+                )
                 self.on_transmit_success()
                 self.pending_ack_packet_from = None
         else:

@@ -32,10 +32,12 @@ import bounos
 
 
 _boxplot_kwargs = {
-    'showmeans': True,
-    'showbox': False,
-    'widths': 0.2,
-    'linewidth': 2
+    #'showmeans': False,
+    #'showbox': True,
+    #'widths': 0.6,
+    #'linewidth': 2,
+    'showfliers': False,
+    "whis":1
 }
 
 
@@ -566,15 +568,24 @@ def trust_network_wrt_observers(trust_group, var, title=None, figsize=(16, 2), t
     :param trust_frame:
     :return:
     """
-    if texify:
-        pass
-
+    df = trust_group.dropna()
     f, ax = plt.subplots(1, 1, figsize=(figsize[0], figsize[1] * 1), sharey=True)
     # plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
-    sns.boxplot(trust_group.dropna(), ax=ax)  # , **_boxplot_kwargs)
+    ax = sns.boxplot(df, ax=ax, **_boxplot_kwargs)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(True)
+    ax.spines['left'].set_visible(True)
+
+    ax.xaxis.set_ticks_position('none')
+    ax.yaxis.set_ticks_position('none')
+
     ax.set_xlabel("Assessment Type")
     ax.set_ylabel("Trust Value")
     ax.set_ylim((0.0, 1.0))
+
+    f.tight_layout(pad=0.1)
     if title is not False:
         ax.set_title("{}".format(
             var if title is None else ": " + title
@@ -784,12 +795,8 @@ def latexify(fig_width=347, fig_height=None, columns=1, factor=0.45):
 
 
 def format_axes(ax, spine_color='gray'):
-    for spine in ['top', 'right']:
+    for spine in ['top', 'right', 'left', 'bottom']:
         ax.spines[spine].set_visible(False)
-
-    for spine in ['left', 'bottom']:
-        ax.spines[spine].set_color(spine_color)
-        ax.spines[spine].set_linewidth(0.5)
 
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
@@ -822,6 +829,7 @@ def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False):
         ax.set_xticklabels([])
         ax.set_yticklabels([])
         ax = format_axes(ax)
+
 
     return fig
 
