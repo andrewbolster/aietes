@@ -86,6 +86,32 @@ def weight_calculator(metric_index, ignore=None):
     return bin_weight / float(np.sum(bin_weight))
 
 
+def _grc(value, comparison, width, rho = 0.5):
+    """
+    Generates the inner sequence for GRC
+    Best / Worst based purely on comparison vector (i.e. good generally min(vals))
+    Also applies vector scaling to [0,1]
+
+    Validated against the code used in Guo (pg 183)
+
+    :param value:
+    :param comparison:
+    :param width:
+    :param rho:
+    :return:
+    """
+
+    #todo test this against: zero widths, nan widths, singular arrays (should be 0.5)
+
+    upper = width
+    lower = np.abs(value - comparison) + rho * width
+    with np.errstate(invalid='ignore'):
+        inner = np.divide(upper,lower)
+
+    scaled = 0.75 * inner - 0.5
+
+    return scaled
+
 def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_metrics=None, rho=0.5, debug=False):
     """
     Generate an individual observer perspective i.e per node record
@@ -103,27 +129,31 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
         keys = []
         maxes = []
         mins = []
+
+    if flip_metrics is None:
+        flip_metrics = []
     for ki, gi in gf.groupby(level='t'):
         gmn = np.nanmin(gi, axis=0) # Generally the 'Good' sequence,
         gmx = np.nanmax(gi, axis=0)
         width = np.abs(gmx - gmn)
 
-        if any(width != 0):
-
+        # If we have any actual values
+        if np.any(~np.isnan(width)):
             # While this looks bananas it is EXACTLY how it is in Bellas code.
             # Apart from the dropna stuff... she just had lots more data to play with
-            good = gi.dropna(axis=0).apply(
-                lambda o: (0.75 * np.divide(width, (np.abs(o - gmn)) + rho * width) - 0.5),
-                axis=1
-            ).dropna(axis=1)
-            bad = gi.dropna(axis=0).apply(
-                lambda o: (0.75 * np.divide(width, (np.abs(o - gmx)) + rho * width) - 0.5),
-                axis=1
-            ).dropna(axis=1)
+            g_grc = partial(_grc, gmn, width)
+            b_grc = partial(_grc, gmx, width)
+
+            good = gi.dropna(axis=0).apply(g_grc, axis=1).dropna(axis=1)
+            bad = gi.dropna(axis=0).apply(b_grc, axis=1).dropna(axis=1)
 
             for flipper in flip_metrics:
-                if flipper in good.keys():
+                if flipper in good.keys() and flipper in bad.keys():
                     good[flipper], bad[flipper] = bad[flipper], good[flipper]
+                else:
+                    raise RuntimeError("Should not try to flip metric ({}) not in both vectors: {}/{}".format(
+                        flipper, good.keys(), bad.keys()
+                    ))
 
             if metric_weights is not None:
                 # If the dropnas above have eliminated uninformative rows, they may have been trying to
@@ -145,13 +175,14 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
                 print "New Weight {}".format(valid_metric_weights)
                 print "Width {}".format(width)
                 raise
-            trusts.append(
-                pd.Series(
+            t_val = pd.Series(
                     interval.apply(
                         t_kt,
                         axis=1),
                     name='trust'
-                )
+            )
+            trusts.append(
+                t_val
             )
         else:
             # If we don't have any records, there's nothing we can do.
@@ -196,7 +227,9 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     :param n_metrics: int: number of metrics assessed in each observation
     :return: pandas.DataFrame
     """
-    assert isinstance(tf, pd.DataFrame)
+    assert isinstance(tf, pd.DataFrame), "Expected first argument (tf) to be a Pandas Dataframe, got {} instead".format(
+        type(tf)
+    )
 
     if var not in tf.index.names and 'run' not in tf.index.names:
         # Dealing with a single run; pad it with 0's
@@ -260,6 +293,7 @@ def generate_global_trust_values(trust_logs, metric_weights=None):
     :param metric_weights:
     :return:
     """
+    raise PendingDeprecationWarning("This shouldn't be used any more and will be removed soon")
     trust_perspectives = {
         node: generate_node_trust_perspective(node_observations, metric_weights=metric_weights)
         for node, node_observations in trust_logs.iteritems()

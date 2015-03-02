@@ -43,7 +43,6 @@ class ChartBuilders(unittest.TestCase):
         sim.simulate()
         self.dp = sim.generate_datapackage()
 
-
     def test_lost_packet_distribution(self):
         """
         Ensure lost_packet_distribution doesn't crash
