@@ -84,6 +84,11 @@ def queue_mask(i, args):
         return
 
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 162e31853a53cf8c12e4113401df38535e020860
 def parallel_sim(arglist):
     import logging
 

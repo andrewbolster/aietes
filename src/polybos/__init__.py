@@ -43,8 +43,12 @@ from multiprocessing import Pool
 from aietes import Simulation
 import aietes.Threaded
 import aietes.Distributed
+<<<<<<< HEAD
 from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, \
     seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
+=======
+from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
+>>>>>>> 162e31853a53cf8c12e4113401df38535e020860
 from bounos import DataPackage, print_analysis, load_sources, npz_in_dir
 
 try:
@@ -669,6 +673,7 @@ class ExperimentManager(object):
         start = time.time()
         try:
             os.chdir(self.exp_path)
+<<<<<<< HEAD
             if self.parallel and queue:
                 if queue=='pool':
                     queue = Pool(processes=4)
@@ -710,6 +715,42 @@ class ExperimentManager(object):
                         del s._pending_queue
                 else:
                     raise ValueError("Invalid Queue type {} given, options are pool and celery".format(queue))
+=======
+            if queue=='pool':
+                queue = Pool(processes=4)
+                # Q: Is this acting on the reference to scenario or the item in scenarios?
+                logging.info("Launching Queue")
+                for scenario_title, scenario in self.scenarios.items():
+                    scenario.commit()
+                    scenario.run_parallel(queueing_pool=queue, **kwargs)
+
+                logging.info("Now waiting on Queue")
+                queue.close()
+                queue.join()
+                logging.info("Queue Complete")
+                for title,s in self.scenarios.items():
+                    assert s._pending_queue.finished(), "{} isn't finished!".format(title)
+                    s.datarun = s._pending_queue.results
+                    del s._pending_queue
+
+            elif queue=='celery':
+                # Q: Is this acting on the reference to scenario or the item in scenarios?
+                logging.info("Dispatching to Celery")
+                for scenario_title, scenario in self.scenarios.items():
+                    scenario.commit()
+                    scenario.run_parallel(queueing_pool=queue, **kwargs)
+
+                logging.info("Now waiting on Celery Tasks")
+                while(not all([s._pending_queue.finished() for s in self.scenarios.itervalues()])):
+                    time.sleep(1)
+                    logging.debug("Tick")
+
+                logging.info("Celery Complete")
+                for title,s in self.scenarios.items():
+                    assert s._pending_queue.finished(), "{} isn't finished!".format(title)
+                    s.datarun = s._pending_queue.results
+                    del s._pending_queue
+>>>>>>> 162e31853a53cf8c12e4113401df38535e020860
             else:
 
                 # Q: Is this acting on the reference to scenario or the item in scenarios?
