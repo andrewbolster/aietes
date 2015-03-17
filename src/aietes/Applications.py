@@ -106,16 +106,17 @@ class Application(Sim.Process):
         acked = False
         for sent in self.sent_log:
             if sent['ID'] == packetid:
-                if sent['source'] is self.layercake.hostname:
-                    self.logger.info("Confirmed TX of {} to {} at {} after {}".format(
-                        sent['ID'], sent['dest'],
-                        Sim.now(), Sim.now() - sent['time_stamp']
-                    ))
-                else:
-                    self.logger.info("Confirmed FWD for {} of {} to {} at {} after {}".format(
-                        sent['source'], sent['ID'], sent['dest'],
-                        Sim.now(), Sim.now() - sent['time_stamp']
-                    ))
+                if DEBUG:
+                    if sent['source'] is self.layercake.hostname:
+                        self.logger.info("Confirmed TX of {} to {} at {} after {}".format(
+                            sent['ID'], sent['dest'],
+                            Sim.now(), Sim.now() - sent['time_stamp']
+                        ))
+                    else:
+                        self.logger.info("Confirmed FWD for {} of {} to {} at {} after {}".format(
+                            sent['source'], sent['ID'], sent['dest'],
+                            Sim.now(), Sim.now() - sent['time_stamp']
+                        ))
                 sent['delivered'] = True
                 sent['acknowledged'] = Sim.now()
                 acked = True

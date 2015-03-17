@@ -422,11 +422,12 @@ class Simulation(object):
         # Boundary checks:
         # len(app)==len(dist)
         # len(app) % nodes_count-preconfigured_nodes_count = 0
-        if isinstance(app, list) and isinstance(dist, list):
-            if len(app) == len(dist) and (nodes_count - preconfigured_nodes_count) % len(app) == 0:
+        if isinstance(appp, list) and isinstance(dist, list):
+            if len(appp) == len(dist) \
+                    and (nodes_count - preconfigured_nodes_count) % len(appp) == 0:
                 applications = [str(a)
-                                for a, n in zip(app, dist)
-                                for i in range(int(n))
+                                for a, n in zip(appp, dist)
+                                for _ in range(int(n))
                 ]
                 cls.logger.debug("Distributed Applications:%s" % applications)
             else:

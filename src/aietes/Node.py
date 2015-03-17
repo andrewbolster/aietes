@@ -100,6 +100,11 @@ class Node(Sim.Process):
         #
         try:
             application = self.config['Application']['protocol']
+            if isinstance(application,list):
+                if len(application)>1:
+                    raise ConfigError("Have a multi-value list where it shouldn't be! {}".format(application))
+                else:
+                    application = application[0]
             app_mod = getattr(Applications, application)
         except AttributeError:
             raise ConfigError("Can't find Application: %s" %

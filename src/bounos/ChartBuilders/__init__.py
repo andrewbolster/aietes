@@ -59,6 +59,7 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
         title = dp.title
         tmax = dp.tmax
     elif dp is None:
+        assert isinstance(tx, pd.DataFrame)
         df = tx
         title = "FIXME" if title is None else title
         tmax = int(np.ceil(
@@ -67,15 +68,20 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
         raise ValueError("I've got no idea how you got here...")
 
     died = df[df.delivered != True].count().max()
-    all_pkts = df.count().max()
+    if died > 1:
+        all_pkts = df.count().max()
 
-    f, ax = plt.subplots(figsize=(13, 7))
-    ax.set_title(
-        "Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title, died / float(all_pkts),
-                                                                                         all_pkts))
-    ax.set_ylabel("Count (n)")
-    ax.set_xlabel("Simulation Time (s)")
-    sns.distplot(df.time_stamp[df.delivered == False], kde=False, rug=True, bins=10, ax=ax)
+        f, ax = plt.subplots(figsize=(13, 7))
+        ax.set_title(
+            "Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title, died / float(all_pkts),
+                                                                                             all_pkts))
+        ax.set_ylabel("Count (n)")
+        ax.set_xlabel("Simulation Time (s)")
+        with np.errstate(invalid='ignore'):
+            sns.distplot(df.time_stamp[df.delivered != True], kde=False, rug=True, bins=10, ax=ax)
+    else:
+        raise ValueError("Not enough lost packets")
+
     return f
 
 

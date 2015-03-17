@@ -44,6 +44,7 @@ def setup_routing(node, config):
         return SimpleRoutingTable(node, config)
 
 
+
 class SimpleRoutingTable(dict):
     def __init__(self, layercake, config):
         dict.__init__(self)
