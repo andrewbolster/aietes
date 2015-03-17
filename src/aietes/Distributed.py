@@ -25,12 +25,12 @@ from aietes.Threaded import sim_mask
 app = Celery('aietes.Distributed', broker='amqp://guest@localhost//', backend='amqp')
 
 @app.task
-def worker(i, args):
+def simulate(i, args):
     try:
         results = sim_mask(args)
         return i,results
-    except :
-        return i, None
+    except Exception as e:
+        return i, e
 
 
 class emmitter(object):
@@ -47,7 +47,7 @@ class emmitter(object):
         ))
         for i,args in enumerate(self.tasklist):
             logging.info('Dispatching {}'.format(i))
-            self.pending_results[i]=worker.delay(i,args)
+            self.pending_results[i]=simulate.delay(i,args)
 
     def finished(self):
         if all([r.ready() for r in self.pending_results]):

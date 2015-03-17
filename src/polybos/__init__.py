@@ -710,6 +710,8 @@ class ExperimentManager(object):
                         del s._pending_queue
                 else:
                     raise ValueError("Invalid Queue type {} given, options are pool and celery".format(queue))
+                    del s._pending_queue
+
             else:
 
                 # Q: Is this acting on the reference to scenario or the item in scenarios?
