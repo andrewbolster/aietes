@@ -50,9 +50,16 @@ class ChartBuilders(unittest.TestCase):
         """
         if not self.dp.has_comms_data():
             raise unittest.SkipTest("Latest DataPackage has no Comms data: {}".format(self.dp.title))
+        tx = self.dp.get_global_packet_logs(pkt_type='tx')
 
-        test_figure = bounos.ChartBuilders.lost_packet_distribution(self.dp)
-        self.assertIsInstance(test_figure, Figure)
+        died = tx[tx.delivered != True].count().max()
+        if died < 2:
+            self.assertRaises(ValueError,
+                              bounos.ChartBuilders.lost_packet_distribution,
+                              tx=tx)
+        else:
+            test_figure = bounos.ChartBuilders.lost_packet_distribution(tx=tx)
+            self.assertIsInstance(test_figure, Figure)
 
     def test_end_to_end_delay_distribution(self):
         """

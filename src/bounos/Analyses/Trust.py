@@ -147,13 +147,9 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
             good = gi.dropna(axis=0).apply(g_grc, axis=1).dropna(axis=1)
             bad = gi.dropna(axis=0).apply(b_grc, axis=1).dropna(axis=1)
 
-            for flipper in flip_metrics:
+            for flipper in flip_metrics: # NOTE flipper may have been removed if no variation
                 if flipper in good.keys() and flipper in bad.keys():
                     good[flipper], bad[flipper] = bad[flipper], good[flipper]
-                else:
-                    raise RuntimeError("Should not try to flip metric ({}) not in both vectors: {}/{}".format(
-                        flipper, good.keys(), bad.keys()
-                    ))
 
             if metric_weights is not None:
                 # If the dropnas above have eliminated uninformative rows, they may have been trying to
