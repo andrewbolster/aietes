@@ -566,7 +566,7 @@ def trust_perspectives_wrt_targets(trust_frame):
     return f
 
 
-def trust_network_wrt_observers(trust_group, var, title=None, figsize=(16, 2), texify=True):
+def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), texify=True):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
     :param title:

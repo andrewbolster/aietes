@@ -106,8 +106,10 @@ def _grc(value, comparison, width, rho = 0.5):
     upper = width
     lower = np.abs(value - comparison) + rho * width
     with np.errstate(invalid='ignore'):
+        # inner is in the range [2/3, 2]
         inner = np.divide(upper,lower)
 
+    # Scale to [0,1]
     scaled = 0.75 * inner - 0.5
 
     return scaled
@@ -118,7 +120,6 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
     :param gf:
     :param metric_weights:
     :param flip_metrics: Metrics that are more 'good' as they get bigger
-    :param rho:
     :return:
     """
     trusts = []
@@ -133,19 +134,22 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
     if flip_metrics is None:
         flip_metrics = []
     for ki, gi in gf.groupby(level='t'):
-        gmn = np.nanmin(gi, axis=0) # Generally the 'Good' sequence,
-        gmx = np.nanmax(gi, axis=0)
+        gmn = gi.min(axis=0) # Generally the 'Good' sequence,
+        gmx = gi.max(axis=0)
         width = np.abs(gmx - gmn)
 
         # If we have any actual values
-        if np.any(~np.isnan(width)):
+        if np.any(width[~np.isnan(width)]>0):
             # While this looks bananas it is EXACTLY how it is in Bellas code.
-            # Apart from the dropna stuff... she just had lots more data to play with
-            g_grc = partial(_grc, gmn, width)
-            b_grc = partial(_grc, gmx, width)
+            g_grc = partial(_grc, comparison=gmn, width=width)
+            b_grc = partial(_grc, comparison=gmx, width=width)
 
-            good = gi.dropna(axis=0).apply(g_grc, axis=1).dropna(axis=1)
-            bad = gi.dropna(axis=0).apply(b_grc, axis=1).dropna(axis=1)
+            # Where there are 'missing' values, this implies that there's no information
+            # therefore we can assume regression to the mean
+            # This means that low-successful-metric records don't get too washed out by the limited info
+            # EG if there is only TX Throughput, results are often 0 or 1 which makes v spiky
+            good = gi.apply(g_grc, axis=1).fillna(0.5)
+            bad = gi.apply(b_grc, axis=1).fillna(0.5)
 
             for flipper in flip_metrics: # NOTE flipper may have been removed if no variation
                 if flipper in good.keys() and flipper in bad.keys():
@@ -164,19 +168,24 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
                     'good': good.apply(np.average, weights=valid_metric_weights, axis=1),
                     'bad': bad.apply(np.average, weights=valid_metric_weights, axis=1)
                 })[['good','bad']]
+                t_val = pd.Series(
+                        interval.apply(
+                            t_kt,
+                            axis=1),
+                        name='trust'
+                )
             except ValueError:
+                print "Interval {}".format(interval)
                 print "Good.keys(){}".format(good.keys())
                 print "Bad.keys(){}".format(bad.keys())
                 print "Orig Weight {}".format(metric_weights)
                 print "New Weight {}".format(valid_metric_weights)
                 print "Width {}".format(width)
+                print "GI {}".format(gi)
+                print "Good {}".format(good)
+                print "Bad {}".format(bad)
                 raise
-            t_val = pd.Series(
-                    interval.apply(
-                        t_kt,
-                        axis=1),
-                    name='trust'
-            )
+
             trusts.append(
                 t_val
             )
@@ -247,8 +256,9 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
         )
         trusts = [item for sublist in trusts for item in sublist]
     else:
-        for k, g in tf.groupby(level=[var, 'run', 'observer']):
-            trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
+        with np.errstate(all='raise'):
+            for k, g in tf.groupby(level=[var, 'run', 'observer']):
+                trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
 
     tf = pd.concat(trusts)
     tf.sort(inplace=True)

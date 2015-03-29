@@ -26,7 +26,6 @@ _boxplot_kwargs = {
     'widths': 0.2,
     'linewidth': 2
 }
-golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 golden_mean = (np.sqrt(5) - 1.0) / 2.5  # because it fits
 w = 4
 
@@ -62,7 +61,10 @@ in_results = partial(os.path.join, Tools._results_dir)
 
 def per_scenario_gd_mal_trusts(gd_file, mal_file):
     if not all(map(os.path.isfile, [gd_file, mal_file])):
-        raise OSError("Either {} or {} is not present".format(gd_file, mal_file))
+        if all(map(os.path.isfile, map(in_results,[gd_file, mal_file]))):
+            gd_file, mal_file = map(in_results, [gd_file, mal_file])
+        else:
+            raise OSError("Either {} or {} is not present".format(gd_file, mal_file))
     with pd.get_store(mal_file) as store:
         mal_trust = store.get('trust')
         map_levels(mal_trust, scenario_map)
@@ -72,11 +74,8 @@ def per_scenario_gd_mal_trusts(gd_file, mal_file):
     return gd_trust, mal_trust
 
 
-def plot_comparison(gd_tp, mal_tp, s, trust="grey_", metric=None, show_title=True, keyword=None):
+def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, keyword=None):
     tex_safe_s = scenario_map[s]
-
-    df1 = Trust.generate_mtfm(gd_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
-    df2 = Trust.generate_mtfm(mal_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
 
     fig, ax = plt.subplots(1, 1, figsize=(w, w * golden_mean), sharey=True)
 
@@ -107,7 +106,7 @@ def plot_comparison(gd_tp, mal_tp, s, trust="grey_", metric=None, show_title=Tru
     ax.set_ylabel('{}Trust Value'.format(trust.replace("_", " ").title()))
     ax.set_xlabel('Trust Assessment Period')
     fig.tight_layout(pad=0.1)
-    fig.savefig("/home/bolster/src/thesis/papers/active/15_AdHocNow/img/trust_{}_{}{}.pdf".format(
+    fig.savefig("img/trust_{}_{}{}.pdf".format(
         s, "emph_%s" % metric if metric else "even",
         "_%s" % keyword if keyword else ""),transparent = True
     )
@@ -120,24 +119,34 @@ def cross_scenario_plot():
             plot_comparison(gd_tp, mal_tp, s, metric="All_")
 
 
-def plot_weight_comparisons(gd_file, mal_file, malicious_behaviour="Selfish", s="bella_static", excluded=[],
-                            show_title=True):
+def plot_weight_comparisons(gd_file, mal_file,
+                            malicious_behaviour="Selfish", s="bella_static",
+                            excluded=[], show_title=True):
+    mtfm_args =  ('n0', 'n1', ['n2', 'n3'], ['n4', 'n5'])
     with mpl.rc_context(rc={'text.usetex': 'True'}):
+
         gd_trust, mal_trust = per_scenario_gd_mal_trusts(gd_file, mal_file)
-        print gd_trust.keys()
         gd_tp, mal_tp = per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, s=s)
-        plot_comparison(gd_tp, mal_tp, s, show_title=show_title, keyword=malicious_behaviour)
+
+        gd_mtfm = Trust.generate_mtfm(gd_tp, *mtfm_args).sum(axis=1)
+        mal_mtfm = Trust.generate_mtfm(mal_tp, *mtfm_args).sum(axis=1)
+
+        plot_comparison(gd_mtfm, mal_mtfm, s, show_title=show_title, keyword=malicious_behaviour)
         for i, mi in enumerate(trust_metrics):
             if mi not in excluded:
                 gd_tp, mal_tp = per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, s=s,
                                                                       weight_vector=weight_for_metric(mi, 3))
-                plot_comparison(gd_tp, mal_tp, s, metric=mi, show_title=show_title,
+
+                gd_mtfm = Trust.generate_mtfm(gd_tp, *mtfm_args).sum(axis=1)
+                mal_mtfm = Trust.generate_mtfm(mal_tp, *mtfm_args).sum(axis=1)
+
+                plot_comparison(gd_mtfm, mal_mtfm, s, metric=mi, show_title=show_title,
                                 keyword=malicious_behaviour)
 
 
 def per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, weight_vector=None, s=None, two_pass=False):
     if weight_vector is not None:
-        print("Using {}".format(weight_vector))
+        print("Using {}".format(weight_vector.values))
     if s is not None:
         print("Trimming trust to {}".format(s))
         mal_trust = mal_trust.xs(scenario_map[s], level='var')
@@ -170,14 +179,21 @@ def plot_scenario_pair(gd_tp, mal_tp, s, span=1, trust_type=None):
     ax[1].set_ylabel('{}Trust Assessment'.format(trust_type.replace("_", " ").title()))
 
     fig.tight_layout()
-    fig.savefig("/home/bolster/src/thesis/papers/active/15_AdHocNow/img/{}trust_{}_joint.pdf".format(
+    fig.savefig("img/{}trust_{}_joint.pdf".format(
         trust_type, s), transparent=True
     )
 
 
 def weight_for_metric(m, emph=4):
     base = np.ones_like(trust_metrics, dtype=np.float)
-    base[np.where(trust_metrics == m)] += emph
+    if isinstance(m, list):
+        for _ in m:
+            base[np.where(trust_metrics == m)] += emph
+    else:
+        base[np.where(trust_metrics == m)] += emph
+    return norm_weight(base)
+
+def norm_weight(base):
     return pd.Series(base / base.sum(), index=trust_metrics)
 
 
@@ -197,11 +213,18 @@ def beta_otmf_vals(beta_trust):
     otmf_vals = beta_trust.apply(lambda r: otmf_T(r['+'],r['-']), axis=1)
     return beta_vals, otmf_vals
 
-def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None):
+def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None,
+                      metric_weights=None, figsize=None):
+
+    if figsize is None:
+        figsize = (w,w*golden_mean)
     with mpl.rc_context(rc={'text.usetex':'True'}):
         with pd.get_store(in_results(filename)) as store:
             trust=store.get('trust')
-            tp_net=Trust.network_trust_dict(Trust.generate_node_trust_perspective(trust))
+            tp_net=Trust.network_trust_dict(
+                Trust.generate_node_trust_perspective(trust, par=True,
+                                                      metric_weights=metric_weights)
+            )
             map_levels(tp_net, scenario_map)
             if s is not None:
                 if isinstance(s, list):
@@ -212,112 +235,11 @@ def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None):
                 scenarios = scenario_order
             for s in scenarios:
                 tex_safe_s = scenario_map[s]
-                title = "Selfish {}".format(tex_safe_s)
+                title = "{}{}".format(keyword, tex_safe_s)
+
                 fig = cb.trust_network_wrt_observers(tp_net.xs(tex_safe_s, level='var'),
-                                                     tex_safe_s, title=show_title,
-                                                     figsize=(w,w*golden_mean))
-                #fig.tight_layout(pad=0.1)
-                print tex_safe_s
-                fig.savefig("/home/bolster/src/thesis/papers/active/15_AdHocNow/img/trust_{}{}.pdf".format(
+                                                     tex_safe_s, title=title if show_title else False,
+                                                     figsize=figsize)
+                fig.savefig("img/trust_{}{}.pdf".format(
                     s, "_"+keyword if keyword is not None else ""),
                             transparent=True)
-
-def run_malicious_comparison(args):
-    if args.scenario is not None:
-        if isinstance(args.scenario, list):
-            scenarios = args.scenario
-        else:
-            scenarios = [args.scenario]
-    else:
-        scenarios = scenario_order
-    for s in scenarios:
-        print s
-        plot_weight_comparisons(in_results(args.good_file), in_results(args.bad_file),
-                                s=s,
-                                malicious_behaviour=args.bad_name,
-                                show_title=False)
-
-
-def plot_triplet(args):
-    gd_trust, mal_trust = per_scenario_gd_mal_trusts(in_results(good), in_results(malicious))
-    print gd_trust.keys()
-    mal_mobile = mal_trust.xs('All Mobile', level='var')
-    gd_mobile = gd_trust.xs('All Mobile', level='var')
-
-    gd_beta_t = beta_trusts(gd_mobile)
-    mal_beta_t = beta_trusts(mal_mobile)
-
-    fig, ax = plt.subplots(1, 1, figsize=(w, w * golden_mean), sharey=True)
-
-    x = df1.index.levels[df1.index.names.index('t')]
-
-    ax.plot(x, df1, label="Fair", linestyle="--")
-    ax.plot(x, df2, label="Selfish")
-
-    top = df1.mean() + df1.std()
-    middle = df1.mean()
-    bottom = df1.mean() - df1.std()
-
-    for line in [top, middle, bottom]:
-        ax.axhline(line, linestyle=':', alpha=0.5)
-
-    ax.fill_between(x, df2, bottom, where=df2 < bottom, interpolate=True, facecolor='green', alpha=0.25)
-    ax.fill_between(x, df2, top, where=df2 > top, interpolate=True, facecolor='green', alpha=0.25)
-
-    if show_title:
-        ax.set_title("{} {}".format(tex_safe_s, "Emphasising {}".format(metric) if metric else ""))
-    ax.set_ylim([0, 1])
-    if df2.mean() > 0.5:  # Selfish bar is much more highlighted
-        ax.legend(loc='lower left', ncol=2)
-    else:
-        ax.legend(loc='upper left', ncol=2)
-
-    ax.axhline(0.5, linestyle="..")
-    ax.set_ylabel('{}Trust Value'.format(trust.replace("_", " ").title()))
-    ax.set_xlabel('Trust Assessment Period')
-    fig.tight_layout(pad=0.1)
-    fig.savefig("/home/bolster/src/thesis/papers/active/15_AdHocNow/img/trust_{}_{}{}.pdf".format(
-        s, "emph_%s" % metric if metric else "even",
-        "_%s" % keyword if keyword else ""), transparent=True
-    )
-
-if __name__ == "__main__":
-    good = "TrustMobilityTests-0.015-4-2015-02-19-09-11-25.h5"
-    malicious = "MaliciousBadMouthingPowerControlTrustMobilityTests-0.015-4-2015-02-19-09-08-49.h5"
-    good = "TrustMobilityTests-0.025-3-2015-02-19-10-53-28.h5"
-    malicious = "MaliciousBadMouthingPowerControlTrustMobilityTests-0.025-3-2015-02-19-10-50-43.h5"
-    #malicious = "MaliciousBadMouthingPowerControlTrustMedianTests-0.025-3-2015-02-19-23-27-01.h5"
-    #good = "TrustMedianTests-0.025-3-2015-02-19-23-29-39.h5"
-
-    import argparse
-    parser = argparse.ArgumentParser(description="Compare Weights across Runs")
-    parser.add_argument('--good_file', type=str, help="Good Behaviour File",
-                        default=good)
-    parser.add_argument('--bad_file', type=str, help="Bad Behaviour File",
-                        default=malicious)
-    parser.add_argument('--bad_name', type=str, help="Bad Behaviour Name",
-                        default="BadMouthingPowerControl")
-    parser.add_argument('--scenario', type=str, help="Selected Scenario",
-                        default="bella_static")
-    parser.add_argument('--keyword', type=str, help="Tag to go on the end of MTFM filenames",
-                        default=None)
-
-    parser.add_argument('--wcomparison', action='store_true', help="Run Weight Comparisons on a Malicious and Good Set",
-                        default=False)
-    parser.add_argument('--mtfmboxplot', action='store_true', help="Run MTMF comparison on a set",
-                        default=False)
-    parser.add_argument('--betaplot', action='store_true', help="Run Beta Comparison on a set",
-                        default=False)
-
-
-    args = parser.parse_args()
-    if args.scenario is None:
-        args.scenario = ["bella_all_mobile"]
-    if args.wcomparison:
-        run_malicious_comparison(args)
-    elif args.mtfmboxplot:
-        plot_mtfm_boxplot(good, s=args.scenario, keyword=args.keyword)
-    elif args.betaplot:
-        plot_triplet(args)
-        parser.print_help()
-
