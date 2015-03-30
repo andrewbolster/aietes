@@ -18,6 +18,7 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 n_metrics = 6
 
+import itertools
 from collections import OrderedDict
 from functools import partial
 
@@ -25,30 +26,103 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 
+from aietes import Tools
+from bounos.Analyses import scenario_map
 
+
+# USUALLY CONSTANTS
+trust_metrics = np.asarray("ADelay,ARXP,ATXP,RXThroughput,PLR,TXThroughput".split(','))
+metric_combinations = itertools.product(xrange(1, 4), repeat=len(trust_metrics))
+metric_combinations_series = [pd.Series(x, index=trust_metrics) for x in metric_combinations]
+
+# DEFAULT VARIABLES
+default_mtfm_args = ('n0', 'n1', ['n2', 'n3'], ['n4', 'n5'])
+
+
+def trust_from_file(file):
+    with pd.get_store(Tools.in_results(file)) as store:
+        trust = store.get('trust')
+        Tools.map_levels(trust, scenario_map)
+    return trust
+
+
+def perspective_from_trust(trust, s=None, metric_weight=None, par=True):
+    if s is not None:
+        trust = trust.xs(scenario_map[s], level='var')
+    tp = generate_node_trust_perspective(trust, metric_weights=metric_weight, par=par)
+    Tools.map_levels(tp, scenario_map)
+    return tp
+
+
+def generate_outlier_frame(mtfm, good_key, sigma=1.0):
+    _mean = mtfm.xs(good_key, level='bev').mean()
+    _std = mtfm.xs(good_key, level='bev').std()
+    llim = _mean - (sigma * _std)
+    ulim = _mean + (sigma * _std)
+    outliers = pd.concat(
+        (mtfm[mtfm > ulim] - ulim, (llim - mtfm[mtfm < llim])),
+        keys=('upper', 'lower'), names=['range', 'bev', 't']
+    )
+    return outliers
+
+
+def mtfm_from_perspectives_dict(perspectives, mtfm_args=None):
+    if mtfm_args is None:
+        mtfm_args = default_mtfm_args
+    inter = pd.concat(perspectives.values(),
+        axis=0, keys=perspectives.keys(),
+        names=["bev"] + perspectives.values()[0].index.names)
+    mtfms = (inter.groupby(level=['bev']) \
+             .apply(generate_mtfm, *mtfm_args) \
+             .reset_index(level=[0, 2, 3], drop=True) \
+             .sum(axis=1)
+             )
+    return mtfms
+
+
+def outliers_from_trust_dict(trust_dict, good_key="good", s=None,
+                             metric_weight=None, mtfm_args=None, par=True):
+    perspectives = {
+        k: perspective_from_trust(t, s=s, metric_weight=metric_weight, par=par)
+        for k, t in trust_dict.iteritems()
+    }
+    mtfms = mtfm_from_perspectives_dict(perspectives, mtfm_args)
+    outlier = generate_outlier_frame(mtfms, good_key).reset_index()
+    for k in metric_weight.keys():
+        outlier[k] = metric_weight[k]
+    outlier.set_index(['bev', 't'], inplace=True)
+    outlier.rename(columns={0: 'Delta'}, inplace=True)
+    return outlier
+
+# TODO Grey stuff can probably be broken out at a separate file
 # THESE LAMBDAS PERFORM GRAY CLASSIFICATION BASED ON GUO
 # Still have no idea where sigma comes into it but that's life
 _white_fs = [lambda x: -x + 1,
              lambda x: -2 * x + 2 if x > 0.5 else 2 * x,
              lambda x: x
-]
+             ]
 _white_sigmas = [0.0, 0.5, 1.0]
+
 
 def _gray_whitenized(x):
     return [f(x) for f in _white_fs]
 
+
 def _t_whitenized(x):
     return max(_gray_whitenized(x)) * x  # Maps to max_s{f_s(T_{Bi})})T_{Bi}
+
 
 def _t_direct(x):
     return 0.5 * _t_whitenized(x)
 
-def _t_recommend(x, nr = np.inf, ni = np.inf):
 
+def _t_recommend(x, nr=np.inf, ni=np.inf):
     return 0.5 * ((2.0 * nr) / (2.0 * nr + ni)) * _t_whitenized(x)
 
-def _t_indirect(x, nr = np.inf, ni = np.inf):
+
+def _t_indirect(x, nr=np.inf, ni=np.inf):
     return 0.5 * (ni / (2.0 * nr + ni)) * _t_whitenized(x)
+
 
 def _gray_class(x):
     try:
@@ -86,7 +160,7 @@ def weight_calculator(metric_index, ignore=None):
     return bin_weight / float(np.sum(bin_weight))
 
 
-def _grc(value, comparison, width, rho = 0.5):
+def _grc(value, comparison, width, rho=0.5):
     """
     Generates the inner sequence for GRC
     Best / Worst based purely on comparison vector (i.e. good generally min(vals))
@@ -101,18 +175,19 @@ def _grc(value, comparison, width, rho = 0.5):
     :return:
     """
 
-    #todo test this against: zero widths, nan widths, singular arrays (should be 0.5)
+    # todo test this against: zero widths, nan widths, singular arrays (should be 0.5)
 
     upper = width
     lower = np.abs(value - comparison) + rho * width
     with np.errstate(invalid='ignore'):
         # inner is in the range [2/3, 2]
-        inner = np.divide(upper,lower)
+        inner = upper/lower
 
     # Scale to [0,1]
     scaled = 0.75 * inner - 0.5
 
     return scaled
+
 
 def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_metrics=None, rho=0.5, debug=False):
     """
@@ -132,14 +207,15 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
         mins = []
 
     if flip_metrics is None:
-        flip_metrics = []
+        flip_metrics = ['TXThroughput', 'RXThroughput']  # These are 'bigger is better' values
+
     for ki, gi in gf.groupby(level='t'):
-        gmn = gi.min(axis=0) # Generally the 'Good' sequence,
+        gmn = gi.min(axis=0)  # Generally the 'Good' sequence,
         gmx = gi.max(axis=0)
         width = np.abs(gmx - gmn)
 
         # If we have any actual values
-        if np.any(width[~np.isnan(width)]>0):
+        if np.any(width[~np.isnan(width)] > 0):
             # While this looks bananas it is EXACTLY how it is in Bellas code.
             g_grc = partial(_grc, comparison=gmn, width=width)
             b_grc = partial(_grc, comparison=gmx, width=width)
@@ -151,7 +227,7 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
             good = gi.apply(g_grc, axis=1).fillna(0.5)
             bad = gi.apply(b_grc, axis=1).fillna(0.5)
 
-            for flipper in flip_metrics: # NOTE flipper may have been removed if no variation
+            for flipper in flip_metrics:  # NOTE flipper may have been removed if no variation
                 if flipper in good.keys() and flipper in bad.keys():
                     good[flipper], bad[flipper] = bad[flipper], good[flipper]
 
@@ -167,12 +243,12 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
                 interval = pd.DataFrame.from_dict({
                     'good': good.apply(np.average, weights=valid_metric_weights, axis=1),
                     'bad': bad.apply(np.average, weights=valid_metric_weights, axis=1)
-                })[['good','bad']]
+                })[['good', 'bad']]
                 t_val = pd.Series(
-                        interval.apply(
-                            t_kt,
-                            axis=1),
-                        name='trust'
+                    interval.apply(
+                        t_kt,
+                        axis=1),
+                    name='trust'
                 )
             except ValueError:
                 print "Interval {}".format(interval)
@@ -200,13 +276,13 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
             maxes.append(gmx)
             mins.append(gmn)
     if debug:
-        debugging = {'intervals':intervals,
-                     'goods':goods,
+        debugging = {'intervals': intervals,
+                     'goods': goods,
                      'bads': bads,
                      'keys': keys,
                      'maxes': maxes,
                      'mins': mins
-        }
+                     }
         return trusts, debugging
     else:
         return trusts
@@ -244,9 +320,6 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
         tf = pd.concat([tf], keys=[0] + tf.index.names, names=[var] + tf.index.names)
 
     trusts = []
-
-    if flip_metrics is None:
-        flip_metrics = ['TXThroughput', 'RXThroughput'] # These are 'bigger is better' values
 
     exec_args = {'metric_weights': metric_weights, 'flip_metrics': flip_metrics, 'rho': rho}
 

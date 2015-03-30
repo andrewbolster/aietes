@@ -26,6 +26,7 @@ import os
 import errno
 from inspect import getmembers, isfunction
 from itertools import groupby
+from functools import partial
 from operator import itemgetter
 from datetime import datetime as dt
 from time import time
@@ -865,6 +866,8 @@ def results_file(proposed_name, results_dir=None):
         proposed_name = os.path.join(results_dir, proposed_name)
     return proposed_name
 
+in_results = partial(os.path.join,_results_dir)
+
 
 def get_config_file(config):
     """
@@ -1150,6 +1153,13 @@ def literal_eval_walk(node, tabs=0):
 
 
 def map_levels(df, dct, level=0):
+    """
+    Renames items in a index/multiindex of a DataFrame in place
+    :param df: pd.DataFrame
+    :param dct: dict: Pairs of Item Names to Swap
+    :param level: int: pd.MultiIndex level
+    :return:
+    """
     index = df.index
     index.set_levels([[dct.get(item, item) for item in names] if i == level else names
                       for i, names in enumerate(index.levels)], inplace=True)
@@ -1169,15 +1179,3 @@ class Capturing(list):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
 
-
-def map_level(df, dct, level=0):
-    """
-    Renames items in a index/multiindex of a DataFrame in place
-    :param df: pd.DataFrame
-    :param dct: dict: Pairs of Item Names to Swap
-    :param level: int: pd.MultiIndex level
-    :return:
-    """
-    index = df.index
-    index.set_levels([[dct.get(item, item) for item in names] if i == level else names
-                      for i, names in enumerate(index.levels)], inplace=True)

@@ -33,6 +33,12 @@ logging.basicConfig(format=FORMAT,
 
 log = logging.getLogger()
 
+scenario_map = dict(zip(
+    [u'bella_all_mobile', u'bella_allbut1_mobile', u'bella_single_mobile', u'bella_static', u'bella_static_median',u'bella_all_mobile_median'],
+    ['All Mobile', '$n_1$ Static', '$n_1$ Mobile', 'All Static','Static using alternate filter', 'Mobile using alternate filter']
+))
+scenario_order = list(reversed([u'bella_all_mobile', u'bella_allbut1_mobile', u'bella_single_mobile', u'bella_static']))
+
 
 def get_valid_metric(metric):
     """

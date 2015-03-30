@@ -50,7 +50,7 @@ if __name__ == "__main__":
     title = "TrustMedianTests"
     log = logging.getLogger()
 
-    for malice in ["BadMouthingPowerControl",False]:
+    for malice in ["SelfishTargetSelection", "BadMouthingPowerControl", False]:
         try:
             exp = exec_scaled_behaviour_range(base_scenarios, title,
                                               app_rate=app_rate,

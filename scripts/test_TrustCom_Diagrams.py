@@ -60,6 +60,7 @@ rate_and_ranges = filter(lambda p: os.path.basename(p).startswith("CommsRateAndR
 app_rates = map(app_rate_from_path, rate_and_ranges)
 
 
+
 def interpolate_rate_sep(df, key):
     X, Y, Z = df.rate, df.separation, df[key]
 
@@ -381,17 +382,10 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        def trust_from_file(file):
-            with pd.get_store(in_results(file)) as store:
-                    trust=store.get('trust')
-                    Tools.map_levels(trust, scenario_map)
-            return trust
 
         def beta_trusts(trust, length=4096):
-            #trust.TXThroughput.fillna(value=0,inplace=True)
             trust['+'] = (trust.TXThroughput/length)*(1-trust.PLR)
             trust['-'] = (trust.TXThroughput/length)*(trust.PLR)
-            #rust.swaplevel('t','observer')
             beta_trust = trust[['+','-']].unstack(level='target')
             return beta_trust
 
@@ -413,22 +407,23 @@ class TrustCom(unittest.TestCase):
             ax.plot(mtfm, label="MTFM")
             ax.set_ylim((0,1))
             ax.set_ylabel("Trust Value".format(key))
-            ax.set_xlabel("Trust Assessment Period")
+            ax.set_xlabel("Observation")
             ax.legend(loc='lower center', ncol=3)
             ax.axhline(mtfm.mean(), color="r", linestyle='-.')
-            ax.yaxis.set_major_locator(loc25)
+            ax.yaxis.set_major_locator(loc_25)
             fig.tight_layout()
             fig.savefig("img/trust_beta_otmf{}.pdf".format("_"+key if key is not None else ""),transparent=True)
             return fig
 
 
-        gd_trust, mal_trust = map(trust_from_file,[self.good,self.malicious])
+        gd_trust, mal_trust = map(Trust.trust_from_file,[self.good,self.malicious])
         mal_mobile = mal_trust.xs('All Mobile',level='var')
         gd_mobile = gd_trust.xs('All Mobile',level='var')
         gd_beta_t = beta_trusts(gd_mobile)
         mal_beta_t = beta_trusts(mal_mobile)
 
         np.random.seed(42)
+        mtfm_span = 2
         mal_beta_t['-'] = mal_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
         gd_beta_t['-'] = gd_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
 
@@ -438,6 +433,8 @@ class TrustCom(unittest.TestCase):
         gd_mtfm = Trust.generate_mtfm(gd_tp, 'n0', 'n1',['n2','n3'],['n4','n5']).sum(axis=1)
         mal_mtfm = Trust.generate_mtfm(mal_tp, 'n0', 'n1',['n2','n3'],['n4','n5']).sum(axis=1)
 
+        gd_mtfm =pd.stats.moments.ewma(gd_mtfm, span=mtfm_span)
+        mal_mtfm =pd.stats.moments.ewma(mal_mtfm, span=mtfm_span)
         plot_beta_mtmf_comparison(gd_beta_t, gd_mtfm, key="fair")
         plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="selfish")
 

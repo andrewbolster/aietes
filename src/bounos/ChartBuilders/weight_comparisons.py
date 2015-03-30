@@ -17,6 +17,7 @@ import aietes.Tools as Tools
 from aietes.Tools import map_levels
 import bounos.ChartBuilders as cb
 import bounos.Analyses.Trust as Trust
+from bounos.Analyses import scenario_order, scenario_map
 import bounos.multi_loader as multi_loader
 
 # print(matplotlib.rcParams)
@@ -50,19 +51,12 @@ trust_metric_selections = np.asarray(
     [map(lambda m: float(m in trust_combination), trust_metrics) for trust_combination in trust_combinations])
 trust_metric_weights = map(lambda s: s / sum(s), trust_metric_selections)
 
-scenario_map = dict(zip(
-    [u'bella_all_mobile', u'bella_allbut1_mobile', u'bella_single_mobile', u'bella_static', u'bella_static_median',u'bella_all_mobile_median'],
-    ['All Mobile', '$n_1$ Static', '$n_1$ Mobile', 'All Static','Static using alternate filter', 'Mobile using alternate filter']
-))
-scenario_order = list(reversed([u'bella_all_mobile', u'bella_allbut1_mobile', u'bella_single_mobile', u'bella_static']))
-
-in_results = partial(os.path.join, Tools._results_dir)
 
 
 def per_scenario_gd_mal_trusts(gd_file, mal_file):
     if not all(map(os.path.isfile, [gd_file, mal_file])):
-        if all(map(os.path.isfile, map(in_results,[gd_file, mal_file]))):
-            gd_file, mal_file = map(in_results, [gd_file, mal_file])
+        if all(map(os.path.isfile, map(Tools.in_results,[gd_file, mal_file]))):
+            gd_file, mal_file = map(Tools.in_results, [gd_file, mal_file])
         else:
             raise OSError("Either {} or {} is not present".format(gd_file, mal_file))
     with pd.get_store(mal_file) as store:
@@ -104,7 +98,7 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
 
     ax.axhline(0.5, linestyle="..")
     ax.set_ylabel('{}Trust Value'.format(trust.replace("_", " ").title()))
-    ax.set_xlabel('Trust Assessment Period')
+    ax.set_xlabel('Observation')
     fig.tight_layout(pad=0.1)
     fig.savefig("img/trust_{}_{}{}.pdf".format(
         s, "emph_%s" % metric if metric else "even",
@@ -145,6 +139,7 @@ def plot_weight_comparisons(gd_file, mal_file,
 
 
 def per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, weight_vector=None, s=None, two_pass=False):
+    # TODO This is useless, refactor
     if weight_vector is not None:
         print("Using {}".format(weight_vector.values))
     if s is not None:
@@ -219,7 +214,7 @@ def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None,
     if figsize is None:
         figsize = (w,w*golden_mean)
     with mpl.rc_context(rc={'text.usetex':'True'}):
-        with pd.get_store(in_results(filename)) as store:
+        with pd.get_store(Tools.in_results(filename)) as store:
             trust=store.get('trust')
             tp_net=Trust.network_trust_dict(
                 Trust.generate_node_trust_perspective(trust, par=True,
