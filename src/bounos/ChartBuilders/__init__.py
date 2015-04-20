@@ -822,6 +822,7 @@ def format_axes(ax, spine_color='gray'):
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
 
+
     for axis in [ax.xaxis, ax.yaxis]:
         axis.set_tick_params(direction='out', color=spine_color)
 
