@@ -783,7 +783,6 @@ def latexify(columns=1, factor=0.45):
     # computer.org/cms/Computer.org/Journal%20templates/transactions_art_guide.pdf
 
     golden_mean = (np.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
-
     fig_width_in = 3.339 * factor / columns
     fig_height_in = fig_width_in * golden_mean
 
