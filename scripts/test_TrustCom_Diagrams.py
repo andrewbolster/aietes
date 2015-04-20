@@ -76,6 +76,17 @@ def interpolate_rate_sep(df, key):
     zi = interpolate.griddata((X, Y), Z, (xi[None, :], yi[:, None]), method='linear')
     return xi, yi, zi, X, Y
 
+def plot_lines_of_throughput(df):
+    fig = plt.figure(figsize=(w, golden_mean * w), facecolor='white')
+    ax = fig.add_subplot(1, 1, 1)
+    for (k, g), ls in zip(df.groupby('separation'), itertools.cycle(["-", "--", "-.", ":"])):
+        ax.plot(g.rate, g.throughput, label=k, linestyle=ls)
+    ax.legend(loc="upper left")
+    ax.set_xlabel("Packet Emission Rate (pps)")
+    ax.set_ylabel("Per Node Avg. Throughput (bps)")
+
+
+    return fig
 
 def plot_contour_pair(xi, yi, zi):
     fig = plt.figure(figsize=(2 * w, golden_mean * w * 2))
@@ -130,6 +141,7 @@ def plot_contour_2d(xi, yi, zi, X=None, Y=None, var=None, norm=False):
         X = []
     if Y is None:
         Y = []
+
     fig = plt.figure(figsize=(w, golden_mean * w), facecolor='white')
     ax = fig.add_subplot(1, 1, 1)
     xig, yig = np.meshgrid(xi, yi)
@@ -488,6 +500,7 @@ class TrustCom(unittest.TestCase):
         gd_mtfm = pd.stats.moments.ewma(gd_mtfm, span=mtfm_span)
         mal_mtfm = pd.stats.moments.ewma(mal_mtfm, span=mtfm_span)
         sel_mtfm = pd.stats.moments.ewma(sel_mtfm, span=mtfm_span)
+
         plot_beta_mtmf_comparison(gd_beta_t, gd_mtfm, key="fair")
         plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="malicious")
         plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish")

@@ -218,7 +218,6 @@ def beta_otmf_vals(beta_trust):
     otmf_vals = beta_trust.apply(lambda r: otmf_T(r['+'], r['-']), axis=1)
     return beta_vals, otmf_vals
 
-
 def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None,
                       metric_weights=None, figsize=None, xlabel=True, dropnet=False):
     if figsize is None:
