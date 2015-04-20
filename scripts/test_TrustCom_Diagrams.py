@@ -262,6 +262,10 @@ class TrustCom(unittest.TestCase):
         self.selfish = "MaliciousSelfishTargetSelectionTrustMedianTests-0.025-3-2015-03-29-19-32-36.h5"
         self.generated_files = []
 
+        for file in [self.good, self.malicious, self.selfish]:
+            if not os.path.isfile(Tools.in_results(file)):
+                self.fail("No file {}".format(file))
+
     def tearDown(self):
         logging.info("Successfully Generated:\n{}".format(self.generated_files))
 
@@ -367,10 +371,20 @@ class TrustCom(unittest.TestCase):
             "trust_bella_static_emph_ATXP_BadMouthingPowerControl.pdf",
             "trust_bella_static_emph_RXThroughput_BadMouthingPowerControl.pdf",
             "trust_bella_static_emph_TXThroughput_BadMouthingPowerControl.pdf",
+            "trust_bella_all_mobile_emph_ADelay_BadMouthingPowerControl.pdf",
             "trust_bella_all_mobile_emph_ARXP_BadMouthingPowerControl.pdf",
             "trust_bella_all_mobile_emph_ATXP_BadMouthingPowerControl.pdf",
             "trust_bella_all_mobile_emph_RXThroughput_BadMouthingPowerControl.pdf",
-            "trust_bella_all_mobile_emph_TXThroughput_BadMouthingPowerControl.pdf"
+            "trust_bella_all_mobile_emph_TXThroughput_BadMouthingPowerControl.pdf",
+            "trust_bella_static_emph_ADelay_SelfishTargetSelection.pdf",
+            "trust_bella_static_emph_ATXP_SelfishTargetSelection.pdf",
+            "trust_bella_static_emph_RXThroughput_SelfishTargetSelection.pdf",
+            "trust_bella_static_emph_TXThroughput_SelfishTargetSelection.pdf",
+            "trust_bella_all_mobile_emph_ADelay_SelfishTargetSelection.pdf",
+            "trust_bella_all_mobile_emph_ARXP_SelfishTargetSelection.pdf",
+            "trust_bella_all_mobile_emph_ATXP_SelfishTargetSelection.pdf",
+            "trust_bella_all_mobile_emph_RXThroughput_SelfishTargetSelection.pdf",
+            "trust_bella_all_mobile_emph_TXThroughput_SelfishTargetSelection.pdf"
         ]
         for f in required_files:
             try:
@@ -386,6 +400,11 @@ class TrustCom(unittest.TestCase):
                                                        malicious_behaviour="BadMouthingPowerControl",
                                                        s=s, figsize=figsize, show_title=False,
                                                        labels=["Fair","Malicious"]
+                                                       )
+            weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
+                                                       malicious_behaviour="SelfishTargetSelection",
+                                                       s=s, figsize=figsize, show_title=False,
+                                                       labels=["Fair","Selfish"]
                                                        )
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img",f)))

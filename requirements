@@ -22,6 +22,8 @@ persistent
 pubsub
 pydot
 pykalman
+quantities
+scikit-learn
 scipy
 seaborn
 tables
