@@ -46,10 +46,10 @@ def trust_from_file(file):
     return trust
 
 
-def perspective_from_trust(trust, s=None, metric_weight=None, par=True):
+def perspective_from_trust(trust, s=None, metric_weight=None, par=True, flip_metrics=None):
     if s is not None:
         trust = trust.xs(scenario_map[s], level='var')
-    tp = generate_node_trust_perspective(trust, metric_weights=metric_weight, par=par)
+    tp = generate_node_trust_perspective(trust, metric_weights=metric_weight, flip_metrics=flip_metrics, par=par)
     Tools.map_levels(tp, scenario_map)
     return tp
 
@@ -81,9 +81,11 @@ def mtfm_from_perspectives_dict(perspectives, mtfm_args=None):
 
 
 def outliers_from_trust_dict(trust_dict, good_key="good", s=None,
-                             metric_weight=None, mtfm_args=None, par=True):
+                             metric_weight=None, mtfm_args=None, par=True,
+                             flip_metrics=None):
     perspectives = {
-        k: perspective_from_trust(t, s=s, metric_weight=metric_weight, par=par)
+        k: perspective_from_trust(t, s=s, metric_weight=metric_weight,
+                                  flip_metrics=flip_metrics, par=par)
         for k, t in trust_dict.iteritems()
     }
     mtfms = mtfm_from_perspectives_dict(perspectives, mtfm_args)

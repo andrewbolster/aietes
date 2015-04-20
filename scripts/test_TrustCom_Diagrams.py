@@ -120,13 +120,7 @@ def plot_contour_3d(xi, yi, zi, rot=120, labels=None):
 
 
 def plot_lines_of_throughput(df):
-    fig = plt.figure(figsize=(w, golden_mean * w), facecolor='white')
-    ax = fig.add_subplot(1, 1, 1)
-    for (k, g), ls in zip(df.groupby('separation'), itertools.cycle(["-", "--", "-.", ":"])):
-        ax.plot(g.rate, g.throughput, label=k, linestyle=ls)
-    ax.legend(loc="upper left")
-    ax.set_xlabel("Packet Emission Rate (pps)")
-    ax.set_ylabel("Per Node Avg. Throughput (bps)")
+
 
     return fig
 
@@ -265,12 +259,11 @@ class TrustCom(unittest.TestCase):
 
         self.malicious = "MaliciousBadMouthingPowerControlTrustMedianTests-0.025-3-2015-02-19-23-27-01.h5"
         self.good = "TrustMedianTests-0.025-3-2015-02-19-23-29-39.h5"
+        self.selfish = "MaliciousSelfishTargetSelectionTrustMedianTests-0.025-3-2015-03-29-19-32-36.h5"
         self.generated_files = []
 
     def tearDown(self):
         logging.info("Successfully Generated:\n{}".format(self.generated_files))
-
-
 
     def testPhysicalNodeLayout(self):
         # # Graph: Physical Layout of Nodes
@@ -282,6 +275,8 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
+        cb.latexify(columns=0.5, factor=0.5)
+
         base_config = aietes.Simulation.populate_config(
             aietes.Tools.get_config('bella_static.conf'),
             retain_default=True
@@ -292,9 +287,10 @@ class TrustCom(unittest.TestCase):
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
         reload(cb)
         # _=cb.plot_positions(node_positions, bounds=base_config.Environment.shape)
-        fig = cb.plot_nodes(node_positions, node_links=node_links, radius=2, scalefree=True)
-        fig.tight_layout(pad=0.0)
+        fig = cb.plot_nodes(node_positions, figsize=(4,1.6), node_links=node_links, radius=3, scalefree=True, square=False)
+        fig.tight_layout(pad=0.3)
         fig.savefig("img/s1_layout.pdf", transparent=True)
+        plt.close(fig)
 
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img",f)))
@@ -312,10 +308,20 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
+        cb.latexify(columns=0.5, factor=0.5)
+
         for mobility in ['static', 'all_mobile']:
-            fig = plot_lines_of_throughput(get_mobility_stats(mobility))
-            fig.tight_layout(pad=0.1)
+            df = get_mobility_stats(mobility)
+            fig = plt.figure(facecolor='white')
+            ax = fig.add_subplot(1, 1, 1)
+            for (k, g), ls in zip(df.groupby('separation'), itertools.cycle(["-", "--", "-.", ":"])):
+                ax.plot(g.rate, g.throughput, label=k, linestyle=ls)
+            ax.legend(loc="upper left")
+            ax.set_xlabel("Packet Emission Rate (pps)")
+            ax.set_ylabel("Avg. Throughput (bps)")
+            fig.tight_layout()
             fig.savefig("img/throughput_sep_lines_{}.pdf".format(mobility), transparent=True, facecolor='white')
+            plt.close(fig)
 
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img",f)))
@@ -326,6 +332,8 @@ class TrustCom(unittest.TestCase):
         required_files = [
             "trust_bella_static_fair.pdf",
             "trust_bella_all_mobile_fair.pdf",
+            "trust_bella_static_malicious.pdf",
+            "trust_bella_all_mobile_malicious.pdf",
             "trust_bella_static_selfish.pdf",
             "trust_bella_all_mobile_selfish.pdf"
         ]
@@ -334,14 +342,21 @@ class TrustCom(unittest.TestCase):
                 os.remove(os.path.join("img", f))
             except:
                 pass
-        w = 3
+
+        figsize = cb.latexify(columns=0.5, factor=0.5)
+
         selected_scenarios = ['bella_all_mobile', 'bella_static']
         weight_comparisons.plot_mtfm_boxplot(self.good, keyword="fair",
-                                             s=selected_scenarios, figsize=(2*w,2*w*golden_mean))
-        weight_comparisons.plot_mtfm_boxplot(self.malicious, keyword="selfish",
-                                             s=selected_scenarios, figsize=(2*w,2*w*golden_mean))
+                                             s=selected_scenarios, figsize=figsize,
+                                             xlabel=False, dropnet=True)
+        weight_comparisons.plot_mtfm_boxplot(self.malicious, keyword="malicious",
+                                             s=selected_scenarios, figsize=figsize,
+                                             xlabel=False, dropnet=True)
+        weight_comparisons.plot_mtfm_boxplot(self.selfish, keyword="selfish",
+                                             s=selected_scenarios, figsize=figsize,
+                                             xlabel=False, dropnet=True)
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img",f)))
+            self.assertTrue(os.path.isfile(os.path.join("img",f)), f)
             self.generated_files.append(f)
 
     def testWeightComparisons(self):
@@ -363,25 +378,29 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
+        figsize = cb.latexify(columns=0.5, factor=0.5)
+
         selected_scenarios = ['bella_all_mobile', 'bella_static']
         for s in selected_scenarios:
             weight_comparisons.plot_weight_comparisons(self.good, self.malicious,
                                                        malicious_behaviour="BadMouthingPowerControl",
-                                                       s=s
+                                                       s=s, figsize=figsize, show_title=False,
+                                                       labels=["Fair","Malicious"]
                                                        )
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img",f)))
             self.generated_files.append(f)
 
     def testSummaryGraphsForMalGdScenarios(self):
-        # # Summary Graphs with malicious and fair scenarios
-        required_files = ["trust_beta_otmf_fair.pdf", "trust_beta_otmf_selfish.pdf"]
+        # # Summary Graphs with malicious, selfish and fair scenarios
+        required_files = ["trust_beta_otmf_fair.pdf", "trust_beta_otmf_malicious.pdf", "trust_beta_otmf_selfish.pdf"]
         for f in required_files:
             try:
                 os.remove(os.path.join("img", f))
             except:
                 pass
 
+        cb.latexify(columns=0.5, factor=0.5)
 
         def beta_trusts(trust, length=4096):
             trust['+'] = (trust.TXThroughput/length)*(1-trust.PLR)
@@ -401,8 +420,8 @@ class TrustCom(unittest.TestCase):
         def plot_beta_mtmf_comparison(beta_trust, mtfm, key):
 
             beta, otmf = beta_calcs(beta_trust)
-            fig, ax = plt.subplots(1, 1, figsize=(w, w * golden_mean), sharey=True)
-            ax.plot(beta.xs('n0',level='observer')['n1'], label="Beta", linestyle='--')
+            fig, ax = plt.subplots(1, 1, sharey=True)
+            ax.plot(beta.xs('n0',level='observer')['n1'], label="Hermes", linestyle='--')
             ax.plot(otmf.xs('n0',level='observer')['n1'], label="OTMF", linestyle=':')
             ax.plot(mtfm, label="MTFM")
             ax.set_ylim((0,1))
@@ -413,30 +432,37 @@ class TrustCom(unittest.TestCase):
             ax.yaxis.set_major_locator(loc_25)
             fig.tight_layout()
             fig.savefig("img/trust_beta_otmf{}.pdf".format("_"+key if key is not None else ""),transparent=True)
-            return fig
+            plt.close(fig)
 
 
-        gd_trust, mal_trust = map(Trust.trust_from_file,[self.good,self.malicious])
+        gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file,[self.good,self.malicious, self.selfish])
         mal_mobile = mal_trust.xs('All Mobile',level='var')
         gd_mobile = gd_trust.xs('All Mobile',level='var')
+        sel_mobile = sel_trust.xs('All Mobile',level='var')
         gd_beta_t = beta_trusts(gd_mobile)
         mal_beta_t = beta_trusts(mal_mobile)
+        sel_beta_t = beta_trusts(sel_mobile)
 
         np.random.seed(42)
         mtfm_span = 2
-        mal_beta_t['-'] = mal_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
         gd_beta_t['-'] = gd_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
+        sel_beta_t['-'] = sel_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
+        mal_beta_t['-'] = mal_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
 
         gd_tp = Trust.generate_node_trust_perspective(gd_mobile)
         mal_tp = Trust.generate_node_trust_perspective(mal_mobile)
+        sel_tp = Trust.generate_node_trust_perspective(sel_mobile)
 
         gd_mtfm = Trust.generate_mtfm(gd_tp, 'n0', 'n1',['n2','n3'],['n4','n5']).sum(axis=1)
         mal_mtfm = Trust.generate_mtfm(mal_tp, 'n0', 'n1',['n2','n3'],['n4','n5']).sum(axis=1)
+        sel_mtfm = Trust.generate_mtfm(sel_tp, 'n0', 'n1',['n2','n3'],['n4','n5']).sum(axis=1)
 
         gd_mtfm =pd.stats.moments.ewma(gd_mtfm, span=mtfm_span)
         mal_mtfm =pd.stats.moments.ewma(mal_mtfm, span=mtfm_span)
+        sel_mtfm =pd.stats.moments.ewma(sel_mtfm, span=mtfm_span)
         plot_beta_mtmf_comparison(gd_beta_t, gd_mtfm, key="fair")
-        plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="selfish")
+        plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="malicious")
+        plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish")
 
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img",f)))
