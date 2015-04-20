@@ -100,6 +100,7 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
     ax.axhline(0.5, linestyle="..")
     ax.set_ylabel('{}Trust Value'.format(trust.replace("_", " ").title()))
     ax.set_xlabel('Observation')
+    ax = cb.format_axes(ax)
     fig.tight_layout(pad=0.1)
     fig.savefig("img/trust_{}_{}{}.pdf".format(
         s, "emph_%s" % metric if metric else "even",

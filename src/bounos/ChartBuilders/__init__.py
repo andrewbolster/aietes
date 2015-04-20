@@ -815,11 +815,15 @@ def latexify(columns=1, factor=0.45):
 
 
 def format_axes(ax, spine_color='gray'):
-    for spine in ['top', 'right', 'left', 'bottom']:
+    ax.grid(True, color=spine_color, alpha=0.2)
+    for spine in ['top', 'right']:
         ax.spines[spine].set_visible(False)
+    for spine in ['bottom','left']:
+        ax.spines[spine].set_color(spine_color)
 
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
+
 
     for axis in [ax.xaxis, ax.yaxis]:
         axis.set_tick_params(direction='out', color=spine_color)
@@ -847,9 +851,10 @@ def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False, squ
     if square:
         ax.set_aspect('equal', adjustable='datalim')
     if scalefree:
+        ax = format_axes(ax)
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-        ax = format_axes(ax)
+        ax.grid(False)
 
 
     return fig

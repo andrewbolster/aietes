@@ -21,8 +21,12 @@ import pandas as pd
 import numpy as np
 from collections import OrderedDict
 
+import sklearn.ensemble as ske
+from scipy.stats.stats import pearsonr
+
 import matplotlib.pylab as plt
 import matplotlib.cm as cm
+from matplotlib import rc_context
 import matplotlib.ticker as plticker
 loc_25 = plticker.MultipleLocator(base=0.25)  # this locator puts ticks at regular intervals
 
@@ -30,7 +34,7 @@ import aietes
 import aietes.Tools as Tools
 import bounos.ChartBuilders as cb
 import bounos.Analyses.Trust as Trust
-from bounos.ChartBuilders import weight_comparisons
+from bounos.ChartBuilders import weight_comparisons, radar, format_axes
 
 import scipy.interpolate as interpolate
 # pylab.rcParams['figure.figsize'] = 16, 12
@@ -116,12 +120,6 @@ def plot_contour_3d(xi, yi, zi, rot=120, labels=None):
         ax.set_zlabel(labels['z'])
 
     fig.tight_layout()
-    return fig
-
-
-def plot_lines_of_throughput(df):
-
-
     return fig
 
 
@@ -260,6 +258,7 @@ class TrustCom(unittest.TestCase):
         self.malicious = "MaliciousBadMouthingPowerControlTrustMedianTests-0.025-3-2015-02-19-23-27-01.h5"
         self.good = "TrustMedianTests-0.025-3-2015-02-19-23-29-39.h5"
         self.selfish = "MaliciousSelfishTargetSelectionTrustMedianTests-0.025-3-2015-03-29-19-32-36.h5"
+        self.outlier = "outliers.h5"
         self.generated_files = []
 
         for file in [self.good, self.malicious, self.selfish]:
@@ -446,6 +445,7 @@ class TrustCom(unittest.TestCase):
             ax.set_ylim((0,1))
             ax.set_ylabel("Trust Value".format(key))
             ax.set_xlabel("Observation")
+            ax = format_axes(ax)
             ax.legend(loc='lower center', ncol=3)
             ax.axhline(mtfm.mean(), color="r", linestyle='-.')
             ax.yaxis.set_major_locator(loc_25)
@@ -486,3 +486,95 @@ class TrustCom(unittest.TestCase):
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img",f)))
             self.generated_files.append(f)
+
+
+    def testOutlierGraphs(self):
+        columns = {'ADelay': "$Delay$",
+                   'ARXP': "$P_{RX}$",
+                   'ATXP': "$P_{TX}$",
+                   'RXThroughput': "$T^P_{RX}$",
+                   'TXThroughput': "$T^P_{TX}$",
+                   'PLR': '$PLR$'
+                   }
+        key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
+
+        # Plot relative importance of outlier metrics
+        required_files = ["MaliciousSelfishMetricFactorsRad.png", "MaliciousSelfishMetricFactors.png"]
+        for f in required_files:
+            try:
+                os.remove(os.path.join("img", f))
+            except:
+                pass
+
+        def feature_extractor(df, target):
+            data = df.drop(target, axis=1)
+            reg = ske.RandomForestRegressor(n_jobs=2, n_estimators=100)
+            reg.fit(data, df[target])
+            return pd.Series(dict(zip(data.keys(), reg.feature_importances_)))
+        def comparer(base, comp, index=0):
+            dp_r = (comp / base).reset_index()
+            Sfet = feature_extractor(dp_r, index)
+            return Sfet
+
+        # Generate Outlier DataPackage
+        with pd.get_store(in_results('outliers.h5')) as s:
+            outliers = s.get('outliers')
+            sum_by_weight = outliers.groupby(
+                ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index('bev')
+            dp = pd.DataFrame.from_dict({
+                k: sum_by_weight[sum_by_weight.bev == k]['Delta']
+                for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
+            })
+
+        # Perform Comparisons
+        gm = comparer(dp.good, dp.malicious)[key_order]
+        gs = comparer(dp.good, dp.selfish)[key_order]
+        ms = comparer(dp.malicious, dp.selfish)[key_order]
+
+        # Bar Chart
+        figsize = cb.latexify(columns=1.0, factor=1.2)
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(1, 1, 1)
+        _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS":gs, "MPC/STS":ms}).rename(index=columns)
+        ax = _df.plot(kind='bar', position=0.5, ax=ax, legend=False)
+        bars = ax.patches
+        hatches = ''.join(h * len(_df) for h in 'x/O.')
+
+        for bar, hatch in zip(bars, hatches):
+            bar.set_hatch(hatch)
+        ax.set_xticklabels(_df.index, rotation=0)
+        ax.set_ylabel("Relative Significance")
+        ax.legend(loc='center right', bbox_to_anchor=(1, 1), ncol=4)
+
+        ax = format_axes(ax)
+        fig.tight_layout()
+        ax.grid(True, color='k', alpha=0.33, ls=':')
+        fig.savefig("img/MaliciousSelfishMetricFactors.png", transparent=True)
+
+
+        # Radar Base
+        with rc_context(rc={'axes.labelsize': 8}):
+            figsize = cb.latexify(columns=1, factor=1.2)
+            r = radar.Radar_factory(len(key_order))
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(1, 1, 1, projection='radar')
+            ax.plot(r, gm.values, ls='--', marker='x', label="F/M")
+            ax.plot(r, gs.values, ls=':', marker='x', label="F/S")
+            ax.plot(r, ms.values, ls='-.', marker='x', label="M/S")
+            ax.grid(True, color='k', alpha=0.33, ls=':')
+            ax.set_varlabels([columns[k] for k in key_order])
+            ax.set_ylabel("Relative\nSignificance")
+            ax.yaxis.labelpad = -80
+            ax.tick_params(direction='out', pad=-100)
+            ax.legend(loc = 5, mode='expand', bbox_to_anchor=(1.05, 1))
+            fig.savefig("img/MaliciousSelfishMetricFactorsRad.png", transparent=True)
+
+
+        for f in required_files:
+            self.assertTrue(os.path.isfile(os.path.join("img",f)))
+            self.generated_files.append(f)
+
+
+
+
+
