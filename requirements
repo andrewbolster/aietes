@@ -1,4 +1,6 @@
 BTrees
+SimPy == 2.3.1
+ZODB
 click
 colorlog
 configobj
@@ -25,7 +27,5 @@ quantities
 scikit-learn
 scipy
 seaborn
-SimPy == 2.3.1
 tables
 transaction
-ZODB

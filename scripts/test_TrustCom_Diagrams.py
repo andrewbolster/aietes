@@ -424,6 +424,11 @@ class TrustCom(unittest.TestCase):
                                                        s=s, figsize=figsize, show_title=False,
                                                        labels=["Fair", "Selfish"]
                                                        )
+            weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
+                                                       malicious_behaviour="SelfishTargetSelection",
+                                                       s=s, figsize=figsize, show_title=False,
+                                                       labels=["Fair","Selfish"]
+                                                       )
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img", f)))
             self.generated_files.append(f)
