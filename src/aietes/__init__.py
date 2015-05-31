@@ -19,11 +19,19 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
+import collections
+import logging
+import os
 import traceback
 import optparse
 import cProfile
 
+from configobj import ConfigObj
+from time import time
+from datetime import datetime as dt
+
 import pandas as pd
+import numpy as np
 
 from Layercake import MAC
 from Environment import Environment
@@ -31,7 +39,19 @@ import Fleet
 from Node import Node
 import Behaviour
 from bounos.DataPackage import DataPackage
-from Tools import *
+from Tools import (
+    _results_dir,
+    get_results_path,
+    log_hdl,
+    validate_config,
+    generate_names,
+    Dotdict,
+    ConfigError,
+    LOGLEVELS,
+    Sim,
+    are_equal_waypoints, #Probably Shouldn't be in Tools
+)
+
 from Tools.humanize_time import seconds_to_str
 
 
@@ -636,7 +656,7 @@ class Simulation(object):
         dp = DataPackage(**(self.current_state()))
 
         filename = output_file if output_file is not None else dp.title
-        filename = "%s.aietes" % results_file(filename, results_dir=output_path)
+        filename = "%s.aietes" % get_results_path(filename, results_dir=output_path)
         return_dict = {}
 
         if movie_file or plot or gif:

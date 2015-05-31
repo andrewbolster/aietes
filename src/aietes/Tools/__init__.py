@@ -45,7 +45,6 @@ import validate
 from SimPy import SimulationStep as Sim
 from joblib import Memory
 from colorlog import ColoredFormatter
-import matplotlib
 
 from aietes.Tools.humanize_time import seconds_to_str
 
@@ -396,6 +395,7 @@ class Dotdictify(dict):
 
     def __init__(self, value=None, **kwargs):
         super(Dotdictify, self).__init__(**kwargs)
+        raise DeprecationWarning("Really shouldn't be using this any more!")
         if value is None:
             pass
         elif isinstance(value, dict):
@@ -852,19 +852,37 @@ def log_level_lookup(log_level):
                 return k
 
 
-def results_file(proposed_name, results_dir=None):
+def get_results_path(proposed_name, results_dir=None, make=False):
     """
+    Default Path Joiner; provides a dir for results based on a proposed title and a
+    base directory, i.e. generates /<results_dir>/<proposed_name>
+
+    Can optionally make the directory as well.
 
     :param proposed_name:
-    :param results_dir:
-    :return:
+    :param results_dir: Defaults to <repo_base>/results
+    :param make: generate the directories on the FS
+    :return: FQN Path
+    :raises ValueError
     """
-    if os.path.dirname(proposed_name) is not None:
-        # Have not been given a FQN Path: Assume to use the results directory
-        if results_dir is None:
-            results_dir = _results_dir
-        proposed_name = os.path.join(results_dir, proposed_name)
-    return proposed_name
+    # Have not been given a FQN Path: Assume to use the results directory
+    if results_dir is None:
+        results_dir = _results_dir
+
+    if make:
+        try:
+            os.makedirs(results_dir)
+        except OSError as exc: # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(results_dir):
+                pass
+            else: raise
+
+    if proposed_name is None:
+        raise ValueError("Proposed Name cannot be None")
+
+    proposed_path = os.path.abspath(os.path.join(results_dir, proposed_name))
+
+    return proposed_path
 
 in_results = partial(os.path.join,_results_dir)
 

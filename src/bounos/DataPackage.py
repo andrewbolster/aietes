@@ -32,7 +32,7 @@ from ast import literal_eval
 import numpy as np
 import pandas as pd
 
-from aietes.Tools import mag, add_ndarray_to_set, unext, validate_config, results_file
+from aietes.Tools import mag, add_ndarray_to_set, unext, validate_config, get_results_path
 import Analyses.Trust
 from configobj import ConfigObj
 
@@ -221,15 +221,13 @@ class DataPackage(object):
         :param track_mat:
         :return:
         """
-        if not os.path.exists(results_dir):
-            logging.info("Generating results dir {}".format(results_dir))
-            os.makedirs(results_dir)
-        logging.info(
-            "Writing datafile to {}.npz".format(results_file(filename, results_dir=results_dir)))
+        full_path = get_results_path(filename, results_dir=results_dir, make=True)
+
+        logging.info("Writing datafile to {}.npz".format(full_path))
 
         data = {i: self.__dict__[
             i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
-        data['filename'] = "{}.npz".format(filename)
+        data['filename'] = "{}.npz".format(full_path)
 
         np.savez(filename,
                  **data
