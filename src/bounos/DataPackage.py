@@ -17,6 +17,7 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
+import os
 import sys
 import traceback
 import logging
@@ -220,6 +221,9 @@ class DataPackage(object):
         :param track_mat:
         :return:
         """
+        if not os.path.exists(results_dir):
+            logging.info("Generating results dir {}".format(results_dir))
+            os.makedirs(results_dir)
         logging.info(
             "Writing datafile to {}.npz".format(results_file(filename, results_dir=results_dir)))
 
