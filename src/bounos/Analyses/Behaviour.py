@@ -184,7 +184,9 @@ def combined_detection_rank(data, metrics, suspects_only=False, *args, **kwargs)
     :return: :raise ValueError:
     """
     if not isinstance(metrics, list):
-        raise ValueError("Should be passed a list of analyses")
+        raise ValueError("metrics should be passed a list of analyses")
+    if not isinstance(data, DataPackage.DataPackage):
+        raise ValueError("data should be a DataPackage")
     tmax = kwargs.get("tmax", data.tmax)
     window = kwargs.get("window", 600)
     override_detection = kwargs.get("override", False)

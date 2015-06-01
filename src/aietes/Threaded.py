@@ -140,7 +140,12 @@ class queue_sim(object):
         if self.finished():
             for i,p in enumerate(self.pending_results):
                 # If the task raised an exception, it will appear here
-                self.results[i] = p.get()
+                _id, _data = p.get()
+                if _id != i:
+                    raise AssertionError("Results should have been queued and processed in the same order, instead I've got id {} when I'm expecting {}".format(
+                        _id, i
+                    ))
+                self.results[i] = _data
             return True
         else:
             return False

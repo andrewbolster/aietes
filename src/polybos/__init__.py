@@ -44,7 +44,7 @@ from aietes import Simulation
 import aietes.Threaded
 from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, \
     seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
-from bounos import DataPackage, print_analysis, load_sources, npz_in_dir
+from bounos import DataPackage, behaviour_analysis_dict, load_sources, npz_in_dir
 
 try:
     from contrib.Ghia.ecea.data_grapher import data_grapher
@@ -1023,8 +1023,8 @@ class ExperimentManager(object):
             print("%s,%s" % (t, suspects))
 
             for i, r in enumerate(stats):
-                analysis = print_analysis(s.datarun[i])
-                confident = analysis['trust_stdev'] > 100
+                analysis = behaviour_analysis_dict(s.datarun[i])
+                confident = analysis['trust_stdev'] > 100 # TODO This needs to be dynamic, possibly based on n_metrics and t
                 correct_detection = (not bool(suspects) and not confident) or analysis[
                                                                                   'suspect_name'] in suspects
                 correctness_stats[t].append(
@@ -1065,7 +1065,7 @@ class ExperimentManager(object):
                 [not correct and confident for (correct, confident) in stats])
             nn = sum(
                 [not correct and not confident for (correct, confident) in stats])
-            print("%s\t%d\t%d\t%d\t%d" % (run, cc, cn, nc, nn))
+            print("%s\t\t%d\t%d\t%d\t%d" % (run, cc, cn, nc, nn))
             cct += cc
             cnt += cn
             nct += nc
@@ -1118,9 +1118,8 @@ class ExperimentManager(object):
             start = time.clock()
             print("Writing Experiment to {}".format(dumppath))
             # Scenarios have their own storage in self.scenarios_file
-            self.scenarios.close()
-            del self.scenarios
             pickle.dump(self, open(dumppath, 'wb'))
+            del self.scenarios
             print("Done in %f seconds" % (time.clock() - start))
         except Exception:
             import traceback
@@ -1140,7 +1139,7 @@ class ExperimentManager(object):
                 os.path.join(self.exp_path, s.title + ".anl"))
             print("Writing analysis %s to %s" % (s.title, s_path))
             stats = [dict(
-                print_analysis(d).items() + d.package_statistics().items()) for d in s.datarun]
+                behaviour_analysis_dict(d).items() + d.package_statistics().items()) for d in s.datarun]
 
             pickle.dump(stats, open(s_path, "wb"))
             print("Done in %f seconds" % (time.clock() - start))

@@ -30,9 +30,10 @@ def setup_exp():
 
 def run(e):
     e.run(title="8-bev-mal",
-          runcount=4,
-          runtime=400,
-          dataFile=True)
+          runcount=8,
+          runtime=1800,
+          retain_data=True,
+          queue=True)
     return e
 
 

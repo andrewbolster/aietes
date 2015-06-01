@@ -868,7 +868,7 @@ def global_adjust(figure, axes, scale=2):
         left=0.05, bottom=0.1, right=0.98, top=0.95, wspace=0.2, hspace=0.0)
 
 
-def print_analysis(d):
+def behaviour_analysis_dict(d):
     """
 
     :param d:
