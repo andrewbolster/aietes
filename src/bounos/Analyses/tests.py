@@ -25,16 +25,17 @@ class TestGenerate_node_trust_perspective(TestCase):
     def test_generate_node_trust_perspective_par_equiv(self):
         lin = Trust.generate_node_trust_perspective(self.trust, par=False)
         par = Trust.generate_node_trust_perspective(self.trust, par=True)
-        assert_frame_equal(par,lin)
+        assert_frame_equal(par, lin)
 
     def test_perspective_shapes(self):
         tp = Trust.generate_node_trust_perspective(self.trust)
-        self.assertSequenceEqual(tp.index.names, ['var','run','observer','t'],
+        self.assertSequenceEqual(tp.index.names, ['var', 'run', 'observer', 't'],
                                  "Should have 'var run observer t' index")
-        self.assertTrue(all(tp.columns==['n0','n1','n2','n3','n4','n5']),
-                                 "Columns should contain node names")
+        self.assertTrue(all(tp.columns == ['n0', 'n1', 'n2', 'n3', 'n4', 'n5']),
+                        "Columns should contain node names")
         self.assertEqual(tp.columns.name, "target",
-                                 "Column should be called target")
+                         "Column should be called target")
+
 
 class TestGenerate_trust_logs_from_comms_logs(TestCase):
     def setUp(self):
@@ -45,11 +46,12 @@ class TestGenerate_trust_logs_from_comms_logs(TestCase):
         sim.prepare(sim_time=1250)
         sim.simulate()
         self.dp = sim.generate_datapackage()
+
     def test_generate_trust_logs_from_comms_logs(self):
         tf = Trust.generate_trust_logs_from_comms_logs(self.dp.comms['logs'])
         self.assertEqual(len(tf.index.levels), 3, "Should have three levels")
 
-        self.assertSequenceEqual(tf.index.names, ['observer','target','t'],
+        self.assertSequenceEqual(tf.index.names, ['observer', 'target', 't'],
                                  "Called observer target t in that order")
-        self.assertTrue(np.all(tf.groupby(level='target').size()==15),
+        self.assertTrue(np.all(tf.groupby(level='target').size() == 15),
                         "Should have 6 targets total with 15 observations each (i.e. 3*metric)")

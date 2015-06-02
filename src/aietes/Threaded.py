@@ -18,7 +18,6 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 from multiprocessing.process import current_process
-from multiprocessing import Pool
 import struct
 import os
 import logging
@@ -138,7 +137,7 @@ class queue_sim(object):
         :return: bool: results are ready for processing
         """
         if self.finished():
-            for i,p in enumerate(self.pending_results):
+            for i, p in enumerate(self.pending_results):
                 # If the task raised an exception, it will appear here
                 self.results[i] = p.get()
             return True

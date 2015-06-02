@@ -60,27 +60,27 @@ def main():
                         nargs='?', const='latest_aietes.npz_from_pwd',
                         metavar='XXX.npz',
                         help='Aietes DataPackage to be analysed'
-    )
+                        )
     parser.add_argument('-a', '--autostart',
                         dest='autostart', action='store_true', default=False,
                         help='Automatically launch animation on loading'
-    )
+                        )
     parser.add_argument('-x', '--autoexit',
                         dest='autoexit', action='store_true', default=False,
                         help='Automatically exit (after animation with -a)'
-    )
+                        )
     parser.add_argument('-l', '--loop',
                         dest='loop', action='store_true', default=False,
                         help='Loop animation'
-    )
+                        )
     parser.add_argument('-v', '--verbose',
                         dest='verbose', action='store_true', default=False,
                         help='Verbose Debugging Information'
-    )
+                        )
     parser.add_argument('-n', '--new-simulation',
                         dest='newsim', action='store_true', default=False,
                         help='Generate a new simulation from default'
-    )
+                        )
     args = parser.parse_args()
 
     if args.data_file is 'latest_aietes.npz_from_pwd':

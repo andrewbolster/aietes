@@ -394,7 +394,7 @@ class Fleet(Sim.Process):
                          ha='center', va='bottom', bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                          arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                          color='red')
-            )
+                         )
             ax1.scatter(x, y)
             ax2.scatter(y, z)
             ax3.scatter(x, z)

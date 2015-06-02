@@ -6,6 +6,7 @@ import aietes.Tools as Tools
 import os
 import uuid
 
+
 class TestGet_results_path(TestCase):
     def test_get_results_path_not_none_or_empty(self):
         self.assertRaises(ValueError, Tools.get_results_path, None)
@@ -17,7 +18,7 @@ class TestGet_results_path(TestCase):
         list_before = os.listdir(Tools._results_dir)
         path = Tools.get_results_path(proposed)
         list_after = os.listdir(Tools._results_dir)
-        self.assertListEqual(list_before,list_after)
+        self.assertListEqual(list_before, list_after)
         self.assertIsNotNone(path)
 
     def test_get_results_path_default_made(self):

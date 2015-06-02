@@ -314,7 +314,7 @@ class EphyraController(object):
                              'stddev': stddev_head,
                              'delta_avg': _distances_from_avg_head
                          }
-        })
+                     })
 
     def get_heading_mag_max_min(self):
         """

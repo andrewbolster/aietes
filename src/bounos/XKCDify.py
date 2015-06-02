@@ -12,13 +12,12 @@ including axes labels and titles (but not axes tick labels).
 The idea for this comes from work by Damon McDougall
   http://www.mail-archive.com/matplotlib-users@lists.sourceforge.net/msg25499.html
 """
-from scipy import interpolate, signal
+from pkg_resources import resource_filename
 
+from scipy import interpolate, signal
 import numpy as np
 import pylab as pl
 import matplotlib.font_manager as fm
-
-from pkg_resources import resource_filename
 
 fpath = resource_filename(__name__, "Humor-Sans.ttf")
 

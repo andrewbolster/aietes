@@ -29,6 +29,11 @@ from argparse import RawTextHelpFormatter
 from math import ceil
 from copy import deepcopy
 
+try:
+    from xkcdify import xkcdify
+except ImportError:
+    xkcdify = None
+
 import numpy as np
 import pandas as pd
 
@@ -337,8 +342,10 @@ def main():
 
     args = custom_parser().parse_args()
 
-    if args.xkcd:
-        from xkcdify import xkcdify
+    if args.xkcd and xkcdify is None:
+        raise RuntimeWarning("xkcdify is not available")
+    elif args.xkcd:
+        pass
     else:
         xkcdify = None
 

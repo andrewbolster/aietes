@@ -32,8 +32,8 @@ def map_paths(paths):
     subdirs = reduce(list.__add__, [filter(os.path.isdir,
                                            map(lambda p: os.path.join(path, p),
                                                os.listdir(path)
-                                           )
-    ) for path in paths])
+                                               )
+                                           ) for path in paths])
     return subdirs
 
 
@@ -99,36 +99,36 @@ def generate_dataframes_from_inverted_log(tup):
         if k not in ['stats', 'positions']:
             # Var/Run/Node/(N/t) MultiIndex
             df = pd.concat([
-                               pd.concat([
-                                             pd.concat([pd.DataFrame(iiiv)
-                                                        for iiik, iiiv in iiv.iteritems()],
-                                                       keys=iiv.keys())
-                                             for iik, iiv in iv.iteritems()],
-                                         keys=iv.keys()
-                               )
-                               for ik, iv in v.iteritems()],
-                           keys=v.keys(),
-                           names=['var', 'run', 'node', 't']
+                pd.concat([
+                    pd.concat([pd.DataFrame(iiiv)
+                               for iiik, iiiv in iiv.iteritems()],
+                              keys=iiv.keys())
+                    for iik, iiv in iv.iteritems()],
+                    keys=iv.keys()
+                )
+                for ik, iv in v.iteritems()],
+                keys=v.keys(),
+                names=['var', 'run', 'node', 't']
             )
         elif k == 'positions':
             # Var/Run/T/Node MultiIndex
             df = pd.concat([
-                               pd.concat([iiv
-                                          for iik, iiv in iv.iteritems()],
-                                         keys=iv.keys())
-                               for ik, iv in v.iteritems()],
-                           keys=v.keys(),
-                           names=['var', 'run', 't', 'node']
+                pd.concat([iiv
+                           for iik, iiv in iv.iteritems()],
+                          keys=iv.keys())
+                for ik, iv in v.iteritems()],
+                keys=v.keys(),
+                names=['var', 'run', 't', 'node']
             )
         else:
             # Var/Run MultiIndex
             df = pd.concat([
-                               pd.concat([iiv
-                                          for iik, iiv in iv.iteritems()],
-                                         keys=iv.keys())
-                               for ik, iv in v.iteritems()],
-                           keys=v.keys(),
-                           names=['var', 'run', 'node']
+                pd.concat([iiv
+                           for iik, iiv in iv.iteritems()],
+                          keys=iv.keys())
+                for ik, iv in v.iteritems()],
+                keys=v.keys(),
+                names=['var', 'run', 'node']
             )
 
         # Fixes for storage and sanity
@@ -150,7 +150,7 @@ def generate_dataframes_from_inverted_log(tup):
                                                0],  # Var
                                            df.index.levels[1].astype(np.int32)  # Run
                                        ] + (df.index.levels[2:])
-        )
+                                       )
         df = df.reindex(sorted(df.index.levels[0]), level=0, copy=False)  # Var
         df = df.reindex(sorted(df.index.levels[1]), level=1, copy=False)  # Var
 

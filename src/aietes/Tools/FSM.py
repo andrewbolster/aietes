@@ -231,7 +231,7 @@ class FSM(object):
             # s = s + fsm.input_symbol
             # fsm.something.append (s)
             # def EndBuildNumber (fsm):
-            #s = fsm.something.pop ()
+            # s = fsm.something.pop ()
             #fsm.something.append (int(s))
             # def DoOperator (fsm):
             #ar = fsm.something.pop()

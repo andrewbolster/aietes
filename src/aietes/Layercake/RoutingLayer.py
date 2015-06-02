@@ -32,6 +32,7 @@ from aietes.Layercake.priodict import PriorityDictionary
 from aietes.Tools import distance, broadcast_address, DEBUG
 
 
+
 # DEBUG = True
 
 
@@ -42,7 +43,6 @@ def setup_routing(node, config):
         return Static(node, config)
     else:
         return SimpleRoutingTable(node, config)
-
 
 
 class SimpleRoutingTable(dict):
@@ -441,7 +441,7 @@ class Static(SimpleRoutingTable):
 
         if DEBUG:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(),
-                                                                     nodes_geo[self[i]])
+                nodes_geo[self[i]])
 
     def build_routing_table_1(self):
         # Reception Cone
@@ -557,7 +557,7 @@ class Static(SimpleRoutingTable):
 
         if DEBUG:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(),
-                                                                     nodes_geo[self[i]])
+                nodes_geo[self[i]])
 
     def build_routing_table_2(self):
         # Shortest path with level constraints
@@ -887,8 +887,8 @@ class FBR(SimpleRoutingTable):
                            *filter(  # unzipped filtered
                                      lambda i: i[1] > r,  # list (l,d) where d > r
                                      self.layercake.phy.level2distance.items()  # from available levels
+                                     )
                            )
-            )
             if levels:
                 new_level = min(levels[0])  # Lowest Value Level
 
@@ -1016,7 +1016,7 @@ class FBR(SimpleRoutingTable):
             if self.layercake.phy.collision_detected():
                 self.logger.debug(
                     "There has been a collision, let's give it another chance!")
-                return "2CHANCE", self.nodes_pos.get(current_through,0)
+                return "2CHANCE", self.nodes_pos.get(current_through, 0)
 
             if current_through[0:3] != "ANY":
                 # This is not a multicast RTS but a directed RTS which has been
