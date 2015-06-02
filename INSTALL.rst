@@ -1,5 +1,5 @@
 # INSTALLATION
-============
+==============
 All distutils-able requirements *should* be satisifed by the build script. If not, please let the maintainers know.
 
 Distutils doesn't treat numpy/scipy very well at the minute in terms of dependency declaration so it is currently recommended to use your distributions package manager version instead

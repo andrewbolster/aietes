@@ -14,6 +14,7 @@ from bounos.multi_loader import dump_trust_logs_and_stats_from_exp_paths
 
 logging.basicConfig()
 
+
 @contextmanager
 def redirected(stdout):
     saved_stdout = sys.stdout
@@ -22,17 +23,18 @@ def redirected(stdout):
     sys.stdout = saved_stdout
 
 
-def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1, malice = False):
+def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1, malice=False):
     e = EXP(title="{}{}-{}-{}".format(
-            "Malicious{}".format(malice) if malice else "",
-            title, app_rate, scale),
-        parallel=True
-    )
+        "Malicious{}".format(malice) if malice else "",
+        title, app_rate, scale),
+            parallel=True
+            )
     for base_scenario in base_scenarios:
-        e.add_position_scaling_range([scale], title="{}({})".format(e.title,re.split('\.|\/', base_scenario)[-2]), base_scenario=base_scenario, basis_node_name="n1")
-    e.update_all_nodes({"app_rate":app_rate})
+        e.add_position_scaling_range([scale], title="{}({})".format(e.title, re.split('\.|\/', base_scenario)[-2]),
+                                     base_scenario=base_scenario, basis_node_name="n1")
+    e.update_all_nodes({"app_rate": app_rate})
     if malice:
-        e.update_explicit_node("n1",{"app":malice})
+        e.update_explicit_node("n1", {"app": malice})
 
     return e
 

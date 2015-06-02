@@ -10,7 +10,7 @@ def set_exp():
     e = EXP(node_count=8,
             title="Waypointing Test")
     e.add_variable_2_range_scenarios({"waypointing": numpy.linspace(0.0, 0.3, 20),
-                                  "clumping": numpy.linspace(0.0, 0.3, 20)})
+                                      "clumping": numpy.linspace(0.0, 0.3, 20)})
     return e
 
 

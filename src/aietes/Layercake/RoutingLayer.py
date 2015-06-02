@@ -211,7 +211,7 @@ class DSDV(SimpleRoutingTable):
         :return:
         """
         for dest, hop, seq_no in packet['table']:
-            if not self.has_key(dest):
+            if dest not in self:
                 new_entry = RoutingEntry(
                     packet['source'], hop + len(packet['route']), seq_no)
                 self.logger.info(
@@ -854,10 +854,10 @@ class FBR(SimpleRoutingTable):
         if self.layercake.hostname == destination:
             return True
 
-        if self.has_key(destination):
+        if destination in self:
             # When Broadcast flags go into the route table, the node_pos lookup dies miserably
             candidate = self[destination]
-            if not self.nodes_pos.has_key(candidate):
+            if candidate not in self.nodes_pos:
                 return True
             if self.get_level_for(self.nodes_pos[self[destination]]) is None:
                 return True
@@ -1052,7 +1052,7 @@ class FBR(SimpleRoutingTable):
         else:
             # There have been answers: for a given transmission power, I should
             # always look for the one that is closer to the destination
-            if candidates.has_key(destination):
+            if destination in candidates:
                 self.logger.debug("Selecting {} as direct route".format(
                     destination
                 ))

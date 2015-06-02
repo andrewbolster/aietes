@@ -1,3 +1,4 @@
+# coding=utf-8
 from unittest import TestCase
 
 __author__ = 'bolster'
@@ -7,7 +8,7 @@ import os
 import uuid
 
 
-class TestGet_results_path(TestCase):
+class TestGetResultsPath(TestCase):
     def test_get_results_path_not_none_or_empty(self):
         self.assertRaises(ValueError, Tools.get_results_path, None)
         self.assertRaises(TypeError, Tools.get_results_path)
@@ -26,6 +27,7 @@ class TestGet_results_path(TestCase):
         result_dir = '/dev/shm/' + str(uuid.uuid4())
 
         path = Tools.get_results_path(proposed, results_dir=result_dir, make=True)
+
         self.assertTrue(os.path.exists(result_dir), "Path: {}".format(result_dir))
         os.rmdir(result_dir)
         self.assertFalse(os.path.exists(result_dir))

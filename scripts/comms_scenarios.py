@@ -23,11 +23,11 @@ def redirected(stdout):
     sys.stdout = saved_stdout
 
 
-def exec_comms_range(scenario, title, dontrun=False):
+def exec_comms_range(scenario, title):
     e = EXP(title="{}-{}".format(title, re.split('\.|\/', scenario)[-2]),
             parallel=True,
             base_config_file=scenario
-    )
+            )
 
     value_range = set(np.arange(0.02, 0.035, step=0.0025).tolist() + np.arange(0.015, 0.075, step=0.005).tolist())
     e.add_application_variable_scenario('app_rate', value_range)

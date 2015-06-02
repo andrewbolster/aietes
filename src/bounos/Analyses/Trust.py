@@ -40,8 +40,8 @@ metric_combinations_series = [pd.Series(x, index=trust_metrics) for x in metric_
 default_mtfm_args = ('n0', 'n1', ['n2', 'n3'], ['n4', 'n5'])
 
 
-def trust_from_file(file):
-    with pd.get_store(Tools.in_results(file)) as store:
+def trust_from_file(filename):
+    with pd.get_store(Tools.in_results(filename)) as store:
         trust = store.get('trust')
         Tools.map_levels(trust, scenario_map)
     return trust
@@ -70,14 +70,13 @@ def generate_outlier_frame(mtfm, good_key, sigma=1.0):
 def mtfm_from_perspectives_dict(perspectives, mtfm_args=None):
     if mtfm_args is None:
         mtfm_args = default_mtfm_args
+
     inter = pd.concat(perspectives.values(),
         axis=0, keys=perspectives.keys(),
         names=["bev"] + perspectives.values()[0].index.names)
-    mtfms = (inter.groupby(level=['bev']) \
-             .apply(generate_mtfm, *mtfm_args) \
-             .reset_index(level=[0, 2, 3], drop=True) \
-             .sum(axis=1)
-             )
+    mtfms = (
+        inter.groupby(level=['bev']).apply(generate_mtfm, *mtfm_args).reset_index(level=[0, 2, 3], drop=True).sum(
+            axis=1))
     return mtfms
 
 
@@ -362,7 +361,7 @@ def invert_node_trust_perspective(node_trust_perspective):
     for j_node in node_trust_perspective[-1].keys():
         trust_inverted[j_node] = np.array([0.5 for _ in range(len(node_trust_perspective))])
         for t in range(len(node_trust_perspective)):
-            if t < len(node_trust_perspective) and node_trust_perspective[t].has_key(j_node):
+            if t < len(node_trust_perspective) and j_node in node_trust_perspective[t]:
                 trust_inverted[j_node][t] = node_trust_perspective[t][j_node]
 
     return trust_inverted

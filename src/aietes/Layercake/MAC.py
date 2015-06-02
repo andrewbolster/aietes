@@ -98,6 +98,8 @@ class ALOHA(MAC):
         self.timer = self.InternalTimer(self.fsm)
         self.TimerRequest = Sim.SimEvent("TimerRequest")
 
+        self.fsm = None
+
     def activate(self):
         Sim.activate(self.timer, self.timer.lifecycle(self.TimerRequest))
 
@@ -937,6 +939,8 @@ class DACAP(MAC):
             backoff = self.get_backoff_time(self.incoming_packet["type"], t)
         elif self.incoming_packet["type"] == "ACK":
             backoff = 0.0  # I'm done
+        else:
+            backoff = None # This will raise issues if something messes up
 
         # Update the timer: 1.-Stop, 2.-Restart
         p = Sim.Process()
@@ -1120,6 +1124,8 @@ class DACAP(MAC):
             backoff = 2 * t + 2 * t - self.Tw_min * t + self.t_data
         elif packet_type == "DATA":
             backoff = 2 * t
+        else:
+            backoff = None # This will raise issues if something messes up
 
         self.logger.warning("Backoff for {backoff} for {type} packet based on t{t},Tw{TW},Td{TD}".format(
             backoff=backoff,
@@ -1755,10 +1761,10 @@ class DACAP4FBR(DACAP):
                 "You were not in my list " + self.incoming_packet["source"] + ". Your packet may have collided.")
 
         if len(self.valid_candidates) == 0:
-            if self.multicast == True and self.fsm.current_state == "WAIT_TIME":
+            if self.multicast and self.fsm.current_state == "WAIT_TIME":
                 # All candidates have sent a WAR packet or the only one did
                 self.fsm.process("defer")
-            elif self.multicast == False and self.fsm.current_state == "WAIT_TIME":
+            elif not self.multicast and self.fsm.current_state == "WAIT_TIME":
                 self.fsm.process("defer")
 
         self.incoming_packet = None
@@ -2185,6 +2191,8 @@ class CSMA(MAC):
             backoff = 2 * t + self.t_control
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
+        else:
+            backoff = None # This will raise issues if something messes up
 
         if DEBUG > 1:
             self.logger.debug("Backoff: {t} based on {t} {pkt}".format(
@@ -2552,6 +2560,8 @@ class FAMA(CSMA):
             backoff = 2 * t
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
+        else:
+            backoff = None # This will raise issues if something messes up
 
         if DEBUG:
             self.logger.debug("Backoff: {t} based on {t} {pkt}".format(

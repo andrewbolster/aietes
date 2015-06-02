@@ -23,7 +23,7 @@ def setup_exp():
             title="Malicious Behaviour Trust Comparison",
             parallel=True,
             future=True
-    )
+            )
     e.add_minority_n_behaviour_suite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
     return e
 

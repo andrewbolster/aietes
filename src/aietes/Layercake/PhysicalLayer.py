@@ -34,7 +34,7 @@ import scipy.special
 from aietes.Tools import distance, DEBUG
 
 
-DEBUG = False
+# DEBUG = False
 
 
 class PhysicalLayer(object):
@@ -569,7 +569,7 @@ def attenuation_db(f, d):
 
     Cite Stojanovic2007
 
-    >>> np.around(attenuation_db(10.0,5000))
+    >>> np.around(attenuation_db(10.0, 5000))
     -35.0
 
     f - Frequency in kHz

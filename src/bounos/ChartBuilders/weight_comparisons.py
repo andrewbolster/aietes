@@ -1,4 +1,4 @@
-from  __future__ import division
+from __future__ import division
 import os
 import itertools
 
@@ -28,7 +28,7 @@ cb.latexify(columns=2, factor=0.45)
 
 _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 # result_dirs_by_latest=sorted(filter(os.path.isdir,map(lambda p: os.path.abspath(os.path.join(Tools._results_dir,p)),os.listdir(Tools._results_dir))),key=lambda f:os.path.getmtime(f))
-#last_bella_static_base=filter(lambda p: os.path.basename(p).startswith("CommsRateTest-bella_static"), result_dirs_by_latest)[-1]
+# last_bella_static_base=filter(lambda p: os.path.basename(p).startswith("CommsRateTest-bella_static"), result_dirs_by_latest)[-1]
 
 trust_metrics = np.asarray("ADelay,ARXP,ATXP,RXThroughput,PLR,TXThroughput".split(','))
 
@@ -62,7 +62,10 @@ def per_scenario_gd_mal_trusts(gd_file, mal_file):
 
 
 def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, keyword=None,
-                    figsize=None, labels=["Fair", "Selfish"]):
+                    figsize=None, labels=None):
+    if labels is None:
+        labels = ["Fair", "Selfish"]
+
     tex_safe_s = scenario_map[s]
 
     fig, ax = plt.subplots(1, 1, figsize=figsize, sharey=True)
@@ -111,8 +114,14 @@ def cross_scenario_plot():
 
 def plot_weight_comparisons(gd_file, mal_file,
                             malicious_behaviour="Selfish", s="bella_static",
-                            excluded=[], show_title=True, figsize=None,
-                            labels=["Fair", "Selfish"]):
+                            excluded=None, show_title=True, figsize=None,
+                            labels=None):
+    if labels is None:
+        labels = ["Fair", "Selfish"]
+
+    if excluded is None:
+        excluded = []
+
     mtfm_args = ('n0', 'n1', ['n2', 'n3'], ['n4', 'n5'])
     with mpl.rc_context(rc={'text.usetex': 'True'}):
 
@@ -137,7 +146,8 @@ def plot_weight_comparisons(gd_file, mal_file,
                                 keyword=malicious_behaviour, figsize=figsize, labels=labels)
 
 
-def per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, weight_vector=None, s=None, two_pass=False):
+def per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, weight_vector=None, s=None,
+                                          two_pass=False):
     # TODO This is useless, refactor
     if weight_vector is not None:
         print("Using {}".format(weight_vector.values))
@@ -194,7 +204,7 @@ def norm_weight(base):
 
 def beta_trusts(trust, length=4096):
     trust['+'] = (trust.TXThroughput / length) * (1 - trust.PLR)
-    trust['-'] = (trust.TXThroughput / length) * (trust.PLR)
+    trust['-'] = (trust.TXThroughput / length) * trust.PLR
     beta_trust = trust[['+', '-']].unstack(level='target')
     return beta_trust
 
