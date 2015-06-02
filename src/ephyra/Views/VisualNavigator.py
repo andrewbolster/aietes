@@ -429,7 +429,7 @@ class VisualNavigator(wx.Panel):
                                                                     alpha=self.sphere_opacity,
                                                                     color=self.plot_sphere_cm(
                                                                         colorval)
-        )
+                                                                    )
 
     def redraw_fleet_heading_vectors(self):
         """
@@ -446,7 +446,7 @@ class VisualNavigator(wx.Panel):
             if self.frame.args.verbose:
                 self.log.debug(
                     "Average heading: %s, Color: [%s], Speed: %s" % (
-                    str(headings[node]), str(colorval), str(magnitude)))
+                        str(headings[node]), str(colorval), str(magnitude)))
 
             xs, ys, zs = zip(
                 positions[node], np.add(positions[node], (np.asarray(headings[node]) * 50)))

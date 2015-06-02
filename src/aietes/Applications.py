@@ -17,12 +17,11 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-from collections import Counter, namedtuple
+from collections import Counter
 from copy import deepcopy
 
 import numpy as np
 from numpy.random import poisson
-
 import pandas as pd
 
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
@@ -44,13 +43,13 @@ class Application(Sim.Process):
         Sim.Process.__init__(self, name="{}({})".format(
             self.__class__.__name__,
             node.name)
-        )
+                             )
         self.stats = {'packets_sent': 0,
                       'packets_received': 0,
                       'packets_time': 0,
                       'packets_hops': 0,
                       'packets_dhops': 0,
-        }
+                      }
         self.received_log = []
         self.last_accessed_rx_packet = None
         self.sent_log = []
@@ -95,7 +94,7 @@ class Application(Sim.Process):
         if self.HAS_LAYERCAKE:
             self.layercake.tx_good_signal_hdlrs.append(self.signal_good_tx)
             self.layercake.tx_lost_signal_hdlrs.append(self.signal_lost_tx)
-            self.layercake.app_rx_handler=self.packet_recv
+            self.layercake.app_rx_handler = self.packet_recv
             if self.MONITOR_MODE:
                 self.layercake.activate(self.recv, monitor_mode=self.fwd)
 
@@ -216,7 +215,7 @@ class Application(Sim.Process):
             self.logger.info("App Packet received from %s" % source)
         self.stats['packets_received'] += 1
 
-        delay = packet['delay'] = packet.get('received',Sim.now()) - packet['time_stamp']
+        delay = packet['delay'] = packet.get('received', Sim.now()) - packet['time_stamp']
 
         self.received_log.append(deepcopy(packet))
 
@@ -481,7 +480,7 @@ class CommsTrust(RoutingTest):
         # Extra information that might be interesting in the longer term.
         self.trust_accessories = {'queue_length': [],
                                   'collisions': []
-        }
+                                  }
         self.trust_assessments = {}  # My generated trust metrics, [node][t][n_observation_arrays]
         self.current_target = None
         self.last_trust_assessment = None
@@ -496,7 +495,6 @@ class CommsTrust(RoutingTest):
 
         """
         self.last_accessed_rx_packet = None
-
 
         self.forced_nodes = self.layercake.host.fleet.node_names()
         if self.forced_nodes:
@@ -582,10 +580,10 @@ class CommsTrust(RoutingTest):
                 # Relevant Packets RX since last interval
 
                 if not self.trust_assessments.has_key(node):
-                    self.trust_assessments[node] = [ pd.Series([]) for _ in range(trust_period)]
+                    self.trust_assessments[node] = [pd.Series([]) for _ in range(trust_period)]
 
             relevant_rx_packets = self.received_log[self.last_accessed_rx_packet:]
-            self.last_accessed_rx_packet = len(self.received_log)-1
+            self.last_accessed_rx_packet = len(self.received_log) - 1
 
             rx_stats = {}
             for node in self.trust_assessments.keys():
@@ -594,11 +592,10 @@ class CommsTrust(RoutingTest):
                 rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
                 # avg(tx pwr, rx pwr, delay, length), rx throughput
 
-
             relevant_acked_packets = []
-            for i,p in enumerate(self.sent_log):
+            for i, p in enumerate(self.sent_log):
                 # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
-                if p.get('acknowledged',-1) > last_relevant_time:
+                if p.get('acknowledged', -1) > last_relevant_time:
                     relevant_acked_packets.append(p)
 
             tx_stats = {}
@@ -607,7 +604,7 @@ class CommsTrust(RoutingTest):
                 tx_throughput = map(
                     lambda p: float(p['length']),
                     filter(
-                        lambda p: node in [p['dest'],p['through']],
+                        lambda p: node in [p['dest'], p['through']],
                         relevant_acked_packets)
                 )
                 if tx_throughput:
@@ -654,7 +651,7 @@ class CommsTrust(RoutingTest):
             [n
              for n, c in most_common
              if c == most_common[-1][1]
-            ]
+             ]
         )
         return new_target
 
@@ -807,6 +804,7 @@ class SelfishTargetSelection(CommsTrustRoundRobin):
 
         return drop_it
 
+
 class BadMouthingPowerControl(CommsTrustRoundRobin):
     """
     INCREASES the power to everyone except for the given bad_mouth target
@@ -829,9 +827,9 @@ class BadMouthingPowerControl(CommsTrustRoundRobin):
         Called by send_packet in RoutingLayer via Layercake
         :return:bool
         """
-        if  packet['dest'] != self.bad_mouth_target:
+        if packet['dest'] != self.bad_mouth_target:
             try:
-                new_level =str(max(0, min(int(packet['level'])+1, int(self.layercake.phy.max_level))))
+                new_level = str(max(0, min(int(packet['level']) + 1, int(self.layercake.phy.max_level))))
             except:
                 self.logger.error("Something is very very wrong with {}".format(
                     packet

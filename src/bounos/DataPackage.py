@@ -17,12 +17,12 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-import os
 import sys
 import traceback
 import logging
 
 from scipy.spatial.distance import pdist, squareform
+
 
 
 
@@ -63,7 +63,7 @@ class DataPackage(object):
                    'ecea_positions': 'ecea_positions',
                    'additional': 'additional',
                    'comms': 'comms'
-    }
+                   }
 
     version = 1.0
 
@@ -231,7 +231,7 @@ class DataPackage(object):
 
         np.savez(filename,
                  **data
-        )
+                 )
         co = ConfigObj(self.config, list_values=False)
         co.filename = "%s.conf" % filename
         co.write()
@@ -417,7 +417,7 @@ class DataPackage(object):
         """
         magnitudes = [sum(map(mag, self.heading_slice(time))) / self.n
                       for time in range(self.tmax)
-        ]
+                      ]
         return magnitudes
 
     def average_heading_mag_range(self):
@@ -428,7 +428,7 @@ class DataPackage(object):
         """
         magnitudes = [mag(self.average_heading(time))
                       for time in range(self.tmax)
-        ]
+                      ]
         return magnitudes
 
     def heading_stddev_range(self):
@@ -440,7 +440,7 @@ class DataPackage(object):
             self.deviation_from_at(self.average_heading(time), time)
         )
                       for time in range(self.tmax)
-        ]
+                      ]
         return deviations
 
     def average_position(self, time):
@@ -761,7 +761,7 @@ class DataPackage(object):
                          bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                          arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                          color='red')
-            )
+                         )
             ax1.scatter(x, y)
             ax2.scatter(y, z)
             ax3.scatter(x, z)

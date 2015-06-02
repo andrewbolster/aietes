@@ -37,11 +37,11 @@ import weakref
 from tempfile import mkdtemp
 from shelve import DbfilenameShelf
 from ast import literal_eval
+from configobj import ConfigObj
+import validate
 
 import notify2
 import numpy as np
-from configobj import ConfigObj
-import validate
 from SimPy import SimulationStep as Sim
 from joblib import Memory
 from colorlog import ColoredFormatter
@@ -872,10 +872,11 @@ def get_results_path(proposed_name, results_dir=None, make=False):
     if make:
         try:
             os.makedirs(results_dir)
-        except OSError as exc: # Python >2.5
+        except OSError as exc:  # Python >2.5
             if exc.errno == errno.EEXIST and os.path.isdir(results_dir):
                 pass
-            else: raise
+            else:
+                raise
 
     if proposed_name is None:
         raise ValueError("Proposed Name cannot be None")
@@ -884,7 +885,8 @@ def get_results_path(proposed_name, results_dir=None, make=False):
 
     return proposed_path
 
-in_results = partial(os.path.join,_results_dir)
+
+in_results = partial(os.path.join, _results_dir)
 
 
 def get_config_file(config):

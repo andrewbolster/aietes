@@ -21,7 +21,6 @@ __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
 import os
-import gc
 import errno
 import sys
 import tempfile
@@ -58,7 +57,7 @@ progress_display = False
 
 PseudoScenario = collections.namedtuple("PseudoScenario",
                                         ["title", "datarun"]
-)
+                                        )
 logging.basicConfig()
 log = logging.getLogger(__name__)
 
@@ -195,7 +194,7 @@ class Scenario(object):
                                      self.mypath, "%s.log" % title),
                                  logtoconsole=logging.ERROR,
                                  progress_display=progress_display
-                )
+                                 )
                 prep_stats = sim.prepare(sim_time=runtime)
                 protected_run = try_x_times(10, RuntimeError, RuntimeError("Attempted ten runs, all failed"),
                                             sim.simulate)
@@ -342,8 +341,8 @@ class Scenario(object):
                   'Environment': self.environment,
                   'Node': {'Nodes': self.nodes,
                            'count': len([name for name in self.nodes.keys() if name != "__default__"])
+                           }
                   }
-        }
         return config
 
     def generate_configobj(self):
@@ -548,7 +547,7 @@ class ExperimentManager(object):
                  title=None, parallel=False,
                  base_config_file=None,
                  base_exp_path=None, *args, **kwargs
-    ):
+                 ):
         """
         The Experiment Manager Object deals with multiple scenarios build around a single or
             multiple experimental input. (Number of nodes, ratio of behaviours, etc)
@@ -675,9 +674,9 @@ class ExperimentManager(object):
                 queue.join()
                 logging.info("Queue Complete")
                 for title, s in self.scenarios.items():
-                    timeout=0
+                    timeout = 0
                     while not s._pending_queue.populate():
-                        timeout+=1
+                        timeout += 1
                         logging.warn("Not Finished, Sleeping for {}".format(timeout))
                         time.sleep(timeout)
                     s.datarun = s._pending_queue.results
@@ -916,7 +915,7 @@ class ExperimentManager(object):
         node_positions = {k: np.asarray(v['initial_position'], dtype=float)
                           for k, v in base_config['Node']['Nodes'].items()
                           if v.has_key('initial_position')  # This filters out any semi-defined nodes
-        }
+                          }
         node_centroids = {k: np.append((v[0:2] - env_shape[0:2] / 2), 0.0) for k, v in node_positions.items()}
         delta = np.asarray(node_positions[basis_node_name])
         for scale in scale_range:
@@ -941,7 +940,7 @@ class ExperimentManager(object):
 
                 s = Scenario(default_config=Simulation.populate_config(new_config, retain_default=True),
                              title="{}({:.2f})".format(self.title, scale) if title is None else title
-                )
+                             )
                 self.scenarios[s.title] = s
             else:
                 raise ConfigError(
@@ -1044,7 +1043,7 @@ class ExperimentManager(object):
                         analysis['suspect_confidence'],
                         str(analysis["trust_average"])
                     )
-                    )
+                          )
 
             print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
                   % (avg_of_dict(stats, ['motion', 'fleet_distance']),
@@ -1094,9 +1093,9 @@ class ExperimentManager(object):
         ))
 
         print(
-        "True-Confidence pct with {} runs factoring in the Waypoint state (i.e. positive negatives or missed-detections via lack of confidence): {:.2%}".format(
-            total, (cnt - (total * (1 / n_scenarios))) / total
-        ))
+            "True-Confidence pct with {} runs factoring in the Waypoint state (i.e. positive negatives or missed-detections via lack of confidence): {:.2%}".format(
+                total, (cnt - (total * (1 / n_scenarios))) / total
+            ))
 
     def dump_dataruns(self):
         """
@@ -1176,8 +1175,8 @@ class RecoveredExperiment(ExperimentManager):
         subdirs = filter(os.path.isdir,
                          map(lambda p: os.path.join(path, p),
                              os.listdir(path)
+                             )
                          )
-        )
         scenarios_file = os.path.join(path, cls._shelf_name)
         scenarios = AutoSyncShelf(scenarios_file)
         for subdir in natsorted(subdirs):

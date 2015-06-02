@@ -24,10 +24,10 @@
 #
 ###########################################################################
 from __future__ import division
-import numpy as np
 import math
 from copy import deepcopy
 
+import numpy as np
 import SimPy.Simulation as Sim
 import scipy.special
 
@@ -152,7 +152,7 @@ class PhysicalLayer(object):
                 "Trying to send {typ} to {dest}"
                 "Currently have {q}".format(
                     typ=packet['type'],
-                    dest = packet['dest'],
+                    dest=packet['dest'],
                     q=self.transducer.activeQ
                 ))
 
@@ -460,7 +460,7 @@ class OutgoingPacket(Sim.Process):
         if DEBUG:
             self.logger.debug("{type} {id} to {dest} will take {s} to be transmitted".format(
                 type=packet['type'],
-                id=packet.get('ID'), # SIL doesn't have ID
+                id=packet.get('ID'),  # SIL doesn't have ID
                 s=duration,
                 dest=packet['dest']
             ))

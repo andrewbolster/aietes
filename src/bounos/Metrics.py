@@ -191,4 +191,4 @@ class EceaError(Metric):
 # signed = False
 #
 # def generator(self, data):
-#         return data.plr()
+# return data.plr()

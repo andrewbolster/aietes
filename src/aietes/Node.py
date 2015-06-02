@@ -43,7 +43,7 @@ class Node(Sim.Process):
         self.logger = kwargs.get(
             "logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
 
-        #fileHandler = logging.FileHandler("{0}/{1}.log".format(logPath, fileName))
+        # fileHandler = logging.FileHandler("{0}/{1}.log".format(logPath, fileName))
         #fileHandler.setFormatter(log_fmt)
         #self.logger.addHandler(fileHandler)
 
@@ -100,8 +100,8 @@ class Node(Sim.Process):
         #
         try:
             application = self.config['Application']['protocol']
-            if isinstance(application,list):
-                if len(application)>1:
+            if isinstance(application, list):
+                if len(application) > 1:
                     raise ConfigError("Have a multi-value list where it shouldn't be! {}".format(application))
                 else:
                     application = application[0]

@@ -13,7 +13,6 @@
  * Contributors:
  *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
-from unittest import TestCase
 
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
@@ -155,8 +154,8 @@ class Tools(unittest.TestCase):
         config_list = map(os.path.abspath,
                           [os.path.join(aietes.Tools._config_dir, c)
                            for c in os.listdir(aietes.Tools._config_dir)
-                          ]
-        )
+                           ]
+                          )
         self.assertIn(config_path, config_list)
         self.assertTrue(config_path.endswith(config_tail))
 

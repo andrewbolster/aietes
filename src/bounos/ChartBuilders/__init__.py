@@ -17,6 +17,8 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
+from collections import OrderedDict
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
@@ -24,20 +26,17 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
-from collections import OrderedDict
-
-from aietes import Tools
 
 import bounos
 
 
 _boxplot_kwargs = {
-    #'showmeans': False,
+    # 'showmeans': False,
     #'showbox': True,
     #'widths': 0.6,
     #'linewidth': 2,
     'showfliers': False,
-    "whis":1
+    "whis": 1
 }
 
 
@@ -73,7 +72,8 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
 
         f, ax = plt.subplots(figsize=(13, 7))
         ax.set_title(
-            "Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title, died / float(all_pkts),
+            "Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title,
+                                                                                             died / float(all_pkts),
                                                                                              all_pkts))
         ax.set_ylabel("Count (n)")
         ax.set_xlabel("Simulation Time (s)")
@@ -358,7 +358,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
              style=["-", "--", "-.", ":"],
              grid='on',
              title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
-    )
+             )
     ax.set_xlabel(var)
     ax.set_ylabel("Total Packets")
     if not hide_annotations:
@@ -566,7 +566,8 @@ def trust_perspectives_wrt_targets(trust_frame):
     return f
 
 
-def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), texify=True, xlabel=True, dropnet=False):
+def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), texify=True, xlabel=True,
+                                dropnet=False):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
     :param title:
@@ -590,16 +591,14 @@ def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), 
     ax.yaxis.set_ticks_position('none')
 
     ax.axvline(5.5, ls="--", color="k", alpha=0.5)
-    [ax.axvline(x, ls=":", color="k", alpha=0.5) for x in [1.5,3.5]]
-    ax.annotate("D", xy=(1,0.9), xycoords='data', horizontalalignment='centre')
-    ax.annotate("R", xy=(2.5,0.9), xycoords='data', horizontalalignment='centre')
-    ax.annotate("I", xy=(4.5,0.9), xycoords='data', horizontalalignment='centre')
+    [ax.axvline(x, ls=":", color="k", alpha=0.5) for x in [1.5, 3.5]]
+    ax.annotate("D", xy=(1, 0.9), xycoords='data', horizontalalignment='centre')
+    ax.annotate("R", xy=(2.5, 0.9), xycoords='data', horizontalalignment='centre')
+    ax.annotate("I", xy=(4.5, 0.9), xycoords='data', horizontalalignment='centre')
     if dropnet:
-        ax.annotate("Agg.", xy=(6,0.9), xycoords='data', horizontalalignment='centre')
+        ax.annotate("Agg.", xy=(6, 0.9), xycoords='data', horizontalalignment='centre')
     else:
-        ax.annotate("Agg.", xy=(6.5,0.9), xycoords='data', horizontalalignment='centre')
-
-
+        ax.annotate("Agg.", xy=(6.5, 0.9), xycoords='data', horizontalalignment='centre')
 
     if xlabel:
         ax.set_xlabel("Assessment Type")
@@ -632,7 +631,7 @@ def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
                      bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                      arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                      color='red')
-        )
+                     )
         ax1.scatter(x, y)
         ax2.scatter(y, z)
         ax3.scatter(x, z)
@@ -677,7 +676,7 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
                      bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                      arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                      color='red')
-        )
+                     )
         ax1.scatter(x, y)
         ax2.scatter(y, z)
         ax3.scatter(x, z)
@@ -722,7 +721,7 @@ def plot_positions(d, bounds=None):
                      bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                      arrowprops=dict(arrowstyle='->',
                                      color='red')
-        )
+                     )
         ax1.scatter(x, y)
         ax2.scatter(y, z)
         ax3.scatter(x, z)
@@ -808,7 +807,7 @@ def latexify(columns=1, factor=0.45):
               'text.usetex': True,
               'figure.figsize': [fig_width_in, fig_height_in],
               'font.family': 'serif'
-    }
+              }
 
     mpl.rcParams.update(params)
     return (fig_width_in, fig_height_in)
@@ -818,12 +817,11 @@ def format_axes(ax, spine_color='gray'):
     ax.grid(True, color=spine_color, alpha=0.2)
     for spine in ['top', 'right']:
         ax.spines[spine].set_visible(False)
-    for spine in ['bottom','left']:
+    for spine in ['bottom', 'left']:
         ax.spines[spine].set_color(spine_color)
 
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
-
 
     for axis in [ax.xaxis, ax.yaxis]:
         axis.set_tick_params(direction='out', color=spine_color)
@@ -832,7 +830,7 @@ def format_axes(ax, spine_color='gray'):
 
 
 def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False, square=True, figsize=None):
-    fig, ax = plt.subplots(1,1, figsize=figsize)
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
     nodes = []
     node_positions = OrderedDict(sorted(node_positions.items()))
     for node, position in node_positions.items():
@@ -847,7 +845,6 @@ def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False, squ
                 x, y = zip(node_positions.values()[node][0:2], node_positions.values()[link][0:2])
                 ax.plot(x, y, color='k', lw=1, alpha=0.4, linestyle='--')
 
-
     if square:
         ax.set_aspect('equal', adjustable='datalim')
     if scalefree:
@@ -855,7 +852,6 @@ def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False, squ
         ax.set_xticklabels([])
         ax.set_yticklabels([])
         ax.grid(False)
-
 
     return fig
 

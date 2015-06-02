@@ -30,6 +30,7 @@ from aietes import Tools
 from bounos.Analyses import scenario_map
 
 
+
 # USUALLY CONSTANTS
 trust_metrics = np.asarray("ADelay,ARXP,ATXP,RXThroughput,PLR,TXThroughput".split(','))
 metric_combinations = itertools.product(xrange(1, 4), repeat=len(trust_metrics))
@@ -183,7 +184,7 @@ def _grc(value, comparison, width, rho=0.5):
     lower = np.abs(value - comparison) + rho * width
     with np.errstate(invalid='ignore'):
         # inner is in the range [2/3, 2]
-        inner = upper/lower
+        inner = upper / lower
 
     # Scale to [0,1]
     scaled = 0.75 * inner - 0.5

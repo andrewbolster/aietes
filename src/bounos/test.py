@@ -107,7 +107,7 @@ class DataPackageCreation(unittest.TestCase):
                  environment=environment,
                  config=config,
                  title=title
-        )
+                 )
         dp = bounos.DataPackage(source=source_file + '.npz')
         print dp.p.shape
         self.assertEqual(dp.title, title)

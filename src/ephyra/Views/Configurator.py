@@ -71,7 +71,7 @@ class Configurator(wx.Panel):
                    "Cruising Speed": 1.4,
                    "Max Turn Rate": 4.5,
                    "Initial Position": {"X": 0.0, "Y": 1.0, "Z": 2.0}
-        }
+                   }
     }
     behaviour_default = {
         "Config": {"Protocol": [cls.__name__ for cls in itersubclasses(Behaviour)],
@@ -84,7 +84,7 @@ class Configurator(wx.Panel):
                    "Repulsive Factor": 0.01,
                    "Waypoint Factor*": 0.01,
                    "Update Rate": 0.3
-        }
+                   }
     }
 
     def __init__(self, parent, frame, *args, **kw):
@@ -108,7 +108,7 @@ class Configurator(wx.Panel):
 
         self.tree = CustomTreeCtrl(self.window)
         self.root = root = self.tree.AddRoot(self.config_tree.get_label(),
-                                             data=self.config_tree.get_data())
+            data=self.config_tree.get_data())
         self.build_tree(self.config_tree, self.root)
 
         self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_click, self.tree)
@@ -207,7 +207,7 @@ class Configurator(wx.Panel):
             ListNode("Behaviours", data=kw.get(
                 "behaviours", self.defaults[2].get_data()))
         ])
-        )
+                                     )
         for i in range(kw.get("nodes", 1)):
             self.add_node(fleetid)
 
