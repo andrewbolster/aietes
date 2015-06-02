@@ -1,5 +1,7 @@
+# coding=utf-8
 __author__ = 'bolster'
-import os, warnings
+import os
+import warnings
 import pandas as pd
 import itertools
 import logging
@@ -37,7 +39,7 @@ outliers = Parallel(n_jobs=-1, verbose=10, pre_dispatch=8)(
      good_key="good",
      s="bella_all_mobile",
      metric_weight=w,
-     flip_metrics= ['TXThroughput', 'RXThroughput', 'ATXP']
+     flip_metrics=['TXThroughput', 'RXThroughput', 'ATXP']
      ) for w in itertools.imap(weight_comparisons.norm_weight,
                                Trust.metric_combinations_series)
 )

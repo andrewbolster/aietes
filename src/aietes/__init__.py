@@ -472,7 +472,7 @@ class Simulation(object):
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
-        #   len(bev)==len(dist)
+        # len(bev)==len(dist)
         #   len(bev) % nodes_count-preconfigured_nodes_count = 0
         if isinstance(bev, list) and isinstance(dist, list):
             if len(bev) == len(dist) and (nodes_count - preconfigured_nodes_count) % len(bev) == 0:

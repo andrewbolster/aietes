@@ -226,7 +226,7 @@ class DataPackage(object):
         logging.info("Writing datafile to {}.npz".format(full_path))
 
         data = {i: self.__dict__[
-            i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
+            i] for i in self._attrib_map.keys() if i in self.__dict__}
         data['filename'] = "{}.npz".format(full_path)
 
         np.savez(filename,
@@ -436,11 +436,12 @@ class DataPackage(object):
         Returns an array of overall heading stddevs across the dataset
 
         """
-        deviations = [np.std(
-            self.deviation_from_at(self.average_heading(time), time)
-        )
-                      for time in range(self.tmax)
-                      ]
+        deviations = [
+            np.std(
+                self.deviation_from_at(self.average_heading(time), time)
+            )
+            for time in range(self.tmax)
+        ]
         return deviations
 
     def average_position(self, time):
@@ -827,7 +828,7 @@ class DataPackage(object):
         :return bool:
         """
 
-        return all([v.has_key('tx') and v.has_key('rx') for v in self.comms['logs'].values()])
+        return all(['tx' in v and 'rx' in v for v in self.comms['logs'].values()])
 
     def has_trust_data(self):
         """
@@ -837,4 +838,4 @@ class DataPackage(object):
         :return bool:
         """
 
-        return self.has_comms_data() and all([v.has_key('trust') for v in self.comms['logs'].values()])
+        return self.has_comms_data() and all(['trust' in v for v in self.comms['logs'].values()])

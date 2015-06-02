@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import division
 
 __author__ = 'bolster'
@@ -15,6 +16,7 @@ import itertools
 import functools
 import unittest
 import logging
+
 logging.basicConfig()
 
 import pandas as pd
@@ -28,6 +30,7 @@ import matplotlib.pylab as plt
 import matplotlib.cm as cm
 from matplotlib import rc_context
 import matplotlib.ticker as plticker
+
 loc_25 = plticker.MultipleLocator(base=0.25)  # this locator puts ticks at regular intervals
 
 import aietes
@@ -62,7 +65,6 @@ result_h5s_by_latest = sorted(filter(lambda p: os.path.basename(p).endswith("h5"
 rate_and_ranges = filter(lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest"),
                          result_h5s_by_latest)
 app_rates = map(app_rate_from_path, rate_and_ranges)
-
 
 
 def interpolate_rate_sep(df, key):
@@ -123,7 +125,11 @@ def plot_contour_3d(xi, yi, zi, rot=120, labels=None):
     return fig
 
 
-def plot_contour_2d(xi, yi, zi, X=[], Y=[], var=None, norm=False):
+def plot_contour_2d(xi, yi, zi, X=None, Y=None, var=None, norm=False):
+    if X is None:
+        X = []
+    if Y is None:
+        Y = []
     fig = plt.figure(figsize=(w, golden_mean * w), facecolor='white')
     ax = fig.add_subplot(1, 1, 1)
     xig, yig = np.meshgrid(xi, yi)
@@ -230,7 +236,7 @@ def get_mobility_stats(mobility):
     sdf['throughput_norm'] = norm(sdf.throughput)
     sdf['co_norm'] = sdf.average_rx_delay_norm * sdf.throughput_norm
     sdf = sdf.set_index(['rate', 'separation'])
-    sdf['tdivdel'] = sdf.throughput / (sdf.average_rx_delay)
+    sdf['tdivdel'] = sdf.throughput / sdf.average_rx_delay
     sdf.reset_index(inplace=True)
     return sdf
 
@@ -261,9 +267,9 @@ class TrustCom(unittest.TestCase):
         self.outlier = "outliers.h5"
         self.generated_files = []
 
-        for file in [self.good, self.malicious, self.selfish]:
-            if not os.path.isfile(Tools.in_results(file)):
-                self.fail("No file {}".format(file))
+        for filename in [self.good, self.malicious, self.selfish]:
+            if not os.path.isfile(Tools.in_results(filename)):
+                self.fail("No file {}".format(filename))
 
     def tearDown(self):
         logging.info("Successfully Generated:\n{}".format(self.generated_files))
@@ -286,17 +292,18 @@ class TrustCom(unittest.TestCase):
         )
         texify = lambda t: "${}_{}$".format(t[0], t[1])
         node_positions = {texify(k): np.asarray(v['initial_position'], dtype=float) for k, v in
-                          base_config['Node']['Nodes'].items() if v.has_key('initial_position')}
+                          base_config['Node']['Nodes'].items() if 'initial_position' in v}
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
         reload(cb)
         # _=cb.plot_positions(node_positions, bounds=base_config.Environment.shape)
-        fig = cb.plot_nodes(node_positions, figsize=(4,1.6), node_links=node_links, radius=3, scalefree=True, square=False)
+        fig = cb.plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
+                            square=False)
         fig.tight_layout(pad=0.3)
         fig.savefig("img/s1_layout.pdf", transparent=True)
         plt.close(fig)
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img",f)))
+            self.assertTrue(os.path.isfile(os.path.join("img", f)))
             self.generated_files.append(f)
 
     def testThroughputLines(self):
@@ -327,7 +334,7 @@ class TrustCom(unittest.TestCase):
             plt.close(fig)
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img",f)))
+            self.assertTrue(os.path.isfile(os.path.join("img", f)))
             self.generated_files.append(f)
 
     def testMTFMBoxplots(self):
@@ -359,7 +366,7 @@ class TrustCom(unittest.TestCase):
                                              s=selected_scenarios, figsize=figsize,
                                              xlabel=False, dropnet=True)
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img",f)), f)
+            self.assertTrue(os.path.isfile(os.path.join("img", f)), f)
             self.generated_files.append(f)
 
     def testWeightComparisons(self):
@@ -398,15 +405,15 @@ class TrustCom(unittest.TestCase):
             weight_comparisons.plot_weight_comparisons(self.good, self.malicious,
                                                        malicious_behaviour="BadMouthingPowerControl",
                                                        s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair","Malicious"]
+                                                       labels=["Fair", "Malicious"]
                                                        )
             weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
                                                        malicious_behaviour="SelfishTargetSelection",
                                                        s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair","Selfish"]
+                                                       labels=["Fair", "Selfish"]
                                                        )
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img",f)))
+            self.assertTrue(os.path.isfile(os.path.join("img", f)))
             self.generated_files.append(f)
 
     def testSummaryGraphsForMalGdScenarios(self):
@@ -421,28 +428,30 @@ class TrustCom(unittest.TestCase):
         cb.latexify(columns=0.5, factor=0.5)
 
         def beta_trusts(trust, length=4096):
-            trust['+'] = (trust.TXThroughput/length)*(1-trust.PLR)
-            trust['-'] = (trust.TXThroughput/length)*(trust.PLR)
-            beta_trust = trust[['+','-']].unstack(level='target')
+            trust['+'] = (trust.TXThroughput / length) * (1 - trust.PLR)
+            trust['-'] = (trust.TXThroughput / length) * trust.PLR
+            beta_trust = trust[['+', '-']].unstack(level='target')
             return beta_trust
 
         def beta_calcs(beta_trust):
-            beta_trust=pd.stats.moments.ewma(beta_trust, span=2)
-            beta_t_confidence = lambda s,f: 1-np.sqrt((12*s*f)/((s+f+1)*(s+f)**2))
-            beta_t = lambda s,f: s/(s+f)
-            otmf_T = lambda s,f: 1-np.sqrt(((((beta_t(s,f)-1)**2)/2)+(((beta_t_confidence(s,f) - 1)**2)/9)))/np.sqrt((1/2)+(1/9))
-            beta_vals = beta_trust.apply(lambda r: beta_t(r['+'],r['-']), axis=1)
-            otmf_vals = beta_trust.apply(lambda r: otmf_T(r['+'],r['-']), axis=1)
+            beta_trust = pd.stats.moments.ewma(beta_trust, span=2)
+            beta_t_confidence = lambda s, f: 1 - np.sqrt((12 * s * f) / ((s + f + 1) * (s + f) ** 2))
+            beta_t = lambda s, f: s / (s + f)
+            otmf_T = lambda s, f: 1 - np.sqrt(
+                ((((beta_t(s, f) - 1) ** 2) / 2) + (((beta_t_confidence(s, f) - 1) ** 2) / 9))) / np.sqrt(
+                (1 / 2) + (1 / 9))
+            beta_vals = beta_trust.apply(lambda r: beta_t(r['+'], r['-']), axis=1)
+            otmf_vals = beta_trust.apply(lambda r: otmf_T(r['+'], r['-']), axis=1)
             return beta_vals, otmf_vals
 
         def plot_beta_mtmf_comparison(beta_trust, mtfm, key):
 
             beta, otmf = beta_calcs(beta_trust)
             fig, ax = plt.subplots(1, 1, sharey=True)
-            ax.plot(beta.xs('n0',level='observer')['n1'], label="Hermes", linestyle='--')
-            ax.plot(otmf.xs('n0',level='observer')['n1'], label="OTMF", linestyle=':')
+            ax.plot(beta.xs('n0', level='observer')['n1'], label="Hermes", linestyle='--')
+            ax.plot(otmf.xs('n0', level='observer')['n1'], label="OTMF", linestyle=':')
             ax.plot(mtfm, label="MTFM")
-            ax.set_ylim((0,1))
+            ax.set_ylim((0, 1))
             ax.set_ylabel("Trust Value".format(key))
             ax.set_xlabel("Observation")
             ax = format_axes(ax)
@@ -450,41 +459,41 @@ class TrustCom(unittest.TestCase):
             ax.axhline(mtfm.mean(), color="r", linestyle='-.')
             ax.yaxis.set_major_locator(loc_25)
             fig.tight_layout()
-            fig.savefig("img/trust_beta_otmf{}.pdf".format("_"+key if key is not None else ""),transparent=True)
+            fig.savefig("img/trust_beta_otmf{}.pdf".format("_" + key if key is not None else ""), transparent=True)
             plt.close(fig)
 
 
-        gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file,[self.good,self.malicious, self.selfish])
-        mal_mobile = mal_trust.xs('All Mobile',level='var')
-        gd_mobile = gd_trust.xs('All Mobile',level='var')
-        sel_mobile = sel_trust.xs('All Mobile',level='var')
+        gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file, [self.good, self.malicious, self.selfish])
+        mal_mobile = mal_trust.xs('All Mobile', level='var')
+        gd_mobile = gd_trust.xs('All Mobile', level='var')
+        sel_mobile = sel_trust.xs('All Mobile', level='var')
         gd_beta_t = beta_trusts(gd_mobile)
         mal_beta_t = beta_trusts(mal_mobile)
         sel_beta_t = beta_trusts(sel_mobile)
 
         np.random.seed(42)
         mtfm_span = 2
-        gd_beta_t['-'] = gd_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
-        sel_beta_t['-'] = sel_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
-        mal_beta_t['-'] = mal_beta_t['-'].applymap(lambda _: int(2.0*np.random.random()/1.5))
+        gd_beta_t['-'] = gd_beta_t['-'].applymap(lambda _: int(2.0 * np.random.random() / 1.5))
+        sel_beta_t['-'] = sel_beta_t['-'].applymap(lambda _: int(2.0 * np.random.random() / 1.5))
+        mal_beta_t['-'] = mal_beta_t['-'].applymap(lambda _: int(2.0 * np.random.random() / 1.5))
 
         gd_tp = Trust.generate_node_trust_perspective(gd_mobile)
         mal_tp = Trust.generate_node_trust_perspective(mal_mobile)
         sel_tp = Trust.generate_node_trust_perspective(sel_mobile)
 
-        gd_mtfm = Trust.generate_mtfm(gd_tp, 'n0', 'n1',['n2','n3'],['n4','n5']).sum(axis=1)
-        mal_mtfm = Trust.generate_mtfm(mal_tp, 'n0', 'n1',['n2','n3'],['n4','n5']).sum(axis=1)
-        sel_mtfm = Trust.generate_mtfm(sel_tp, 'n0', 'n1',['n2','n3'],['n4','n5']).sum(axis=1)
+        gd_mtfm = Trust.generate_mtfm(gd_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
+        mal_mtfm = Trust.generate_mtfm(mal_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
+        sel_mtfm = Trust.generate_mtfm(sel_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
 
-        gd_mtfm =pd.stats.moments.ewma(gd_mtfm, span=mtfm_span)
-        mal_mtfm =pd.stats.moments.ewma(mal_mtfm, span=mtfm_span)
-        sel_mtfm =pd.stats.moments.ewma(sel_mtfm, span=mtfm_span)
+        gd_mtfm = pd.stats.moments.ewma(gd_mtfm, span=mtfm_span)
+        mal_mtfm = pd.stats.moments.ewma(mal_mtfm, span=mtfm_span)
+        sel_mtfm = pd.stats.moments.ewma(sel_mtfm, span=mtfm_span)
         plot_beta_mtmf_comparison(gd_beta_t, gd_mtfm, key="fair")
         plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="malicious")
         plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish")
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img",f)))
+            self.assertTrue(os.path.isfile(os.path.join("img", f)))
             self.generated_files.append(f)
 
 
@@ -511,6 +520,7 @@ class TrustCom(unittest.TestCase):
             reg = ske.RandomForestRegressor(n_jobs=2, n_estimators=100)
             reg.fit(data, df[target])
             return pd.Series(dict(zip(data.keys(), reg.feature_importances_)))
+
         def comparer(base, comp, index=0):
             dp_r = (comp / base).reset_index()
             Sfet = feature_extractor(dp_r, index)
@@ -535,7 +545,7 @@ class TrustCom(unittest.TestCase):
         figsize = cb.latexify(columns=1.0, factor=1.2)
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1)
-        _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS":gs, "MPC/STS":ms}).rename(index=columns)
+        _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(index=columns)
         ax = _df.plot(kind='bar', position=0.5, ax=ax, legend=False)
         bars = ax.patches
         hatches = ''.join(h * len(_df) for h in 'x/O.')
@@ -566,12 +576,11 @@ class TrustCom(unittest.TestCase):
             ax.set_ylabel("Relative\nSignificance")
             ax.yaxis.labelpad = -80
             ax.tick_params(direction='out', pad=-100)
-            ax.legend(loc = 5, mode='expand', bbox_to_anchor=(1.05, 1))
+            ax.legend(loc=5, mode='expand', bbox_to_anchor=(1.05, 1))
             fig.savefig("img/MaliciousSelfishMetricFactorsRad.png", transparent=True)
 
-
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img",f)))
+            self.assertTrue(os.path.isfile(os.path.join("img", f)))
             self.generated_files.append(f)
 
 

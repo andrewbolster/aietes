@@ -22,30 +22,20 @@ def map_paths(paths):
     subdirs = reduce(list.__add__, [filter(os.path.isdir,
                                            map(lambda p: os.path.join(path, p),
                                                os.listdir(path)
-                                           )
-    ) for path in paths])
+                                               )
+                                           ) for path in paths])
     return subdirs
 
 
 def scenarios_comms(paths, generator=False):
     subdirs = natsorted(map_paths(paths))
     for i, subdir in enumerate(natsorted(subdirs)):
-        title = os.path.basename(subdir)
         sources = npz_in_dir(subdir)
         print("{:%}:{}".format(float(i) / float(len(subdirs)), subdir))
         if generator:
             yield (subdir, generate_sources(sources, comms_only=True))
         else:
             yield (subdir, load_sources(sources, comms_only=True))
-
-
-def hdfstore(filename, obj):
-    print("Storing into {}.h5".format(filename))
-    store = pd.HDFStore("{}.h5".format(filename), mode='w')
-    try:
-        store.append(filename, object, data_columns=True)
-    finally:
-        store.close()
 
 
 logs = uncpickle('trust_logs.pkl')
@@ -65,8 +55,11 @@ def network_trust_dict(trust_inverted):
     target = 'n1'
     indirect_nodes = ['n4', 'n5']
     t_direct = lambda x: 0.5 * max(whitenized(x)) * x
-    t_recommend = lambda x: 0.5 * (2 * len(recommendation_nodes) / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * max(whitenized(x)) * x
-    t_indirect = lambda x: 0.5 * (2 * len(indirect_nodes) / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * max(whitenized(x)) * x
+    t_recommend = lambda x: 0.5 * (
+        2 * len(recommendation_nodes) / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * max(
+        whitenized(x)) * x
+    t_indirect = lambda x: 0.5 * (
+        2 * len(indirect_nodes) / (2.0 * len(recommendation_nodes) + len(indirect_nodes))) * max(whitenized(x)) * x
 
     def network_trust(t):
         t_sum = 0
@@ -121,25 +114,28 @@ import itertools
 
 trust_metrics = np.asarray("ATXP,ARXP,ADelay,ALength,Throughput,PLR".split(','))
 trust_combinations = []
-map(trust_combinations.extend, np.asarray([itertools.combinations(trust_metrics, i) for i in range(2, len(trust_metrics))]))
+map(trust_combinations.extend,
+    np.asarray([itertools.combinations(trust_metrics, i) for i in range(2, len(trust_metrics))]))
 trust_combinations = np.asarray(trust_combinations)
 # print trust_combinations
-trust_metric_selections = np.asarray([map(lambda m: float(m in trust_combination), trust_metrics) for trust_combination in trust_combinations])
+trust_metric_selections = np.asarray(
+    [map(lambda m: float(m in trust_combination), trust_metrics) for trust_combination in trust_combinations])
 trust_metric_weights = map(lambda s: s / sum(s), trust_metric_selections)
 
 
 def gen_trust_plots_for_weights(metric_weight=None):
-    trust_perspectives, inverted_trust_perspectives, rate_collector = generate_trust_perspectives_from_logs(logs, metric_weights=metric_weight)
+    trust_perspectives, inverted_trust_perspectives, rate_collector = generate_trust_perspectives_from_logs(logs,
+                                                                                                            metric_weights=metric_weight)
 
     rate_frame = pd.concat([v for _, v in rate_collector], keys=[v for v, _ in rate_collector], names=['variable', 't'])
     # sns.boxplot(rate_frame,showmeans=True, showbox=False, widths = 0.2, linewidth=2)
-    #rate_frame.reset_index(level=['variable'],inplace=True)
+    # rate_frame.reset_index(level=['variable'],inplace=True)
     f, ax = plt.subplots()
     f.set_size_inches(13, 6)
     print w
 
     vals = rate_frame.dropna().groupby(level=['variable'], sort=True)
-    #vals.boxplot(layout=(2,5), ax=ax)
+    # vals.boxplot(layout=(2,5), ax=ax)
     vals.get_group('0.025').boxplot(ax=ax)
     if metric_weight is not None:
         f.suptitle(",".join(trust_metrics[np.where(metric_weight > 0)].tolist()))

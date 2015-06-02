@@ -28,7 +28,7 @@ from aietes.Tools import MapEntry, distance, fudge_normal, DEBUG, unit, mag, lis
     ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
 
-DEBUG = False
+#DEBUG = False
 
 
 class BasicWaypoint(object):
@@ -68,6 +68,7 @@ class Behaviour(object):
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
+        self.nearest_neighbours = []
         self.n_nearest_neighbours = listfix(
             int, self.bev_config['nearest_neighbours'])
         self.neighbourhood_max_rad = listfix(

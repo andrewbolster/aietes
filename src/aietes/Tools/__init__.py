@@ -135,11 +135,6 @@ LOGLEVELS = {'debug': logging.DEBUG,
              'error': logging.ERROR,
              'critical': logging.CRITICAL}
 
-DEFAULT_CONVENTION = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon',
-                      'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa',
-                      'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron',
-                      'Pi', 'Rho', 'Sigma', 'Tau', 'Upsilon',
-                      'Phi', 'Chi', 'Psi', 'Omega']
 DEFAULT_CONVENTION = ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo',
                       'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliet',
                       'Kilo', 'Lima', 'Mike', 'November', 'Oscar',
@@ -300,22 +295,22 @@ def spherical_distance(sixvec_a, sixvec_b):
     return np.arccos(np.dot(sixvec_a, sixvec_b))
 
 
-def add_ndarray_to_set(ndarray, list):
+def add_ndarray_to_set(ndarray, input_list):
     """
 
     :param ndarray:
-    :param list:
+    :param input_list:
     :return:
     """
     in_list = False
-    for element in list:
+    for element in input_list:
         if np.linalg.norm(ndarray - element) < 0.1:
             in_list = True
 
     if not in_list:
-        list.append(ndarray)
+        input_list.append(ndarray)
 
-    return list
+    return input_list
 
 
 #
@@ -758,7 +753,7 @@ def update_dict(d, keys, value, safe=False):
     :raise KeyError:
     """
     for key in keys[:-1]:
-        if not d.has_key(key) and safe:
+        if key not in d and safe:
             raise KeyError("Attempting to update uninstantiated key")
         d = d.setdefault(key, {})
     d[keys[-1]] = value

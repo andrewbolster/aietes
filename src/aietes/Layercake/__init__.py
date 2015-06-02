@@ -149,7 +149,7 @@ class Layercake(object):
         :return: bool
         """
         if self.fwd_signal_hdlrs:
-            return (any([hdlr(packet) for hdlr in self.fwd_signal_hdlrs]))
+            return any([hdlr(packet) for hdlr in self.fwd_signal_hdlrs])
         else:
             return False
 

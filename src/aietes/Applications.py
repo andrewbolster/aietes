@@ -27,7 +27,7 @@ import pandas as pd
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
 
-DEBUG = False
+#DEBUG = False
 
 
 class Application(Sim.Process):

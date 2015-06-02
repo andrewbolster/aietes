@@ -1,3 +1,4 @@
+# coding=utf-8
 from unittest import TestCase
 
 __author__ = 'bolster'
@@ -26,6 +27,7 @@ class TestGetResultsPath(TestCase):
         result_dir = '/dev/shm/' + str(uuid.uuid4())
 
         path = Tools.get_results_path(proposed, results_dir=result_dir, make=True)
+
         self.assertTrue(os.path.exists(result_dir), "Path: {}".format(result_dir))
         os.rmdir(result_dir)
         self.assertFalse(os.path.exists(result_dir))

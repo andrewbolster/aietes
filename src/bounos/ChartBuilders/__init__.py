@@ -32,9 +32,9 @@ import bounos
 
 _boxplot_kwargs = {
     # 'showmeans': False,
-    #'showbox': True,
-    #'widths': 0.6,
-    #'linewidth': 2,
+    # 'showbox': True,
+    # 'widths': 0.6,
+    # 'linewidth': 2,
     'showfliers': False,
     "whis": 1
 }
@@ -66,7 +66,7 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
     else:
         raise ValueError("I've got no idea how you got here...")
 
-    died = df[df.delivered != True].count().max()
+    died = df[not df.delivered].count().max()
     if died > 1:
         all_pkts = df.count().max()
 
@@ -810,7 +810,7 @@ def latexify(columns=1, factor=0.45):
               }
 
     mpl.rcParams.update(params)
-    return (fig_width_in, fig_height_in)
+    return fig_width_in, fig_height_in
 
 
 def format_axes(ax, spine_color='gray'):

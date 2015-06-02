@@ -160,6 +160,8 @@ class Scenario(object):
 
         # May be unnecessary
         self._default_behaviour_dict = self.get_behaviour_dict()
+        self.mypath = None
+        self.datarun = None
 
 
     def run(self, runcount=None, runtime=None, *args, **kwargs):
@@ -914,7 +916,7 @@ class ExperimentManager(object):
         env_shape = np.asarray(base_config['Environment']['shape'])
         node_positions = {k: np.asarray(v['initial_position'], dtype=float)
                           for k, v in base_config['Node']['Nodes'].items()
-                          if v.has_key('initial_position')  # This filters out any semi-defined nodes
+                          if 'initial_position' in v  # This filters out any semi-defined nodes
                           }
         node_centroids = {k: np.append((v[0:2] - env_shape[0:2] / 2), 0.0) for k, v in node_positions.items()}
         delta = np.asarray(node_positions[basis_node_name])
@@ -1105,7 +1107,7 @@ class ExperimentManager(object):
             s.write()
 
         if ghia:
-            data_grapher(dir=self.exp_path, title=self.title)
+            data_grapher(directory=self.exp_path, title=self.title)
 
     def dump_self(self):
         """
