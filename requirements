@@ -1,7 +1,4 @@
-pylab
 BTrees
-SimPy == 2.3.1
-ZODB
 click
 colorlog
 configobj
@@ -14,8 +11,8 @@ nose
 nose-exclude
 nosexcover
 notify2
-numpy
 numexpr
+numpy
 oct2py
 openpyxl==1.8.6
 pandas
@@ -23,9 +20,12 @@ persistent
 pubsub
 pydot
 pykalman
+pylab
 quantities
 scikit-learn
 scipy
 seaborn
+SimPy == 2.3.1
 tables
 transaction
+ZODB

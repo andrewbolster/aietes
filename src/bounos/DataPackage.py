@@ -17,6 +17,7 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
+import os
 import sys
 import traceback
 import logging
