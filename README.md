@@ -1,9 +1,11 @@
 aietes
 ======
-# AIETES
 Andrew Bolster 2012
+
+[![Code Issues](http://www.quantifiedcode.com/api/v1/project/78cdaccc129f4d878cc319a938186212/badge.svg)](http://www.quantifiedcode.com/app/project/78cdaccc129f4d878cc319a938186212)
+
 ##Description
-Aietes is a motion and behaviour simulator for AUVs (Autonomous Underwater Vehicles)
+Aietes is a motion, behaviour, and communications simulator for AUVs (Autonomous Underwater Vehicles)
 ##Dependencies
 * matplotlib
 * numpy
