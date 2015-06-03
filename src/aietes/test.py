@@ -28,12 +28,10 @@ from pprint import pformat
 
 import matplotlib
 
-
 matplotlib.use("Agg")
 
 import aietes
 import bounos
-
 
 datapackage_per_node_members = [
     'p', 'v', 'names', 'contributions', 'achievements']
@@ -166,4 +164,3 @@ class Tools(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

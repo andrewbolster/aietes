@@ -3,11 +3,11 @@
 __author__ = 'andrewbolster'
 import numpy
 
-from polybos import ExperimentManager as EXP
+from polybos import ExperimentManager as ExpMan
 
 
 def set_exp():
-    e = EXP(node_count=8,
+    e = ExpMan(node_count=8,
             title="Clumping Test", parallel=True)
     e.add_variable_range_scenario("clumping", numpy.linspace(0.0, 1.0, 20))
     return e
@@ -24,4 +24,4 @@ def run_exp(e):
 if __name__ == "__main__":
     exp = set_exp()
     exp = run_exp(exp)
-    EXP.print_stats(exp)
+    ExpMan.print_stats(exp)

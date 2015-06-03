@@ -289,8 +289,8 @@ class Transducer(Sim.Resource):
             if not doomed and linear2db(min_sir) >= self.SIR_thresh \
                     and arg[1].power >= self.physical_layer.receiving_threshold:
 
-                BER = scipy.special.erfc(np.sqrt(linear2db(min_sir)))
-                made_it = new_packet['length'] * BER
+                ber = scipy.special.erfc(np.sqrt(linear2db(min_sir)))
+                made_it = new_packet['length'] * ber
 
                 # Properly received: enough power, not enough interference
                 self.collision = False

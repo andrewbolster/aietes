@@ -163,5 +163,3 @@ class Layercake(object):
             return self.pwd_signal_hdlr(packet)
         else:
             return packet["level"]
-
-

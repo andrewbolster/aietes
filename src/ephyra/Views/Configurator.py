@@ -108,7 +108,7 @@ class Configurator(wx.Panel):
 
         self.tree = CustomTreeCtrl(self.window)
         self.root = root = self.tree.AddRoot(self.config_tree.get_label(),
-            data=self.config_tree.get_data())
+                                             data=self.config_tree.get_data())
         self.build_tree(self.config_tree, self.root)
 
         self.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_click, self.tree)

@@ -24,7 +24,6 @@ import pandas as pd
 
 import bounos.ChartBuilders as ChartBuilders
 
-
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,
                     level=logging.INFO,

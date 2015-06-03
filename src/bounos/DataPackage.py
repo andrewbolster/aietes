@@ -442,7 +442,7 @@ class DataPackage(object):
                 self.deviation_from_at(self.average_heading(time), time)
             )
             for time in range(self.tmax)
-        ]
+            ]
         return deviations
 
     def average_position(self, time):

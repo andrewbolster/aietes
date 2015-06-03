@@ -24,7 +24,6 @@ import Behaviour
 import Applications
 from aietes.Tools import *
 
-
 FULL = 0
 SIMPLE = 1
 
@@ -512,7 +511,6 @@ class Node(Sim.Process):
         else:
             velocity = self.velocity.copy()
         return velocity
-
 
     def grant_achievement(self, achievement):
         """

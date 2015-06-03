@@ -105,7 +105,7 @@ def parallel_sim(arglist):
     return results
 
 
-class queue_sim(object):
+class QueueSim(object):
     def __init__(self, arglist, pool):
         import logging
 
@@ -141,12 +141,11 @@ class queue_sim(object):
                 # If the task raised an exception, it will appear here
                 _id, _data = p.get()
                 if _id != i:
-                    raise AssertionError("Results should have been queued and processed in the same order, instead I've got id {} when I'm expecting {}".format(
-                        _id, i
-                    ))
+                    raise AssertionError(
+                        "Results should have been queued and processed in the same order, instead I've got id {} when I'm expecting {}".format(
+                            _id, i
+                        ))
                 self.results[i] = _data
             return True
         else:
             return False
-
-

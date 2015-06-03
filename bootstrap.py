@@ -28,7 +28,6 @@ import tempfile
 import urllib2
 from optparse import OptionParser
 
-
 tmpeggs = tempfile.mkdtemp()
 
 is_jython = sys.platform.startswith('java')
@@ -62,11 +61,11 @@ except ImportError:
     ez = {}
     if USE_DISTRIBUTE:
         exec urllib2.urlopen('http://python-distribute.org/distribute_setup.py'
-        ).read() in ez
+                             ).read() in ez
         ez['use_setuptools'](to_dir=tmpeggs, download_delay=0, no_fake=True)
     else:
         exec urllib2.urlopen('http://peak.telecommunity.com/dist/ez_setup.py'
-        ).read() in ez
+                             ).read() in ez
         ez['use_setuptools'](to_dir=tmpeggs, download_delay=0)
 
     if to_reload:
@@ -77,7 +76,7 @@ except ImportError:
 if sys.platform == 'win32':
     def quote(c):
         if ' ' in c:
-            return '"%s"' % c # work around spawn lamosity on windows
+            return '"%s"' % c  # work around spawn lamosity on windows
         else:
             return c
 else:
@@ -100,8 +99,8 @@ if is_jython:
                             env=dict(os.environ,
                                      PYTHONPATH=
                                      ws.find(pkg_resources.Requirement.parse(requirement)).location
-                            ),
-    ).wait() == 0
+                                     ),
+                            ).wait() == 0
 
 else:
     assert os.spawnle(
@@ -110,7 +109,7 @@ else:
         dict(os.environ,
              PYTHONPATH=
              ws.find(pkg_resources.Requirement.parse(requirement)).location
-        ),
+             ),
     ) == 0
 
 ws.add_entry(tmpeggs)

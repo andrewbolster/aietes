@@ -11,7 +11,7 @@ import aietes.Tools as Tools
 import bounos.Analyses.Trust as Trust
 
 
-class TestGenerate_node_trust_perspective(TestCase):
+class TestGenerateNodeTrustPerspective(TestCase):
     def setUp(self):
         # Make up a datapackage and hope for the best
         sim = aietes.Simulation(title=self.__class__.__name__,
@@ -21,7 +21,6 @@ class TestGenerate_node_trust_perspective(TestCase):
         sim.simulate()
         dp = sim.generate_datapackage()
         self.trust = Trust.generate_trust_logs_from_comms_logs(dp.comms['logs'])
-
 
     def test_generate_node_trust_perspective_par_equiv(self):
         lin = Trust.generate_node_trust_perspective(self.trust, par=False)
@@ -38,7 +37,7 @@ class TestGenerate_node_trust_perspective(TestCase):
                          "Column should be called target")
 
 
-class TestGenerate_trust_logs_from_comms_logs(TestCase):
+class TestGenerateTrustLogsFromCommsLogs(TestCase):
     def setUp(self):
         # Make up a datapackage and hope for the best
         sim = aietes.Simulation(title=self.__class__.__name__,

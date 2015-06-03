@@ -9,7 +9,7 @@ import logging
 
 import numpy as np
 
-from polybos import ExperimentManager as EXP
+from polybos import ExperimentManager as ExpMan
 from bounos.multi_loader import dump_trust_logs_and_stats_from_exp_paths
 
 logging.basicConfig()
@@ -24,7 +24,7 @@ def redirected(stdout):
 
 
 def exec_comms_range(scenario, title):
-    e = EXP(title="{}-{}".format(title, re.split('\.|\/', scenario)[-2]),
+    e = ExpMan(title="{}-{}".format(title, re.split('\.|/', scenario)[-2]),
             parallel=True,
             base_config_file=scenario
             )
@@ -57,9 +57,8 @@ if __name__ == "__main__":
             continue
         path = exp.exp_path
         print("Saved detection stats to {}".format(exp.exp_path))
-        base_name = re.split('\.|\/', base_scenario)[-2]
+        base_name = re.split('\.|/', base_scenario)[-2]
         try:
             dump_trust_logs_and_stats_from_exp_paths([path], title="{}-{}".format(base_title, base_name))
         except:
             log.exception("Crashed in trust logging, moving on")
-

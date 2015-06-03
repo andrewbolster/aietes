@@ -28,7 +28,6 @@ from aietes.Tools import Sim, distance, mag, seconds_to_str
 from aietes.Tools.ProgressBar import ProgressBar
 from aietes.Environment import Environment
 
-
 try:
     from contrib.Ghia.uuv_time_delay_model import time_of_flight_matrix_complex
 
@@ -221,8 +220,7 @@ class Fleet(Sim.Process):
             latest_map = self.environment.map
         return {
             m.name: m.position for m in latest_map.itervalues()
-        }
-
+            }
 
     def node_position_by_name(self, name, shared=True):
         """
@@ -376,7 +374,6 @@ class Fleet(Sim.Process):
                 maxdeviation = avgheading
 
         return "V:%s,C:%s,D:%s,A:%s" % (avgheading, fleetcenter, maxdistance, maxdeviation)
-
 
     def plot_axes_views(self, res=120):
         """

@@ -116,7 +116,6 @@ class SimpleRoutingTable(dict):
                     src=packet["source"], dest=packet['dest']))
                 self.send_packet(packet)
 
-
     def need_explicit_ack(self, current_level, destination):
         return True
 
@@ -441,7 +440,7 @@ class Static(SimpleRoutingTable):
 
         if DEBUG:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(),
-                nodes_geo[self[i]])
+                                                                     nodes_geo[self[i]])
 
     def build_routing_table_1(self):
         # Reception Cone
@@ -557,7 +556,7 @@ class Static(SimpleRoutingTable):
 
         if DEBUG:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(),
-                nodes_geo[self[i]])
+                                                                     nodes_geo[self[i]])
 
     def build_routing_table_2(self):
         # Shortest path with level constraints
@@ -723,7 +722,6 @@ class FBR(SimpleRoutingTable):
         self.incoming_packet = None
         self.packets = set([])
         self.rx_cone = config["rx_cone"]
-
 
     def on_packet_reception(self, packet):
         """
@@ -893,7 +891,6 @@ class FBR(SimpleRoutingTable):
                 new_level = min(levels[0])  # Lowest Value Level
 
         return new_level
-
 
     def find_closer_sink(self):
         """

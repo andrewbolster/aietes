@@ -27,7 +27,7 @@ import pandas as pd
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
 
-#DEBUG = False
+# DEBUG = False
 
 
 class Application(Sim.Process):
@@ -99,7 +99,6 @@ class Application(Sim.Process):
                 self.layercake.activate(self.recv, monitor_mode=self.fwd)
 
         Sim.activate(self, self.lifecycle())
-
 
     def signal_good_tx(self, packetid):
         acked = False
@@ -284,7 +283,6 @@ class Application(Sim.Process):
         else:
             app_stats = {}
         return app_stats
-
 
     def dump_logs(self):
         """
@@ -638,7 +636,6 @@ class CommsTrust(RoutingTest):
 
             self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))
             self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
-
 
     def select_target(self):
         """

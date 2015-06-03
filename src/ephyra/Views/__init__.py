@@ -28,7 +28,6 @@ import matplotlib.backends.backend_wxagg
 from mpl_toolkits.mplot3d import proj3d
 from matplotlib.patches import FancyArrowPatch
 
-
 matplotlib.rcParams.update({'font.size': 8})
 
 import numpy as np

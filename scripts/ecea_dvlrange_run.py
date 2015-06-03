@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # coding=utf-8
 __author__ = 'andrewbolster'
-from polybos import ExperimentManager as EXP
+from polybos import ExperimentManager as ExpMan
 
 
 def set_exp():
     variations = [1e-3, 2e-3, 4e-3]
-    e = EXP(node_count=4,
+    e = ExpMan(node_count=4,
             title="FleetLawnmowerDVLVar-{}".format(variations),
             parallel=True, future=True,
             retain_data='files')
@@ -37,10 +37,3 @@ if __name__ == "__main__":
     exp = run_exp(exp)
     print exp.dump_dataruns()
     print memory()
-
-
-
-
-
-
-

@@ -940,7 +940,7 @@ class DACAP(MAC):
         elif self.incoming_packet["type"] == "ACK":
             backoff = 0.0  # I'm done
         else:
-            backoff = None # This will raise issues if something messes up
+            backoff = None  # This will raise issues if something messes up
 
         # Update the timer: 1.-Stop, 2.-Restart
         p = Sim.Process()
@@ -1125,7 +1125,7 @@ class DACAP(MAC):
         elif packet_type == "DATA":
             backoff = 2 * t
         else:
-            backoff = None # This will raise issues if something messes up
+            backoff = None  # This will raise issues if something messes up
 
         self.logger.warning("Backoff for {backoff} for {type} packet based on t{t},Tw{TW},Td{TD}".format(
             backoff=backoff,
@@ -1824,7 +1824,6 @@ class CSMA(MAC):
         self.t_data = None
         self.t_control = None
 
-
     def activate(self):
         """
 
@@ -2073,7 +2072,6 @@ class CSMA(MAC):
                 src=self.incoming_packet)
             )
 
-
     def check_pending_ack(self):
         """
 
@@ -2192,7 +2190,7 @@ class CSMA(MAC):
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
         else:
-            backoff = None # This will raise issues if something messes up
+            backoff = None  # This will raise issues if something messes up
 
         if DEBUG > 1:
             self.logger.debug("Backoff: {t} based on {t} {pkt}".format(
@@ -2561,7 +2559,7 @@ class FAMA(CSMA):
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
         else:
-            backoff = None # This will raise issues if something messes up
+            backoff = None  # This will raise issues if something messes up
 
         if DEBUG:
             self.logger.debug("Backoff: {t} based on {t} {pkt}".format(

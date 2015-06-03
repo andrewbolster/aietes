@@ -35,7 +35,7 @@ loc_25 = plticker.MultipleLocator(base=0.25)  # this locator puts ticks at regul
 
 import aietes
 import aietes.Tools as Tools
-import bounos.ChartBuilders as cb
+import bounos.ChartBuilders as CB
 import bounos.Analyses.Trust as Trust
 from bounos.ChartBuilders import weight_comparisons, radar, format_axes
 
@@ -52,7 +52,7 @@ scenario_order = list(reversed([u'bella_all_mobile', u'bella_allbut1_mobile', u'
 
 golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 w = 6
-cb.latexify(columns=2, factor=0.55)
+CB.latexify(columns=2, factor=0.55)
 
 # # Data File Acquistion
 
@@ -68,13 +68,14 @@ app_rates = map(app_rate_from_path, rate_and_ranges)
 
 
 def interpolate_rate_sep(df, key):
-    X, Y, Z = df.rate, df.separation, df[key]
+    x, y, z = df.rate, df.separation, df[key]
 
-    xi = np.linspace(X.min(), X.max(), 16)
-    yi = np.linspace(Y.min(), Y.max(), 16)
+    xi = np.linspace(x.min(), x.max(), 16)
+    yi = np.linspace(y.min(), y.max(), 16)
     # VERY IMPORTANT, to tell matplotlib how is your data organized
-    zi = interpolate.griddata((X, Y), Z, (xi[None, :], yi[:, None]), method='linear')
-    return xi, yi, zi, X, Y
+    zi = interpolate.griddata((x, y), z, (xi[None, :], yi[:, None]), method='linear')
+    return xi, yi, zi, x, y
+
 
 def plot_lines_of_throughput(df):
     fig = plt.figure(figsize=(w, golden_mean * w), facecolor='white')
@@ -85,13 +86,13 @@ def plot_lines_of_throughput(df):
     ax.set_xlabel("Packet Emission Rate (pps)")
     ax.set_ylabel("Per Node Avg. Throughput (bps)")
 
-
     return fig
+
 
 def plot_contour_pair(xi, yi, zi):
     fig = plt.figure(figsize=(2 * w, golden_mean * w * 2))
     ax = fig.add_subplot(1, 2, 1, projection='3d')
-    CS = plt.contour(xi, yi, zi, 15, linewidths=0.5, color='k')
+    cs = plt.contour(xi, yi, zi, 15, linewidths=0.5, color='k')
     ax = fig.add_subplot(1, 2, 2, projection='3d')
 
     xig, yig = np.meshgrid(xi, yi)
@@ -136,11 +137,11 @@ def plot_contour_3d(xi, yi, zi, rot=120, labels=None):
     return fig
 
 
-def plot_contour_2d(xi, yi, zi, X=None, Y=None, var=None, norm=False):
-    if X is None:
-        X = []
-    if Y is None:
-        Y = []
+def plot_contour_2d(xi, yi, zi, x=None, y=None, var=None, norm=False):
+    if x is None:
+        x = []
+    if y is None:
+        y = []
 
     fig = plt.figure(figsize=(w, golden_mean * w), facecolor='white')
     ax = fig.add_subplot(1, 1, 1)
@@ -168,26 +169,26 @@ def plot_contour_2d(xi, yi, zi, X=None, Y=None, var=None, norm=False):
         # ax.set_title("{} with varying Packet Emission and Node Separations".format(var))
         cbar.set_label(var)
 
-    if len(X) and len(Y):
-        ax.scatter(X, Y, color='k', marker='.')
+    if len(x) and len(y):
+        ax.scatter(x, y, color='k', marker='.')
 
     # ax.clabel(cset,inline=1)
     return fig
 
 
 def plot_all_funky_stuff(sdf, mobility):
-    xt, yt, zt, Xt, Yt = interpolate_rate_sep(sdf.dropna(), "throughput")
-    fig = plot_contour_2d(xt, yt, zt, Xt, Yt, "Per Node Avg. Throughput (bps)")
+    xt, yt, zt, x, y = interpolate_rate_sep(sdf.dropna(), "throughput")
+    fig = plot_contour_2d(xt, yt, zt, x, y, "Per Node Avg. Throughput (bps)")
     fig.tight_layout(pad=0.1)
     fig.savefig("img/throughput_2d_{}.pdf".format(mobility))
 
-    xd, yd, zd, Xd, Yd = interpolate_rate_sep(sdf.dropna(), "average_rx_delay")
-    fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Average Delay (s)")
+    xd, yd, zd, x, y = interpolate_rate_sep(sdf.dropna(), "average_rx_delay")
+    fig = plot_contour_2d(xd, yd, zd, x, y, "Average Delay (s)")
     fig.tight_layout(pad=0.1)
     fig.savefig("img/delay_2d_{}.pdf".format(mobility))
 
-    xd, yd, zd, Xd, Yd = interpolate_rate_sep(sdf, "tdivdel")
-    fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Throughput Delay Ratio")
+    xd, yd, zd, x, y = interpolate_rate_sep(sdf, "tdivdel")
+    fig = plot_contour_2d(xd, yd, zd, x, y, "Throughput Delay Ratio")
     fig.tight_layout(pad=0.1)
     fig.savefig("img/2d_ratio_{}.pdf".format(mobility))
 
@@ -195,8 +196,8 @@ def plot_all_funky_stuff(sdf, mobility):
     fig.tight_layout(pad=0.1)
     fig.savefig("img/3d_ratio_{}.pdf".format(mobility), transparent=True, facecolor='white')
 
-    xd, yd, zd, Xd, Yd = interpolate_rate_sep(sdf, "co_norm")
-    fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Normalised Throughput Delay Product", norm=True)
+    xd, yd, zd, x, y = interpolate_rate_sep(sdf, "co_norm")
+    fig = plot_contour_2d(xd, yd, zd, x, y, "Normalised Throughput Delay Product", norm=True)
     fig.tight_layout(pad=0.1)
     fig.savefig("img/2d_normed_product_{}.pdf".format(mobility))
 
@@ -296,7 +297,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        cb.latexify(columns=0.5, factor=0.5)
+        CB.latexify(columns=0.5, factor=0.5)
 
         base_config = aietes.Simulation.populate_config(
             aietes.Tools.get_config('bella_static.conf'),
@@ -306,9 +307,9 @@ class TrustCom(unittest.TestCase):
         node_positions = {texify(k): np.asarray(v['initial_position'], dtype=float) for k, v in
                           base_config['Node']['Nodes'].items() if 'initial_position' in v}
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
-        reload(cb)
-        # _=cb.plot_positions(node_positions, bounds=base_config.Environment.shape)
-        fig = cb.plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
+        reload(CB)
+        # _=CB.plot_positions(node_positions, bounds=base_config.Environment.shape)
+        fig = CB.plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
                             square=False)
         fig.tight_layout(pad=0.3)
         fig.savefig("img/s1_layout.pdf", transparent=True)
@@ -330,7 +331,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        cb.latexify(columns=0.5, factor=0.5)
+        CB.latexify(columns=0.5, factor=0.5)
 
         for mobility in ['static', 'all_mobile']:
             df = get_mobility_stats(mobility)
@@ -365,7 +366,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        figsize = cb.latexify(columns=0.5, factor=0.5)
+        figsize = CB.latexify(columns=0.5, factor=0.5)
 
         selected_scenarios = ['bella_all_mobile', 'bella_static']
         weight_comparisons.plot_mtfm_boxplot(self.good, keyword="fair",
@@ -410,7 +411,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        figsize = cb.latexify(columns=0.5, factor=0.5)
+        figsize = CB.latexify(columns=0.5, factor=0.5)
 
         selected_scenarios = ['bella_all_mobile', 'bella_static']
         for s in selected_scenarios:
@@ -427,7 +428,7 @@ class TrustCom(unittest.TestCase):
             weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
                                                        malicious_behaviour="SelfishTargetSelection",
                                                        s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair","Selfish"]
+                                                       labels=["Fair", "Selfish"]
                                                        )
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img", f)))
@@ -442,7 +443,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        cb.latexify(columns=0.5, factor=0.5)
+        CB.latexify(columns=0.5, factor=0.5)
 
         def beta_trusts(trust, length=4096):
             trust['+'] = (trust.TXThroughput / length) * (1 - trust.PLR)
@@ -454,11 +455,11 @@ class TrustCom(unittest.TestCase):
             beta_trust = pd.stats.moments.ewma(beta_trust, span=2)
             beta_t_confidence = lambda s, f: 1 - np.sqrt((12 * s * f) / ((s + f + 1) * (s + f) ** 2))
             beta_t = lambda s, f: s / (s + f)
-            otmf_T = lambda s, f: 1 - np.sqrt(
+            otmf_t = lambda s, f: 1 - np.sqrt(
                 ((((beta_t(s, f) - 1) ** 2) / 2) + (((beta_t_confidence(s, f) - 1) ** 2) / 9))) / np.sqrt(
                 (1 / 2) + (1 / 9))
             beta_vals = beta_trust.apply(lambda r: beta_t(r['+'], r['-']), axis=1)
-            otmf_vals = beta_trust.apply(lambda r: otmf_T(r['+'], r['-']), axis=1)
+            otmf_vals = beta_trust.apply(lambda r: otmf_t(r['+'], r['-']), axis=1)
             return beta_vals, otmf_vals
 
         def plot_beta_mtmf_comparison(beta_trust, mtfm, key):
@@ -478,7 +479,6 @@ class TrustCom(unittest.TestCase):
             fig.tight_layout()
             fig.savefig("img/trust_beta_otmf{}.pdf".format("_" + key if key is not None else ""), transparent=True)
             plt.close(fig)
-
 
         gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file, [self.good, self.malicious, self.selfish])
         mal_mobile = mal_trust.xs('All Mobile', level='var')
@@ -514,7 +514,6 @@ class TrustCom(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join("img", f)))
             self.generated_files.append(f)
 
-
     def testOutlierGraphs(self):
         columns = {'ADelay': "$Delay$",
                    'ARXP': "$P_{RX}$",
@@ -541,8 +540,8 @@ class TrustCom(unittest.TestCase):
 
         def comparer(base, comp, index=0):
             dp_r = (comp / base).reset_index()
-            Sfet = feature_extractor(dp_r, index)
-            return Sfet
+            sfet = feature_extractor(dp_r, index)
+            return sfet
 
         # Generate Outlier DataPackage
         with pd.get_store(in_results('outliers.h5')) as s:
@@ -550,9 +549,9 @@ class TrustCom(unittest.TestCase):
             sum_by_weight = outliers.groupby(
                 ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index('bev')
             dp = pd.DataFrame.from_dict({
-                k: sum_by_weight[sum_by_weight.bev == k]['Delta']
-                for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
-            })
+                                            k: sum_by_weight[sum_by_weight.bev == k]['Delta']
+                                            for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
+                                            })
 
         # Perform Comparisons
         gm = comparer(dp.good, dp.malicious)[key_order]
@@ -560,7 +559,7 @@ class TrustCom(unittest.TestCase):
         ms = comparer(dp.malicious, dp.selfish)[key_order]
 
         # Bar Chart
-        figsize = cb.latexify(columns=1.0, factor=1.2)
+        figsize = CB.latexify(columns=1.0, factor=1.2)
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1)
         _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(index=columns)
@@ -582,8 +581,8 @@ class TrustCom(unittest.TestCase):
 
         # Radar Base
         with rc_context(rc={'axes.labelsize': 8}):
-            figsize = cb.latexify(columns=1, factor=1.2)
-            r = radar.Radar_factory(len(key_order))
+            figsize = CB.latexify(columns=1, factor=1.2)
+            r = radar.radar_factory(len(key_order))
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(1, 1, 1, projection='radar')
             ax.plot(r, gm.values, ls='--', marker='x', label="F/M")
@@ -600,8 +599,3 @@ class TrustCom(unittest.TestCase):
         for f in required_files:
             self.assertTrue(os.path.isfile(os.path.join("img", f)))
             self.generated_files.append(f)
-
-
-
-
-

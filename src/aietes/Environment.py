@@ -25,7 +25,6 @@ from SimPy import Simulation as Sim
 
 from aietes.Tools import MapEntry, distance, DEBUG, ConfigError
 
-
 Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
 
 
@@ -262,4 +261,3 @@ class Environment(object):
         """
         assert filename is not None
         np.savez(filename, self.pos_log)
-

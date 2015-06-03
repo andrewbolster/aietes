@@ -127,7 +127,7 @@ def _build_egg(egg, tarball, to_dir):
 
 def _do_download(version, download_base, to_dir, download_delay):
     egg = os.path.join(to_dir, 'distribute-%s-py%d.%d.egg'
-                               % (version, sys.version_info[0], sys.version_info[1]))
+                       % (version, sys.version_info[0], sys.version_info[1]))
     if not os.path.exists(egg):
         tarball = download_setuptools(version, download_base,
                                       to_dir, download_delay)
@@ -168,7 +168,7 @@ def use_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
                     "\n\n(Currently using %r)\n" % (version, e.args[0]))
                 sys.exit(2)
             else:
-                del pkg_resources, sys.modules['pkg_resources']    # reload ok
+                del pkg_resources, sys.modules['pkg_resources']  # reload ok
                 return _do_download(version, download_base, to_dir,
                                     download_delay)
         except pkg_resources.DistributionNotFound:

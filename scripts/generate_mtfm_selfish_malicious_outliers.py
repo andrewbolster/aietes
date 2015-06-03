@@ -12,7 +12,6 @@ from bounos.ChartBuilders import weight_comparisons
 from bounos.Analyses import Trust
 from aietes.Tools import memory, swapsize
 
-
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,
                     level=logging.INFO,
@@ -52,4 +51,3 @@ if os.path.isfile(filename):
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     sums.to_hdf(filename, 'outliers', complevel=5, complib='zlib')
-

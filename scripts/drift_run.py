@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 __author__ = 'andrewbolster'
-from polybos import ExperimentManager as EXP
+from polybos import ExperimentManager as ExpMan
 
 
 def set_exp():
-    e = EXP(node_count=4,
+    e = ExpMan(node_count=4,
             title="Drift Analysis",
             parallel=True, future=True,
             retain_data=False)
@@ -33,10 +33,3 @@ if __name__ == "__main__":
     exp = set_exp()
     exp = run_exp(exp)
     print memory()
-
-
-
-
-
-
-

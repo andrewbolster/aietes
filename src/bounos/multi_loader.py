@@ -16,7 +16,6 @@ from bounos import npz_in_dir, load_sources, generate_sources
 from bounos.Analyses import Trust
 from aietes.Tools import memory, swapsize
 
-
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,
                     level=logging.INFO,
@@ -73,18 +72,18 @@ def generate_inverted_logs_from_paths(paths):
                 memory(), swapsize()))
             for node, inner_logs in nodes.iteritems():
                 if node in ['stats', 'positions']:
-                    if not logs.has_key(node):
+                    if node not in logs:
                         logs[node] = {}
-                    if not logs[node].has_key(var):
+                    if var not in logs[node]:
                         logs[node][var] = {}
                     logs[node][var][run] = inner_logs
                 else:
                     for k, v in inner_logs.iteritems():
-                        if not logs.has_key(k):
+                        if k not in logs:
                             logs[k] = {}
-                        if not logs[k].has_key(var):
+                        if var not in logs[k]:
                             logs[k][var] = {}
-                        if not logs[k][var].has_key(run):
+                        if run not in logs[k][var]:
                             logs[k][var][run] = {}
                         logs[k][var][run][node] = v
 
@@ -99,37 +98,37 @@ def generate_dataframes_from_inverted_log(tup):
         if k not in ['stats', 'positions']:
             # Var/Run/Node/(N/t) MultiIndex
             df = pd.concat([
-                pd.concat([
-                    pd.concat([pd.DataFrame(iiiv)
-                               for iiik, iiiv in iiv.iteritems()],
-                              keys=iiv.keys())
-                    for iik, iiv in iv.iteritems()],
-                    keys=iv.keys()
-                )
-                for ik, iv in v.iteritems()],
-                keys=v.keys(),
-                names=['var', 'run', 'node', 't']
-            )
+                               pd.concat([
+                                             pd.concat([pd.DataFrame(iiiv)
+                                                        for iiik, iiiv in iiv.iteritems()],
+                                                       keys=iiv.keys())
+                                             for iik, iiv in iv.iteritems()],
+                                         keys=iv.keys()
+                                         )
+                               for ik, iv in v.iteritems()],
+                           keys=v.keys(),
+                           names=['var', 'run', 'node', 't']
+                           )
         elif k == 'positions':
             # Var/Run/T/Node MultiIndex
             df = pd.concat([
-                pd.concat([iiv
-                           for iik, iiv in iv.iteritems()],
-                          keys=iv.keys())
-                for ik, iv in v.iteritems()],
-                keys=v.keys(),
-                names=['var', 'run', 't', 'node']
-            )
+                               pd.concat([iiv
+                                          for iik, iiv in iv.iteritems()],
+                                         keys=iv.keys())
+                               for ik, iv in v.iteritems()],
+                           keys=v.keys(),
+                           names=['var', 'run', 't', 'node']
+                           )
         else:
             # Var/Run MultiIndex
             df = pd.concat([
-                pd.concat([iiv
-                           for iik, iiv in iv.iteritems()],
-                          keys=iv.keys())
-                for ik, iv in v.iteritems()],
-                keys=v.keys(),
-                names=['var', 'run', 'node']
-            )
+                               pd.concat([iiv
+                                          for iik, iiv in iv.iteritems()],
+                                         keys=iv.keys())
+                               for ik, iv in v.iteritems()],
+                           keys=v.keys(),
+                           names=['var', 'run', 'node']
+                           )
 
         # Fixes for storage and sanity
         if k == 'stats':
@@ -155,8 +154,10 @@ def generate_dataframes_from_inverted_log(tup):
         df = df.reindex(sorted(df.index.levels[1]), level=1, copy=False)  # Var
 
 
+    # TODO Give this a bloody exception clause
     except:
         log.exception("{k} didn't work".format(k=k))
+        raise
 
     return k, df
 

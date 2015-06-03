@@ -72,8 +72,8 @@ def mtfm_from_perspectives_dict(perspectives, mtfm_args=None):
         mtfm_args = default_mtfm_args
 
     inter = pd.concat(perspectives.values(),
-        axis=0, keys=perspectives.keys(),
-        names=["bev"] + perspectives.values()[0].index.names)
+                      axis=0, keys=perspectives.keys(),
+                      names=["bev"] + perspectives.values()[0].index.names)
     mtfms = (
         inter.groupby(level=['bev']).apply(generate_mtfm, *mtfm_args).reset_index(level=[0, 2, 3], drop=True).sum(
             axis=1))
@@ -87,7 +87,7 @@ def outliers_from_trust_dict(trust_dict, good_key="good", s=None,
         k: perspective_from_trust(t, s=s, metric_weight=metric_weight,
                                   flip_metrics=flip_metrics, par=par)
         for k, t in trust_dict.iteritems()
-    }
+        }
     mtfms = mtfm_from_perspectives_dict(perspectives, mtfm_args)
     outlier = generate_outlier_frame(mtfms, good_key).reset_index()
     for k in metric_weight.keys():
@@ -328,7 +328,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     if par:
         trusts = Parallel(n_jobs=-1)(delayed(generate_single_observer_trust_perspective)
                                      (g, **exec_args) for k, g in tf.groupby(level=[var, 'run', 'observer'])
-        )
+                                     )
         trusts = [item for sublist in trusts for item in sublist]
     else:
         with np.errstate(all='raise'):
@@ -378,11 +378,11 @@ def generate_global_trust_values(trust_logs, metric_weights=None):
     trust_perspectives = {
         node: generate_node_trust_perspective(node_observations, metric_weights=metric_weights)
         for node, node_observations in trust_logs.iteritems()
-    }
+        }
     inverted_trust_perspectives = {
         node: invert_node_trust_perspective(node_perspective)
         for node, node_perspective in trust_perspectives.iteritems()
-    }
+        }
     return trust_perspectives, inverted_trust_perspectives
 
 

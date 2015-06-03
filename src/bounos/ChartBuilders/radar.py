@@ -8,7 +8,7 @@ from matplotlib.projections.polar import PolarAxes
 from matplotlib.projections import register_projection
 
 
-def Radar_factory(num_vars):
+def radar_factory(num_vars):
     theta = 2 * np.pi * np.linspace(0, 1 - 1. / num_vars, num_vars)
     theta += np.pi / 2
 

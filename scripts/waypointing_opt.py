@@ -3,11 +3,11 @@
 __author__ = 'andrewbolster'
 import numpy
 
-from polybos import ExperimentManager as EXP
+from polybos import ExperimentManager as ExpMan
 
 
 def set_exp():
-    e = EXP(node_count=8,
+    e = ExpMan(node_count=8,
             title="Waypointing Test")
     e.add_variable_2_range_scenarios({"waypointing": numpy.linspace(0.0, 0.3, 20),
                                       "clumping": numpy.linspace(0.0, 0.3, 20)})
@@ -25,4 +25,4 @@ def run_exp(e):
 if __name__ == "__main__":
     exp = set_exp()
     exp = run_exp(exp)
-    EXP.print_stats(exp)
+    ExpMan.print_stats(exp)

@@ -28,7 +28,7 @@ from aietes.Tools import MapEntry, distance, fudge_normal, DEBUG, unit, mag, lis
     ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
 
-#DEBUG = False
+# DEBUG = False
 
 
 class BasicWaypoint(object):
@@ -145,7 +145,7 @@ class Behaviour(object):
                     [
                         "%s:%.f%%" % (func, 100 * mag(value) / total)
                         for func, value in contributions.iteritems()
-                    ], total)
+                        ], total)
                                   )
             else:
                 self.logger.debug("contributions: None")

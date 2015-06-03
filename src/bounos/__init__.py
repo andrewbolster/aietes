@@ -43,7 +43,6 @@ import Analyses.Trust
 from DataPackage import DataPackage
 from aietes.Tools import list_functions, mkpickle
 
-
 font = {'family': 'normal',
         'weight': 'normal',
         'size': 10}

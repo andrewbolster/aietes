@@ -7,7 +7,7 @@ import sys
 import os
 from subprocess import call
 
-from polybos import ExperimentManager as EXP
+from polybos import ExperimentManager as ExpMan
 
 
 @contextmanager
@@ -19,7 +19,7 @@ def redirected(stdout):
 
 
 def setup_exp():
-    e = EXP(node_count=8,
+    e = ExpMan(node_count=8,
             title="Malicious Behaviour Trust Comparison",
             parallel=True,
             future=True
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     exp.dump_analysis()
 
     with redirected(stdout=logpath):
-        EXP.print_stats(exp, verbose=True)
+        ExpMan.print_stats(exp, verbose=True)
 
     with open(logpath, 'r') as fin:
         print fin.read()
@@ -57,5 +57,3 @@ if __name__ == "__main__":
     exp.dump_self()
     os.chdir(exp.exp_path)
     call(['bounos', '-M'])
-
-

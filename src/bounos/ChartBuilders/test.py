@@ -113,4 +113,3 @@ class ChartBuilders(unittest.TestCase):
 
         test_figure = bounos.ChartBuilders.combined_trust_observation_summary(self.dp, target=self.dp.names[1])
         self.assertIsInstance(test_figure, Figure)
-

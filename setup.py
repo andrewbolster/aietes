@@ -41,6 +41,6 @@ setup(name='aietes',
               ['aietes=aietes:main',
                'bounos=bounos:main',
                'ephyra=ephyra:main'
-              ]
+               ]
       }
-)
+      )

@@ -163,7 +163,6 @@ class Scenario(object):
         self.mypath = None
         self.datarun = None
 
-
     def run(self, runcount=None, runtime=None, *args, **kwargs):
         """
         Offload this to AIETES
@@ -281,7 +280,7 @@ class Scenario(object):
 
             print("done %d runs in parallel" % runcount)
         else:
-            self._pending_queue = aietes.Threaded.queue_sim(self.runlist, queueing_pool)
+            self._pending_queue = aietes.Threaded.QueueSim(self.runlist, queueing_pool)
             self._pending_queue.launch()
             print("launched %d runs, pending collection" % runcount)
 
@@ -798,7 +797,6 @@ class ExperimentManager(object):
                 s.update_node(node_config, variable, v)
             self.scenarios[s.title] = s
 
-
     def add_variable_node_scenario(self, node_range):
         """
         Add a scenario with a range of configuration values to the experimental run
@@ -1025,7 +1023,8 @@ class ExperimentManager(object):
 
             for i, r in enumerate(stats):
                 analysis = behaviour_analysis_dict(s.datarun[i])
-                confident = analysis['trust_stdev'] > 100 # TODO This needs to be dynamic, possibly based on n_metrics and t
+                confident = analysis[
+                                'trust_stdev'] > 100  # TODO This needs to be dynamic, possibly based on n_metrics and t
                 correct_detection = (not bool(suspects) and not confident) or analysis[
                                                                                   'suspect_name'] in suspects
                 correctness_stats[t].append(
@@ -1186,4 +1185,3 @@ class RecoveredExperiment(ExperimentManager):
             scenarios[subdir] = PseudoScenario(subdir, load_sources(sources, comms_only=True))
 
         return scenarios, scenarios_file
-

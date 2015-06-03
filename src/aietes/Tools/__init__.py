@@ -48,7 +48,6 @@ from colorlog import ColoredFormatter
 
 from aietes.Tools.humanize_time import seconds_to_str
 
-
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
 np.seterr(all='raise', under='warn')
@@ -1193,4 +1192,3 @@ class Capturing(list):
     def __exit__(self, *args):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
-

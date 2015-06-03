@@ -29,7 +29,6 @@ from scipy.spatial.distance import pdist, squareform
 
 import bounos
 
-
 _boxplot_kwargs = {
     # 'showmeans': False,
     # 'showbox': True,
@@ -493,7 +492,6 @@ def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
 
     ax.legend((rects1[0], rects2[0]), ('Source', 'Destination'))
 
-
     def autolabel(rects):
         # attach some text labels
         """
@@ -783,14 +781,15 @@ def latexify(columns=1, factor=0.45):
     # computer.org/cms/Computer.org/Journal%20templates/transactions_art_guide.pdf
 
     golden_mean = (np.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
+    max_height_inches = 8.0
+
     fig_width_in = 3.339 * factor / columns
     fig_height_in = fig_width_in * golden_mean
 
-    MAX_HEIGHT_INCHES = 8.0
-    if fig_height_in > MAX_HEIGHT_INCHES:
+    if fig_height_in > max_height_inches:
         print("WARNING: fig_height too large:" + fig_height_in +
-              "so will reduce to" + MAX_HEIGHT_INCHES + "inches.")
-        fig_height_in = MAX_HEIGHT_INCHES
+              "so will reduce to" + max_height_inches + "inches.")
+        fig_height_in = max_height_inches
 
     params = {'backend': 'ps',
               'text.latex.preamble': ['\usepackage{gensymb}'],
@@ -820,7 +819,6 @@ def format_axes(ax, spine_color='gray'):
 
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
-
 
     for axis in [ax.xaxis, ax.yaxis]:
         axis.set_tick_params(direction='out', color=spine_color)
