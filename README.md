@@ -1,4 +1,4 @@
-aietes
+AIETES
 ======
 Andrew Bolster 2012
 
@@ -18,6 +18,7 @@ Aietes is a motion, behaviour, and communications simulator for AUVs (Autonomous
 * python-wxgtk2.8
 * python-tk
 * cython
+
 ##Installation
     sudo apt-get install dvipng build-essential python-dev python-matplotlib python-simpy python-pydot python-numexpr python-wxgtk2.8 libfreetype6-dev python-tk libhdf5-dev liblapack-dev libblas-dev gfortran
     sudo pip install -r requirements
