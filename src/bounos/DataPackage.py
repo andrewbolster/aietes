@@ -25,13 +25,14 @@ from scipy.spatial.distance import pdist, squareform
 
 
 
+
 # used to reconstitute config from NP object
 from ast import literal_eval
 
 import numpy as np
 import pandas as pd
 
-from aietes.Tools import mag, add_ndarray_to_set, unext, validate_config, results_file
+from aietes.Tools import mag, add_ndarray_to_set, unext, validate_config, get_results_path
 import Analyses.Trust
 from configobj import ConfigObj
 
@@ -62,7 +63,7 @@ class DataPackage(object):
                    'ecea_positions': 'ecea_positions',
                    'additional': 'additional',
                    'comms': 'comms'
-    }
+                   }
 
     version = 1.0
 
@@ -220,16 +221,17 @@ class DataPackage(object):
         :param track_mat:
         :return:
         """
-        logging.info(
-            "Writing datafile to {}.npz".format(results_file(filename, results_dir=results_dir)))
+        full_path = get_results_path(filename, results_dir=results_dir, make=True)
+
+        logging.info("Writing datafile to {}.npz".format(full_path))
 
         data = {i: self.__dict__[
-            i] for i in self._attrib_map.keys() if self.__dict__.has_key(i)}
-        data['filename'] = "{}.npz".format(filename)
+            i] for i in self._attrib_map.keys() if i in self.__dict__}
+        data['filename'] = "{}.npz".format(full_path)
 
         np.savez(filename,
                  **data
-        )
+                 )
         co = ConfigObj(self.config, list_values=False)
         co.filename = "%s.conf" % filename
         co.write()
@@ -415,7 +417,7 @@ class DataPackage(object):
         """
         magnitudes = [sum(map(mag, self.heading_slice(time))) / self.n
                       for time in range(self.tmax)
-        ]
+                      ]
         return magnitudes
 
     def average_heading_mag_range(self):
@@ -426,7 +428,7 @@ class DataPackage(object):
         """
         magnitudes = [mag(self.average_heading(time))
                       for time in range(self.tmax)
-        ]
+                      ]
         return magnitudes
 
     def heading_stddev_range(self):
@@ -434,10 +436,11 @@ class DataPackage(object):
         Returns an array of overall heading stddevs across the dataset
 
         """
-        deviations = [np.std(
-            self.deviation_from_at(self.average_heading(time), time)
-        )
-                      for time in range(self.tmax)
+        deviations = [
+            np.std(
+                self.deviation_from_at(self.average_heading(time), time)
+            )
+            for time in range(self.tmax)
         ]
         return deviations
 
@@ -759,7 +762,7 @@ class DataPackage(object):
                          bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                          arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                          color='red')
-            )
+                         )
             ax1.scatter(x, y)
             ax2.scatter(y, z)
             ax3.scatter(x, z)
@@ -825,7 +828,7 @@ class DataPackage(object):
         :return bool:
         """
 
-        return all([v.has_key('tx') and v.has_key('rx') for v in self.comms['logs'].values()])
+        return all(['tx' in v and 'rx' in v for v in self.comms['logs'].values()])
 
     def has_trust_data(self):
         """
@@ -835,4 +838,4 @@ class DataPackage(object):
         :return bool:
         """
 
-        return self.has_comms_data() and all([v.has_key('trust') for v in self.comms['logs'].values()])
+        return self.has_comms_data() and all(['trust' in v for v in self.comms['logs'].values()])

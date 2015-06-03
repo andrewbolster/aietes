@@ -17,6 +17,8 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
+from collections import OrderedDict
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
@@ -24,20 +26,17 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import pdist, squareform
-from collections import OrderedDict
-
-from aietes import Tools
 
 import bounos
 
 
 _boxplot_kwargs = {
-    #'showmeans': False,
-    #'showbox': True,
-    #'widths': 0.6,
-    #'linewidth': 2,
+    # 'showmeans': False,
+    # 'showbox': True,
+    # 'widths': 0.6,
+    # 'linewidth': 2,
     'showfliers': False,
-    "whis":1
+    "whis": 1
 }
 
 
@@ -67,13 +66,14 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
     else:
         raise ValueError("I've got no idea how you got here...")
 
-    died = df[df.delivered != True].count().max()
+    died = df[not df.delivered].count().max()
     if died > 1:
         all_pkts = df.count().max()
 
         f, ax = plt.subplots(figsize=(13, 7))
         ax.set_title(
-            "Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title, died / float(all_pkts),
+            "Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title,
+                                                                                             died / float(all_pkts),
                                                                                              all_pkts))
         ax.set_ylabel("Count (n)")
         ax.set_xlabel("Simulation Time (s)")
@@ -358,7 +358,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
              style=["-", "--", "-.", ":"],
              grid='on',
              title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
-    )
+             )
     ax.set_xlabel(var)
     ax.set_ylabel("Total Packets")
     if not hide_annotations:
@@ -566,7 +566,8 @@ def trust_perspectives_wrt_targets(trust_frame):
     return f
 
 
-def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), texify=True):
+def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), texify=True, xlabel=True,
+                                dropnet=False):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
     :param title:
@@ -575,6 +576,8 @@ def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), 
     :return:
     """
     df = trust_group.dropna()
+    if dropnet:
+        df = df.drop("$T_{Net}$", 1)
     f, ax = plt.subplots(1, 1, figsize=(figsize[0], figsize[1] * 1), sharey=True)
     # plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
     ax = sns.boxplot(df, ax=ax, **_boxplot_kwargs)
@@ -587,7 +590,18 @@ def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), 
     ax.xaxis.set_ticks_position('none')
     ax.yaxis.set_ticks_position('none')
 
-    ax.set_xlabel("Assessment Type")
+    ax.axvline(5.5, ls="--", color="k", alpha=0.5)
+    [ax.axvline(x, ls=":", color="k", alpha=0.5) for x in [1.5, 3.5]]
+    ax.annotate("D", xy=(1, 0.9), xycoords='data', horizontalalignment='centre')
+    ax.annotate("R", xy=(2.5, 0.9), xycoords='data', horizontalalignment='centre')
+    ax.annotate("I", xy=(4.5, 0.9), xycoords='data', horizontalalignment='centre')
+    if dropnet:
+        ax.annotate("Agg.", xy=(6, 0.9), xycoords='data', horizontalalignment='centre')
+    else:
+        ax.annotate("Agg.", xy=(6.5, 0.9), xycoords='data', horizontalalignment='centre')
+
+    if xlabel:
+        ax.set_xlabel("Assessment Type")
     ax.set_ylabel("Trust Value")
     ax.set_ylim((0.0, 1.0))
 
@@ -617,7 +631,7 @@ def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
                      bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                      arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                      color='red')
-        )
+                     )
         ax1.scatter(x, y)
         ax2.scatter(y, z)
         ax3.scatter(x, z)
@@ -662,7 +676,7 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
                      bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                      arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                      color='red')
-        )
+                     )
         ax1.scatter(x, y)
         ax2.scatter(y, z)
         ax3.scatter(x, z)
@@ -707,7 +721,7 @@ def plot_positions(d, bounds=None):
                      bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                      arrowprops=dict(arrowstyle='->',
                                      color='red')
-        )
+                     )
         ax1.scatter(x, y)
         ax2.scatter(y, z)
         ax3.scatter(x, z)
@@ -752,7 +766,7 @@ def plot_positions(d, bounds=None):
 ## Extended based on http://damon-is-a-geek.com/publication-ready-the-first-time-beautiful-reproducible-plots-with-matplotlib.html
 #####
 
-def latexify(fig_width=347, fig_height=None, columns=1, factor=0.45):
+def latexify(columns=1, factor=0.45):
     """Set up matplotlib's RC params for LaTeX plotting.
     Call this before plotting a figure.
 
@@ -760,7 +774,7 @@ def latexify(fig_width=347, fig_height=None, columns=1, factor=0.45):
     ----------
     fig_width : float, optional, pts
     fig_height : float,  optional, pts
-    columns : {1, 2}
+    columns : {0.5, 1, 2}
     """
 
     # code adapted from http://www.scipy.org/Cookbook/Matplotlib/LaTeX_Examples
@@ -768,41 +782,43 @@ def latexify(fig_width=347, fig_height=None, columns=1, factor=0.45):
     # Width and max height in inches for IEEE journals taken from
     # computer.org/cms/Computer.org/Journal%20templates/transactions_art_guide.pdf
 
-    assert (columns in [1, 2])
 
-    inches_per_pt = 1.0 / 72.27
+    golden_mean = (np.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
 
-    fig_width_in = fig_width * inches_per_pt * factor
-
-    if fig_height is None:
-        golden_mean = (np.sqrt(5) - 1.0) / 2.0  # Aesthetic ratio
-        fig_height_in = fig_width_in * golden_mean
+    fig_width_in = 3.339 * factor / columns
+    fig_height_in = fig_width_in * golden_mean
 
     MAX_HEIGHT_INCHES = 8.0
     if fig_height_in > MAX_HEIGHT_INCHES:
         print("WARNING: fig_height too large:" + fig_height_in +
               "so will reduce to" + MAX_HEIGHT_INCHES + "inches.")
-        fig_height = MAX_HEIGHT_INCHES
+        fig_height_in = MAX_HEIGHT_INCHES
 
     params = {'backend': 'ps',
               'text.latex.preamble': ['\usepackage{gensymb}'],
-              'axes.labelsize': 12,  # fontsize for x and y labels (was 10)
-              'axes.titlesize': 12,
-              'font.size': 12,  # was 10/8
-              'legend.fontsize': 12,  # was 10
-              'xtick.labelsize': 12,
-              'ytick.labelsize': 12,
+              'axes.labelsize': 10,  # fontsize for x and y labels (was 10)
+              'axes.titlesize': 10,
+              'font.size': 10,  # was 10/8
+              'legend.fontsize': 8,  # was 10,
+              'legend.labelspacing': 0.2,
+              'legend.borderpad': 0,
+              'xtick.labelsize': 8,
+              'ytick.labelsize': 8,
               'text.usetex': True,
               'figure.figsize': [fig_width_in, fig_height_in],
               'font.family': 'serif'
-    }
+              }
 
     mpl.rcParams.update(params)
+    return fig_width_in, fig_height_in
 
 
 def format_axes(ax, spine_color='gray'):
-    for spine in ['top', 'right', 'left', 'bottom']:
+    ax.grid(True, color=spine_color, alpha=0.2)
+    for spine in ['top', 'right']:
         ax.spines[spine].set_visible(False)
+    for spine in ['bottom', 'left']:
+        ax.spines[spine].set_color(spine_color)
 
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
@@ -813,8 +829,8 @@ def format_axes(ax, spine_color='gray'):
     return ax
 
 
-def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False):
-    fig, ax = plt.subplots()
+def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False, square=True, figsize=None):
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
     nodes = []
     node_positions = OrderedDict(sorted(node_positions.items()))
     for node, position in node_positions.items():
@@ -829,13 +845,13 @@ def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False):
                 x, y = zip(node_positions.values()[node][0:2], node_positions.values()[link][0:2])
                 ax.plot(x, y, color='k', lw=1, alpha=0.4, linestyle='--')
 
-    ax.set_aspect('equal', adjustable='datalim')
-
+    if square:
+        ax.set_aspect('equal', adjustable='datalim')
     if scalefree:
+        ax = format_axes(ax)
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-        ax = format_axes(ax)
-
+        ax.grid(False)
 
     return fig
 

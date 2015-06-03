@@ -1,29 +1,31 @@
-ZODB
-notify2
+pylab
 BTrees
-transaction
-persistent
-click
-tables
-pandas
-pykalman
-configobj
-scipy
-pydot
-matplotlib >= 1.3.1
-scipy
-numpy
 SimPy == 2.3.1
-pubsub
+ZODB
+click
+colorlog
+configobj
 futures
 joblib >=0.8.0a3
-openpyxl==1.8.6
-oct2py
-seaborn
+matplotlib >= 1.3.1
 natsort
-colorlog
 networkx
 nose
-nosexcover
 nose-exclude
+nosexcover
 notify2
+numpy
+numexpr
+oct2py
+openpyxl==1.8.6
+pandas
+persistent
+pubsub
+pydot
+pykalman
+quantities
+scikit-learn
+scipy
+seaborn
+tables
+transaction

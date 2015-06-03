@@ -194,8 +194,8 @@ class Fleet(Sim.Process):
             latest_logs = self.environment.latest_logs()
         positions = [None for _ in range(self.node_count())]
         times = [-1 for _ in range(self.node_count())]
-        for id, log in latest_logs.items():
-            index = self.nodenum_from_id(id)
+        for nodeid, log in latest_logs.items():
+            index = self.nodenum_from_id(nodeid)
             positions[index] = log.position
             times[index] = log.time
             if DEBUG:
@@ -249,8 +249,8 @@ class Fleet(Sim.Process):
         else:
             kb = self.environment.logs_at_time(t)
         positions = [None for _ in range(self.node_count())]
-        for id, log in kb.items():
-            positions[self.nodenum_from_id(id)] = log.position
+        for nodeid, log in kb.items():
+            positions[self.nodenum_from_id(nodeid)] = log.position
         return np.asarray(positions)
 
     def node_poslogs(self, shared=True):
@@ -394,7 +394,7 @@ class Fleet(Sim.Process):
                          ha='center', va='bottom', bbox=dict(boxstyle='round,pad=0.2', fc='yellow', alpha=0.3),
                          arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0.5',
                                          color='red')
-            )
+                         )
             ax1.scatter(x, y)
             ax2.scatter(y, z)
             ax3.scatter(x, z)

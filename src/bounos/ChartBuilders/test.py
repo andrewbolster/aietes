@@ -21,6 +21,7 @@ __email__ = "me@andrewbolster.info"
 
 import unittest
 
+import matplotlib
 from matplotlib.figure import Figure
 
 import aietes
@@ -42,6 +43,13 @@ class ChartBuilders(unittest.TestCase):
         sim.prepare(sim_time=1000)
         sim.simulate()
         self.dp = sim.generate_datapackage()
+
+    def tearDown(self):
+        """
+        Close all figures
+        :return:
+        """
+        matplotlib.pyplot.close("all")
 
     def test_lost_packet_distribution(self):
         """

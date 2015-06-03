@@ -37,15 +37,14 @@ import weakref
 from tempfile import mkdtemp
 from shelve import DbfilenameShelf
 from ast import literal_eval
+from configobj import ConfigObj
+import validate
 
 import notify2
 import numpy as np
-from configobj import ConfigObj
-import validate
 from SimPy import SimulationStep as Sim
 from joblib import Memory
 from colorlog import ColoredFormatter
-import matplotlib
 
 from aietes.Tools.humanize_time import seconds_to_str
 
@@ -136,11 +135,6 @@ LOGLEVELS = {'debug': logging.DEBUG,
              'error': logging.ERROR,
              'critical': logging.CRITICAL}
 
-DEFAULT_CONVENTION = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon',
-                      'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa',
-                      'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron',
-                      'Pi', 'Rho', 'Sigma', 'Tau', 'Upsilon',
-                      'Phi', 'Chi', 'Psi', 'Omega']
 DEFAULT_CONVENTION = ['Alfa', 'Bravo', 'Charlie', 'Delta', 'Echo',
                       'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliet',
                       'Kilo', 'Lima', 'Mike', 'November', 'Oscar',
@@ -301,22 +295,22 @@ def spherical_distance(sixvec_a, sixvec_b):
     return np.arccos(np.dot(sixvec_a, sixvec_b))
 
 
-def add_ndarray_to_set(ndarray, list):
+def add_ndarray_to_set(ndarray, input_list):
     """
 
     :param ndarray:
-    :param list:
+    :param input_list:
     :return:
     """
     in_list = False
-    for element in list:
+    for element in input_list:
         if np.linalg.norm(ndarray - element) < 0.1:
             in_list = True
 
     if not in_list:
-        list.append(ndarray)
+        input_list.append(ndarray)
 
-    return list
+    return input_list
 
 
 #
@@ -396,6 +390,7 @@ class Dotdictify(dict):
 
     def __init__(self, value=None, **kwargs):
         super(Dotdictify, self).__init__(**kwargs)
+        raise DeprecationWarning("Really shouldn't be using this any more!")
         if value is None:
             pass
         elif isinstance(value, dict):
@@ -758,7 +753,7 @@ def update_dict(d, keys, value, safe=False):
     :raise KeyError:
     """
     for key in keys[:-1]:
-        if not d.has_key(key) and safe:
+        if key not in d and safe:
             raise KeyError("Attempting to update uninstantiated key")
         d = d.setdefault(key, {})
     d[keys[-1]] = value
@@ -852,21 +847,41 @@ def log_level_lookup(log_level):
                 return k
 
 
-def results_file(proposed_name, results_dir=None):
+def get_results_path(proposed_name, results_dir=None, make=False):
     """
+    Default Path Joiner; provides a dir for results based on a proposed title and a
+    base directory, i.e. generates /<results_dir>/<proposed_name>
+
+    Can optionally make the directory as well.
 
     :param proposed_name:
-    :param results_dir:
-    :return:
+    :param results_dir: Defaults to <repo_base>/results
+    :param make: generate the directories on the FS
+    :return: FQN Path
+    :raises ValueError
     """
-    if os.path.dirname(proposed_name) is not None:
-        # Have not been given a FQN Path: Assume to use the results directory
-        if results_dir is None:
-            results_dir = _results_dir
-        proposed_name = os.path.join(results_dir, proposed_name)
-    return proposed_name
+    # Have not been given a FQN Path: Assume to use the results directory
+    if results_dir is None:
+        results_dir = _results_dir
 
-in_results = partial(os.path.join,_results_dir)
+    if make:
+        try:
+            os.makedirs(results_dir)
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(results_dir):
+                pass
+            else:
+                raise
+
+    if proposed_name is None:
+        raise ValueError("Proposed Name cannot be None")
+
+    proposed_path = os.path.abspath(os.path.join(results_dir, proposed_name))
+
+    return proposed_path
+
+
+in_results = partial(os.path.join, _results_dir)
 
 
 def get_config_file(config):

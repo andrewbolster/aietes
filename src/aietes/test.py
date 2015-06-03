@@ -13,7 +13,6 @@
  * Contributors:
  *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
-from unittest import TestCase
 
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
@@ -97,9 +96,9 @@ class DefaultBehaviour(unittest.TestCase):
                                                   data_file=True)
         expected_filename = "{}.aietes".format(self.__class__.__name__)
         expected_path = os.path.join(aietes.Tools._results_dir, expected_filename)
-        self.assertEqual(output_dict['data_file'], expected_path + '.npz',
+        self.assertEqual(output_dict['data_file'], os.path.abspath(expected_path + '.npz'),
                          "DataFile Paths don't match {}:{}".format(output_dict['data_file'], expected_path + '.npz'))
-        self.assertEqual(output_dict['config_file'], expected_path + '.conf',
+        self.assertEqual(output_dict['config_file'], os.path.abspath(expected_path + '.conf'),
                          "ConfigFile Paths don't match {}:{}".format(output_dict['config_file'],
                                                                      expected_path + '.npz'))
         self.assertTrue(os.path.isfile(expected_path + '.npz'),
@@ -155,8 +154,8 @@ class Tools(unittest.TestCase):
         config_list = map(os.path.abspath,
                           [os.path.join(aietes.Tools._config_dir, c)
                            for c in os.listdir(aietes.Tools._config_dir)
-                          ]
-        )
+                           ]
+                          )
         self.assertIn(config_path, config_list)
         self.assertTrue(config_path.endswith(config_tail))
 

@@ -33,8 +33,8 @@ def map_paths(paths):
     subdirs = reduce(list.__add__, [filter(os.path.isdir,
                                            map(lambda p: os.path.join(path, p),
                                                os.listdir(path)
-                                           )
-    ) for path in paths])
+                                               )
+                                           ) for path in paths])
     return subdirs
 
 
@@ -45,12 +45,6 @@ def scenarios_comms(paths):
         sources = npz_in_dir(subdir)
         log.info("{:%}:{}:{}/{}".format(float(i) / float(len(subdirs)), title, memory(), swapsize()))
         yield (subdir, generate_sources(sources, comms_only=True))
-
-
-def hdfstore(filename, obj):
-    log.info("Storing into {}.h5".format(filename))
-    store = pd.HDFStore("{}.h5".format(filename), mode='w')
-    store.append(filename, object)
 
 
 import ZODB, ZODB.FileStorage
@@ -85,7 +79,7 @@ def dump_trust_logs_and_stats_from_exp_paths(paths):
                  pd.concat([r[1] for r in runlist],
                            keys=[r[0] for r in runlist],
                            names=['run', 'node'])
-                )
+                 )
             )
             trust_logs[variable] = {r[0]: generate_trust_logs_from_comms_logs(r[2]) for r in runlist}
             comms_logs[variable] = {r[0]: r[2] for r in runlist}

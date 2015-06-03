@@ -43,9 +43,9 @@ class Node(Sim.Process):
         self.logger = kwargs.get(
             "logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
 
-        #fileHandler = logging.FileHandler("{0}/{1}.log".format(logPath, fileName))
-        #fileHandler.setFormatter(log_fmt)
-        #self.logger.addHandler(fileHandler)
+        # fileHandler = logging.FileHandler("{0}/{1}.log".format(logPath, fileName))
+        # fileHandler.setFormatter(log_fmt)
+        # self.logger.addHandler(fileHandler)
 
         self.simulation = simulation
         self.config = node_config
@@ -100,8 +100,8 @@ class Node(Sim.Process):
         #
         try:
             application = self.config['Application']['protocol']
-            if isinstance(application,list):
-                if len(application)>1:
+            if isinstance(application, list):
+                if len(application) > 1:
                     raise ConfigError("Have a multi-value list where it shouldn't be! {}".format(application))
                 else:
                     application = application[0]
@@ -204,11 +204,13 @@ class Node(Sim.Process):
             self.logger.debug("Drift activated from config: {} with {}, {}".format(
                 self.config['drift'], drift_scales, drift_noises))
             self.drifting = True
-        elif kwargs.has_key('drift'):
+        elif 'drift' in kwargs:
             self.drift = kwargs.get('drift')(self)
             self.logger.debug(
                 "Drift activated from kwarg: {}".format(self.drift.__name__))
             self.drifting = True
+
+        self.nodenum = None
 
     def assign_fleet(self, fleet):
         """
@@ -351,9 +353,9 @@ class Node(Sim.Process):
                                                                              self._lastupdate,
                                                                              dt)
             except FloatingPointError:
-                type, value, traceback = sys.exc_info()
+                err_type, value, traceback = sys.exc_info()
                 raise ValueError, ("Dt,t:{},{}".format(
-                    dt, Sim.now()), type, value), traceback
+                    dt, Sim.now()), err_type, value), traceback
         else:
             self.position += self.velocity
 

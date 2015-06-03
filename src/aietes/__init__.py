@@ -19,11 +19,19 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
+import collections
+import logging
+import os
 import traceback
 import optparse
 import cProfile
 
+from configobj import ConfigObj
+from time import time
+from datetime import datetime as dt
+
 import pandas as pd
+import numpy as np
 
 from Layercake import MAC
 from Environment import Environment
@@ -31,7 +39,19 @@ import Fleet
 from Node import Node
 import Behaviour
 from bounos.DataPackage import DataPackage
-from Tools import *
+from Tools import (
+    _results_dir,
+    get_results_path,
+    log_hdl,
+    validate_config,
+    generate_names,
+    Dotdict,
+    ConfigError,
+    LOGLEVELS,
+    Sim,
+    are_equal_waypoints,  # Probably Shouldn't be in Tools
+)
+
 from Tools.humanize_time import seconds_to_str
 
 
@@ -277,7 +297,7 @@ class Simulation(object):
                  'config': self.config,
                  'title': self.title,
                  'tmax': self.duration_intervals
-        }
+                 }
 
         # 'Quirky' Optional State Info
 
@@ -327,9 +347,9 @@ class Simulation(object):
         comms_logs = {node.name: node.app.dump_logs()
                       for node in self.nodes if node.app}
         comms_pos = pd.concat({
-                                  n: pd.DataFrame(p, index=['x', 'y', 'z'])
-                                  for n, p in zip(names, state['p'])
-                              }, names=['node', 'dim']
+            n: pd.DataFrame(p, index=['x', 'y', 'z'])
+            for n, p in zip(names, state['p'])
+        }, names=['node', 'dim']
         ).T
         comms_pos.index = pd.to_datetime(comms_pos.index, unit='s')
 
@@ -392,7 +412,7 @@ class Simulation(object):
             cls.logger.info("Have %d nodes from config: %s" % (
                 preconfigured_nodes_count,
                 nodes_config)
-            )
+                            )
             pre_node_names = config_dict['Node']['Nodes'].keys()
 
         #
@@ -428,7 +448,7 @@ class Simulation(object):
                 applications = [str(a)
                                 for a, n in zip(appp, dist)
                                 for _ in range(int(n))
-                ]
+                                ]
                 cls.logger.debug("Distributed Applications:%s" % applications)
             else:
                 raise ConfigError(
@@ -441,7 +461,7 @@ class Simulation(object):
         #
         # Check and generate behaviour distribution
         # i.e. bev = ["Bev A","Bev B"]
-        #        dist = [ 4, 5 ]
+        # dist = [ 4, 5 ]
         try:
             bev = node_default_config_dict['Behaviour']['protocol']
             dist = node_default_config_dict['Behaviour']['distribution']
@@ -452,14 +472,14 @@ class Simulation(object):
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
-        #   len(bev)==len(dist)
+        # len(bev)==len(dist)
         #   len(bev) % nodes_count-preconfigured_nodes_count = 0
         if isinstance(bev, list) and isinstance(dist, list):
             if len(bev) == len(dist) and (nodes_count - preconfigured_nodes_count) % len(bev) == 0:
                 behaviours = [str(a)
                               for a, n in zip(bev, dist)
                               for i in range(int(n))
-                ]
+                              ]
                 cls.logger.debug("Distributed behaviours:%s" % behaviours)
             else:
                 raise ConfigError(
@@ -636,7 +656,7 @@ class Simulation(object):
         dp = DataPackage(**(self.current_state()))
 
         filename = output_file if output_file is not None else dp.title
-        filename = "%s.aietes" % results_file(filename, results_dir=output_path)
+        filename = "%s.aietes" % get_results_path(filename, results_dir=output_path)
         return_dict = {}
 
         if movie_file or plot or gif:
@@ -692,7 +712,7 @@ def go(options, args=None):
                      logger=None,
                      logtoconsole=logtoconsole,
                      progress_display=not options.quiet
-    )
+                     )
 
     if options.input is None:
         sim.prepare(sim_time=options.sim_time)

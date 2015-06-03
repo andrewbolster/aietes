@@ -25,6 +25,7 @@
 ###########################################################################
 
 import random
+
 random.seed(123456789)
 
 import logging
@@ -96,6 +97,8 @@ class ALOHA(MAC):
 
         self.timer = self.InternalTimer(self.fsm)
         self.TimerRequest = Sim.SimEvent("TimerRequest")
+
+        self.fsm = None
 
     def activate(self):
         Sim.activate(self.timer, self.timer.lifecycle(self.TimerRequest))
@@ -936,6 +939,8 @@ class DACAP(MAC):
             backoff = self.get_backoff_time(self.incoming_packet["type"], t)
         elif self.incoming_packet["type"] == "ACK":
             backoff = 0.0  # I'm done
+        else:
+            backoff = None # This will raise issues if something messes up
 
         # Update the timer: 1.-Stop, 2.-Restart
         p = Sim.Process()
@@ -1119,6 +1124,8 @@ class DACAP(MAC):
             backoff = 2 * t + 2 * t - self.Tw_min * t + self.t_data
         elif packet_type == "DATA":
             backoff = 2 * t
+        else:
+            backoff = None # This will raise issues if something messes up
 
         self.logger.warning("Backoff for {backoff} for {type} packet based on t{t},Tw{TW},Td{TD}".format(
             backoff=backoff,
@@ -1754,10 +1761,10 @@ class DACAP4FBR(DACAP):
                 "You were not in my list " + self.incoming_packet["source"] + ". Your packet may have collided.")
 
         if len(self.valid_candidates) == 0:
-            if self.multicast == True and self.fsm.current_state == "WAIT_TIME":
+            if self.multicast and self.fsm.current_state == "WAIT_TIME":
                 # All candidates have sent a WAR packet or the only one did
                 self.fsm.process("defer")
-            elif self.multicast == False and self.fsm.current_state == "WAIT_TIME":
+            elif not self.multicast and self.fsm.current_state == "WAIT_TIME":
                 self.fsm.process("defer")
 
         self.incoming_packet = None
@@ -1778,9 +1785,9 @@ class CSMA(MAC):
     def __init__(self, layercake, config):
         self.layercake = layercake
         self.config = config
-        self.logger = getattr(self.layercake,"logger", None)
+        self.logger = getattr(self.layercake, "logger", None)
         if self.logger is not None:
-            self.logger=self.logger.getChild("%s" % self.__class__.__name__)
+            self.logger = self.logger.getChild("%s" % self.__class__.__name__)
         else:
             logging.basicConfig()
             self.logger = logging.getLogger("%s" % self.__class__.__name__)
@@ -1795,7 +1802,6 @@ class CSMA(MAC):
 
         self.packet_signal = {
             "ACK": "got_ACK", "RTS": "got_RTS", "CTS": "got_CTS", "DATA": "got_DATA"}
-
 
         self.transmission_attempts = 0
         self.ack_failures = 0
@@ -2128,7 +2134,7 @@ class CSMA(MAC):
 
             self.layercake.phy.transmit_packet(rts_packet)
 
-            timeout = self.get_timeout("CTS", self.T)+ random.random()*(self.transmission_attempts/4.0)
+            timeout = self.get_timeout("CTS", self.T) + random.random() * (self.transmission_attempts / 4.0)
             if DEBUG:
                 self.logger.debug("Transmitting RTS to {dest} for {id} and waiting {timeout}".format(
                     dest=self.outgoing_packet_queue[0]["dest"],
@@ -2147,7 +2153,6 @@ class CSMA(MAC):
             timeout = random.random() * (2 * self.T + self.t_data)
 
             self.TimerRequest.signal((timeout, self.fsm.input_symbol))
-
 
             if DEBUG:
                 self.logger.debug("Channel not clear to transmit {id} to {dest} via {thru}, backing off for {t}".format(
@@ -2186,6 +2191,8 @@ class CSMA(MAC):
             backoff = 2 * t + self.t_control
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
+        else:
+            backoff = None # This will raise issues if something messes up
 
         if DEBUG > 1:
             self.logger.debug("Backoff: {t} based on {t} {pkt}".format(
@@ -2268,7 +2275,7 @@ class CSMA(MAC):
         self.level = self.incoming_packet["level"]
         self.T = self.layercake.phy.level2delay(self.level)
 
-        timeout = self.get_timeout("DATA", self.T) + random.random() * (self.channel_access_retries+0.01)/4.0
+        timeout = self.get_timeout("DATA", self.T) + random.random() * (self.channel_access_retries + 0.01) / 4.0
         self.TimerRequest.signal((timeout, "timeout"))
 
         self.time = Sim.now()
@@ -2406,7 +2413,7 @@ class CSMA(MAC):
         p = Sim.Process()
         p.interrupt(self.timer)
 
-        self.layercake.signal_good_tx(self.incoming_packet['ID']) # ACKd packets should always have IDs
+        self.layercake.signal_good_tx(self.incoming_packet['ID'])  # ACKd packets should always have IDs
         self.post_success_or_fail()
 
     def on_transmit_fail(self):
@@ -2553,6 +2560,8 @@ class FAMA(CSMA):
             backoff = 2 * t
         elif packet_type == "ACK":
             backoff = 0  # I'm all set
+        else:
+            backoff = None # This will raise issues if something messes up
 
         if DEBUG:
             self.logger.debug("Backoff: {t} based on {t} {pkt}".format(
@@ -2662,7 +2671,8 @@ class CSMA4FBR(CSMA):
                     self.multicast = True
                     self.fsm.process("send_CTS")
             else:
-                self.logger.debug("I can't attend the MultiCast RTS received from " + self.incoming_packet["source"] + " but I will be silent.")
+                self.logger.debug("I can't attend the MultiCast RTS received from " + self.incoming_packet[
+                    "source"] + " but I will be silent.")
                 self.fsm.process("ignore_RTS")
         elif self.fsm.current_state == "WAIT_DATA":
             if self.last_cts_to == self.incoming_packet["source"]:

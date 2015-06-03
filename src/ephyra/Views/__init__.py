@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
  * This file is part of the Aietes Framework (https://github.com/andrewbolster/aietes)
  *
@@ -20,8 +21,8 @@ import os
 import logging
 import traceback
 import sys
-
 import wx
+
 import matplotlib
 import matplotlib.backends.backend_wxagg
 from mpl_toolkits.mplot3d import proj3d
@@ -345,7 +346,7 @@ class EphyraNotebook(wx.Frame):
         dlg = wx.MessageDialog(self,
                                message="This will start a new simulation using the SimulationStep system to generate results in 'real' time and will be fucking slow",
                                style=wx.OK | wx.CANCEL | wx.ICON_EXCLAMATION
-        )
+                               )
         result = dlg.ShowModal()
         dlg.Destroy()
         if result == wx.ID_OK:

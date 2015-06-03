@@ -28,7 +28,7 @@ from aietes.Tools import MapEntry, distance, fudge_normal, DEBUG, unit, mag, lis
     ConfigError, angle_between, random_three_vector, random_xy_vector, agitate_position
 
 
-DEBUG = False
+#DEBUG = False
 
 
 class BasicWaypoint(object):
@@ -68,6 +68,7 @@ class Behaviour(object):
         self.simulation = self.node.simulation
         self.env_shape = np.asarray(self.simulation.environment.shape)
         self.neighbours = {}
+        self.nearest_neighbours = []
         self.n_nearest_neighbours = listfix(
             int, self.bev_config['nearest_neighbours'])
         self.neighbourhood_max_rad = listfix(
@@ -145,7 +146,7 @@ class Behaviour(object):
                         "%s:%.f%%" % (func, 100 * mag(value) / total)
                         for func, value in contributions.iteritems()
                     ], total)
-                )
+                                  )
             else:
                 self.logger.debug("contributions: None")
         if self.debug and DEBUG:
@@ -176,10 +177,10 @@ class Behaviour(object):
                                                  key).name,
                                              distance=distance(target_pos, value.position)
 
-        ) for key, value in self.neighbours.items()]
+                                             ) for key, value in self.neighbours.items()]
         # self.logger.DEBUG("Got Distances: %s"%neighbours_with_distance)
         nearest_neighbours = sorted(neighbours_with_distance, key=attrgetter('distance')
-        )
+                                    )
         # Select N neighbours in order
         # self.logger.DEBUG("Nearest Neighbours:%s"%nearest_neighbours)
         if n_neighbours is not None:
@@ -208,7 +209,7 @@ class Behaviour(object):
                                     self.get_nearest_neighbours(repulsive_position)[0].velocity),
                                 self.node.position,
                                 sixvec(self.node.velocity)
-                               ))
+                                ))
         if self.debug:
             self.logger.debug(
                 "Repulsion from %s: %s, at range of %s" % (force_vector, repulsive_position, distance_val))

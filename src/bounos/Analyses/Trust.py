@@ -30,6 +30,7 @@ from aietes import Tools
 from bounos.Analyses import scenario_map
 
 
+
 # USUALLY CONSTANTS
 trust_metrics = np.asarray("ADelay,ARXP,ATXP,RXThroughput,PLR,TXThroughput".split(','))
 metric_combinations = itertools.product(xrange(1, 4), repeat=len(trust_metrics))
@@ -39,17 +40,17 @@ metric_combinations_series = [pd.Series(x, index=trust_metrics) for x in metric_
 default_mtfm_args = ('n0', 'n1', ['n2', 'n3'], ['n4', 'n5'])
 
 
-def trust_from_file(file):
-    with pd.get_store(Tools.in_results(file)) as store:
+def trust_from_file(filename):
+    with pd.get_store(Tools.in_results(filename)) as store:
         trust = store.get('trust')
         Tools.map_levels(trust, scenario_map)
     return trust
 
 
-def perspective_from_trust(trust, s=None, metric_weight=None, par=True):
+def perspective_from_trust(trust, s=None, metric_weight=None, par=True, flip_metrics=None):
     if s is not None:
         trust = trust.xs(scenario_map[s], level='var')
-    tp = generate_node_trust_perspective(trust, metric_weights=metric_weight, par=par)
+    tp = generate_node_trust_perspective(trust, metric_weights=metric_weight, flip_metrics=flip_metrics, par=par)
     Tools.map_levels(tp, scenario_map)
     return tp
 
@@ -69,21 +70,22 @@ def generate_outlier_frame(mtfm, good_key, sigma=1.0):
 def mtfm_from_perspectives_dict(perspectives, mtfm_args=None):
     if mtfm_args is None:
         mtfm_args = default_mtfm_args
+
     inter = pd.concat(perspectives.values(),
         axis=0, keys=perspectives.keys(),
         names=["bev"] + perspectives.values()[0].index.names)
-    mtfms = (inter.groupby(level=['bev']) \
-             .apply(generate_mtfm, *mtfm_args) \
-             .reset_index(level=[0, 2, 3], drop=True) \
-             .sum(axis=1)
-             )
+    mtfms = (
+        inter.groupby(level=['bev']).apply(generate_mtfm, *mtfm_args).reset_index(level=[0, 2, 3], drop=True).sum(
+            axis=1))
     return mtfms
 
 
 def outliers_from_trust_dict(trust_dict, good_key="good", s=None,
-                             metric_weight=None, mtfm_args=None, par=True):
+                             metric_weight=None, mtfm_args=None, par=True,
+                             flip_metrics=None):
     perspectives = {
-        k: perspective_from_trust(t, s=s, metric_weight=metric_weight, par=par)
+        k: perspective_from_trust(t, s=s, metric_weight=metric_weight,
+                                  flip_metrics=flip_metrics, par=par)
         for k, t in trust_dict.iteritems()
     }
     mtfms = mtfm_from_perspectives_dict(perspectives, mtfm_args)
@@ -181,7 +183,7 @@ def _grc(value, comparison, width, rho=0.5):
     lower = np.abs(value - comparison) + rho * width
     with np.errstate(invalid='ignore'):
         # inner is in the range [2/3, 2]
-        inner = upper/lower
+        inner = upper / lower
 
     # Scale to [0,1]
     scaled = 0.75 * inner - 0.5
@@ -359,7 +361,7 @@ def invert_node_trust_perspective(node_trust_perspective):
     for j_node in node_trust_perspective[-1].keys():
         trust_inverted[j_node] = np.array([0.5 for _ in range(len(node_trust_perspective))])
         for t in range(len(node_trust_perspective)):
-            if t < len(node_trust_perspective) and node_trust_perspective[t].has_key(j_node):
+            if t < len(node_trust_perspective) and j_node in node_trust_perspective[t]:
                 trust_inverted[j_node][t] = node_trust_perspective[t][j_node]
 
     return trust_inverted

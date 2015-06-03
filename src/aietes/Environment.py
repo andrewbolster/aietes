@@ -145,7 +145,7 @@ class Environment(object):
             raise RuntimeError("Invalid Position Update from {name}@{time}:{pos}".format(name=object_name,
                                                                                          time=t,
                                                                                          pos=position)
-            )
+                               )
 
         # DEBUG=True
         if t < self.simulation.duration_intervals:
@@ -172,7 +172,7 @@ class Environment(object):
                                     position=position,
                                     object_id=object_id,
                                     time=t
-            ))
+                                    ))
         else:
             self.logger.debug(
                 "Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t, t,
