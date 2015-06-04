@@ -35,9 +35,9 @@ from ephyra.Views import MetricView, Arrow3D
 from aietes.Tools import timeit, mag
 
 
-
 # noinspection PyStringFormat
 class VisualNavigator(wx.Panel):
+
     @timeit()
     def __init__(self, parent, frame, *args, **kw):
         wx.Panel.__init__(self, parent, *args, **kw)
@@ -227,7 +227,7 @@ class VisualNavigator(wx.Panel):
         self.labels = [
             self.plot_axes.text(x[0], y[0], z[0], self.names[i][0])
             for i, (x, y, z) in enumerate(zip(xs, ys, zs))
-            ]
+        ]
 
         # Initialise Metric Views
         metrics = self.ctl.get_metrics()
@@ -780,6 +780,7 @@ class VisualNavigator(wx.Panel):
 
 
 class DriftingNavigator(VisualNavigator):
+
     def initialise_3d_plot(self):
         """
 
@@ -792,7 +793,7 @@ class DriftingNavigator(VisualNavigator):
             self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(),
                                 alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
-            ]
+        ]
 
     def redraw_page(self, t=None):
         """
@@ -834,7 +835,7 @@ class ECEANavigator(DriftingNavigator):
             self.plot_axes.plot(x, y, z, linestyle=':', label=self.names[i], color=self.lines[i].get_color(),
                                 alpha=self.trail_opacity)[0] for
             i, (x, y, z) in enumerate(zip(xs, ys, zs))
-            ]
+        ]
 
     def redraw_page(self, t=None):
         """

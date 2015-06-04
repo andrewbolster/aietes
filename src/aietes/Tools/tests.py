@@ -9,6 +9,7 @@ import uuid
 
 
 class TestGetResultsPath(TestCase):
+
     def test_get_results_path_not_none_or_empty(self):
         self.assertRaises(ValueError, Tools.get_results_path, None)
         self.assertRaises(TypeError, Tools.get_results_path)

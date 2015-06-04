@@ -47,8 +47,10 @@ def scenarios_comms(paths):
         yield (subdir, generate_sources(sources, comms_only=True))
 
 
-import ZODB, ZODB.FileStorage
-import persistent, transaction
+import ZODB
+import ZODB.FileStorage
+import persistent
+import transaction
 
 
 class PersistentDataPackage(DataPackage, persistent.Persistent):

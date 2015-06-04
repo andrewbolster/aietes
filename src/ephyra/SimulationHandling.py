@@ -26,6 +26,7 @@ from ephyra import wx
 
 
 class WorkerThread(Thread):
+
     """Worker Thread Class."""
 
     def __init__(self, notify_window):

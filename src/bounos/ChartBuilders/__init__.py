@@ -319,7 +319,6 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
             ax[i][2].legend()
             ax[i][2].set_ylim(0, 1.0)
 
-
         # Harrang Labels
         if i + 1 < dp.n:
             plt.setp(ax[i][0].get_xticklabels(), visible=False)
@@ -446,10 +445,10 @@ def rts_ratio_across_variation(stats, title=None, var='Packet Rates', figsize=No
 
     ax.set_title("RTS / Data Ratio of Varying {},{}. "
                  "\n showing standard deviation of result, with a max of {}".format(
-        var,
-        (':' + title if title is not None else ""),
-        np.around(np.max(r_std.values), decimals=2))
-    )
+                     var,
+                     (':' + title if title is not None else ""),
+                     np.around(np.max(r_std.values), decimals=2))
+                 )
     return f
 
 
@@ -479,7 +478,6 @@ def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
     tick.label1On = False
     tick.label2On = True
     ax.set_yticklabels([int(failed_senders.mean())], minor=True, verticalalignment='center')
-
 
     # add some text for labels, title and axes ticks
     ax.set_ylabel('Packets Not Delivered (% of total transmitted)')
@@ -760,8 +758,8 @@ def plot_positions(d, bounds=None):
 
 
 #####
-##  LATEXIFY from http://nipunbatra.github.io/2014/08/latexify/
-## Extended based on http://damon-is-a-geek.com/publication-ready-the-first-time-beautiful-reproducible-plots-with-matplotlib.html
+# LATEXIFY from http://nipunbatra.github.io/2014/08/latexify/
+# Extended based on http://damon-is-a-geek.com/publication-ready-the-first-time-beautiful-reproducible-plots-with-matplotlib.html
 #####
 
 def latexify(columns=1, factor=0.45):

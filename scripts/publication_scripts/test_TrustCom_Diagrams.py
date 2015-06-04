@@ -16,6 +16,9 @@ import itertools
 import functools
 import unittest
 import logging
+import tempfile
+import shutil
+
 
 logging.basicConfig()
 
@@ -24,7 +27,6 @@ import numpy as np
 from collections import OrderedDict
 
 import sklearn.ensemble as ske
-from scipy.stats.stats import pearsonr
 
 import matplotlib.pylab as plt
 import matplotlib.cm as cm
@@ -41,6 +43,11 @@ from bounos.ChartBuilders import weight_comparisons, radar, format_axes
 
 import scipy.interpolate as interpolate
 # pylab.rcParams['figure.figsize'] = 16, 12
+
+##################
+# USING TEMP DIR #
+##################
+use_temp_dir = True
 
 in_results = functools.partial(os.path.join, Tools._results_dir)
 app_rate_from_path = lambda s: float(".".join(s.split('-')[2].split('.')[0:-1]))
@@ -225,12 +232,12 @@ def get_mobility_stats(mobility):
             trust = s.get('trust')
             # Reset Range for packet emission rate
             stats.index = stats.index.set_levels([
-                                                     np.int32(
-                                                         (np.asarray(stats.index.levels[0].astype(np.float64)) * 100)),
-                                                     # Var
-                                                     stats.index.levels[1].astype(np.int32)  # Run
-                                                 ] + (stats.index.levels[2:])
-                                                 )
+                np.int32(
+                    (np.asarray(stats.index.levels[0].astype(np.float64)) * 100)),
+                # Var
+                stats.index.levels[1].astype(np.int32)  # Run
+            ] + (stats.index.levels[2:])
+            )
 
             statsd[app_rate_from_path(store_path)] = stats.copy()
             trustd[app_rate_from_path(store_path)] = trust.copy()
@@ -255,15 +262,20 @@ def get_mobility_stats(mobility):
 
 
 class TrustCom(unittest.TestCase):
+
     def setUp(self):
 
-        os.chdir(expanduser("~/src/thesis/papers/active/15_TrustCom/"))
+        if use_temp_dir:
+            self.dirpath = tempfile.mkdtemp()
+        else:
+            self.dirpath = expanduser("~/src/thesis/papers/active/15_TrustCom/")
+
+        os.chdir(self.dirpath)
 
         if not os.path.exists("img"):
             os.makedirs("img")
         if not os.path.exists("input"):
             os.makedirs("input")
-
 
         # # Plot Style Config
 
@@ -286,6 +298,8 @@ class TrustCom(unittest.TestCase):
 
     def tearDown(self):
         logging.info("Successfully Generated:\n{}".format(self.generated_files))
+        if use_temp_dir:
+            shutil.rmtree(self.dirpath)
 
     def testPhysicalNodeLayout(self):
         # # Graph: Physical Layout of Nodes
@@ -549,9 +563,9 @@ class TrustCom(unittest.TestCase):
             sum_by_weight = outliers.groupby(
                 ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index('bev')
             dp = pd.DataFrame.from_dict({
-                                            k: sum_by_weight[sum_by_weight.bev == k]['Delta']
-                                            for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
-                                            })
+                k: sum_by_weight[sum_by_weight.bev == k]['Delta']
+                for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
+            })
 
         # Perform Comparisons
         gm = comparer(dp.good, dp.malicious)[key_order]
@@ -577,7 +591,6 @@ class TrustCom(unittest.TestCase):
         fig.tight_layout()
         ax.grid(True, color='k', alpha=0.33, ls=':')
         fig.savefig("img/MaliciousSelfishMetricFactors.png", transparent=True)
-
 
         # Radar Base
         with rc_context(rc={'axes.labelsize': 8}):

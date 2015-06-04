@@ -6,9 +6,9 @@ from polybos import ExperimentManager as ExpMan
 
 def set_exp():
     e = ExpMan(node_count=4,
-            title="Drift Analysis",
-            parallel=True, future=True,
-            retain_data=False)
+               title="Drift Analysis",
+               parallel=True, future=True,
+               retain_data=False)
     e.update_default_node({
         'behaviour': 'FleetLawnmower',
         'waypoint_style': 'lawnmower',

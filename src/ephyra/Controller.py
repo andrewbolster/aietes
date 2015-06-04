@@ -58,6 +58,7 @@ def check_model():
 
 
 class EphyraController(object):
+
     def __init__(self, *args, **kw):
         self.model = BounosModel()
         self.view = None
@@ -300,20 +301,20 @@ class EphyraController(object):
         stddev_head = np.std(_distances_from_avg_head)
 
         return dict({'positions':
-            {
-                'pernode': positions,
-                'avg': avg_pos,
-                'stddev': stddev_pos,
-                'delta_avg': _distances_from_avg_pos
-            },
-            'headings':
-                {
-                    'pernode': headings,
-                    'avg': avg_head,
-                    'stddev': stddev_head,
-                    'delta_avg': _distances_from_avg_head
-                }
-        })
+                     {
+                         'pernode': positions,
+                         'avg': avg_pos,
+                         'stddev': stddev_pos,
+                         'delta_avg': _distances_from_avg_pos
+                     },
+                     'headings':
+                     {
+                         'pernode': headings,
+                         'avg': avg_head,
+                         'stddev': stddev_head,
+                         'delta_avg': _distances_from_avg_head
+                     }
+                     })
 
     def get_heading_mag_max_min(self):
         """

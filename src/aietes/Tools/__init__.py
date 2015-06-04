@@ -63,6 +63,7 @@ _config_dir = "%s/configs/" % _ROOT
 
 
 class SimTimeFilter(logging.Filter):
+
     """
     Brings Sim.now() into usefulness
     """
@@ -104,6 +105,7 @@ def notify_desktop(message):
 
 
 class ConfigError(Exception):
+
     """
     Raised when a configuration cannot be validated through ConfigObj/Validator
     Contains a 'status' with the boolean dict representation of the error
@@ -379,6 +381,7 @@ def linear2db(linear):
 
 
 class Dotdictify(dict):
+
     """
 
     :param value:
@@ -455,6 +458,7 @@ class Dotdictify(dict):
 
 
 class Dotdict(dict):
+
     """
 
     :param arg:
@@ -480,6 +484,7 @@ class Dotdict(dict):
 
 
 class MemoryEntry(object):
+
     """
 
     :param object_id:
@@ -501,6 +506,7 @@ class MemoryEntry(object):
 
 
 class MapEntry(object):
+
     """
 
     :param object_id:
@@ -524,6 +530,7 @@ class MapEntry(object):
 
 class AutoSyncShelf(DbfilenameShelf):
     # default to newer pickle protocol and writeback=True
+
     """
 
     :param filename:
@@ -722,6 +729,7 @@ def itersubclasses(cls, _seen=None):
 
 
 class KeepRefs(object):
+
     """
 
     """
@@ -1184,6 +1192,7 @@ import sys
 
 
 class Capturing(list):
+
     def __enter__(self):
         self._stdout = sys.stdout
         sys.stdout = self._stringio = StringIO()

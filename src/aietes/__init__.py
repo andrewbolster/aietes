@@ -58,6 +58,7 @@ np.set_printoptions(precision=3)
 
 
 class Simulation(object):
+
     """
     Defines a single simulation
     Keyword Arguments:
@@ -346,10 +347,10 @@ class Simulation(object):
         comms_logs = {node.name: node.app.dump_logs()
                       for node in self.nodes if node.app}
         comms_pos = pd.concat({
-                                  n: pd.DataFrame(p, index=['x', 'y', 'z'])
-                                  for n, p in zip(names, state['p'])
-                                  }, names=['node', 'dim']
-                              ).T
+            n: pd.DataFrame(p, index=['x', 'y', 'z'])
+            for n, p in zip(names, state['p'])
+        }, names=['node', 'dim']
+        ).T
         comms_pos.index = pd.to_datetime(comms_pos.index, unit='s')
 
         comms = {
@@ -411,7 +412,7 @@ class Simulation(object):
             cls.logger.info("Have %d nodes from config: %s" % (
                 preconfigured_nodes_count,
                 nodes_config)
-                            )
+            )
             pre_node_names = config_dict['Node']['Nodes'].keys()
 
         #

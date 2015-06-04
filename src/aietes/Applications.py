@@ -31,6 +31,7 @@ from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
 
 class Application(Sim.Process):
+
     """
     Generic Class for top level application layers
     """
@@ -43,7 +44,7 @@ class Application(Sim.Process):
         Sim.Process.__init__(self, name="{}({})".format(
             self.__class__.__name__,
             node.name)
-                             )
+        )
         self.stats = {'packets_sent': 0,
                       'packets_received': 0,
                       'packets_time': 0,
@@ -341,6 +342,7 @@ class AccessibilityTest(Application):
 
 
 class RoutingTest(Application):
+
     """
 
     :param args:
@@ -435,7 +437,7 @@ class RoutingTest(Application):
             self.sent_counter[n] = 0
         for n in learned_and_implied_nodes:
             self.total_counter[n] = self.sent_counter[
-                                        n] + self.received_counter[n]
+                n] + self.received_counter[n]
         if not_in_rx or not_in_tx or not_in_tot:
             self.logger.info("Synchronising counters: {} not in rx and {} not in tx, {} not in total".format(
                 not_in_rx, not_in_tx, not_in_tot))
@@ -456,6 +458,7 @@ class RoutingTest(Application):
 
 
 class CommsTrust(RoutingTest):
+
     """
     Vaguely Emulated Bellas Traffic Scenario
     Trust Values retained per interval:
@@ -577,7 +580,7 @@ class CommsTrust(RoutingTest):
             for node in self.total_counter.keys():
                 # Relevant Packets RX since last interval
 
-                if not self.trust_assessments.has_key(node):
+                if node not in self.trust_assessments:
                     self.trust_assessments[node] = [pd.Series([]) for _ in range(trust_period)]
 
             relevant_rx_packets = self.received_log[self.last_accessed_rx_packet:]
@@ -760,6 +763,7 @@ class CommsTrustRoundRobin(CommsTrust):
 
 
 class SelfishTargetSelection(CommsTrustRoundRobin):
+
     def select_target(self):
         neighbours_by_distance = self.layercake.host.behaviour.get_nearest_neighbours()
         choices = [(v.name, 1.0 / np.power(v.distance, 2)) for v in neighbours_by_distance]
@@ -803,6 +807,7 @@ class SelfishTargetSelection(CommsTrustRoundRobin):
 
 
 class BadMouthingPowerControl(CommsTrustRoundRobin):
+
     """
     INCREASES the power to everyone except for the given bad_mouth target
     """

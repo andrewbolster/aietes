@@ -106,6 +106,7 @@ def parallel_sim(arglist):
 
 
 class QueueSim(object):
+
     def __init__(self, arglist, pool):
         import logging
 

@@ -32,7 +32,6 @@ from aietes.Layercake.priodict import PriorityDictionary
 from aietes.Tools import distance, broadcast_address, DEBUG
 
 
-
 # DEBUG = True
 
 
@@ -46,6 +45,7 @@ def setup_routing(node, config):
 
 
 class SimpleRoutingTable(dict):
+
     def __init__(self, layercake, config):
         dict.__init__(self)
         self.layercake = layercake
@@ -138,6 +138,7 @@ RoutingEntry = collections.namedtuple("RoutingEntry",
 
 
 class DSDV(SimpleRoutingTable):
+
     """
     Destination Sequenced Discance Vector protocol uses the Bellnman Ford Algo. to calculate paths based on hop-lengths
 
@@ -180,7 +181,6 @@ class DSDV(SimpleRoutingTable):
             self.layercake.recv(packet)
 
     def send_packet(self, packet):
-
         """
 
         :param packet:
@@ -228,6 +228,7 @@ class DSDV(SimpleRoutingTable):
 
 
 class Static(SimpleRoutingTable):
+
     """ Note that it has not sense to use static routes when the network has mobile nodes. For MAC, CS-ALOHA or DACAP should be used.
         Variation 0: approximation to the transmission cone
         Variation 1: approximation to the receiver cone
@@ -510,7 +511,7 @@ class Static(SimpleRoutingTable):
                                             # nodes_geo[i].distanceto(nodes_geo[next_hop_name])
                                             # < next_dist:
                                             if abs(abs(recep_angle) - abs(rel_pos_item[2])) < abs(
-                                                            abs(next_angle) - abs(rel_pos_item[2])):
+                                                    abs(next_angle) - abs(rel_pos_item[2])):
                                                 next_hop_name = i
                                                 next_hop_rel_pos = j
                                                 next_dist = dist(
@@ -707,6 +708,7 @@ class Static(SimpleRoutingTable):
 
 
 class FBR(SimpleRoutingTable):
+
     """ In this case, DACAP4FBR should be selected as MAC protocol.
         Variation 0: Transmission cone
         Variation 1: Reception cone (transmission cone with big apperture)
@@ -885,8 +887,8 @@ class FBR(SimpleRoutingTable):
                            *filter(  # unzipped filtered
                                      lambda i: i[1] > r,  # list (l,d) where d > r
                                      self.layercake.phy.level2distance.items()  # from available levels
-                                     )
                            )
+            )
             if levels:
                 new_level = min(levels[0])  # Lowest Value Level
 
@@ -1071,7 +1073,7 @@ class FBR(SimpleRoutingTable):
             for name, de in candidates.iteritems():
                 if ener[max_ee] > 0:
                     score[name] = dist[name] / dist[max_dd] + \
-                                  ener[name] / ener[max_ee]
+                        ener[name] / ener[max_ee]
                 else:
                     score[name] = dist[name] / dist[max_dd]
 

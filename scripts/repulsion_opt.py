@@ -8,7 +8,7 @@ from polybos import ExperimentManager as ExpMan
 
 def set_exp():
     e = ExpMan(node_count=8,
-            title="Repulsion-Clumping Test")
+               title="Repulsion-Clumping Test")
     e.add_variable_2_range_scenarios({"repulsion": numpy.linspace(0.005, 0.3, 10),
                                       "clumping": numpy.linspace(0.005, 0.3, 10)})
     return e

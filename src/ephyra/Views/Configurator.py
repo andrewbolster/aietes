@@ -28,6 +28,7 @@ from aietes.Behaviour import Behaviour
 
 
 class Configurator(wx.Panel):
+
     """
     The Configurator panel allows the user to generate aietes-compatible configurations
 
@@ -207,7 +208,7 @@ class Configurator(wx.Panel):
             ListNode("Behaviours", data=kw.get(
                 "behaviours", self.defaults[2].get_data()))
         ])
-                                     )
+        )
         for i in range(kw.get("nodes", 1)):
             self.add_node(fleetid)
 
@@ -376,6 +377,7 @@ class Configurator(wx.Panel):
 
 
 class ListNode(object):
+
     """
 
     :param title:

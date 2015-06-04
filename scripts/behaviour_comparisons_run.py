@@ -20,10 +20,10 @@ def redirected(stdout):
 
 def setup_exp():
     e = ExpMan(node_count=8,
-            title="Malicious Behaviour Trust Comparison",
-            parallel=True,
-            future=True
-            )
+               title="Malicious Behaviour Trust Comparison",
+               parallel=True,
+               future=True
+               )
     e.add_minority_n_behaviour_suite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
     return e
 

@@ -41,6 +41,7 @@ DEBUG = False
 
 
 class Fleet(Sim.Process):
+
     """
     Fleets act initially as traffic managers for Nodes
     """
@@ -220,7 +221,7 @@ class Fleet(Sim.Process):
             latest_map = self.environment.map
         return {
             m.name: m.position for m in latest_map.itervalues()
-            }
+        }
 
     def node_position_by_name(self, name, shared=True):
         """

@@ -47,6 +47,7 @@ waypoint = namedtuple("waypoint", ['position', 'prox'])
 
 
 class Behaviour(object):
+
     """
     Generic Representation of a Nodes behavioural characteristics
     #TODO should be a state machine?
@@ -145,8 +146,8 @@ class Behaviour(object):
                     [
                         "%s:%.f%%" % (func, 100 * mag(value) / total)
                         for func, value in contributions.iteritems()
-                        ], total)
-                                  )
+                    ], total)
+                )
             else:
                 self.logger.debug("contributions: None")
         if self.debug and DEBUG:
@@ -198,7 +199,7 @@ class Behaviour(object):
         force_vector = np.array([0, 0, 0], dtype=np.float)
         distance_val = distance(position, repulsive_position)
         force_vector = unit(position - repulsive_position) * \
-                       d_limit / float(min(distance_val, self.neighbourhood_max_rad))
+            d_limit / float(min(distance_val, self.neighbourhood_max_rad))
 
         if distance_val < 1:
             raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
@@ -226,7 +227,7 @@ class Behaviour(object):
         force_vector = np.array([0, 0, 0], dtype=np.float)
         distance_val = distance(position, attractive_position)
         force_vector = unit(attractive_position - position) * \
-                       (min(distance_val, self.neighbourhood_max_rad) / float(d_limit))
+            (min(distance_val, self.neighbourhood_max_rad) / float(d_limit))
         if self.debug:
             self.logger.debug(
                 "Attraction to %s: %s, at range of %s" % (force_vector, attractive_position, distance_val))
@@ -293,6 +294,7 @@ class Behaviour(object):
 
 
 class RandomWalk(Behaviour):
+
     """
     Generic Wandering Behaviour
     """
@@ -317,6 +319,7 @@ class RandomWalk(Behaviour):
 
 
 class RandomFlatWalk(Behaviour):
+
     """
     Generic Wandering Behaviour on a plane
     travels for about a 5th of the size of the environment before turning
@@ -354,6 +357,7 @@ class RandomFlatWalk(Behaviour):
 class RandomFlatCentredWalk(RandomFlatWalk):
     # Should probably add some intelligence in here to select a random point within the environment to head towards
     # rather than picking a random direction....
+
     """
 
     :param args:
@@ -377,6 +381,7 @@ class RandomFlatCentredWalk(RandomFlatWalk):
 
 
 class Nothing(Behaviour):
+
     """
     Do Nothing
     """
@@ -386,6 +391,7 @@ class Nothing(Behaviour):
 
 
 class Flock(Behaviour):
+
     """
     Flocking Behaviour as modelled by three rules:
         Short Range Repulsion
@@ -504,6 +510,7 @@ class Flock(Behaviour):
 
 
 class AlternativeFlockMixin(object):
+
     """
 
     :param args:
@@ -538,6 +545,7 @@ class AlternativeFlockMixin(object):
 
 
 class AlternativeFlock(Flock, AlternativeFlockMixin):
+
     """
 
     :param args:
@@ -550,6 +558,7 @@ class AlternativeFlock(Flock, AlternativeFlockMixin):
 
 
 class WaypointMixin(object):
+
     """
     Waypoint MixIn Class defines the general waypoint behaviour and includes the inner 'waypoint' object class.
     """
@@ -651,6 +660,7 @@ class WaypointMixin(object):
 
 
 class Waypoint(Flock, WaypointMixin):
+
     """
 
     :param args:
@@ -663,6 +673,7 @@ class Waypoint(Flock, WaypointMixin):
 
 
 class AlternativeWaypoint(AlternativeFlock, Waypoint):
+
     """
 
     :param args:
@@ -675,6 +686,7 @@ class AlternativeWaypoint(AlternativeFlock, Waypoint):
 
 
 class SoloWaypoint(Nothing, WaypointMixin):
+
     """
 
     :param args:
@@ -687,6 +699,7 @@ class SoloWaypoint(Nothing, WaypointMixin):
 
 
 class StationKeep(Nothing):
+
     """
     Simple behaviour that represents a station-keeping state / buoy.
     """
@@ -696,6 +709,7 @@ class StationKeep(Nothing):
 
 
 class FleetLawnmower(Flock, WaypointMixin):
+
     """
     Repeating Lawnmower Behaviour across a 2D slice of the environment extent
         Subdivides environment into N-Overlapping patterns based on fleet size
@@ -740,7 +754,6 @@ class FleetLawnmower(Flock, WaypointMixin):
         self.lawnmower(self.node.fleet.node_count(), overlap=30, twister=False)
 
     def boresight(self, position, velocity):
-
         """
 
         :param position:
@@ -931,6 +944,7 @@ class FleetLawnmower(Flock, WaypointMixin):
 
 
 class FleetLawnmowerLoop(FleetLawnmower):
+
     """
 
     :param args:
@@ -943,6 +957,7 @@ class FleetLawnmowerLoop(FleetLawnmower):
 
 
 class Tail(Flock):
+
     """
     This behaviour gives the desire to be at the back of the fleet.
     This is accomplished by taking the incident angle between the clumping centre and the heading vector and taking the
@@ -971,6 +986,7 @@ class Tail(Flock):
 
 
 class SlowCoach(Flock):
+
     """
     This behaviour gives the desire to be clow.
     This is accomplished by the opposite of the last velocity

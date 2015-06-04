@@ -30,7 +30,6 @@ from aietes import Tools
 from bounos.Analyses import scenario_map
 
 
-
 # USUALLY CONSTANTS
 trust_metrics = np.asarray("ADelay,ARXP,ATXP,RXThroughput,PLR,TXThroughput".split(','))
 metric_combinations = itertools.product(xrange(1, 4), repeat=len(trust_metrics))
@@ -87,7 +86,7 @@ def outliers_from_trust_dict(trust_dict, good_key="good", s=None,
         k: perspective_from_trust(t, s=s, metric_weight=metric_weight,
                                   flip_metrics=flip_metrics, par=par)
         for k, t in trust_dict.iteritems()
-        }
+    }
     mtfms = mtfm_from_perspectives_dict(perspectives, mtfm_args)
     outlier = generate_outlier_frame(mtfms, good_key).reset_index()
     for k in metric_weight.keys():
@@ -378,11 +377,11 @@ def generate_global_trust_values(trust_logs, metric_weights=None):
     trust_perspectives = {
         node: generate_node_trust_perspective(node_observations, metric_weights=metric_weights)
         for node, node_observations in trust_logs.iteritems()
-        }
+    }
     inverted_trust_perspectives = {
         node: invert_node_trust_perspective(node_perspective)
         for node, node_perspective in trust_perspectives.iteritems()
-        }
+    }
     return trust_perspectives, inverted_trust_perspectives
 
 

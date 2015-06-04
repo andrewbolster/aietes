@@ -56,6 +56,7 @@ _metrics = [Metrics.DeviationOfHeading,
 
 
 class BounosModel(DataPackage):
+
     """
     BounosModel acts as an interactive superclass of DataPackage, designed for interactive
         simulation/analysis
@@ -242,13 +243,11 @@ def multirun(args, basedir=os.curdir):
     args.strip_title = True
     # annotate achievements in metric, not fusion
     args.annotate_achievements = 1
-    plot_runner = custom_metric_run(
-        data=best_runs, args=args, title="metric_run")
+    custom_metric_run(data=best_runs, args=args, title="metric_run")
 
     # annotate achievements in metric, not fusion
     args.annotate_achievements = 0
-    plot_runner = custom_fusion_run(
-        data=best_runs, args=args, title="fusion_run")
+    custom_fusion_run(data=best_runs, args=args, title="fusion_run")
 
 
 def custom_parser():
@@ -404,6 +403,7 @@ def plot_detections(ax, metric, orig_data,
     results = Analyses.Behaviour.detect_misbehaviour(data=orig_data,
                                                      metric=metric.__class__.__name__,
                                                      stddev_frac=2)
+    # FIXME detections shadows for-detections below. Not sure what this is supposed to do
     detections = results['detections']
     detection_vals = results['detection_envelope']
     detection_dict = results['suspicions']
@@ -790,7 +790,6 @@ def run_overlay(data, args=None):
     fig = pl.figure()
     ax = fig.gca()
 
-    results = {}
     for source in data.keys():
         if analysis_args is not None:
             results = analysis(data=data[source], **analysis_args)

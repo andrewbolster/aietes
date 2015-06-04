@@ -63,6 +63,7 @@ log = logging.getLogger(__name__)
 
 
 class Scenario(object):
+
     """ Scenario Object
 
     The Scenario Object deals with config management and passthrough, as well as some optional
@@ -532,6 +533,7 @@ class Scenario(object):
 
 
 class ExperimentManager(object):
+
     """
 
     :param node_count:
@@ -1024,9 +1026,9 @@ class ExperimentManager(object):
             for i, r in enumerate(stats):
                 analysis = behaviour_analysis_dict(s.datarun[i])
                 confident = analysis[
-                                'trust_stdev'] > 100  # TODO This needs to be dynamic, possibly based on n_metrics and t
+                    'trust_stdev'] > 100  # TODO This needs to be dynamic, possibly based on n_metrics and t
                 correct_detection = (not bool(suspects) and not confident) or analysis[
-                                                                                  'suspect_name'] in suspects
+                    'suspect_name'] in suspects
                 correctness_stats[t].append(
                     (correct_detection, confident))
                 if verbose:
@@ -1044,7 +1046,7 @@ class ExperimentManager(object):
                         analysis['suspect_confidence'],
                         str(analysis["trust_average"])
                     )
-                          )
+                    )
 
             print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
                   % (avg_of_dict(stats, ['motion', 'fleet_distance']),
@@ -1146,6 +1148,7 @@ class ExperimentManager(object):
 
 
 class RecoveredExperiment(ExperimentManager):
+
     """
     SubClass to recover a partially executed experiment from an experiment directory.
 

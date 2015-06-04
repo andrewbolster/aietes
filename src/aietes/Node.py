@@ -29,6 +29,7 @@ SIMPLE = 1
 
 
 class Node(Sim.Process):
+
     """
     Generic Representation of a network node
     """
@@ -249,8 +250,8 @@ class Node(Sim.Process):
         True if within bounds of the environment while we're doing wall checking (as defined by the behaviour)
         """
         return self.wallCheckDisabled or \
-               all(self.position < np.asarray(self.simulation.environment.shape)) and \
-               all(np.zeros(3) < self.position)
+            all(self.position < np.asarray(self.simulation.environment.shape)) and \
+            all(np.zeros(3) < self.position)
 
     def distance_to(self, their_position):
         """
@@ -326,7 +327,7 @@ class Node(Sim.Process):
             new_velocity = np.zeros(3)
         else:
             new_velocity = self.velocity + \
-                           ((self.acceleration_force * dt) / self.mass)
+                ((self.acceleration_force * dt) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruise_control(new_velocity, self.velocity)
             if DEBUG:

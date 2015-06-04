@@ -100,11 +100,11 @@ def generate_trust_perspectives_from_logs(logs, metric_weights=None):
             trust_perspectives = {
                 node: Trust.generate_node_trust_perspective(node_observations, metric_weights=metric_weights)
                 for node, node_observations in trust_logs.items()
-                }
+            }
             inverted_trust_perspectives = {
                 node: Trust.invert_node_trust_perspective(node_perspective)
                 for node, node_perspective in trust_perspectives.items()
-                }
+            }
             run_collector.append(network_trust_dict(inverted_trust_perspectives))
         rate_collector.append((rate, pd.concat(run_collector, names=['run'])))
     return trust_perspectives, inverted_trust_perspectives, rate_collector

@@ -65,16 +65,18 @@ Noah Spurrier 20020822
 
 
 class ExceptionFSM(Exception):
+
     """This is the FSM Exception class."""
 
     def __init__(self, value):
         self.value = value
 
     def __str__(self):
-        return `self.value`
+        return repr(self.value)
 
 
 class FSM(object):
+
     """This is a Finite State Machine (FSM).
     """
 

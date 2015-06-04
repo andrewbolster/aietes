@@ -12,6 +12,7 @@ import bounos.Analyses.Trust as Trust
 
 
 class TestGenerateNodeTrustPerspective(TestCase):
+
     def setUp(self):
         # Make up a datapackage and hope for the best
         sim = aietes.Simulation(title=self.__class__.__name__,
@@ -38,6 +39,7 @@ class TestGenerateNodeTrustPerspective(TestCase):
 
 
 class TestGenerateTrustLogsFromCommsLogs(TestCase):
+
     def setUp(self):
         # Make up a datapackage and hope for the best
         sim = aietes.Simulation(title=self.__class__.__name__,

@@ -7,9 +7,9 @@ from polybos import ExperimentManager as ExpMan
 def set_exp():
     variations = [1e-3, 2e-3, 4e-3]
     e = ExpMan(node_count=4,
-            title="FleetLawnmowerDVLVar-{}".format(variations),
-            parallel=True, future=True,
-            retain_data='files')
+               title="FleetLawnmowerDVLVar-{}".format(variations),
+               parallel=True, future=True,
+               retain_data='files')
     e.update_default_node({
         'behaviour': 'FleetLawnmower',
         'waypoint_style': 'lawnmower',
