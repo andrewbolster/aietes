@@ -27,7 +27,7 @@ def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1, 
     e = ExpMan(title="{}{}-{}-{}".format(
         "Malicious{}".format(malice) if malice else "",
         title, app_rate, scale),
-        parallel=True
+        parallel=False
     )
     for base_scenario in base_scenarios:
         e.add_position_scaling_range([scale], title="{}({})".format(e.title, re.split('\.|/', base_scenario)[-2]),

@@ -31,7 +31,6 @@ from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
 
 class Application(Sim.Process):
-
     """
     Generic Class for top level application layers
     """
@@ -44,7 +43,7 @@ class Application(Sim.Process):
         Sim.Process.__init__(self, name="{}({})".format(
             self.__class__.__name__,
             node.name)
-        )
+                             )
         self.stats = {'packets_sent': 0,
                       'packets_received': 0,
                       'packets_time': 0,
@@ -342,7 +341,6 @@ class AccessibilityTest(Application):
 
 
 class RoutingTest(Application):
-
     """
 
     :param args:
@@ -437,7 +435,7 @@ class RoutingTest(Application):
             self.sent_counter[n] = 0
         for n in learned_and_implied_nodes:
             self.total_counter[n] = self.sent_counter[
-                n] + self.received_counter[n]
+                                        n] + self.received_counter[n]
         if not_in_rx or not_in_tx or not_in_tot:
             self.logger.info("Synchronising counters: {} not in rx and {} not in tx, {} not in total".format(
                 not_in_rx, not_in_tx, not_in_tot))
@@ -457,8 +455,95 @@ class RoutingTest(Application):
         return initial
 
 
-class CommsTrust(RoutingTest):
+class Trust(RoutingTest):
+    """
+    Base class for Trust assessments
 
+    Default Trust Assessment Period of 10 minutes
+    Default to Random Delay < 60 s before first cycle - reduces contention.
+    """
+    trust_assessment_period = 600
+
+    def __init__(self, *args, **kwargs):
+        super(Trust, self).__init__(*args, **kwargs)
+        # List of methods called per tick.
+        self.tick_assessors = []
+        # While it's tempting to preallocate this as a DataFrame, it is over 10 times slower than dict ops
+        self.trust_assessments = {}  # My generated trust metrics, [node][t][observation Series]
+        # Extra information that might be interesting in the longer term.
+        self.trust_accessories = {}
+        self.last_trust_assessment = None
+
+    def activate(self):
+        """
+        Called By Node Activation to launch internal timers and configs
+        """
+        super(Trust, self).activate()
+
+    def update_accessories(self):
+        """
+        Add other useful information from this time period to the accessory store
+        :return:
+        """
+        pass
+
+    def tick(self):
+        """
+        Processing performed periodically depending on the simulation time
+
+        Should populate self.trust_assessments as a node-array dict of metric dicts and optionally
+        self.trust_accessories as a metric-array dict.
+
+        EG: for a node "nodename" that is first observed in int third trust period
+        trust_assessments = {
+            'nodename': [
+                Series([]),
+                Series([]),
+                Series([]),
+                Series({'metrica':valuea, 'metricb': valueb,...,})
+                Series({'metrica':valuea, 'metricb': valueb,...,})
+
+
+            ]
+        }
+
+        """
+        if not Sim.now() % self.trust_assessment_period and Sim.now() > 0:
+            trust_period = Sim.now() // self.trust_assessment_period
+
+            tick_assessments = [tick() for tick in self.tick_assessors]
+            tick_keys = set([
+                                i
+                                for t in tick_assessments
+                                for i in t.keys().tolist()
+                            ]
+            )
+            target_stats = {
+                node: pd.concat([tick[node] for tick in tick_assessments if node in tick])
+                for node in tick_keys
+            }
+            for node, per_target_stats in target_stats.iteritems():
+                if node not in self.trust_assessments:
+                    self.trust_assessments[node] = [pd.Series([]) for _ in range(trust_period)]
+                self.trust_assessments[node].append(per_target_stats)
+
+            self.update_accessories()
+
+    def dump_logs(self):
+        """
+
+
+        :return:
+        """
+        initial = super(Trust, self).dump_logs()
+        initial.update({
+            'trust': self.trust_assessments,
+            'trust_accessories': self.trust_accessories
+        })
+        return initial
+
+
+class CommsTrust(Trust):
     """
     Vaguely Emulated Bellas Traffic Scenario
     Trust Values retained per interval:
@@ -470,7 +555,7 @@ class CommsTrust(RoutingTest):
     """
     test_stream_length = 6
     stream_period_ratio = 0.1
-    trust_assessment_period = 600
+
     random_delay = 60
     metrics_string = "ATXP,ARXP,ADelay,ALength,Throughput,PLR"
     MONITOR_MODE = True
@@ -479,12 +564,13 @@ class CommsTrust(RoutingTest):
         super(CommsTrust, self).__init__(*args, **kwargs)
 
         # Extra information that might be interesting in the longer term.
-        self.trust_accessories = {'queue_length': [],
-                                  'collisions': []
-                                  }
-        self.trust_assessments = {}  # My generated trust metrics, [node][t][n_observation_arrays]
+        self.trust_accessories.update(
+            {'queue_length': [],
+             'collisions': []
+             })
+        self.tick_assessors.extend([self.rx_trust_metrics, self.tx_trust_metrics])
+
         self.current_target = None
-        self.last_trust_assessment = None
         self.forced_nodes = []
         self.test_packet_counter = Counter()
         self.result_packet_dl = {}
@@ -563,82 +649,73 @@ class CommsTrust(RoutingTest):
         else:
             return pd.Series([])
 
-    def tick(self):
-        """
-        Processing performed periodically depending on the
+    def update_accessories(self):
+        self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))
+        self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
 
-        """
-        if not Sim.now() % self.trust_assessment_period and Sim.now() > 0:
+    def rx_trust_metrics(self):
 
-            trust_period = Sim.now() // self.trust_assessment_period
-            last_relevant_time = Sim.now() - self.trust_assessment_period
+        relevant_rx_packets = self.received_log[self.last_accessed_rx_packet:]
+        self.last_accessed_rx_packet = len(self.received_log) - 1
 
-            if self.layercake.hostname == 'n0' and DEBUG:
-                self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
+        rx_stats = pd.Series([])
+        pkt_batches = {}
 
-            # Set up the data structures
-            for node in self.total_counter.keys():
-                # Relevant Packets RX since last interval
+        for pkt in relevant_rx_packets:
+            # FIXME this should maybe be route[-1]
+            try:
+                pkt_batches[pkt['source']].append(pkt)
+            except KeyError:
+                pkt_batches[pkt['source']] = [pkt]
 
-                if node not in self.trust_assessments:
-                    self.trust_assessments[node] = [pd.Series([]) for _ in range(trust_period)]
+        for node, pkt_batch in pkt_batches.iteritems():
+            # Take the Mean and total throughput for all messages sent by node
+            rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
+            # avg(tx pwr, rx pwr, delay, length), rx throughput
+        return rx_stats
 
-            relevant_rx_packets = self.received_log[self.last_accessed_rx_packet:]
-            self.last_accessed_rx_packet = len(self.received_log) - 1
+    def tx_trust_metrics(self):
+        last_relevant_time = Sim.now() - self.trust_assessment_period
+        relevant_acked_packets = []
 
-            rx_stats = {}
-            for node in self.trust_assessments.keys():
-                # Take the Mean and total throughput for all messages sent by node
-                pkt_batch = [packet for packet in relevant_rx_packets if packet['source'] == node]
-                rx_stats[node] = self.get_metrics_from_batch(pkt_batch)
-                # avg(tx pwr, rx pwr, delay, length), rx throughput
+        for i, p in enumerate(self.sent_log):
+            # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
+            if p.get('acknowledged', -1) > last_relevant_time:
+                relevant_acked_packets.append(p)
 
-            relevant_acked_packets = []
-            for i, p in enumerate(self.sent_log):
-                # Only concern yourself with packets actually sent out (i.e. made it beyond the queue)
-                if p.get('acknowledged', -1) > last_relevant_time:
-                    relevant_acked_packets.append(p)
+        tx_stats = pd.Series([])
+        for node in self.total_counter.keys():
+            # Throughput is the total length of data transmitted this frame to this node
+            tx_throughput = map(
+                lambda p: float(p['length']),
+                filter(
+                    lambda p: node in [p['dest'], p['through']],
+                    relevant_acked_packets)
+            )
+            if tx_throughput:
+                tx_throughput = np.sum(tx_throughput)
+            else:
+                tx_throughput = 0.0
 
-            tx_stats = {}
-            for node in self.trust_assessments.keys():
-                # Throughput is the total length of data transmitted this frame to this node
-                tx_throughput = map(
-                    lambda p: float(p['length']),
-                    filter(
-                        lambda p: node in [p['dest'], p['through']],
-                        relevant_acked_packets)
-                )
-                if tx_throughput:
-                    tx_throughput = np.sum(tx_throughput)
-                else:
-                    tx_throughput = 0.0
+            # PLR is the average amount of packets we are sure have been lost in the last time frame
+            # Including pkts that have been acked since last time.
+            plr = map(
+                lambda p: float(not p['delivered']),
+                filter(
+                    # We know the fate of all acked packets
+                    lambda p: p['dest'] == node,
+                    relevant_acked_packets)
+            )
+            if plr and tx_throughput > 0.0:
+                plr = np.nanmean(plr)
+            else:
+                plr = 0.0
 
-                # PLR is the average amount of packets we are sure have been lost in the last time frame
-                # Including pkts that have been acked since last time.
-                plr = map(
-                    lambda p: float(not p['delivered']),
-                    filter(
-                        # We know the fate of all acked packets
-                        lambda p: p['dest'] == node,
-                        relevant_acked_packets)
-                )
-                if plr and tx_throughput > 0.0:
-                    plr = np.nanmean(plr)
-                else:
-                    plr = 0.0
-
-                tx_stats[node] = pd.Series({
-                    'PLR': plr if not np.isnan(plr) else 0.0,
-                    'TXThroughput': tx_throughput
-                })
-
-            for node in self.trust_assessments.keys():
-                nodestat = pd.concat([rx_stats[node], tx_stats[node]])
-                # avg(tx pwr, rx pwr, delay, length), rx throughput, PER
-                self.trust_assessments[node].append(nodestat)
-
-            self.trust_accessories['queue_length'].append(len(self.layercake.mac.outgoing_packet_queue))
-            self.trust_accessories['collisions'].append(len(self.layercake.phy.transducer.collisions))
+            tx_stats[node] = pd.Series({
+                'PLR': plr if not np.isnan(plr) else 0.0,
+                'TXThroughput': tx_throughput
+            })
+        return tx_stats
 
     def select_target(self):
         """
@@ -744,26 +821,12 @@ class CommsTrust(RoutingTest):
                     delay=Sim.now() - packet['time_stamp']
                 ))
 
-    def dump_logs(self):
-        """
-
-
-        :return:
-        """
-        initial = super(CommsTrust, self).dump_logs()
-        initial.update({
-            'trust': self.trust_assessments,
-            'trust_accessories': self.trust_accessories
-        })
-        return initial
-
 
 class CommsTrustRoundRobin(CommsTrust):
     test_stream_length = 1
 
 
 class SelfishTargetSelection(CommsTrustRoundRobin):
-
     def select_target(self):
         neighbours_by_distance = self.layercake.host.behaviour.get_nearest_neighbours()
         choices = [(v.name, 1.0 / np.power(v.distance, 2)) for v in neighbours_by_distance]
@@ -807,7 +870,6 @@ class SelfishTargetSelection(CommsTrustRoundRobin):
 
 
 class BadMouthingPowerControl(CommsTrustRoundRobin):
-
     """
     INCREASES the power to everyone except for the given bad_mouth target
     """

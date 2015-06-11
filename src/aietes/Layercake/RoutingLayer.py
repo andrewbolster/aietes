@@ -140,7 +140,7 @@ RoutingEntry = collections.namedtuple("RoutingEntry",
 class DSDV(SimpleRoutingTable):
 
     """
-    Destination Sequenced Discance Vector protocol uses the Bellnman Ford Algo. to calculate paths based on hop-lengths
+    Destination Sequenced Distance Vector protocol uses the Bellnman Ford Algo. to calculate paths based on hop-lengths
 
     Maintains two routing tables, one permemant and one advertised (i.e. stable and unstable)
 
