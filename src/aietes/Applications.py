@@ -23,6 +23,7 @@ from copy import deepcopy
 import numpy as np
 from numpy.random import poisson
 import pandas as pd
+from scipy.spatial.distance import squareform, pdist
 
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
@@ -54,6 +55,7 @@ class Application(Sim.Process):
         self.last_accessed_rx_packet = None
         self.sent_log = []
         self.config = config
+        self.node = node
         self.layercake = layercake
         self.sim_duration = node.simulation.config.Simulation.sim_duration
         if self.HAS_LAYERCAKE:
@@ -355,6 +357,16 @@ class RoutingTest(Application):
         self.received_counter = Counter()
         self.total_counter = Counter()
 
+    def activate(self):
+        self.forced_nodes = self.layercake.host.fleet.node_names()
+        if self.forced_nodes:
+            for node in self.forced_nodes:
+                if node != self.layercake.hostname:
+                    self.total_counter[node] = 0
+        self.test_packet_counter = Counter(self.total_counter)
+        self.result_packet_dl = {name: []
+                                 for name in self.total_counter.keys()}
+
     def generate_next_packet(self, period, destination=None, data=None, *args, **kwargs):
         """
         Lowest-count node gets a message
@@ -461,6 +473,15 @@ class Trust(RoutingTest):
 
     Default Trust Assessment Period of 10 minutes
     Default to Random Delay < 60 s before first cycle - reduces contention.
+
+    Required Child Method Invocations:
+        Must set one or more method or functions as `tick_assessors`, which
+        should return a node-indexed Series of measurement Series.
+        These will be invoked at each 'tick', and combined into a
+
+    Optional Child Methods:
+        `update_accessories`()
+
     """
     trust_assessment_period = 600
 
@@ -519,7 +540,8 @@ class Trust(RoutingTest):
                             ]
             )
             target_stats = {
-                node: pd.concat([tick[node] for tick in tick_assessments if node in tick])
+                node:
+                    pd.concat([tick[node] for tick in tick_assessments if node in tick])
                 for node in tick_keys
             }
             for node, per_target_stats in target_stats.iteritems():
@@ -542,6 +564,95 @@ class Trust(RoutingTest):
         })
         return initial
 
+class BehaviourTrust(Trust):
+    """
+    Reimplementation of Physical Trust Analysis work.
+
+    Performs the same Routing Test behaviour as Comms Trust
+
+    """
+    def __init__(self, *args, **kwargs):
+        super(BehaviourTrust, self).__init__(*args, **kwargs)
+
+        self.tick_assessors.extend([self.physical_metrics])
+
+    def physical_metrics(self):
+        """
+
+
+
+        This should really be rewritten (along with bounos.Metrics) to pull out these
+        metrics rather than having them coupled to DataPackage
+
+        Assume that we only have a pos_log
+        """
+
+        full_pos_log = self.node.fleet.node_poslogs()
+        last_relevant_time = Sim.now() - self.trust_assessment_period
+        pos_log = full_pos_log[:,:,last_relevant_time:]
+        return BehaviourTrust.physical_metrics_from_position_log(pos_log, self.node.fleet.node_names())
+
+    @classmethod
+    def physical_metrics_from_position_log(cls,pos_log, names=None):
+        """
+        Assumes [n,3,t] ndarray of positions
+
+        Perform Local-versions of
+                Metrics.DeviationOfHeading
+                PernodeSpeed
+                PernodeInternodeDistanceAvg
+
+        INHD -
+            $ m_i^t = h_{avg}^t -h_i $
+
+        Speed -
+            $ m_i^t = |h_i^t| $
+
+        INDD -
+            $ m_i^t =
+
+        """
+        n,d,t = pos_log.shape
+        assert d==3, d
+        if names is None:
+            names = [str(i) for i in range(n)]
+        # Diff assumes the last axis (time) is the differential (i.e. dt, which is what we want)
+        vec_log = np.diff(pos_log)  # (n,3,t-1)
+
+        # Deviation of Heading (INHD)
+        # v = np.asarray([data.deviation_from_at(data.average_heading(time), time) for time in range(int(data.tmax))])
+        # c = np.average(v, axis=1)
+        avg_vec = np.average(vec_log, axis=0)
+        assert avg_vec.shape == (3, t-1), avg_vec.shape
+        inhd = np.linalg.norm(avg_vec - vec_log, axis=1)
+        assert inhd.shape == (n,t-1), inhd.shape
+
+        # Per Node Speed
+        # v = np.asarray([map(mag, data.heading_slice(time)) for time in range(int(data.tmax))])
+        # c = np.average(v, axis=1)
+        mag_log = np.linalg.norm(vec_log, axis=1)  # (n,t)
+
+
+        # Per Node Internode Distance Deviation (INDD)
+        # Deviation from me to the fleet centroid compared to the average inter node distance
+        # v = np.asarray([data.distances_from_average_at(time) for time in range(int(data.tmax))])
+        # c = np.asarray([data.inter_distance_average(time) for time in range(int(data.tmax))])
+        inter_node_distance_matrices = np.asarray([squareform(pdist(_pt)) for _pt in np.rollaxis(pos_log, 2)]).T
+        avg_pos = np.average(pos_log, axis=0)
+        avg_dist = np.linalg.norm(avg_pos - pos_log, axis=1)
+        indd = np.average(inter_node_distance_matrices, axis=1)
+        assert indd.shape == (n,t), indd.shape
+
+        phys_stats = pd.Series([])
+        for i,node in enumerate(names):
+            phys_stats[node] = pd.Series({
+                "INDD": indd[i],
+                "Speed": mag_log[i],
+                "INHD": inhd[i]
+            })
+
+        return phys_stats
+
 
 class CommsTrust(Trust):
     """
@@ -551,6 +662,8 @@ class CommsTrust(Trust):
 
     Default Trust Assessment Period of 10 minutes
     Default to Random Delay < 60 s before first cycle - reduces contension.
+
+    #TODO Extend this to perform Grey Factor Analysis in real time?
 
     """
     test_stream_length = 6
@@ -583,14 +696,7 @@ class CommsTrust(Trust):
         """
         self.last_accessed_rx_packet = None
 
-        self.forced_nodes = self.layercake.host.fleet.node_names()
-        if self.forced_nodes:
-            for node in self.forced_nodes:
-                if node != self.layercake.hostname:
-                    self.total_counter[node] = 0
-        self.test_packet_counter = Counter(self.total_counter)
-        self.result_packet_dl = {name: []
-                                 for name in self.total_counter.keys()}
+
 
         super(CommsTrust, self).activate()
 

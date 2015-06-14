@@ -255,6 +255,8 @@ class Fleet(Sim.Process):
     def node_poslogs(self, shared=True):
         """
         Return the fleet-list array of reported position logs
+
+        P = [n,3,t]
         :param shared:
         """
         if shared:

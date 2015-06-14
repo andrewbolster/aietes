@@ -210,7 +210,7 @@ def multirun(args, basedir=os.curdir):
         data = load_sources(npz_in_dir(sourcedir))
         execute_generator = lambda d: detect_and_identify(d)
         result_generator = (execute_generator(d) for d in data.itervalues())
-        # TODO This is amazingly wasteful, also there appears to be a nasty but here for
+        # TODO This is amazingly wasteful
         _, _, _, identification_list = zip(*result_generator)
 
         # Write a standard fusion run back to the source dir. This might be
@@ -458,15 +458,15 @@ def detect_and_identify(d):
     :param d:
     :return:
     """
-    per_metric_deviations, deviation_windowed = Analyses.Behaviour.combined_detection_rank(d,
-                                                                                           _metrics,
-                                                                                           stddev_frac=2)
-    trust_values = Analyses.Trust.dev_to_trust(per_metric_deviations)
-    identification_dict = Analyses.Behaviour.behaviour_identification(per_metric_deviations, deviation_windowed,
+    metric_devs, windowed_devs = Analyses.Behaviour.combined_detection_rank(d,
+                                                                           _metrics,
+                                                                           stddev_frac=2)
+    trust_values = Analyses.Trust.dev_to_trust(metric_devs)
+    identification_dict = Analyses.Behaviour.behaviour_identification(metric_devs, windowed_devs,
                                                                       _metrics,
                                                                       names=d.names,
                                                                       verbose=False)
-    return trust_values, per_metric_deviations, deviation_windowed, identification_dict
+    return trust_values, metric_devs, windowed_devs, identification_dict
 
 
 def run_detection_fusion(data, args=None):

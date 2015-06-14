@@ -8,7 +8,7 @@ import os
 from subprocess import call
 
 from polybos import ExperimentManager as ExpMan
-
+from bounos.multi_loader import dump_trust_logs_and_stats_from_exp_paths
 
 @contextmanager
 def redirected(stdout):
@@ -19,10 +19,10 @@ def redirected(stdout):
 
 
 def setup_exp():
-    e = ExpMan(node_count=8,
+    e = ExpMan(node_count=6,
                title="Malicious Behaviour Trust Comparison",
-               parallel=True,
-               future=True
+               parallel=False,
+               base_config_file="behave.conf"
                )
     e.add_minority_n_behaviour_suite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
     return e
@@ -54,6 +54,9 @@ if __name__ == "__main__":
         print fin.read()
 
     print("Saved detection stats to {}".format(logpath))
-    exp.dump_self()
-    os.chdir(exp.exp_path)
-    call(['bounos', '-M'])
+    path = exp.exp_path
+    print("Saved detection stats to {}".format(exp.exp_path))
+    try:
+        dump_trust_logs_and_stats_from_exp_paths([path], title=exp.title)
+    except:
+        log.exception("Crashed in trust logging, moving on")

@@ -323,7 +323,7 @@ class Scenario(object):
         """
         if self.committed:
             raise (RuntimeError("Attempted to commit twice (or more)"))
-        print("Scenario {} Committed with {} nodes configured and {} defined".format(self.title,
+        print("Scenario {} Committed with {} nodes configured and {} inherited from config file".format(self.title,
                                                                                      len(self.nodes.keys(
                                                                                      )),
                                                                                      self.node_count))
