@@ -28,7 +28,7 @@ from scipy.spatial.distance import squareform, pdist
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
 
-# DEBUG = False
+DEBUG = True
 
 
 class Application(Sim.Process):
@@ -366,6 +366,7 @@ class RoutingTest(Application):
         self.test_packet_counter = Counter(self.total_counter)
         self.result_packet_dl = {name: []
                                  for name in self.total_counter.keys()}
+        super(RoutingTest, self).activate()
 
     def generate_next_packet(self, period, destination=None, data=None, *args, **kwargs):
         """
@@ -489,6 +490,8 @@ class Trust(RoutingTest):
         super(Trust, self).__init__(*args, **kwargs)
         # List of methods called per tick.
         self.tick_assessors = []
+        # List of methods called per packet received
+        self.packet_receivers = []
         # While it's tempting to preallocate this as a DataFrame, it is over 10 times slower than dict ops
         self.trust_assessments = {}  # My generated trust metrics, [node][t][observation Series]
         # Extra information that might be interesting in the longer term.
@@ -507,6 +510,16 @@ class Trust(RoutingTest):
         :return:
         """
         pass
+
+    def packet_recv(self, packet):
+        """
+        Multi Function Aware Packet Handler
+        These functions should not expect any interdependence in packet content as if they're getting it individually
+        :param packet:
+        :return:
+        """
+        for receiver in self.packet_receivers:
+            receiver(deepcopy(packet))
 
     def tick(self):
         """
@@ -588,6 +601,7 @@ class BehaviourTrust(Trust):
         self._use_fleet_log = True
 
         self.tick_assessors.extend([self.physical_metrics])
+        self.packet_receivers.extend([self.update_log_from_packet])
 
     def physical_metrics(self):
         """
@@ -693,7 +707,7 @@ class BehaviourTrust(Trust):
 
 
 
-    def packet_recv(self, packet):
+    def update_log_from_packet(self, packet):
         """
         Application Level processing of packet. Must call super class
         :param packet:
@@ -729,6 +743,8 @@ class CommsTrust(Trust):
              'collisions': []
              })
         self.tick_assessors.extend([self.rx_trust_metrics, self.tx_trust_metrics])
+        self.packet_receivers.extend([self.update_counters])
+
 
         self.current_target = None
         self.forced_nodes = []
@@ -742,8 +758,6 @@ class CommsTrust(Trust):
 
         """
         self.last_accessed_rx_packet = None
-
-
 
         super(CommsTrust, self).activate()
 
@@ -956,7 +970,7 @@ class CommsTrust(Trust):
         self.log_sent_packet(deepcopy(packet))
         self.log_received_packet(deepcopy(packet))
 
-    def packet_recv(self, packet):
+    def update_counters(self, packet):
         """
 
         :param packet:
@@ -977,6 +991,13 @@ class CommsTrust(Trust):
 class CommsTrustRoundRobin(CommsTrust):
     test_stream_length = 1
 
+class CombinedTrust(BehaviourTrust, CommsTrustRoundRobin):
+    """
+    Fusion Class of Comms and Behaviour with some deconflicting functionality.
+    In theory
+    """
+    def __init__(self, *args, **kwargs):
+        super(CombinedTrust, self).__init__(*args, **kwargs)
 
 class SelfishTargetSelection(CommsTrustRoundRobin):
     def select_target(self):
@@ -1020,6 +1041,13 @@ class SelfishTargetSelection(CommsTrustRoundRobin):
 
         return drop_it
 
+class CombinedSelfishTargetSelection(BehaviourTrust, SelfishTargetSelection):
+    """
+    Fusion Class of Selfish and Behaviour Trust with some deconflicting functionality.
+    In theory
+    """
+    def __init__(self, *args, **kwargs):
+        super(CombinedSelfishTargetSelection, self).__init__(*args, **kwargs)
 
 class BadMouthingPowerControl(CommsTrustRoundRobin):
     """
@@ -1059,6 +1087,14 @@ class BadMouthingPowerControl(CommsTrustRoundRobin):
             new_level = packet["level"]
 
         return new_level
+
+class CombinedBadMouthingPowerControl(BehaviourTrust, BadMouthingPowerControl):
+    """
+    Fusion Class of Malicious and Behaviour trust with some deconflicting functionality.
+    In theory
+    """
+    def __init__(self, *args, **kwargs):
+        super(CombinedBadMouthingPowerControl, self).__init__(*args, **kwargs)
 
 
 class Null(Application):

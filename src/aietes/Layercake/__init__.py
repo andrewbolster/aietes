@@ -87,11 +87,11 @@ class Layercake(object):
         ##############################
         # Routing
         ##############################
-        # try:
-        net_mod = getattr(Net, str(config['net']))
-        self.net = net_mod(self, config['Network'])
-        # except AttributeError as e:
-        # raise ConfigError("Can't find Network: {}: {}".format(config['net'], e))
+        try:
+            net_mod = getattr(Net, str(config['net']))
+            self.net = net_mod(self, config['Network'])
+        except AttributeError as e:
+            raise
 
     def activate(self, rx_handler, monitor_mode=False):
         """

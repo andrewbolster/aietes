@@ -832,6 +832,24 @@ class ExperimentManager(object):
             s.add_default_node(count=self.node_count - n_minority)
             self.scenarios[s.title] = s
 
+    def add_minority_n_application_suite(self, application_list, n_minority=1, title="Application"):
+        """
+        Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
+
+        :param application_list:
+        :param n_minority:
+        :param title:
+        Args:
+            applicaiton_list(list): minority applications
+            n_minority(int): number of minority attackers in each scenario (optional)
+        """
+        for v in application_list:
+            s = Scenario(title="%s(%s)" % (title, v),
+                         default_config=self._default_scenario.generate_configobj())
+            s.add_custom_node({"app": v}, count=n_minority)
+            s.add_default_node(count=self.node_count - n_minority)
+            self.scenarios[s.title] = s
+
     def add_variable_2_range_scenarios(self, v_dict):
         """
         Add a 2dim range of scenarios based on a dictionary of value ranges.
