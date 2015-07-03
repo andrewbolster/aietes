@@ -533,6 +533,7 @@ class Trust(RoutingTest):
             trust_period = Sim.now() // self.trust_assessment_period
 
             tick_assessments = [tick() for tick in self.tick_assessors]
+            assert all([not isinstance(t, list) for t in tick_assessments]), "All Tick Assessors should return a 1-d list of values"
             tick_keys = set([
                                 i
                                 for t in tick_assessments
@@ -541,13 +542,15 @@ class Trust(RoutingTest):
             )
             target_stats = {
                 node:
-                    pd.concat([tick[node] for tick in tick_assessments if node in tick])
+                    pd.concat([pd.Series(tick[node]) for tick in tick_assessments if node in tick])
                 for node in tick_keys
             }
             for node, per_target_stats in target_stats.iteritems():
                 if node not in self.trust_assessments:
                     self.trust_assessments[node] = [pd.Series([]) for _ in range(trust_period)]
                 self.trust_assessments[node].append(per_target_stats)
+
+            self.last_accessed_rx_packet = len(self.received_log) - 1
 
             self.update_accessories()
 
@@ -568,32 +571,49 @@ class BehaviourTrust(Trust):
     """
     Reimplementation of Physical Trust Analysis work.
 
+    This application maintains it's own separate environmental record based on packet reception.
+
+    It assumes that each packet received contains an updated global position log.
+    #TODO this needs to be extended to:
+        Take snapshot from time of transmission instead
+        Actually manage a proper map
+
     Performs the same Routing Test behaviour as Comms Trust
 
     """
     def __init__(self, *args, **kwargs):
         super(BehaviourTrust, self).__init__(*args, **kwargs)
 
+        self.pos_log = []
+        self._use_fleet_log = True
+
         self.tick_assessors.extend([self.physical_metrics])
 
     def physical_metrics(self):
         """
-
-
-
         This should really be rewritten (along with bounos.Metrics) to pull out these
         metrics rather than having them coupled to DataPackage
 
         Assume that we only have a pos_log
         """
 
-        full_pos_log = self.node.fleet.node_poslogs()
-        last_relevant_time = Sim.now() - self.trust_assessment_period
-        pos_log = full_pos_log[:,:,last_relevant_time:]
-        return BehaviourTrust.physical_metrics_from_position_log(pos_log, self.node.fleet.node_names())
+        if self._use_fleet_log:
+            # Assume magic
+            full_pos_log = self.node.fleet.node_poslogs()
+            last_relevant_time = Sim.now() - self.trust_assessment_period
+            pos_log = full_pos_log[:, :, last_relevant_time:]
+        else:
+            # Assume less magic: that we get position info from every packet received
+            full_pos_log = np.asarray(self.pos_log)
+            if full_pos_log:
+                pos_log = full_pos_log[:,:,self.last_accessed_rx_packet:]
+            else:
+                pos_log = None
+
+        return BehaviourTrust.physical_metrics_from_position_log(pos_log, self.node.fleet.node_names(), single_value=True)
 
     @classmethod
-    def physical_metrics_from_position_log(cls,pos_log, names=None):
+    def physical_metrics_from_position_log(cls,pos_log, names=None, single_value=True):
         """
         Assumes [n,3,t] ndarray of positions
 
@@ -612,46 +632,73 @@ class BehaviourTrust(Trust):
             $ m_i^t =
 
         """
-        n,d,t = pos_log.shape
-        assert d==3, d
-        if names is None:
-            names = [str(i) for i in range(n)]
-        # Diff assumes the last axis (time) is the differential (i.e. dt, which is what we want)
-        vec_log = np.diff(pos_log)  # (n,3,t-1)
-
-        # Deviation of Heading (INHD)
-        # v = np.asarray([data.deviation_from_at(data.average_heading(time), time) for time in range(int(data.tmax))])
-        # c = np.average(v, axis=1)
-        avg_vec = np.average(vec_log, axis=0)
-        assert avg_vec.shape == (3, t-1), avg_vec.shape
-        inhd = np.linalg.norm(avg_vec - vec_log, axis=1)
-        assert inhd.shape == (n,t-1), inhd.shape
-
-        # Per Node Speed
-        # v = np.asarray([map(mag, data.heading_slice(time)) for time in range(int(data.tmax))])
-        # c = np.average(v, axis=1)
-        mag_log = np.linalg.norm(vec_log, axis=1)  # (n,t)
-
-
-        # Per Node Internode Distance Deviation (INDD)
-        # Deviation from me to the fleet centroid compared to the average inter node distance
-        # v = np.asarray([data.distances_from_average_at(time) for time in range(int(data.tmax))])
-        # c = np.asarray([data.inter_distance_average(time) for time in range(int(data.tmax))])
-        inter_node_distance_matrices = np.asarray([squareform(pdist(_pt)) for _pt in np.rollaxis(pos_log, 2)]).T
-        avg_pos = np.average(pos_log, axis=0)
-        avg_dist = np.linalg.norm(avg_pos - pos_log, axis=1)
-        indd = np.average(inter_node_distance_matrices, axis=1)
-        assert indd.shape == (n,t), indd.shape
 
         phys_stats = pd.Series([])
-        for i,node in enumerate(names):
-            phys_stats[node] = pd.Series({
-                "INDD": indd[i],
-                "Speed": mag_log[i],
-                "INHD": inhd[i]
-            })
+
+        if pos_log is None:
+            # Can't assess trust, pass through empty stats, or half-generate stats series if names are available
+            if names is not None:
+                for i, node in enumerate(names):
+                    phys_stats[node] = pd.Series({
+                        "INDD": None,
+                        "Speed": None,
+                        "INHD": None
+                    })
+
+        else:
+            n,d,t = pos_log.shape
+            assert d==3, d
+
+            if names is None:
+                names = [str(i) for i in range(n)]
+
+            # Diff assumes the last axis (time) is the differential (i.e. dt, which is what we want)
+            vec_log = np.diff(pos_log)  # (n,3,t-1)
+
+            # Deviation of Heading (INHD)
+            # v = np.asarray([data.deviation_from_at(data.average_heading(time), time) for time in range(int(data.tmax))])
+            # c = np.average(v, axis=1)
+            avg_vec = np.average(vec_log, axis=0)
+            assert avg_vec.shape == (3, t-1), avg_vec.shape
+            inhd = np.linalg.norm(avg_vec - vec_log, axis=1)
+            assert inhd.shape == (n,t-1), inhd.shape
+
+            # Per Node Speed
+            # v = np.asarray([map(mag, data.heading_slice(time)) for time in range(int(data.tmax))])
+            # c = np.average(v, axis=1)
+            mag_log = np.linalg.norm(vec_log, axis=1)  # (n,t)
+
+
+            # Per Node Internode Distance Deviation (INDD)
+            # Deviation from me to the fleet centroid compared to the average inter node distance
+            # v = np.asarray([data.distances_from_average_at(time) for time in range(int(data.tmax))])
+            # c = np.asarray([data.inter_distance_average(time) for time in range(int(data.tmax))])
+            inter_node_distance_matrices = np.asarray([squareform(pdist(_pt)) for _pt in np.rollaxis(pos_log, 2)]).T
+            avg_pos = np.average(pos_log, axis=0)
+            avg_dist = np.linalg.norm(avg_pos - pos_log, axis=1)
+            indd = np.average(inter_node_distance_matrices, axis=1)
+            assert indd.shape == (n,t), indd.shape
+
+
+            for i,node in enumerate(names):
+                phys_stats[node] = pd.Series({
+                    "INDD": indd[i],
+                    "Speed": mag_log[i],
+                    "INHD": inhd[i]
+                })
+                if single_value:
+                    phys_stats[node] = phys_stats[node].apply(np.mean)
 
         return phys_stats
+
+
+
+    def packet_recv(self, packet):
+        """
+        Application Level processing of packet. Must call super class
+        :param packet:
+        """
+        self.pos_log.append(self.node.fleet.node_positions())
 
 
 class CommsTrust(Trust):
@@ -762,7 +809,6 @@ class CommsTrust(Trust):
     def rx_trust_metrics(self):
 
         relevant_rx_packets = self.received_log[self.last_accessed_rx_packet:]
-        self.last_accessed_rx_packet = len(self.received_log) - 1
 
         rx_stats = pd.Series([])
         pkt_batches = {}

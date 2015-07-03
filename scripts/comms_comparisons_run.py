@@ -21,7 +21,7 @@ def redirected(stdout):
 def setup_exp():
     e = ExpMan(node_count=6,
                title="Malicious Behaviour Trust Comparison",
-               parallel=True,
+               parallel=False,
                base_config_file="behave.conf"
                )
     e.add_minority_n_behaviour_suite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
