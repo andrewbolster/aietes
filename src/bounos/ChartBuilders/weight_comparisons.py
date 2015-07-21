@@ -198,8 +198,16 @@ def weight_for_metric(m, emph=4):
     return norm_weight(base)
 
 
-def norm_weight(base):
-    return pd.Series(base / base.sum(), index=trust_metrics)
+def norm_weight(base, metric_names=None):
+    if metric_names is not None:
+        trust_metrics = metric_names
+
+    if isinstance(base, pd.Series):
+        normed = pd.Series(base / base.sum())
+    else:
+        normed = pd.Series(base,index=trust_metrics)/ sum(base)
+
+    return normed
 
 
 def beta_trusts(trust, length=4096):

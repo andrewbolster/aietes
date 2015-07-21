@@ -194,7 +194,7 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
     """
     Generate an individual observer perspective i.e per node record
     :param gf:
-    :param metric_weights:
+    :param metric_weights: Series of 1-normed metric weights, including text indexes. Negative metrics will be flipped
     :param flip_metrics: Metrics that are more 'good' as they get bigger
     :return:
     """
@@ -209,6 +209,8 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
 
     if flip_metrics is None:
         flip_metrics = ['TXThroughput', 'RXThroughput']  # These are 'bigger is better' values
+    elif any(metric_weights.where(metric_weights<0).dropna()):
+        flip_metrics = list(metric_weights.where(metric_weights<0).dropna().keys())
 
     for ki, gi in gf.groupby(level='t'):
         gmn = gi.min(axis=0)  # Generally the 'Good' sequence,
@@ -251,7 +253,7 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
                         axis=1),
                     name='trust'
                 )
-            except ValueError:
+            except [ValueError, FloatingPointError]:
                 print "Interval {}".format(interval)
                 print "Good.keys(){}".format(good.keys())
                 print "Bad.keys(){}".format(bad.keys())
