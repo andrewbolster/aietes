@@ -148,7 +148,6 @@ def t_kt(interval):
             1.0 + (sigma * sigma) / (theta * theta)
         )
 
-
 def weight_calculator(metric_index, ignore=None):
     """
     Helper function to take a given Pandas index and return an ordered ndarray vector of balanced (currently)
@@ -232,7 +231,7 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
 
             for flipper in flip_metrics:  # NOTE flipper may have been removed if no variation
                 if flipper in good.keys() and flipper in bad.keys():
-                    good[flipper], bad[flipper] = bad[flipper], good[flipper]
+                    good[flipper], bad[flipper] = bad[flipper].copy(), good[flipper].copy()
 
             if metric_weights is not None:
                 # If the dropnas above have eliminated uninformative rows, they may have been trying to
@@ -244,8 +243,8 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
 
             try:
                 interval = pd.DataFrame.from_dict({
-                    'good': good.apply(np.average, weights=valid_metric_weights, axis=1),
-                    'bad': bad.apply(np.average, weights=valid_metric_weights, axis=1)
+                    'good': good.apply(np.average, weights=valid_metric_weights[good.keys()], axis=1),
+                    'bad': bad.apply(np.average, weights=valid_metric_weights[bad.keys()], axis=1)
                 })[['good', 'bad']]
                 t_val = pd.Series(
                     interval.apply(
@@ -253,16 +252,19 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
                         axis=1),
                     name='trust'
                 )
-            except [ValueError, FloatingPointError]:
-                print "Interval {}".format(interval)
-                print "Good.keys(){}".format(good.keys())
-                print "Bad.keys(){}".format(bad.keys())
-                print "Orig Weight {}".format(metric_weights)
-                print "New Weight {}".format(valid_metric_weights)
-                print "Width {}".format(width)
-                print "GI {}".format(gi)
-                print "Good {}".format(good)
-                print "Bad {}".format(bad)
+            except (ValueError, FloatingPointError):
+                with np.errstate(invalid='ignore'):
+                    print "Interval {}".format(interval)
+                    print "Good.keys(){}".format(good.keys())
+                    print "Good {}".format(good)
+
+                    print "Bad.keys(){}".format(bad.keys())
+                    print "Bad {}".format(bad)
+
+                    print "Orig Weight {}".format(metric_weights)
+                    print "New Weight {}".format(valid_metric_weights)
+                    print "Width {}".format(width)
+                    print "GI {}".format(gi)
                 raise
 
             trusts.append(
