@@ -50,8 +50,6 @@ from aietes.Tools.humanize_time import seconds_to_str
 
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
-np.seterr(all='raise', under='warn')
-
 DEBUG = False
 FUDGED = False
 

@@ -25,8 +25,8 @@ def redirected(stdout):
 
 def setup_exp():
     e = ExpMan(node_count=6,
-               title="Malicious Behaviour Trust Comparison",
-               parallel=False,
+               title="Malicious Behaviour Trust Control",
+               parallel=True,
                base_config_file="combined.conf"
                )
     # Combined Trust acts as baseline for both comms and behaviour level

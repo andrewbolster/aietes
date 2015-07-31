@@ -16,7 +16,6 @@
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
-n_metrics = 6
 
 import itertools
 from collections import OrderedDict
@@ -30,10 +29,11 @@ from aietes import Tools
 from bounos.Analyses import scenario_map
 
 
-# USUALLY CONSTANTS
-trust_metrics = np.asarray("ADelay,ARXP,ATXP,RXThroughput,PLR,TXThroughput".split(','))
-metric_combinations = itertools.product(xrange(1, 4), repeat=len(trust_metrics))
-metric_combinations_series = [pd.Series(x, index=trust_metrics) for x in metric_combinations]
+# USUALLY CONSTANTS#
+_n_metrics = 6
+_trust_metrics = np.asarray("ADelay,ARXP,ATXP,RXThroughput,PLR,TXThroughput".split(','))
+_metric_combinations = itertools.product(xrange(1, 4), repeat=len(_trust_metrics))
+_metric_combinations_series = [pd.Series(x, index=_trust_metrics) for x in _metric_combinations]
 
 # DEFAULT VARIABLES
 default_mtfm_args = ('n0', 'n1', ['n2', 'n3'], ['n4', 'n5'])
@@ -208,8 +208,10 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
 
     if flip_metrics is None:
         flip_metrics = ['TXThroughput', 'RXThroughput']  # These are 'bigger is better' values
-    elif any(metric_weights.where(metric_weights<0).dropna()):
-        flip_metrics = list(metric_weights.where(metric_weights<0).dropna().keys())
+    else:
+        flip_metrics = []
+    if metric_weights is not None and any(metric_weights.where(metric_weights<0).dropna()):
+        flip_metrics.extend(list(metric_weights.where(metric_weights<0).dropna().keys()))
 
     for ki, gi in gf.groupby(level='t'):
         gmn = gi.min(axis=0)  # Generally the 'Good' sequence,
@@ -237,15 +239,19 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
                 # If the dropnas above have eliminated uninformative rows, they may have been trying to
                 # be weighted on.... Fix that.
                 # ALSO doing it in the same name is really bad for looping....
-                valid_metric_weights = metric_weights.drop(metric_weights.keys().difference(good.keys()))
-            else:
-                valid_metric_weights = None
-
-            try:
+                valid_metric_weights = abs(metric_weights.drop(metric_weights.keys().difference(good.keys())))
                 interval = pd.DataFrame.from_dict({
                     'good': good.apply(np.average, weights=valid_metric_weights[good.keys()], axis=1),
                     'bad': bad.apply(np.average, weights=valid_metric_weights[bad.keys()], axis=1)
                 })[['good', 'bad']]
+            else:
+                interval = pd.DataFrame.from_dict({
+                    'good': good.apply(np.average, axis=1),
+                    'bad': bad.apply(np.average, axis=1)
+                })[['good', 'bad']]
+
+            try:
+
                 t_val = pd.Series(
                     interval.apply(
                         t_kt,
@@ -310,7 +316,6 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     :param tf: pandas.DataFrame: Trust Metrics DataFrame; can be single or ['var','run'] indexed
     :param var: str: optional level name to group by as opposed to the standard 'var'
     :param metric_weights: numpy.ndarray: per-metric weighting array (default None)
-    :param n_metrics: int: number of metrics assessed in each observation
     :return: pandas.DataFrame
     """
     assert isinstance(tf, pd.DataFrame), "Expected first argument (tf) to be a Pandas Dataframe, got {} instead".format(

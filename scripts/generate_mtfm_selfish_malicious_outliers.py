@@ -40,7 +40,7 @@ outliers = Parallel(n_jobs=-1, verbose=10, pre_dispatch=8)(
      metric_weight=w,
      flip_metrics=['TXThroughput', 'RXThroughput', 'ATXP']
      ) for w in itertools.imap(weight_comparisons.norm_weight,
-                               Trust.metric_combinations_series)
+                               Trust._metric_combinations_series)
 )
 sums = pd.concat(outliers).reset_index()
 
