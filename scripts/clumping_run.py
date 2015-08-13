@@ -9,7 +9,7 @@ from polybos import ExperimentManager as ExpMan
 def set_exp():
     e = ExpMan(node_count=8,
                title="Clumping Test", parallel=True)
-    e.add_variable_range_scenario("clumping", numpy.linspace(0.0, 1.0, 20))
+    e.add_custom_node_scenario("clumping", numpy.linspace(0.0, 1.0, 20))
     return e
 
 

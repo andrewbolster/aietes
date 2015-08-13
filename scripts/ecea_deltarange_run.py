@@ -17,7 +17,7 @@ def set_exp():
         'drifting': 'DriftFactorPy',
         'ecea': 'Simple2'
     })
-    e.add_variable_range_scenario('beacon_rate', variations)
+    e.add_custom_node_scenario('beacon_rate', variations)
     e.update_duration(21600)
     return e
 

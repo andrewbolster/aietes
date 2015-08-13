@@ -30,7 +30,7 @@ def exec_comms_range(scenario, title):
                )
 
     value_range = set(np.arange(0.02, 0.035, step=0.0025).tolist() + np.arange(0.015, 0.075, step=0.005).tolist())
-    e.add_application_variable_scenario('app_rate', value_range)
+    e.add_varied_mutable_scenarios('app_rate', value_range)
 
     e.run(
         runcount=4,

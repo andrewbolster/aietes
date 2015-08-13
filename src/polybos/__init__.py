@@ -108,7 +108,7 @@ class Scenario(object):
         """
 
         if default_config_file is None and default_config is None:
-            logging.info("Assume that the user wants a generic default")
+            logging.info("No Config provided: Assume that the user wants a generic default")
             self._default_config = get_config()
         elif isinstance(default_config, ConfigObj):
             logging.info("User provided a (hopefully complete) confobj")
@@ -213,7 +213,7 @@ class Scenario(object):
                     self.datarun[run] = sim.generate_datapackage().write(title)
                 else:
                     self.datarun[run] = return_dict
-                log.info("%s(%s):%f%%"
+                logging.info("%s(%s):%f%%"
                          % (run, return_dict['data_file'],
                             100.0 * float(sim_time) / prep_stats['sim_time']))
 
@@ -221,7 +221,7 @@ class Scenario(object):
                 raise
             except Exception:
                 raise
-        log.info("done %d runs for %d each" % (runcount, sim_time))
+        logging.info("done %d runs for %d each" % (runcount, sim_time))
 
     def run_parallel(self, runcount=None, runtime=None, queueing_pool=False, **kwargs):
         """
@@ -277,7 +277,7 @@ class Scenario(object):
 
             assert all(
                 r is not None for r in self.datarun), "All dataruns should be completed by now"
-            log.info("Got responses")
+            logging.info("Got responses")
 
             print("done %d runs in parallel" % runcount)
         else:
@@ -323,7 +323,7 @@ class Scenario(object):
         """
         if self.committed:
             raise (RuntimeError("Attempted to commit twice (or more)"))
-        print("Scenario {} Committed with {} nodes configured and {} inherited from config file".format(self.title,
+        logging.info("Scenario {} Committed with {} nodes configured and {} inherited from config file".format(self.title,
                                                                                      len(self.nodes.keys(
                                                                                      )),
                                                                                      self.node_count))
@@ -409,7 +409,7 @@ class Scenario(object):
             raise (
                 RuntimeError("Attempted to modify scenario after committing"))
         if hasattr(self, "node_count"):
-            print("Updating nodecount from %d to %d" %
+            logging.info("Updating nodecount from %d to %d" %
                   (self.node_count, count))
         self.node_count = count
 
@@ -529,7 +529,9 @@ class Scenario(object):
         if self.committed:
             raise RuntimeError(
                 "Attempting to update default node config after committing")
+        logging.info("Updating Default node: {}:{}".format(variable,value))
         self.update_node(self._default_node_config, variable, value)
+        logging.info(self._default_node_config['MAC']['protocol'])
 
 
 class ExperimentManager(object):
@@ -589,9 +591,13 @@ class ExperimentManager(object):
         self.scenarios = {}
 
         if node_count is None:
-            self._default_scenario.set_node_count(self._default_scenario.node_count)
+            default_node_count = self._default_scenario.node_count
+            self._default_scenario.set_node_count(default_node_count)
+            logging.info("Default Node Count Set to {} from default scenario".format(default_node_count))
         else:
             self._default_scenario.set_node_count(node_count)
+            logging.info("Default Node Count Set to {} from argument".format(node_count))
+
         self.node_count = self._default_scenario.node_count
         self.parallel = parallel
 
@@ -731,7 +737,7 @@ class ExperimentManager(object):
             new_count(int):new value to be used across scenarios
         """
         for t in self.scenarios.keys():
-            self.scenarios[t].update_node_counts(new_count)
+            self.scenarios[t].set_node_count(new_count)
 
     def update_duration(self, tmax):
         """
@@ -757,7 +763,7 @@ class ExperimentManager(object):
             raise ValueError(
                 "Incorrect Environment Type given:{}{}".format(environment, type(environment)))
 
-    def add_variable_range_scenario(self, variable, value_range, title_range=None):
+    def add_custom_node_scenario(self, variable, value_range, title_range=None):
         """
         Add a scenario with a range of configuration values to the experimental run
 
@@ -776,7 +782,7 @@ class ExperimentManager(object):
             s.add_custom_node({variable: v}, count=self.node_count)
             self.scenarios[s.title] = s
 
-    def add_application_variable_scenario(self, variable, value_range, title_range=None):
+    def add_varied_mutable_scenarios(self, variable, value_range, title_range=None):
         """
         Add a scenario with a range of application/Node configuration values to the
         experimental run
@@ -795,24 +801,11 @@ class ExperimentManager(object):
         for i, v in enumerate(value_range):
             s = Scenario(title=title_range[i],
                          default_config=self._default_scenario.generate_configobj())
-            for node, node_config in s.nodes.items():
-                s.update_node(node_config, variable, v)
+            s.update_default_node(variable, v)
             self.scenarios[s.title] = s
 
-    def add_variable_node_scenario(self, node_range):
-        """
-        Add a scenario with a range of configuration values to the experimental run
+        self.update_node_counts(self.node_count)
 
-        :param node_range:
-        Args:
-            variable(str): mutable value description
-            value_range(range or generator): values to be tested against.
-        """
-        for node_count in node_range:
-            s = Scenario(title="{}({})".format("Nodes", node_count),
-                         default_config=self._default_scenario.generate_configobj())
-            s.add_default_node(node_count)
-            self.scenarios[s.title] = s
 
     def add_minority_n_behaviour_suite(self, behaviour_list, n_minority=1, title="Behaviour"):
         """

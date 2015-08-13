@@ -42,7 +42,7 @@ def set_exp():
         'dvl_across': 0.0,
     }
 
-    e.add_variable_range_scenario('drift_noises',
+    e.add_custom_node_scenario('drift_noises',
                                   [zeroed_noises, no_dvl, no_gyro, default_noises],
                                   ["No Noise", "No DVL Noise", "No Gyro Noise", "Standard Noises"]
                                   )

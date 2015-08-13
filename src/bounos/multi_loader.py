@@ -59,7 +59,7 @@ def hdfstore(filename, obj):
 
 
 def generate_inverted_logs_from_paths(paths):
-    logs = {}
+    logs = {} #TODO Update this to a defaultdict implementation.
     # Transpose per-var-per-run statistics into Per 'log' stats (i.e. rx, tx, trust, stats, etc)
     for var, runs in scenarios_comms(paths):
         for run, data in runs:
@@ -132,7 +132,8 @@ def generate_dataframes_from_inverted_log(tup):
 
         # Fixes for storage and sanity
         if k == 'stats':
-            df.drop(['total_counts', u'sent_counts', 'received_counts'], axis=1, inplace=True)
+            df.drop(['total_counts', u'sent_counts', 'received_counts'],
+                    axis=1, inplace=True, errors='ignore')
 
         if k == 'trust':
             df = Trust.explode_metrics_from_trust_log(df)

@@ -18,7 +18,7 @@ def set_exp():
         'ecea': 'Simple2',
         'beacon_rate': 15
     })
-    e.add_variable_range_scenario('drift_dvl_scale', variations)
+    e.add_custom_node_scenario('drift_dvl_scale', variations)
     e.update_duration(28800)
     return e
 
