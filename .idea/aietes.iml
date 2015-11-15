@@ -9,7 +9,7 @@
       <excludeFolder url="file://$MODULE_DIR$/nose-1.3.4-py2.7.egg" />
       <excludeFolder url="file://$MODULE_DIR$/results" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 2.7.8 (/usr/bin/python2.7)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 2.7.9 (/usr/bin/python2.7)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Puppet modules" level="application" />
   </component>

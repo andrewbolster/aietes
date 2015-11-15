@@ -19,7 +19,6 @@ import logging
 import tempfile
 import shutil
 
-
 logging.basicConfig()
 
 import pandas as pd
@@ -263,7 +262,7 @@ def get_mobility_stats(mobility):
 
 class TrustCom(unittest.TestCase):
 
-    def setUp(self):
+    def setUpClass(self):
 
         if use_temp_dir:
             self.dirpath = tempfile.mkdtemp()

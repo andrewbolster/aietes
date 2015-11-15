@@ -344,7 +344,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
                 trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
 
     tf = pd.concat(trusts)
-    tf.sort(inplace=True)
+    tf.sort_values(inplace=True)
 
     # The following:
     # Transforms the target id into the column space,
