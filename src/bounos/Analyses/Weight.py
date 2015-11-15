@@ -123,7 +123,7 @@ def perform_weight_factor_analysis_on_trust_frame(trust_frame, good, min_emphasi
     """
     # Extract trust metric names from frame
     trust_metrics = list(trust_frame.keys())
-    if max_emphasis < 2:
+    if max_emphasis - min_emphasis < 2:
         raise RuntimeError("Setting Max Emphasis <2 is pointless; Runs all Zeros")
 
     if extra is None:
