@@ -203,9 +203,9 @@ def norm_weight(base, metric_names=None):
         trust_metrics = metric_names
 
     if isinstance(base, pd.Series):
-        normed = pd.Series(base / base.sum())
+        normed = pd.Series(base / base.abs().sum())
     else:
-        normed = pd.Series(base,index=trust_metrics)/ sum(base)
+        normed = pd.Series(base,index=trust_metrics)/ sum(map(abs,base))
 
     return normed
 

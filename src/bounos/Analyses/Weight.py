@@ -98,6 +98,7 @@ def generate_outlier_frame(good, trust_frame, w, par=False):
 
     # TODO experiment with wether it's better to parallelise the inner or outer version of this.... (i.e. par/w vs par/single
     weighted_trust_perspectives = Trust.generate_node_trust_perspective(trust_frame,
+                                                                        flip_metrics=[],
                                                                         metric_weights=w,
                                                                         par=par)
     l_outliers = []

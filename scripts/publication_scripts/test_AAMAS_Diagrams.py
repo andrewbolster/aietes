@@ -283,6 +283,8 @@ class Aaamas(unittest.TestCase):
                     self.comms_only_weights
                 )
             )
+            self.comms_only_weights.to_hdf(shared_h5_path, 'comms_only_weights')
+
             self.comms_only_feats.to_hdf(shared_h5_path, 'comms_only_feats')
 
 
@@ -295,16 +297,17 @@ class Aaamas(unittest.TestCase):
                     self.phys_only_weights
                 )
             )
-
+            self.phys_only_weights.to_hdf(shared_h5_path, 'phys_only_weights')
             self.phys_only_feats.to_hdf(shared_h5_path, 'phys_only_feats')
 
         else:
             with pd.get_store(shared_h5_path) as store:
                 self.joined_target_weights = store.get('joined_target_weights')
-                self.joined_target_weights = store.get('joined_target_weights')
                 self.joined_feats = store.get('joined_feats')
                 self.comms_only_feats = store.get('comms_only_feats')
                 self.phys_only_feats = store.get('phys_only_feats')
+                self.comms_only_weights = store.get('comms_only_weights')
+                self.phys_only_weights = store.get('phys_only_weights')
 
     def testThreatSurfacePlot(self):
         fig_filename = 'img/threat_surface_sum'
@@ -483,7 +486,14 @@ class Aaamas(unittest.TestCase):
 
     def testCommsMetricCorrs(self):
         input_filename = 'input/comms_metric_correlations'
+        corrs = calc_correlations_from_weights(self.comms_only_weights)
+        with open(input_filename + '.tex', 'w') as f:
+            f.write(corrs.loc['Fair'].apply(lambda v: np.round(v, decimals=3)).to_latex(escape=False))
+        self.assertTrue(os.path.isfile(input_filename + '.tex'))
 
+    def testPhysMetricCorrs(self):
+        input_filename = 'input/phys_metric_correlations'
+        corrs = calc_correlations_from_weights(self.phys_only_weights)
         with open(input_filename + '.tex', 'w') as f:
             f.write(corrs.loc['Fair'].apply(lambda v: np.round(v, decimals=3)).to_latex(escape=False))
         self.assertTrue(os.path.isfile(input_filename + '.tex'))
