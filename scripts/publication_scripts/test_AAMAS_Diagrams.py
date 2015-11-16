@@ -69,7 +69,7 @@ def dataframe_weight_filter(df, keys):
 ###########
 use_temp_dir = False
 show_outputs = False
-recompute = True
+recompute = False
 shared_h5_path = '/dev/shm/shared.h5'
 
 _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
@@ -204,12 +204,13 @@ def build_target_weights(h5_path):
     return sorted_joined_target_weights
 
 
-def calc_correlations(base, comp, index=0):
-    dp_r = (comp / base).reset_index()
-    return dp_r.corr()[index][:-1]
 
 
 def calc_correlations_from_weights(weights):
+
+    def calc_correlations(base, comp, index=0):
+        dp_r = (comp / base).reset_index()
+        return dp_r.corr()[index][:-1]
     _corrs = {}
     for base, comp in itertools.permutations(weights.keys(), 2):
         _corrs[(base, comp)] = \
@@ -237,6 +238,8 @@ def format_features(feats):
         inplace=True)
     return alt_feats
 
+def non_zero_rows(df):
+    return df[~(df==0).all(axis=1)]
 
 class Aaamas(unittest.TestCase):
     @classmethod
@@ -308,6 +311,11 @@ class Aaamas(unittest.TestCase):
                 self.phys_only_feats = store.get('phys_only_feats')
                 self.comms_only_weights = store.get('comms_only_weights')
                 self.phys_only_weights = store.get('phys_only_weights')
+
+        self.joined_feat_weights = categorise_dataframe(non_zero_rows(self.joined_feats).T)
+        self.comms_feat_weights = categorise_dataframe(non_zero_rows(self.comms_only_feats).T)
+        self.phys_feat_weights = categorise_dataframe(non_zero_rows(self.phys_only_feats).T)
+
 
     def testThreatSurfacePlot(self):
         fig_filename = 'img/threat_surface_sum'

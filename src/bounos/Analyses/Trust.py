@@ -208,8 +208,6 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
         mins = []
 
     if flip_metrics is None:
-        flip_metrics = ['TXThroughput', 'RXThroughput']  # These are 'bigger is better' values
-    else:
         flip_metrics = []
     if metric_weights is not None and any(metric_weights.where(metric_weights<0).dropna()):
         flip_metrics.extend(list(metric_weights.where(metric_weights<0).dropna().keys()))
