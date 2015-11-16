@@ -1,7 +1,6 @@
 # coding=utf-8
 
 from __future__ import division
-
 import subprocess
 import unittest
 import operator
@@ -9,20 +8,21 @@ import os
 import warnings
 import traceback
 from os.path import expanduser
-
 import tempfile
+import itertools
 import pandas as pd
 import numpy as np
 from collections import OrderedDict
+from scipy.stats.stats import pearsonr
 import sklearn.ensemble as ske
 import matplotlib.pylab as plt
 import matplotlib.cm as cm
 from matplotlib import rc_context
 import matplotlib.ticker as plticker
-
 import sys
-
 import bounos.ChartBuilders as CB
+from bounos.Analyses.Weight import summed_outliers_per_weight
+
 
 ##################
 #  HELPER FUNCS  #
@@ -68,7 +68,9 @@ def dataframe_weight_filter(df, keys):
 # OPTIONS #
 ###########
 use_temp_dir = False
-show_outputs = True
+show_outputs = False
+recompute = True
+shared_h5_path = '/dev/shm/shared.h5'
 
 _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 
@@ -78,6 +80,9 @@ CB.latexify(columns=2, factor=0.55)
 
 phys_keys = ['INDD', 'INHD', 'Speed']
 comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
+
+key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
+
 observer = 'Bravo'
 target = 'Alfa'
 n_nodes = 6
@@ -102,10 +107,12 @@ metric_rename_dict = {
 }
 
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
+shared_h5_path = '/dev/shm/shared.h5'
 
-fig_basedir = "/home/bolster/src/thesis/papers/active/16_AAMAS/img"
+fig_basedir = "/home/bolster/src/thesis/papers/active/16_AAMAS"
 
 assert os.path.isdir(fig_basedir)
+
 
 def try_to_open(filename):
     try:
@@ -115,6 +122,7 @@ def try_to_open(filename):
             os.startfile(filename)
     except Exception:
         warnings.warn(traceback.format_exc())
+
 
 def non_zero_rows(df):
     return df[~(df == 0).all(axis=1)]
@@ -181,6 +189,55 @@ def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, 
                   **txt_kwargs)
 
 
+def build_target_weights(h5_path):
+    """Outliers should have keys of runs"""
+    with pd.get_store(h5_path) as store:
+        target_weights_dict = {}
+        for runkey in store.keys():
+            print runkey
+            target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey), observer, n_metrics,
+                                                                     target=target)
+
+    joined_target_weights = pd.concat(target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names)
+    sorted_joined_target_weights = joined_target_weights.reset_index('run', drop=True).sort()
+
+    return sorted_joined_target_weights
+
+
+def calc_correlations(base, comp, index=0):
+    dp_r = (comp / base).reset_index()
+    return dp_r.corr()[index][:-1]
+
+
+def calc_correlations_from_weights(weights):
+    _corrs = {}
+    for base, comp in itertools.permutations(weights.keys(), 2):
+        _corrs[(base, comp)] = \
+            calc_correlations(weights[base],
+                              weights[comp])
+
+    corrs = pd.DataFrame.from_dict(_corrs).T.rename(columns=metric_rename_dict)
+    map_level(corrs, var_rename_dict, 0)
+    map_level(corrs, var_rename_dict, 1)
+    corrs.index.set_names(['Control', 'Misbehaviour'], inplace=True)
+    return corrs
+
+
+def drop_metrics_from_weights_by_key(target_weights, drop_keys):
+    reset_by_keys = target_weights.reset_index(level=drop_keys)
+    zero_indexes = (reset_by_keys[drop_keys] == 0.0).all(axis=1)
+    dropped_target_weights = reset_by_keys[zero_indexes].drop(drop_keys, 1)
+    return dropped_target_weights
+
+
+def format_features(feats):
+    alt_feats = pd.concat(feats, names=['base', 'comp', 'metric']).unstack('metric')
+    alt_feats.index.set_levels(
+        [[u'MPC', u'STS', u'Fair', u'Shadow', u'SlowCoach'], [u'MPC', u'STS', u'Fair', u'Shadow', u'SlowCoach']],
+        inplace=True)
+    return alt_feats
+
+
 class Aaamas(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -205,13 +262,59 @@ class Aaamas(unittest.TestCase):
             'widths': 0.2,
             'linewidth': 2
         }
+        if recompute:
+            # All Metrics
+            self.joined_target_weights = build_target_weights(results_path + "/outliers.bkup.h5")
+            self.joined_feats = format_features(
+                target_weight_feature_extractor(
+                    self.joined_target_weights
+                )
+            )
+
+            self.joined_target_weights.to_hdf(shared_h5_path, 'joined_target_weights')
+            self.joined_feats.to_hdf(shared_h5_path, 'joined_feats')
+
+            self.comms_only_weights = drop_metrics_from_weights_by_key(
+                self.joined_target_weights,
+                phys_keys
+            )
+            self.comms_only_feats = format_features(
+                target_weight_feature_extractor(
+                    self.comms_only_weights
+                )
+            )
+            self.comms_only_feats.to_hdf(shared_h5_path, 'comms_only_feats')
+
+
+            self.phys_only_weights = drop_metrics_from_weights_by_key(
+                self.joined_target_weights,
+                comm_keys
+            )
+            self.phys_only_feats = format_features(
+                target_weight_feature_extractor(
+                    self.phys_only_weights
+                )
+            )
+
+            self.phys_only_feats.to_hdf(shared_h5_path, 'phys_only_feats')
+
+        else:
+            with pd.get_store(shared_h5_path) as store:
+                self.joined_target_weights = store.get('joined_target_weights')
+                self.joined_target_weights = store.get('joined_target_weights')
+                self.joined_feats = store.get('joined_feats')
+                self.comms_only_feats = store.get('comms_only_feats')
+                self.phys_only_feats = store.get('phys_only_feats')
 
     def testThreatSurfacePlot(self):
         fig_filename = 'img/threat_surface_sum'
+        fig_size = CB.latexify(columns=0.5, factor=0.9)
+        fig_size = (fig_size[0], fig_size[1] / 2)
+        print fig_size
 
-        fig, axes = plt.subplots(nrows=1, ncols=3, sharex='none', sharey='none',
+        fig, axes = plt.subplots(nrows=1, ncols=4, figsize=fig_size,
+                                 sharex='none', sharey='none',
                                  subplot_kw={'axisbg': (1, 0.9, 0.9), 'alpha': 0.1})
-        # fig.suptitle("Threat Surface for Trust Management Frameworks", size=18, x=0.6, y=0.73)
         for ax in axes:
             ax.set_aspect('equal')
             ax.xaxis.set_visible(False)
@@ -224,7 +327,8 @@ class Aaamas(unittest.TestCase):
         ax.set_title("Single Metric")
         ax.add_patch(plt.Circle((0.1, ys[0]), radius=0.075, color='g', alpha=0.9))
         ax.annotate('single metric\nobservation', xy=(0.15, 0.2), xycoords='data',
-                    xytext=(15, 50), textcoords='offset points',
+                    xytext=(-5, 25), textcoords='offset points',
+
                     arrowprops=dict(arrowstyle="->",
                                     connectionstyle="arc,angleA=0180,armA=30,rad=10"),
                     )
@@ -236,7 +340,7 @@ class Aaamas(unittest.TestCase):
         for x in np.linspace(0.1, 0.9, 5):
             ax.add_patch(plt.Circle((x, ys[0]), radius=0.075, color='g', alpha=0.9))
         ax.annotate('single domain\nobservation', xy=(0.5, 0.3), xycoords='data',
-                    xytext=(-25, 30), textcoords='offset points',
+                    xytext=(-30, 30), textcoords='offset points',
                     arrowprops=dict(arrowstyle="->",
                                     connectionstyle="arc,angleA=0180,armA=30,rad=10"),
                     )
@@ -264,11 +368,122 @@ class Aaamas(unittest.TestCase):
         for x in np.linspace(0, 1, 10):
             ax.add_patch(plt.Circle((x, ys[3]), radius=0.075, color='r', alpha=0.9))
 
+        axes = map(CB.format_axes, axes)
+        fig.delaxes(axes[3])
+        fig.savefig(fig_filename, transparent=False)
 
-        fig.savefig(fig_filename, transparent=True)
-
-        self.assertTrue(os.path.isfile(fig_filename+'.png'))
+        self.assertTrue(os.path.isfile(fig_filename + '.png'))
 
         if show_outputs:
-            try_to_open(fig_filename+'.png')
+            try_to_open(fig_filename + '.png')
 
+    def testFullMetricTrustRelevance(self):
+        fig_filename = 'img/full_metric_trust_relevance'
+        fig_size = CB.latexify(columns=0.5, factor=1)
+
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.add_subplot(1, 1, 1)
+
+        fair_feats = self.joined_feats.loc['Fair'].rename(columns=metric_rename_dict)
+
+        ax = fair_feats[~(fair_feats == 0).all(axis=1)].plot(
+            ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
+            legend=False
+        )
+        ax.set_xlabel("Behaviour")
+        ax.set_ylabel("Est. Best Metric Weighting")
+        fig = ax.get_figure()
+
+        bars = ax.patches
+        hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
+
+        for bar, hatch in zip(bars, hatches):
+            bar.set_hatch(hatch)
+
+        ax.legend(loc='best', ncol=1)
+        CB.format_axes(ax)
+
+        fig.tight_layout(pad=0.3)
+        fig.savefig(fig_filename, transparent=True)
+        self.assertTrue(os.path.isfile(fig_filename + '.png'))
+        if show_outputs:
+            try_to_open(fig_filename + '.png')
+
+    def testCommsMetricTrustRelevance(self):
+        fig_filename = 'img/comms_metric_trust_relevance'
+        fig_size = CB.latexify(columns=0.5, factor=1)
+
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.add_subplot(1, 1, 1)
+
+        feats = self.comms_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
+
+        ax = feats[~(feats == 0).all(axis=1)].plot(
+            ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
+            legend=False
+        )
+        ax.set_xlabel("Behaviour")
+        ax.set_ylabel("Est. Best Metric Weighting")
+        fig = ax.get_figure()
+
+        bars = ax.patches
+        hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
+
+        for bar, hatch in zip(bars, hatches):
+            bar.set_hatch(hatch)
+
+        ax.legend(loc='best', ncol=1)
+        CB.format_axes(ax)
+
+        fig.tight_layout(pad=0.3)
+        fig.savefig(fig_filename, transparent=True)
+        self.assertTrue(os.path.isfile(fig_filename + '.png'))
+        if show_outputs:
+            try_to_open(fig_filename + '.png')
+
+    def testPhysMetricTrustRelevance(self):
+        fig_filename = 'img/phys_metric_trust_relevance'
+        fig_size = CB.latexify(columns=0.5, factor=1)
+
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.add_subplot(1, 1, 1)
+
+        feats = self.phys_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
+
+        ax = feats[~(feats == 0).all(axis=1)].plot(
+            ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
+            legend=False
+        )
+        ax.set_xlabel("Behaviour")
+        ax.set_ylabel("Est. Best Metric Weighting")
+        fig = ax.get_figure()
+
+        bars = ax.patches
+        hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
+
+        for bar, hatch in zip(bars, hatches):
+            bar.set_hatch(hatch)
+
+        ax.legend(loc='best', ncol=1)
+        CB.format_axes(ax)
+
+        fig.tight_layout(pad=0.3)
+        fig.savefig(fig_filename, transparent=True)
+        self.assertTrue(os.path.isfile(fig_filename + '.png'))
+        if show_outputs:
+            try_to_open(fig_filename + '.png')
+
+    def testFullMetricCorrs(self):
+        input_filename = 'input/full_metric_correlations'
+        corrs = calc_correlations_from_weights(self.joined_target_weights)
+
+        with open(input_filename + '.tex', 'w') as f:
+            f.write(corrs.loc['Fair'].apply(lambda v: np.round(v, decimals=3)).to_latex(escape=False))
+        self.assertTrue(os.path.isfile(input_filename + '.tex'))
+
+    def testCommsMetricCorrs(self):
+        input_filename = 'input/comms_metric_correlations'
+
+        with open(input_filename + '.tex', 'w') as f:
+            f.write(corrs.loc['Fair'].apply(lambda v: np.round(v, decimals=3)).to_latex(escape=False))
+        self.assertTrue(os.path.isfile(input_filename + '.tex'))

@@ -809,7 +809,7 @@ def latexify(columns=1, factor=0.45):
 
 
 def format_axes(ax, spine_color='gray'):
-    ax.grid(True, color=spine_color, alpha=0.2)
+    ax.grid(True, color=spine_color, alpha=0.5)
     for spine in ['top', 'right']:
         ax.spines[spine].set_visible(False)
     for spine in ['bottom', 'left']:

@@ -20,6 +20,7 @@ __email__ = "me@andrewbolster.info"
 import itertools
 from collections import OrderedDict
 from functools import partial
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -331,29 +332,39 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
 
     trusts = []
 
-    exec_args = {'metric_weights': metric_weights, 'flip_metrics': flip_metrics, 'rho': rho}
+    try:
 
-    if par:
-        trusts = Parallel(n_jobs=-1)(delayed(generate_single_observer_trust_perspective)
-                                     (g, **exec_args) for k, g in tf.groupby(level=[var, 'run', 'observer'])
-                                     )
-        trusts = [item for sublist in trusts for item in sublist]
-    else:
-        with np.errstate(all='raise'):
-            for k, g in tf.groupby(level=[var, 'run', 'observer']):
-                trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
+        exec_args = {'metric_weights': metric_weights, 'flip_metrics': flip_metrics, 'rho': rho}
 
-    tf = pd.concat(trusts)
-    tf.sort_values(inplace=True)
+        if par:
+            trusts = Parallel(n_jobs=-1)(delayed(generate_single_observer_trust_perspective)
+                                         (g, **exec_args) for k, g in tf.groupby(level=[var, 'run', 'observer'])
+                                         )
+            trusts = [item for sublist in trusts for item in sublist]
+        else:
+            with np.errstate(all='raise'):
+                for k, g in tf.groupby(level=[var, 'run', 'observer']):
+                    trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
 
-    # The following:
-    # Transforms the target id into the column space,
-    # Groups each nodes independent observations together
-    # Fills in the gaps IN EACH ASSESSMENT with the previous assessment of that node by that node at the previous time
-    if fillna:
-        tf = tf.unstack('target').groupby(level=[var, 'run', 'observer']).apply(lambda x: x.fillna(method='ffill'))
-    else:
-        tf = tf.unstack('target')
+        tf = pd.concat(trusts)
+        tf.sort_values(inplace=True)
+
+        # The following:
+        # Transforms the target id into the column space,
+        # Groups each nodes independent observations together
+        # Fills in the gaps IN EACH ASSESSMENT with the previous assessment of that node by that node at the previous time
+        if fillna:
+            tf = tf.unstack('target').groupby(level=[var, 'run', 'observer']).apply(lambda x: x.fillna(method='ffill'))
+        else:
+            tf = tf.unstack('target')
+
+    except FloatingPointError:
+        if not metric_weights.any():
+            # Have been given zero weight
+            warnings.warn("Have been given a zero-weight, which is insane, so I'm returning None: {}".format(metric_weights))
+            tf = None
+        else:
+            raise
 
     return tf
 
