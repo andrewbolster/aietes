@@ -24,8 +24,8 @@
 ###########################################################################
 # Contains all nodes' position - Only the sinks' position is needed
 nodes_geo = {}
-import math
 import collections
+import math
 import operator
 
 from aietes.Layercake.priodict import PriorityDictionary
