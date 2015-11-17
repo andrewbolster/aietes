@@ -17,27 +17,38 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
+import operator
 import pandas as pd
 import sklearn.ensemble as ske
-
 import numpy as np
 from time import gmtime, strftime
-
-
 import itertools
 from joblib import Parallel, delayed
-
 from itertools import ifilter
 from functools import partial
-
+from aietes.Tools import var_rename_dict, metric_rename_dict, categorise_dataframe, map_levels
 from bounos.Analyses import Trust
-
 from bounos.ChartBuilders import weight_comparisons
 from bounos.ChartBuilders.weight_comparisons import norm_weight
 
 
+def generate_weighted_trust_perspectives(trust_observations, feat_weights, fair_filter=True, par=True):
+    weighted_trust_perspectives = {}
+    for k, w in feat_weights.to_dict().items():
+        if k[0] != 'Fair' and fair_filter:
+            continue
+        weighted_trust_perspectives[k] = Trust.generate_node_trust_perspective(
+            trust_observations,
+            metric_weights=pd.Series(w),
+            par=par
+        )
+    for key, trust in weighted_trust_perspectives.items():
+        map_levels(weighted_trust_perspectives[key], var_rename_dict)
 
-def generate_trust_metric_weights(trust_metric_names, exclude = None, max_emphasis = 5):
+    return weighted_trust_perspectives
+
+
+def generate_trust_metric_weights(trust_metric_names, exclude=None, max_emphasis=5):
     """
     Generate trust metric weights from their base labels (eg PLR,Delay, etc)
     Creates normalised (sum==1) weight vectors for application to grey vectors
@@ -63,7 +74,6 @@ def generate_trust_metric_weights(trust_metric_names, exclude = None, max_emphas
     return trust_metric_weights
 
 
-
 def generate_outlier_tp(tf, sigma=None, good='good', good_lvl='bev'):
     """
     This must be applied on a per-observation basis (i.e. single run, single observer)
@@ -76,14 +86,14 @@ def generate_outlier_tp(tf, sigma=None, good='good', good_lvl='bev'):
     if sigma is not None:
         raise NotImplementedError("!Have't implemented")
 
-    _mean=tf.xs(good,level=good_lvl).mean()
-    _std=tf.xs(good,level=good_lvl).std()
-    llim=_mean-_std
-    ulim=_mean+_std
-    uppers = (tf[tf>ulim]-ulim).reset_index()
-    lowers = (llim-tf[tf<llim]).reset_index()
-    outliers = pd.concat((uppers,lowers), keys=('upper','lower'), names=['range','id']).reset_index().set_index(
-        ['var','run','observer','range','t']
+    _mean = tf.xs(good, level=good_lvl).mean()
+    _std = tf.xs(good, level=good_lvl).std()
+    llim = _mean - _std
+    ulim = _mean + _std
+    uppers = (tf[tf > ulim] - ulim).reset_index()
+    lowers = (llim - tf[tf < llim]).reset_index()
+    outliers = pd.concat((uppers, lowers), keys=('upper', 'lower'), names=['range', 'id']).reset_index().set_index(
+        ['var', 'run', 'observer', 'range', 't']
     )
     outliers.drop('id', axis=1, inplace=True)
     return outliers
@@ -109,7 +119,9 @@ def generate_outlier_frame(good, trust_frame, w, par=False):
     outlier.set_index(['var', 't'], inplace=True)
     return outlier
 
-def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min_emphasis = 0, max_emphasis = 3, extra=None, verbose=False, par=False):
+
+def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min_emphasis=0, max_emphasis=3, extra=None,
+                                                          verbose=False, par=False):
     """
     For a given trust frame perform grey weight factor distribution analysis to
     generate a frame with metrics/metric weights as a multiindex with columns for each comparison between behaviours
@@ -135,15 +147,15 @@ def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min
                                   min_emphasis, max_emphasis
                               ), repeat=len(trust_metrics)
                           )
-    )
-    combinations = sorted(combinations, key= lambda l: sum(map(abs,l)))
+                          )
+    combinations = sorted(combinations, key=lambda l: sum(map(abs, l)))
     if par:
         outliers = _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose=True)
     else:
         outliers = _outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, verbose=True)
 
     sums = pd.concat(outliers).reset_index()
-    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{}{}_{}".format(good,extra,max_emphasis))
+    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{}{}_{}".format(good, extra, max_emphasis))
     return sums
 
 
@@ -155,16 +167,17 @@ def _outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metr
         outliers.append(outlier)
     return outliers
 
-def _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose):
 
-    outliers = Parallel(n_jobs=-1, verbose=int(verbose)*50)(delayed(generate_outlier_frame)
-                                   (good, trust_frame, norm_weight(w, trust_metrics), False)
-                                   for w in combinations)
+def _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose):
+    outliers = Parallel(n_jobs=-1, verbose=int(verbose) * 50)(delayed(generate_outlier_frame)
+                                                              (good, trust_frame, norm_weight(w, trust_metrics), False)
+                                                              for w in combinations)
     return outliers
 
 
 def mean_T_delta(result, target='Alfa'):
-    return -np.subtract(*map(np.nanmean,np.split(result.values, [1], axis=1)))
+    return -np.subtract(*map(np.nanmean, np.split(result.values, [1], axis=1)))
+
 
 def generate_mean_T_delta_frame(good, trust_frame, w, target, par=False):
     try:
@@ -178,18 +191,19 @@ def generate_mean_T_delta_frame(good, trust_frame, w, target, par=False):
                                                                         metric_weights=w,
                                                                         par=par)
     l_outliers = []
-    for i, tf in weighted_trust_perspectives.groupby(level=['var','run', 'observer']):
-        l_outliers.append((i,mean_T_delta(tf, target)))
+    for i, tf in weighted_trust_perspectives.groupby(level=['var', 'run', 'observer']):
+        l_outliers.append((i, mean_T_delta(tf, target)))
     outlier = pd.Series(dict(l_outliers))
-    outlier.index.names = ['var','run', 'observer']
+    outlier.index.names = ['var', 'run', 'observer']
     outlier = outlier.sort_index().dropna(how='all').reset_index()
     for k in w.keys():
         outlier[k] = w[k]
     outlier.set_index(['var'], inplace=True)
     return outlier
 
+
 def perform_weight_factor_target_mean_T_delta_analysis_on_trust_frame(trust_frame, good,
-                                                                      min_emphasis = 0, max_emphasis = 3, extra=None,
+                                                                      min_emphasis=0, max_emphasis=3, extra=None,
                                                                       verbose=False, par=False, target='Alfa',
                                                                       excluded=[]):
     """
@@ -213,21 +227,24 @@ def perform_weight_factor_target_mean_T_delta_analysis_on_trust_frame(trust_fram
         extra = ""
 
     combinations = ifilter(np.any,
-                          itertools.product(
-                              xrange(
-                                  min_emphasis, max_emphasis
-                              ), repeat=len(trust_metrics)
-                          )
-    )
+                           itertools.product(
+                               xrange(
+                                   min_emphasis, max_emphasis
+                               ), repeat=len(trust_metrics)
+                           )
+                           )
     combinations = ifilter(lambda c: c not in excluded, combinations)
-    #combinations = sorted(combinations, key= lambda l: sum(map(abs,l)))
+    # combinations = sorted(combinations, key= lambda l: sum(map(abs,l)))
     if par:
-        outliers = _target_mean_T_delta_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, target, verbose=True)
+        outliers = _target_mean_T_delta_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, target,
+                                                                verbose=True)
     else:
-        outliers = _target_mean_T_delta_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, target, verbose=True)
+        outliers = _target_mean_T_delta_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, target,
+                                                                verbose=True)
 
     sums = pd.concat(outliers).reset_index()
-    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{}{}{}_{}".format("meandelta",good,extra,max_emphasis))
+    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5',
+                "{}{}{}_{}".format("meandelta", good, extra, max_emphasis))
     return sums
 
 
@@ -239,19 +256,76 @@ def _target_mean_T_delta_single_thread_inner_par(combinations, good, trust_frame
         outliers.append(outlier)
     return outliers
 
-def _target_mean_T_delta_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, target, verbose):
 
-    outliers = Parallel(n_jobs=-1, verbose=int(verbose)*50)(delayed(generate_mean_T_delta_frame)
-                                   (good, trust_frame, norm_weight(w, trust_metrics), target, False)
-                                   for w in combinations)
+def _target_mean_T_delta_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, target, verbose):
+    outliers = Parallel(n_jobs=-1, verbose=int(verbose) * 50)(delayed(generate_mean_T_delta_frame)
+                                                              (good, trust_frame, norm_weight(w, trust_metrics), target,
+                                                               False)
+                                                              for w in combinations)
     return outliers
+
+
+def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None, signed=False):
+    # Select Perspective here
+    weight_df = weight_df[weight_df.observer == observer]
+    weight_df = categorise_dataframe(weight_df)
+
+    # Metrics are the last sector of the frame, set these as leading indices
+    metric_keys = list(weight_df.keys()[-n_metrics:])
+    weight_df.set_index(metric_keys + ['var', 't'], inplace=True)
+
+    # REMEMBER TO CHECK THIS WHEN DOING MULTIPLE RUNS (although technically it shouldn't matter....)
+    weight_df.drop(['observer', 'run'], axis=1, inplace=True)
+
+    # TODO: Assert abs(signed) = unsigned
+    # Sum for each run (i.e. group by everything but time)
+    if signed:
+        d = {'upper': 1, 'lower': -1}
+        r = weight_df['range'].apply(d.get)
+        f = lambda c: c * r
+        time_summed_outliers = \
+            weight_df \
+                .drop('range', axis=1) \
+                .apply(f) \
+                .groupby(level=list(weight_df.index.names[:-1])) \
+                .sum() \
+                .unstack('var')
+    else:
+        time_summed_outliers = \
+            weight_df \
+                .groupby(level=list(weight_df.index.names[:-1])) \
+                .sum() \
+                .unstack('var')
+
+    if target is not None:
+        target_weights = time_summed_outliers.xs(target, level='target', axis=1)
+    return target_weights.fillna(0.0)  # Nans map to no outliers
 
 
 def feature_extractor(df, target):
     data = df.drop(target, axis=1)
-    reg = ske.RandomForestRegressor(n_jobs=4, n_estimators=512)
+    reg = ske.ExtraTreesRegressor(n_jobs=-1, n_estimators=512)
     reg.fit(data, df[target])
     return pd.Series(dict(zip(data.keys(), reg.feature_importances_)))
+
+
+def target_weight_feature_extractor(target_weights):
+    known_good_features_d = {}
+    for basekey in target_weights.keys():  # Parallelisable
+        print basekey
+        # Single DataFrame of all features against one behaviour
+        var_weights = target_weights.apply(lambda s: s - target_weights[basekey], axis=0).dropna()
+        known_good_features_d[basekey] = \
+            pd.concat([feature_extractor(s.reset_index(), var) for var, s in var_weights.iteritems()],
+                      keys=var_weights.keys(), names=['var', 'metric'])
+
+    return known_good_features_d
+
+
+def dataframe_weight_filter(df, keys):
+    indexes = [(df.index.get_level_values(k) == 0.0) for k in keys]
+    return df.loc[reduce(operator.and_, indexes)]
+
 
 # The questions we want to answer are:
 # 1. What metrics differentiate between what behaviours
@@ -266,90 +340,6 @@ def feature_extractor(df, target):
 
 # In[10]:
 
-def categorise_dataframe(df):
-    # Categories work better as indexes
-    for obj_key in df.keys()[df.dtypes == object]:
-        try:
-            df[obj_key] = df[obj_key].astype('category')
-        except TypeError:
-            print("Couldn't categorise {}".format(obj_key))
-            pass
-    return df
-
-
-def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None, signed=False):
-
-    # Select Perspective here
-    weight_df = weight_df[weight_df.observer == observer]
-    weight_df = categorise_dataframe(weight_df)
-
-    # Metrics are the last sector of the frame, set these as leading indices
-    metric_keys = list(weight_df.keys()[-n_metrics:])
-    weight_df.set_index(metric_keys + ['var', 't'], inplace=True)
-
-    # REMEMBER TO CHECK THIS WHEN DOING MULTIPLE RUNS (although technically it shouldn't matter....)
-    weight_df.drop(['observer', 'run'], axis=1, inplace=True)
-
-    #TODO: Assert abs(signed) = unsigned
-    # Sum for each run (i.e. group by everything but time)
-    if signed:
-        d = {'upper':1, 'lower':-1}
-        r = weight_df['range'].apply(d.get)
-        f = lambda c: c*r
-        time_summed_outliers = \
-            weight_df\
-                .drop('range', axis=1)\
-                .apply(f)\
-                .groupby(level=list(weight_df.index.names[:-1]))\
-                .sum()\
-                .unstack('var')
-    else:
-        time_summed_outliers = \
-            weight_df\
-                .groupby(level=list(weight_df.index.names[:-1]))\
-                .sum()\
-                .unstack('var')
-
-    if target is not None:
-        target_weights = time_summed_outliers.xs(target, level='target', axis=1)
-    return target_weights.fillna(0.0)  # Nans map to no outliers
-
-def summed_outliers_per_weight_as_matrix(weight_df, observer, n_metrics, target=None, signed=False):
-
-    # Select Perspective here
-    weight_df = weight_df[weight_df.observer == observer]
-    weight_df = categorise_dataframe(weight_df)
-
-    # Metrics are the last sector of the frame, set these as leading indices
-    metric_keys = list(weight_df.keys()[-n_metrics:])
-    weight_df.set_index(metric_keys + ['var', 't'], inplace=True)
-
-    # REMEMBER TO CHECK THIS WHEN DOING MULTIPLE RUNS (although technically it shouldn't matter....)
-    weight_df.drop(['observer', 'run'], axis=1, inplace=True)
-
-    #TODO: Assert abs(signed) = unsigned
-    # Sum for each run (i.e. group by everything but time)
-    if signed:
-        d = {'upper':1, 'lower':-1}
-        r = weight_df['range'].apply(d.get)
-        f = lambda c: c*r
-        time_summed_outliers = \
-            weight_df\
-                .drop('range', axis=1)\
-                .apply(f)\
-                .groupby(level=list(weight_df.index.names[:-1]))\
-                .sum()\
-                .unstack('var')
-    else:
-        time_summed_outliers = \
-            weight_df\
-                .groupby(level=list(weight_df.index.names[:-1]))\
-                .sum()\
-                .unstack('var')
-
-    if target is not None:
-        target_weights = time_summed_outliers.xs(target, level='target', axis=1)
-    return target_weights.fillna(0.0)  # Nans map to no outliers
 
 if __name__ == "__main__":
     observer = 'Bravo'
@@ -363,7 +353,3 @@ if __name__ == "__main__":
         target_weights_dict = {}
         weight_df = store.get(store.keys()[0])
         summed_outliers_per_weight(weight_df, observer, n_metrics, target=target)
-
-
-
-

@@ -1,67 +1,72 @@
 # coding=utf-8
 
 from __future__ import division
-import subprocess
-import unittest
-import operator
-import os
-import warnings
-import traceback
-from os.path import expanduser
-import tempfile
+
 import itertools
-import pandas as pd
-import numpy as np
-from collections import OrderedDict
-from scipy.stats.stats import pearsonr
-import sklearn.ensemble as ske
+import tempfile
+import unittest
+from collections import defaultdict
+
 import matplotlib.pylab as plt
-import matplotlib.cm as cm
-from matplotlib import rc_context
-import matplotlib.ticker as plticker
-import sys
+import pandas as pd
+import sklearn.ensemble as ske
+from scipy.stats.stats import pearsonr
+
 import bounos.ChartBuilders as CB
-from bounos.Analyses.Weight import summed_outliers_per_weight
+from aietes.Tools import *
+from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_feature_extractor, generate_weighted_trust_perspectives
 
 
 ##################
 #  HELPER FUNCS  #
 ##################
 
-def categorise_dataframe(df):
-    # Categories work better as indexes
-    for obj_key in df.keys()[df.dtypes == object]:
-        try:
-            df[obj_key] = df[obj_key].astype('category')
-        except TypeError:
-            print("Couldn't categorise {}".format(obj_key))
-            pass
-    return df
+def plot_result(result, title=None, stds=True):
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    result.plot(ax=ax)
+    pltlin = lambda v: ax.axhline(v, alpha=0.3, color='blue')
+
+    def pltstd(tup):
+        mean, std = tup
+        ax.axhline(mean + std, alpha=0.3, color='green')
+        ax.axhline(mean - std, alpha=0.3, color='red')
+
+    map(pltlin, result.mean())
+    if stds:
+        map(pltstd, zip(result.mean(), result.std()))
+    ax.set_title(title)
+    print(result.describe())
+    plt.show()
 
 
-def feature_extractor(df, target):
-    data = df.drop(target, axis=1)
-    reg = ske.RandomForestRegressor(n_jobs=4, n_estimators=512)
-    reg.fit(data, df[target])
-    return pd.Series(dict(zip(data.keys(), reg.feature_importances_)))
+def assess_result(result, target='Alfa'):
+    m = result.drop(target, 1).mean().mean() - result[target].mean()
+    std = result.std().mean()
+    return (m, std)
 
 
-def target_weight_feature_extractor(target_weights):
-    known_good_features_d = {}
-    for basekey in target_weights.keys():  # Parallelisable
-        print basekey
-        # Single DataFrame of all features against one behaviour
-        var_weights = target_weights.apply(lambda s: s - target_weights[basekey], axis=0).dropna()
-        known_good_features_d[basekey] = \
-            pd.concat([feature_extractor(s.reset_index(), var) for var, s in var_weights.iteritems()],
-                      keys=var_weights.keys(), names=['var', 'metric'])
-
-    return known_good_features_d
+def assess_results(perspectives_d, base_key='Fair'):
+    keys = map(lambda k: k[1], filter(lambda k: k[0] == base_key, perspectives_d.keys()))
+    results = defaultdict(dict)
+    for bev_key in keys:
+        for run_i, run in perspectives_d[(base_key, bev_key)].xs(bev_key, level='var').groupby(level='run'):
+            results[bev_key][run_i] = assess_result(run)
+            plot_result(run, title="{}{}".format(bev_key, run_i))
+    return results
 
 
-def dataframe_weight_filter(df, keys):
-    indexes = [(df.index.get_level_values(k) == 0.0) for k in keys]
-    return df.loc[reduce(operator.and_, indexes)]
+def feature_validation_plot(weighted_trust_perspectives, feat_weights, ewma=True, target='Alfa', observer='Bravo'):
+    if ewma:
+        _f = lambda f: pd.stats.moments.ewma(f, span=4)
+    else:
+        _f = lambda f: f
+
+    for key, trust in weighted_trust_perspectives.items():
+        ax = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(return_type='axes')
+        title = "Weighted {}".format('-'.join(key))
+        ax.set_title(title)
+        plt.show()
 
 
 ###########
@@ -88,50 +93,12 @@ target = 'Alfa'
 n_nodes = 6
 n_metrics = 9
 
-var_rename_dict = {'CombinedBadMouthingPowerControl': 'MPC',
-                   'CombinedSelfishTargetSelection': 'STS',
-                   'CombinedTrust': 'Fair',
-                   'Shadow': 'Shadow',
-                   'SlowCoach': 'SlowCoach'}
-
-metric_rename_dict = {
-    'ADelay': "$Delay$",
-    'ARXP': "$P_{RX}$",
-    'ATXP': "$P_{TX}$",
-    'RXThroughput': "$T^P_{RX}$",
-    'TXThroughput': "$T^P_{TX}$",
-    'PLR': '$PLR$',
-    'INDD': '$INDD$',
-    'INHD': '$INHD$',
-    'Speed': '$Speed$'
-}
-
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
 shared_h5_path = '/dev/shm/shared.h5'
 
 fig_basedir = "/home/bolster/src/thesis/papers/active/16_AAMAS"
 
 assert os.path.isdir(fig_basedir)
-
-
-def try_to_open(filename):
-    try:
-        if sys.platform == 'linux2':
-            subprocess.call(["xdg-open", filename])
-        else:
-            os.startfile(filename)
-    except Exception:
-        warnings.warn(traceback.format_exc())
-
-
-def non_zero_rows(df):
-    return df[~(df == 0).all(axis=1)]
-
-
-def map_level(df, dct, level=0):
-    index = df.index
-    index.set_levels([[dct.get(item, item) for item in names] if i == level else names
-                      for i, names in enumerate(index.levels)], inplace=True)
 
 
 def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, arrow_kwargs=None):
@@ -195,7 +162,7 @@ def build_outlier_weights(h5_path):
         keys = store.keys()
 
     target_weights_dict = {}
-    for runkey in keys:
+    for runkey in filter(lambda s: s.startswith('/CombinedTrust'), keys):
         with pd.get_store(h5_path) as store:
             print runkey
             target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey),
@@ -208,17 +175,17 @@ def build_outlier_weights(h5_path):
 
     return sorted_joined_target_weights
 
-def build_mean_delta_t_weights(h5_path):
 
+def build_mean_delta_t_weights(h5_path):
     with pd.get_store(h5_path) as store:
         mdts = store.get('meandeltaCombinedTrust_2')
 
 
 def calc_correlations_from_weights(weights):
-
     def calc_correlations(base, comp, index=0):
         dp_r = (comp / base).reset_index()
         return dp_r.corr()[index][:-1]
+
     _corrs = {}
     for base, comp in itertools.permutations(weights.keys(), 2):
         _corrs[(base, comp)] = \
@@ -226,8 +193,8 @@ def calc_correlations_from_weights(weights):
                               weights[comp])
 
     corrs = pd.DataFrame.from_dict(_corrs).T.rename(columns=metric_rename_dict)
-    map_level(corrs, var_rename_dict, 0)
-    map_level(corrs, var_rename_dict, 1)
+    map_levels(corrs, var_rename_dict, 0)
+    map_levels(corrs, var_rename_dict, 1)
     corrs.index.set_names(['Control', 'Misbehaviour'], inplace=True)
     return corrs
 
@@ -246,8 +213,6 @@ def format_features(feats):
         inplace=True)
     return alt_feats
 
-def non_zero_rows(df):
-    return df[~(df==0).all(axis=1)]
 
 class Aaamas(unittest.TestCase):
     @classmethod
@@ -515,6 +480,38 @@ class Aaamas(unittest.TestCase):
         with open(input_filename + '.tex', 'w') as f:
             f.write(corrs.loc['Fair'].apply(lambda v: np.round(v, decimals=3)).to_latex(escape=False))
         self.assertTrue(os.path.isfile(input_filename + '.tex'))
+
+    def testSignedFeatureValidation(self):
+
+        with pd.get_store(results_path + '.h5') as store:
+            trust_observations = store.trust.xs('Bravo', level='observer', drop_level=False).dropna()
+        corrs = calc_correlations_from_weights(self.joined_target_weights)
+        feat_weights = self.joined_feat_weights.rename(index=metric_rename_dict) * corrs.apply(np.sign).T
+        trust_perspectives = generate_weighted_trust_perspectives(trust_observations,
+                                                                  feat_weights,
+                                                                  par=False)
+
+    @unittest.skip("I don't understand what this is supposed to be doing nevermind actually doing anything with it....")
+    def testRegressions(self):
+        """
+        :return:
+        """
+        from sklearn import linear_model, cross_validation
+        import scipy as sp
+
+        weight_df = self.joined_target_weights
+        target = 'CombinedBadMouthingPowerControl'
+        df = weight_df[target].reset_index()
+        data = df.drop(target, axis=1).values
+        labels = df[target].values
+
+        etr = ske.ExtraTreesRegressor(n_jobs=4, n_estimators=512)
+        rtr = ske.RandomForestRegressor(n_jobs=4, n_estimators=512)
+        linr = linear_model.LinearRegression()
+
+        for reg in [etr, rtr, linr]:
+            scores = cross_validation.cross_val_score(reg, data, labels, scoring='mean_squared_error', n_jobs=4)
+            print scores, sp.stats.describe(scores)
 
 
 if __name__ == '__main__':

@@ -23,6 +23,9 @@ import random
 import logging
 import re
 import os
+import subprocess
+import warnings
+import traceback
 import errno
 from inspect import getmembers, isfunction
 from itertools import groupby
@@ -1187,6 +1190,30 @@ def map_levels(df, dct, level=0):
                       for i, names in enumerate(index.levels)], inplace=True)
 
 
+def categorise_dataframe(df):
+    # Categories work better as indexes
+    for obj_key in df.keys()[df.dtypes == object]:
+        try:
+            df[obj_key] = df[obj_key].astype('category')
+        except TypeError:
+            print("Couldn't categorise {}".format(obj_key))
+            pass
+    return df
+
+
+def non_zero_rows(df):
+    return df[~(df == 0).all(axis=1)]
+
+def try_to_open(filename):
+    try:
+        if sys.platform == 'linux2':
+            subprocess.call(["xdg-open", filename])
+        else:
+            os.startfile(filename)
+    except Exception:
+        warnings.warn(traceback.format_exc())
+
+
 from cStringIO import StringIO
 import sys
 
@@ -1201,3 +1228,22 @@ class Capturing(list):
     def __exit__(self, *args):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
+
+
+var_rename_dict = {'CombinedBadMouthingPowerControl': 'MPC',
+                   'CombinedSelfishTargetSelection': 'STS',
+                   'CombinedTrust': 'Fair',
+                   'Shadow': 'Shadow',
+                   'SlowCoach': 'SlowCoach'}
+
+metric_rename_dict = {
+    'ADelay': "$Delay$",
+    'ARXP': "$P_{RX}$",
+    'ATXP': "$P_{TX}$",
+    'RXThroughput': "$T^P_{RX}$",
+    'TXThroughput': "$T^P_{TX}$",
+    'PLR': '$PLR$',
+    'INDD': '$INDD$',
+    'INHD': '$INHD$',
+    'Speed': '$Speed$'
+}

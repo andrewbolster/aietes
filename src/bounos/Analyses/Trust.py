@@ -213,12 +213,15 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
 
     for ki, gi in gf.groupby(level='t'):
         if as_matrix:
+            t_val = [np.nan]*(len(gi.keys())-1)
             gi=gi.values
             gmn = np.nanmin(gi,axis=0)  # Generally the 'Good' sequence,
             gmx = np.nanmax(gi,axis=0)
         else:
+            t_val = pd.Series(np.nan, index=gi.index.copy(), name='trust')
             gmn = gi.min(axis=0)  # Generally the 'Good' sequence,
             gmx = gi.max(axis=0)
+
         width = np.abs(gmx - gmn)
 
         # If we have any actual values
@@ -274,12 +277,9 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
                         axis=1),
                 )
 
-            trusts.append(
-                t_val
-            )
-        else:
-            # If we don't have any records, there's nothing we can do.
-            trusts.append(pd.Series([], name='trust'))
+        trusts.append(
+            t_val
+        )
 
     return trusts
 
