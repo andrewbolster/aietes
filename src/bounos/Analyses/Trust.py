@@ -206,6 +206,11 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
     if metric_weights is not None and any(metric_weights.where(metric_weights<0).dropna()):
         flip_metrics.extend(list(metric_weights.where(metric_weights<0).dropna().keys()))
 
+    if metric_weights is not None:
+        valid_metric_weights = np.abs(metric_weights)
+    else:
+        valid_metric_weights = None
+
     for ki, gi in gf.groupby(level='t'):
         if as_matrix:
             gi=gi.values
@@ -234,10 +239,10 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
                 bad = np.apply_along_axis(b_grc, arr=gi.copy(), axis=1)
                 bad[np.isnan(bad)] = 0.5
 
-                valid_metric_weights = np.abs(metric_weights) if metric_weights is not None else None
 
-                for flipper in map(list(metric_weights.keys()).index, flip_metrics):  # NOTE flipper may have been removed if no variation
-                    good[:,flipper], bad[:,flipper] = bad[:,flipper].copy(), good[:,flipper].copy()
+                if metric_weights is not None:
+                    for flipper in map(list(metric_weights.keys()).index, flip_metrics):  # NOTE flipper may have been removed if no variation
+                        good[:,flipper], bad[:,flipper] = bad[:,flipper].copy(), good[:,flipper].copy()
 
                 interval = np.vstack((
                     np.apply_along_axis(np.average, arr=good, axis=1, weights=valid_metric_weights),
@@ -544,32 +549,3 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     assert any(0 > _d), "All Resultantant Trust Values should be greater than 0"
     return _d
 
-if __name__ == "__main__":
-    from pandas.util.testing import assert_frame_equal
-    from time import time
-
-    control_case_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Control-2015-07-31-07-56-18"
-    with pd.get_store(control_case_path+'.h5') as store:
-        tf = store.trust
-    sample = tf.xs('CombinedTrust', level='var', drop_level=False).xs(0, level='run', drop_level=False).xs('Bravo', level='observer', drop_level=False)
-
-    sample_weight = pd.Series(np.random.randn(len(tf.keys())),index = tf.keys())
-
-    clock = time()
-    def tick(s=" "):
-        global clock
-        print("{} took {}s".format(s, time()-clock))
-        clock = time()
-    tp_as_matrix = generate_node_trust_perspective(sample, metric_weights=sample_weight, par=False, as_matrix=True)
-    tick("Single Matrix")
-    tp = generate_node_trust_perspective(sample, metric_weights=sample_weight, par=False, as_matrix=False)
-    tick("Single Series")
-    assert_frame_equal(tp,tp_as_matrix)
-    tpp_as_matrix = generate_node_trust_perspective(sample, metric_weights=sample_weight, par=True, as_matrix=True)
-    tick("Par Matrix")
-    assert_frame_equal(tpp_as_matrix,tp_as_matrix)
-    tpp = generate_node_trust_perspective(sample, metric_weights=sample_weight, par=True, as_matrix=False)
-    tick("Par Series")
-    assert_frame_equal(tpp,tpp_as_matrix)
-    assert_frame_equal(tp,tpp)
-    print(sample.shape)
