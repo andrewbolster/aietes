@@ -51,7 +51,7 @@ def target_weight_feature_extractor(target_weights):
     for basekey in target_weights.keys():  # Parallelisable
         print basekey
         # Single DataFrame of all features against one behaviour
-        var_weights = target_weights.apply(lambda s: s / target_weights[basekey], axis=0).dropna()
+        var_weights = target_weights.apply(lambda s: s - target_weights[basekey], axis=0).dropna()
         known_good_features_d[basekey] = \
             pd.concat([feature_extractor(s.reset_index(), var) for var, s in var_weights.iteritems()],
                       keys=var_weights.keys(), names=['var', 'metric'])
@@ -192,19 +192,21 @@ def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, 
 def build_target_weights(h5_path):
     """Outliers should have keys of runs"""
     with pd.get_store(h5_path) as store:
-        target_weights_dict = {}
-        for runkey in store.keys():
+        keys = store.keys()
+
+    target_weights_dict = {}
+    for runkey in keys:
+        with pd.get_store(h5_path) as store:
             print runkey
-            target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey), observer, n_metrics,
-                                                                     target=target)
+            target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey),
+                                                                     observer, n_metrics,
+                                                                     target=target,
+                                                                     signed=True)
 
     joined_target_weights = pd.concat(target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names)
     sorted_joined_target_weights = joined_target_weights.reset_index('run', drop=True).sort()
 
     return sorted_joined_target_weights
-
-
-
 
 def calc_correlations_from_weights(weights):
 
@@ -244,7 +246,6 @@ def non_zero_rows(df):
 class Aaamas(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-
         if use_temp_dir:
             self.dirpath = tempfile.mkdtemp()
         else:
@@ -266,56 +267,59 @@ class Aaamas(unittest.TestCase):
             'linewidth': 2
         }
         if recompute:
-            # All Metrics
-            self.joined_target_weights = build_target_weights(results_path + "/outliers.bkup.h5")
-            self.joined_feats = format_features(
-                target_weight_feature_extractor(
-                    self.joined_target_weights
-                )
-            )
+            self.recompute_features_in_shared()
 
-            self.joined_target_weights.to_hdf(shared_h5_path, 'joined_target_weights')
-            self.joined_feats.to_hdf(shared_h5_path, 'joined_feats')
-
-            self.comms_only_weights = drop_metrics_from_weights_by_key(
-                self.joined_target_weights,
-                phys_keys
-            )
-            self.comms_only_feats = format_features(
-                target_weight_feature_extractor(
-                    self.comms_only_weights
-                )
-            )
-            self.comms_only_weights.to_hdf(shared_h5_path, 'comms_only_weights')
-
-            self.comms_only_feats.to_hdf(shared_h5_path, 'comms_only_feats')
-
-
-            self.phys_only_weights = drop_metrics_from_weights_by_key(
-                self.joined_target_weights,
-                comm_keys
-            )
-            self.phys_only_feats = format_features(
-                target_weight_feature_extractor(
-                    self.phys_only_weights
-                )
-            )
-            self.phys_only_weights.to_hdf(shared_h5_path, 'phys_only_weights')
-            self.phys_only_feats.to_hdf(shared_h5_path, 'phys_only_feats')
-
-        else:
-            with pd.get_store(shared_h5_path) as store:
-                self.joined_target_weights = store.get('joined_target_weights')
-                self.joined_feats = store.get('joined_feats')
-                self.comms_only_feats = store.get('comms_only_feats')
-                self.phys_only_feats = store.get('phys_only_feats')
-                self.comms_only_weights = store.get('comms_only_weights')
-                self.phys_only_weights = store.get('phys_only_weights')
+        with pd.get_store(shared_h5_path) as store:
+            self.joined_target_weights = store.get('joined_target_weights')
+            self.joined_feats = store.get('joined_feats')
+            self.comms_only_feats = store.get('comms_only_feats')
+            self.phys_only_feats = store.get('phys_only_feats')
+            self.comms_only_weights = store.get('comms_only_weights')
+            self.phys_only_weights = store.get('phys_only_weights')
 
         self.joined_feat_weights = categorise_dataframe(non_zero_rows(self.joined_feats).T)
         self.comms_feat_weights = categorise_dataframe(non_zero_rows(self.comms_only_feats).T)
         self.phys_feat_weights = categorise_dataframe(non_zero_rows(self.phys_only_feats).T)
 
+    @classmethod
+    def recompute_features_in_shared(cls):
+        # All Metrics
+        print "Building Joined Target Weights"
+        joined_target_weights = build_target_weights(results_path + "/outliers.bkup.h5")
+        joined_feats = format_features(
+            target_weight_feature_extractor(
+                joined_target_weights
+            )
+        )
+        print "Dumping Joined Target Weights"
+        joined_target_weights.to_hdf(shared_h5_path, 'joined_target_weights')
+        joined_feats.to_hdf(shared_h5_path, 'joined_feats')
+        print "Building Comms Target Weights"
+        comms_only_weights = drop_metrics_from_weights_by_key(
+            joined_target_weights,
+            phys_keys
+        )
+        comms_only_feats = format_features(
+            target_weight_feature_extractor(
+                comms_only_weights
+            )
+        )
+        print "Dumping Comms Target Weights"
+        comms_only_weights.to_hdf(shared_h5_path, 'comms_only_weights')
+        comms_only_feats.to_hdf(shared_h5_path, 'comms_only_feats')
+        print "Building Phys Target Weights"
+        phys_only_weights = drop_metrics_from_weights_by_key(
+            joined_target_weights,
+            comm_keys
+        )
+        phys_only_feats = format_features(
+            target_weight_feature_extractor(
+                phys_only_weights
+            )
+        )
+        print "Dumping Phys Target Weights"
+        phys_only_weights.to_hdf(shared_h5_path, 'phys_only_weights')
+        phys_only_feats.to_hdf(shared_h5_path, 'phys_only_feats')
 
     def testThreatSurfacePlot(self):
         fig_filename = 'img/threat_surface_sum'
@@ -505,3 +509,7 @@ class Aaamas(unittest.TestCase):
         with open(input_filename + '.tex', 'w') as f:
             f.write(corrs.loc['Fair'].apply(lambda v: np.round(v, decimals=3)).to_latex(escape=False))
         self.assertTrue(os.path.isfile(input_filename + '.tex'))
+
+
+if __name__ == '__main__':
+    Aaamas.recompute_features_in_shared()

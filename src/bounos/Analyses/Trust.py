@@ -177,20 +177,21 @@ def _grc(value, comparison, width, rho=0.5):
     """
 
     # todo test this against: zero widths, nan widths, singular arrays (should be 0.5)
-
-    upper = width
-    lower = np.abs(value - comparison) + rho * width
     with np.errstate(invalid='ignore'):
+        upper = width
+        lower = np.abs(value - comparison) + rho * width
         # inner is in the range [2/3, 2]
-        inner = upper / lower
+        inner = np.divide(upper, lower)
 
-    # Scale to [0,1]
-    scaled = 0.75 * inner - 0.5
+        # Scale to [0,1]
+        scaled = 0.75 * inner - 0.5
 
     return scaled
 
 
-def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_metrics=None, rho=0.5, debug=False):
+def generate_single_observer_trust_perspective(gf, metric_weights=None,
+                                               flip_metrics=None, rho=0.5,
+                                               as_matrix=True):
     """
     Generate an individual observer perspective i.e per node record
     :param gf:
@@ -199,13 +200,6 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
     :return:
     """
     trusts = []
-    if debug:
-        intervals = []
-        goods = []
-        bads = []
-        keys = []
-        maxes = []
-        mins = []
 
     if flip_metrics is None:
         flip_metrics = []
@@ -213,8 +207,13 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
         flip_metrics.extend(list(metric_weights.where(metric_weights<0).dropna().keys()))
 
     for ki, gi in gf.groupby(level='t'):
-        gmn = gi.min(axis=0)  # Generally the 'Good' sequence,
-        gmx = gi.max(axis=0)
+        if as_matrix:
+            gi=gi.values
+            gmn = np.nanmin(gi,axis=0)  # Generally the 'Good' sequence,
+            gmx = np.nanmax(gi,axis=0)
+        else:
+            gmn = gi.min(axis=0)  # Generally the 'Good' sequence,
+            gmx = gi.max(axis=0)
         width = np.abs(gmx - gmn)
 
         # If we have any actual values
@@ -223,12 +222,21 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
             g_grc = partial(_grc, comparison=gmn, width=width)
             b_grc = partial(_grc, comparison=gmx, width=width)
 
+
             # Where there are 'missing' values, this implies that there's no information
             # therefore we can assume regression to the mean
             # This means that low-successful-metric records don't get too washed out by the limited info
             # EG if there is only TX Throughput, results are often 0 or 1 which makes v spiky
-            good = gi.apply(g_grc, axis=1).fillna(0.5)
-            bad = gi.apply(b_grc, axis=1).fillna(0.5)
+            if as_matrix:
+                good = np.apply_along_axis(g_grc, arr=gi.copy(), axis=1)
+                good[np.isnan(good)] = 0.5
+
+                bad = np.apply_along_axis(b_grc, arr=gi.copy(), axis=1)
+                bad[np.isnan(bad)] = 0.5
+
+            else:
+                good = gi.apply(g_grc, axis=1).fillna(0.5)
+                bad = gi.apply(b_grc, axis=1).fillna(0.5)
 
             for flipper in flip_metrics:  # NOTE flipper may have been removed if no variation
                 if flipper in good.keys() and flipper in bad.keys():
@@ -239,38 +247,26 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
                 # be weighted on.... Fix that.
                 # ALSO doing it in the same name is really bad for looping....
                 valid_metric_weights = abs(metric_weights.drop(metric_weights.keys().difference(good.keys())))
-                interval = pd.DataFrame.from_dict({
-                    'good': good.apply(np.average, weights=valid_metric_weights[good.keys()], axis=1),
-                    'bad': bad.apply(np.average, weights=valid_metric_weights[bad.keys()], axis=1)
-                })[['good', 'bad']]
+            else:
+                valid_metric_weights = None
+
+            if as_matrix:
+                interval = np.vstack((
+                    np.apply_along_axis(np.average, arr=good, axis=1, weights=valid_metric_weights),
+                    np.apply_along_axis(np.average, arr=bad, axis=1, weights=valid_metric_weights)
+                )).T
+                t_val = np.apply_along_axis(t_kt, arr=interval, axis=1)
+
             else:
                 interval = pd.DataFrame.from_dict({
-                    'good': good.apply(np.average, axis=1),
-                    'bad': bad.apply(np.average, axis=1)
+                    'good': good.apply(np.average, axis=1, weights=valid_metric_weights),
+                    'bad': bad.apply(np.average, axis=1, weights=valid_metric_weights)
                 })[['good', 'bad']]
-
-            try:
-
                 t_val = pd.Series(
                     interval.apply(
                         t_kt,
                         axis=1),
-                    name='trust'
                 )
-            except (ValueError, FloatingPointError):
-                with np.errstate(invalid='ignore'):
-                    print "Interval {}".format(interval)
-                    print "Good.keys(){}".format(good.keys())
-                    print "Good {}".format(good)
-
-                    print "Bad.keys(){}".format(bad.keys())
-                    print "Bad {}".format(bad)
-
-                    print "Orig Weight {}".format(metric_weights)
-                    print "New Weight {}".format(valid_metric_weights)
-                    print "Width {}".format(width)
-                    print "GI {}".format(gi)
-                raise
 
             trusts.append(
                 t_val
@@ -278,28 +274,12 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None, flip_met
         else:
             # If we don't have any records, there's nothing we can do.
             trusts.append(pd.Series([], name='trust'))
-        if debug:
-            interval.append(interval)
-            goods.append(good)
-            bads.append(bad)
-            keys.append(ki)
-            maxes.append(gmx)
-            mins.append(gmn)
-    if debug:
-        debugging = {'intervals': intervals,
-                     'goods': goods,
-                     'bads': bads,
-                     'keys': keys,
-                     'maxes': maxes,
-                     'mins': mins
-                     }
-        return trusts, debugging
-    else:
-        return trusts
+
+    return trusts
 
 
 def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_metrics=None,
-                                    rho=0.5, fillna=False, par=True):
+                                    rho=0.5, fillna=False, par=True, as_matrix=True):
     """
     Generate Trust Values based on a big trust_log frame (as acquired from multi_loader or from explode_metrics_...
     Will also accept a selectively filtered trust log for an individual run
@@ -310,6 +290,15 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     Parallel Performs significantly better on large(r) datasets, i.e. multi-var.
     ie. Linear- ~2:20s/run vs 50s/run parallel
 
+    Numpy format (as_matrix performs at least 10x faster than series, and almost 30x
+    faster in parallel
+
+    Single Matrix took 10.7740519047s
+    Single Series took 111.183152914s
+    Par Matrix took 3.45189499855s
+    Par Series took 39.519659996s
+    (31860, 9)
+
     BY DEFAULT FLIPS THROUGHPUT METRICS
 
     :param tf: pandas.DataFrame: Trust Metrics DataFrame; can be single or ['var','run'] indexed
@@ -317,32 +306,40 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     :param metric_weights: numpy.ndarray: per-metric weighting array (default None)
     :return: pandas.DataFrame
     """
-    assert isinstance(tf, pd.DataFrame), "Expected first argument (tf) to be a Pandas Dataframe, got {} instead".format(
-        type(tf)
-    )
 
-    if var not in tf.index.names and 'run' not in tf.index.names:
-        # Dealing with a single run; pad it with 0's
-        dff = pd.concat([tf], keys=[0] + tf.index.names, names=['run'] + tf.index.names)
-        tf = pd.concat([dff], keys=[0] + dff.index.names, names=[var] + dff.index.names)
-    elif var not in tf.index.names:
-        tf = pd.concat([tf], keys=[0] + tf.index.names, names=[var] + tf.index.names)
+    try:
+        if var not in tf.index.names and 'run' not in tf.index.names:
+            # Dealing with a single run; pad it with 0's
+            dff = pd.concat([tf], keys=[0] + tf.index.names, names=['run'] + tf.index.names)
+            tf = pd.concat([dff], keys=[0] + dff.index.names, names=[var] + dff.index.names)
+        elif var not in tf.index.names:
+            tf = pd.concat([tf], keys=[0] + tf.index.names, names=[var] + tf.index.names)
 
-    trusts = []
+        trusts = []
+    except AttributeError:
+        assert isinstance(tf, pd.DataFrame), "Expected first argument (tf) to be a Pandas Dataframe, got {} instead".format(
+            type(tf)
+        )
+        raise
 
     try:
 
-        exec_args = {'metric_weights': metric_weights, 'flip_metrics': flip_metrics, 'rho': rho}
-
+        exec_args = {'metric_weights': metric_weights,
+                     'flip_metrics': flip_metrics,
+                     'rho': rho,
+                     'as_matrix': as_matrix}
         if par:
             trusts = Parallel(n_jobs=-1)(delayed(generate_single_observer_trust_perspective)
                                          (g, **exec_args) for k, g in tf.groupby(level=[var, 'run', 'observer'])
                                          )
-            trusts = [item for sublist in trusts for item in sublist]
+            trusts = [pd.Series(np.concatenate(sublist), index=g.index.copy())
+                      for sublist, (_,g) in zip(trusts,tf.groupby(level=[var, 'run', 'observer']))]
+
         else:
             with np.errstate(all='raise'):
                 for k, g in tf.groupby(level=[var, 'run', 'observer']):
-                    trusts.extend(generate_single_observer_trust_perspective(g, **exec_args))
+                    trust = generate_single_observer_trust_perspective(g, **exec_args)
+                    trusts.extend([pd.Series(np.concatenate(trust),index=g.index.copy())])
 
         tf = pd.concat(trusts)
         tf.sort_values(inplace=True)
@@ -357,7 +354,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
             tf = tf.unstack('target')
 
     except FloatingPointError:
-        if not metric_weights.any():
+        if metric_weights is not None and not metric_weights.any():
             # Have been given zero weight
             warnings.warn("Have been given a zero-weight, which is insane, so I'm returning None: {}".format(metric_weights))
             tf = None
@@ -545,3 +542,31 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     assert any(_d > 1), "All Resultantant Trust Values should be less than 1"
     assert any(0 > _d), "All Resultantant Trust Values should be greater than 0"
     return _d
+
+if __name__ == "__main__":
+    from pandas.util.testing import assert_frame_equal
+    from time import time
+
+    control_case_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Control-2015-07-31-07-56-18"
+    with pd.get_store(control_case_path+'.h5') as store:
+        tf = store.trust
+    sample = tf
+
+    clock = time()
+    def tick(s=" "):
+        global clock
+        print("{} took {}s".format(s, time()-clock))
+        clock = time()
+    tp_as_matrix = generate_node_trust_perspective(sample, par=False, as_matrix=True)
+    tick("Single Matrix")
+    tp = generate_node_trust_perspective(sample, par=False, as_matrix=False)
+    tick("Single Series")
+    assert_frame_equal(tp,tp_as_matrix)
+    tpp_as_matrix = generate_node_trust_perspective(sample, par=True, as_matrix=True)
+    tick("Par Matrix")
+    assert_frame_equal(tpp_as_matrix,tp_as_matrix)
+    tpp = generate_node_trust_perspective(sample, par=True, as_matrix=False)
+    tick("Par Series")
+    assert_frame_equal(tpp,tpp_as_matrix)
+    assert_frame_equal(tp,tpp)
+    print(sample.shape)

@@ -88,8 +88,6 @@ def generate_outlier_tp(tf, sigma=None, good='good', good_lvl='bev'):
     return outliers
 
 
-
-
 def generate_outlier_frame(good, trust_frame, w, par=False):
     try:
         _ = trust_frame.xs(good, level='var').mean()
@@ -130,7 +128,14 @@ def perform_weight_factor_analysis_on_trust_frame(trust_frame, good, min_emphasi
     if extra is None:
         extra = ""
 
-    combinations = itertools.product(xrange(min_emphasis, max_emphasis), repeat=len(trust_metrics))
+    combinations = filter(np.any,
+                          itertools.product(
+                              xrange(
+                                  min_emphasis, max_emphasis
+                              ), repeat=len(trust_metrics)
+                          )
+    )
+    combinations = sorted(combinations, key= lambda l: sum(map(abs,l)))
     if par:
         outliers = _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose=True)
     else:
@@ -187,7 +192,7 @@ def categorise_dataframe(df):
     return df
 
 
-def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None):
+def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None, signed=False):
 
     # Select Perspective here
     weight_df = weight_df[weight_df.observer == observer]
@@ -200,11 +205,28 @@ def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None):
     # REMEMBER TO CHECK THIS WHEN DOING MULTIPLE RUNS (although technically it shouldn't matter....)
     weight_df.drop(['observer', 'run'], axis=1, inplace=True)
 
+    #TODO: Assert abs(signed) = unsigned
     # Sum for each run (i.e. group by everything but time)
-    time_summed_weights = weight_df.groupby(level=list(weight_df.index.names[:-1])).sum().unstack('var')
+    if signed:
+        d = {'upper':1, 'lower':-1}
+        r = weight_df['range'].apply(d.get)
+        f = lambda c: c*r
+        time_summed_outliers = \
+            weight_df\
+                .drop('range', axis=1)\
+                .apply(f)\
+                .groupby(level=list(weight_df.index.names[:-1]))\
+                .sum()\
+                .unstack('var')
+    else:
+        time_summed_outliers = \
+            weight_df\
+                .groupby(level=list(weight_df.index.names[:-1]))\
+                .sum()\
+                .unstack('var')
 
     if target is not None:
-        target_weights = time_summed_weights.xs(target, level='target', axis=1)
+        target_weights = time_summed_outliers.xs(target, level='target', axis=1)
     return target_weights.fillna(0.0)  # Nans map to no outliers
 
 

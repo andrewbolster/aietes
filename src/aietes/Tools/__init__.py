@@ -48,6 +48,8 @@ from colorlog import ColoredFormatter
 
 from aietes.Tools.humanize_time import seconds_to_str
 
+np.seterr(**{'divide': 'ignore', 'invalid': 'ignore', 'over': 'ignore', 'under': 'ignore'})
+
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
 DEBUG = False
