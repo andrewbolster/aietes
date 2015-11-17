@@ -515,25 +515,8 @@ def trust_perspectives_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
     :param trust_frame:
     :return:
     """
-    groups = trust_frame.groupby(level=['var'])
-    n_nodes = trust_frame.shape[1]
+    return(trust_perspectives_wrt_someone('observers'))
 
-    f, ax = plt.subplots(len(groups), n_nodes, figsize=(figsize[0], figsize[1] * len(groups)), sharey=True)
-    plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
-    for i, (var, group) in enumerate(groups):
-        for j, (jvar, jgroup) in enumerate(group.groupby(level='observer')):
-            sns.boxplot(jgroup, ax=ax[i][j], **_boxplot_kwargs)
-            if not i:  # first plot
-                ax[i][j].set_title(jvar)
-        map(lambda a: a.set_xlabel(""), ax[i])
-        if i + 1 < len(groups):
-            ax[i][0].set_xlabel("Target")
-        ax[i][0].set_ylabel("{:.4f}".format(float(var)))
-    f.suptitle(
-        "Plots of Per-Node Subjective Trust Values {}\n(Each sub plot is a single nodes trust viewpoint of other nodes)".format(
-            title if title is None else ": " + title
-        ), fontsize=24)
-    return f
 
 
 def trust_perspectives_wrt_targets(trust_frame):
@@ -542,25 +525,41 @@ def trust_perspectives_wrt_targets(trust_frame):
     :param trust_frame:
     :return:
     """
-    groups = trust_frame.unstack('observer').stack('target').groupby(level=['var'])
+    return(trust_perspectives_wrt_someone('targets'))
+
+def trust_perspectives_wrt_someone(trust_frame, wrt='targets'):
+    """
+    Generates a 'matrix' of trust assessments of each nodes perspective from every other one, grouped by 'var'
+    :param trust_frame:
+    :return:
+    """
+    if wrt == 'targets':
+        base = "observer"
+        comp = "target"
+        perspective = "objective"
+    elif wrt == 'observer':
+        base = "target"
+        comp = "observer"
+        perspective = "subjective"
+
+    groups = trust_frame.unstack(base).stack(comp).groupby(level=['var'])
     n_nodes = trust_frame.shape[1]
 
     f, ax = plt.subplots(len(groups), n_nodes, figsize=(16, 2 * len(groups)), sharey=True)
     plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
     for i, (var, group) in enumerate(groups):
-        for j, (jvar, jgroup) in enumerate(group.groupby(level='target')):
+        for j, (jvar, jgroup) in enumerate(group.groupby(level=comp)):
             sns.boxplot(jgroup, ax=ax[i][j], **_boxplot_kwargs)
             if not i:  # first plot
                 ax[i][j].set_title(jvar)
         map(lambda a: a.set_xlabel(""), ax[i])
         if i + 1 < len(groups):
-            ax[i][0].set_xlabel("Observer")
+            ax[i][0].set_xlabel(base.capitalize())
         ax[i][0].set_ylabel("{:.4f}".format(float(var)))
     f.suptitle(
-        "Plots of Per-Node Objective Trust Values\n(Each sub plot is a nodes trust value from the perspective of other nodes)",
+        "Plots of Per-Node {} Trust Values".format(perspective.capitalize()),
         fontsize=24)
     return f
-
 
 def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), texify=True, xlabel=True,
                                 dropnet=False):

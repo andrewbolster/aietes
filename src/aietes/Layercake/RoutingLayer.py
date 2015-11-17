@@ -425,23 +425,8 @@ class Static(SimpleRoutingTable):
 
             self[name_item] = next_hop_name
 
-        # Apply recursivity
-        for i in self:
-            while self[i] != self[self[i]]:
-                self[i] = self[self[i]]
-                if DEBUG:
-                    print i, self[i]
+        self._update_routing_table_rec(dist, i)
 
-        # Check if the power level needed for each next hop allows us to
-        # directly reaching destination, even being out of the cone
-        for i in self:
-            if self.get_level_for(nodes_geo[i]) is not None and self.get_level_for(nodes_geo[i]) <= self.get_level_for(
-                    nodes_geo[self[i]]):
-                self[i] = i
-
-        if DEBUG:
-            print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(),
-                                                                     nodes_geo[self[i]])
 
     def build_routing_table_1(self):
         # Reception Cone
@@ -541,6 +526,9 @@ class Static(SimpleRoutingTable):
 
             self[name_item] = next_hop_name
 
+        self._update_routing_table_rec(dist, i)
+
+    def _update_routing_table_rec(self, dist, i):
         # Apply recursivity
         for i in self:
             while self[i] != self[self[i]]:
@@ -554,7 +542,6 @@ class Static(SimpleRoutingTable):
             if self.get_level_for(nodes_geo[i]) is not None and self.get_level_for(nodes_geo[i]) <= self.get_level_for(
                     nodes_geo[self[i]]):
                 self[i] = i
-
         if DEBUG:
             print i, nodes_geo[i], self[i], nodes_geo[self[i]], dist(self.layercake.get_current_position(),
                                                                      nodes_geo[self[i]])
@@ -932,11 +919,11 @@ class FBR(SimpleRoutingTable):
                 b = distance(source_pos, dest_pos)
                 c = distance(source_pos, self.layercake.get_current_position())
 
-                if (b ** 2 + c ** 2 - a ** 2) / (2 * b * c) > 0.99 or (b ** 2 + c ** 2 - a ** 2) / (2 * b * c) < -0.99:
+                if self._angular_d(a, b, c) > 0.99 or self._angular_d(a, b, c) < -0.99:
                     a = 0.0
                 else:
                     a = math.degrees(
-                        math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c)))
+                        math.acos(self._angular_d(a, b, c)))
 
                 valid = a <= self.cone_angle / 2.0
 
@@ -960,6 +947,9 @@ class FBR(SimpleRoutingTable):
                 ))
 
         return valid
+
+    def _angular_d(self, a, b, c):
+        return (b ** 2 + c ** 2 - a ** 2) / (2 * b * c)
 
     def add_node(self, name, pos):
         """

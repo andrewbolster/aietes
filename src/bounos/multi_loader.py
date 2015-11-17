@@ -14,7 +14,7 @@ import numpy as np
 
 from bounos import npz_in_dir, load_sources, generate_sources
 from bounos.Analyses import Trust
-from aietes.Tools import memory, swapsize
+from aietes.Tools import memory, swapsize, map_paths
 
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,
@@ -25,15 +25,6 @@ console = logging.StreamHandler()
 console.setLevel(logging.INFO)
 logging.getLogger('').addHandler(console)
 log = logging.getLogger(__name__)
-
-
-def map_paths(paths):
-    subdirs = reduce(list.__add__, [filter(os.path.isdir,
-                                           map(lambda p: os.path.join(path, p),
-                                               os.listdir(path)
-                                               )
-                                           ) for path in paths])
-    return subdirs
 
 
 def scenarios_comms(paths, generator=True):

@@ -1176,6 +1176,14 @@ def literal_eval_walk(node, tabs=0):
             except:
                 print '*' * tabs, key, "EOL FAIL"
 
+def map_paths(paths):
+    subdirs = reduce(list.__add__, [filter(os.path.isdir,
+                                           map(lambda p: os.path.join(path, p),
+                                               os.listdir(path)
+                                               )
+                                           ) for path in paths])
+    return subdirs
+
 
 def map_levels(df, dct, level=0):
     """

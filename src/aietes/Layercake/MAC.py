@@ -64,6 +64,39 @@ class MAC(object):
     channel_access_retries = 0
 
 
+    def send_silence(self):
+        """ Please be quiet!
+        """
+        sil_packet = {"type": "SIL",
+                      "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
+                      "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
+                      "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
+                      "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
+                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
+
+        self.logger.debug(
+            "Transmitting SIL to " + self.incoming_packet["source"])
+
+        self.layercake.phy.transmit_packet(sil_packet)
+
+        self.incoming_packet = None
+
+    def process_sil(self):
+        """ The next time that I try to find a route I should do it starting again from ANY0.
+        """
+        self.outgoing_packet_queue[0]["through"] = "ANY0"
+        self.outgoing_packet_queue[0]["level"] = 0
+        self.x_overheard()
+
+    def ignore_sil(self):
+        """
+
+
+        """
+        self.logger.debug(
+            "Ignoring SIL coming from " + self.incoming_packet["through"])
+        self.incoming_packet = None
+
 class ALOHA(MAC):
 
     """ALOHA:  A very simple MAC Algorithm
@@ -1532,15 +1565,6 @@ class DACAP4FBR(DACAP):
         self.fsm.add_transition(
             "got_MC_RTS", "WAIT_ACK", self.process_mc_rts, "WAIT_ACK")
 
-    def ignore_sil(self):
-        """
-
-
-        """
-        self.logger.debug(
-            "Ignoring SIL coming from " + self.incoming_packet["through"])
-        self.incoming_packet = None
-
     def process_mc_rts(self):
         """ Someone is looking for help, may I help? Now the active nodes are the ones that transmit, maybe we should do it the opposite way
         """
@@ -1566,30 +1590,6 @@ class DACAP4FBR(DACAP):
                 # elif self.fsm.current_state == "WAIT_CTS" or self.fsm.current_state == "WAIT_TIME":
                 # self.send_silence()
                 # elif self.fsm.current_state == "BACKOFF":
-
-    def send_silence(self):
-        """ Please be quiet!
-        """
-        sil_packet = {"type": "SIL",
-                      "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
-                      "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
-                      "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
-                      "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
-                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
-
-        self.logger.debug(
-            "Transmitting SIL to " + self.incoming_packet["source"])
-
-        self.layercake.phy.transmit_packet(sil_packet)
-
-        self.incoming_packet = None
-
-    def process_sil(self):
-        """ The next time that I try to find a route I should do it starting again from ANY0.
-        """
-        self.outgoing_packet_queue[0]["through"] = "ANY0"
-        self.outgoing_packet_queue[0]["level"] = 0
-        self.x_overheard()
 
     def append_cts(self):
         """ More than one CTS is received when looking for the next best hop. We should consider all of them.
@@ -2690,29 +2690,6 @@ class CSMA4FBR(CSMA):
                 # elif self.fsm.current_state == "BACKOFF":
                 # self.send_silence()
 
-    def send_silence(self):
-        """ Please be quiet!
-        """
-        sil_packet = {"type": "SIL",
-                      "source": self.incoming_packet["dest"], "source_position": self.incoming_packet["dest_position"],
-                      "dest": self.incoming_packet["source"], "dest_position": self.incoming_packet["source_position"],
-                      "through": self.layercake.hostname, "through_position": self.layercake.get_current_position(),
-                      "length": self.SIL_packet_length, "tx_energy": self.layercake.phy.tx_energy,
-                      "time_stamp": self.incoming_packet["time_stamp"], "level": self.incoming_packet["level"]}
-
-        self.logger.debug(
-            "Transmitting SIL to " + self.incoming_packet["source"])
-
-        self.layercake.phy.transmit_packet(sil_packet)
-
-        self.incoming_packet = None
-
-    def process_sil(self):
-        """ The next time that I try to find a route I should do it starting again from ANY0.
-        """
-        self.outgoing_packet_queue[0]["through"] = "ANY0"
-        self.outgoing_packet_queue[0]["level"] = 0
-        self.x_overheard()
 
     def append_cts(self):
         """ More than one CTS is received when looking for the next best hop. We should consider all of them.

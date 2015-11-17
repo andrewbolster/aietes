@@ -10,21 +10,13 @@ import pandas as pd
 
 from bounos import DataPackage, npz_in_dir, load_sources, generate_sources
 import bounos.Analyses.Trust as Trust
-from aietes.Tools import uncpickle
+from aietes.Tools import uncpickle, map_paths
 
 
 def grab_comms(s):
     dp = DataPackage(s)
     return dp.comms
 
-
-def map_paths(paths):
-    subdirs = reduce(list.__add__, [filter(os.path.isdir,
-                                           map(lambda p: os.path.join(path, p),
-                                               os.listdir(path)
-                                               )
-                                           ) for path in paths])
-    return subdirs
 
 
 def scenarios_comms(paths, generator=False):

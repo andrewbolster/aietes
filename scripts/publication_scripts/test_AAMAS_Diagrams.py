@@ -365,45 +365,24 @@ class Aaamas(unittest.TestCase):
 
     def testFullMetricTrustRelevance(self):
         fig_filename = 'img/full_metric_trust_relevance'
-        fig_size = CB.latexify(columns=0.5, factor=1)
-
-        fig = plt.figure(figsize=fig_size)
-        ax = fig.add_subplot(1, 1, 1)
 
         fair_feats = self.joined_feats.loc['Fair'].rename(columns=metric_rename_dict)
 
-        ax = fair_feats[~(fair_feats == 0).all(axis=1)].plot(
-            ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
-            legend=False
-        )
-        ax.set_xlabel("Behaviour")
-        ax.set_ylabel("Est. Best Metric Weighting")
-        fig = ax.get_figure()
+        self.save_feature_plot(fair_feats, fig_filename)
 
-        bars = ax.patches
-        hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
 
-        for bar, hatch in zip(bars, hatches):
-            bar.set_hatch(hatch)
-
-        ax.legend(loc='best', ncol=1)
-        CB.format_axes(ax)
-
-        fig.tight_layout(pad=0.3)
-        fig.savefig(fig_filename, transparent=True)
-        self.assertTrue(os.path.isfile(fig_filename + '.png'))
-        if show_outputs:
-            try_to_open(fig_filename + '.png')
 
     def testCommsMetricTrustRelevance(self):
         fig_filename = 'img/comms_metric_trust_relevance'
-        fig_size = CB.latexify(columns=0.5, factor=1)
-
-        fig = plt.figure(figsize=fig_size)
-        ax = fig.add_subplot(1, 1, 1)
 
         feats = self.comms_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
 
+        self.save_feature_plot(feats, fig_filename)
+
+    def save_feature_plot(self, feats, fig_filename):
+        fig_size = CB.latexify(columns=0.5, factor=1)
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.add_subplot(1, 1, 1)
         ax = feats[~(feats == 0).all(axis=1)].plot(
             ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
             legend=False
@@ -411,16 +390,12 @@ class Aaamas(unittest.TestCase):
         ax.set_xlabel("Behaviour")
         ax.set_ylabel("Est. Best Metric Weighting")
         fig = ax.get_figure()
-
         bars = ax.patches
         hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
-
         for bar, hatch in zip(bars, hatches):
             bar.set_hatch(hatch)
-
         ax.legend(loc='best', ncol=1)
         CB.format_axes(ax)
-
         fig.tight_layout(pad=0.3)
         fig.savefig(fig_filename, transparent=True)
         self.assertTrue(os.path.isfile(fig_filename + '.png'))
@@ -429,35 +404,9 @@ class Aaamas(unittest.TestCase):
 
     def testPhysMetricTrustRelevance(self):
         fig_filename = 'img/phys_metric_trust_relevance'
-        fig_size = CB.latexify(columns=0.5, factor=1)
-
-        fig = plt.figure(figsize=fig_size)
-        ax = fig.add_subplot(1, 1, 1)
 
         feats = self.phys_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
-
-        ax = feats[~(feats == 0).all(axis=1)].plot(
-            ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
-            legend=False
-        )
-        ax.set_xlabel("Behaviour")
-        ax.set_ylabel("Est. Best Metric Weighting")
-        fig = ax.get_figure()
-
-        bars = ax.patches
-        hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
-
-        for bar, hatch in zip(bars, hatches):
-            bar.set_hatch(hatch)
-
-        ax.legend(loc='best', ncol=1)
-        CB.format_axes(ax)
-
-        fig.tight_layout(pad=0.3)
-        fig.savefig(fig_filename, transparent=True)
-        self.assertTrue(os.path.isfile(fig_filename + '.png'))
-        if show_outputs:
-            try_to_open(fig_filename + '.png')
+        self.save_feature_plot(feats, fig_filename)
 
     def testFullMetricCorrs(self):
         input_filename = 'input/full_metric_correlations'
