@@ -43,7 +43,7 @@ class DataPackage(object):
     Data Store for simulation results
     Replicates a Numpy Array as is directly accessible as an n-vector
     [x,y,z,t] array for n simulated nodes positions over time. Additional
-    information is queriable through the object.
+    information is queryable through the object.
     """
     _attrib_map = {'p': 'positions',
                    'v': 'vectors',
@@ -450,8 +450,6 @@ class DataPackage(object):
         timeslice
 
         :param time: time index to calculate at
-        :type int
-
         :raises ValueError
         """
         if not (0 <= time <= self.tmax):
@@ -464,8 +462,6 @@ class DataPackage(object):
         """
         Generate the average heading for the fleet at a given timeslice
         :param time: time index to calculate at
-        :type int
-
         :raises ValueError
         """
         if not (0 <= time <= self.tmax):
@@ -480,10 +476,7 @@ class DataPackage(object):
         each node to a given heading
 
         :param time: time index to calculate at
-        :type int
-
         :param heading: (x,y,z) heading to compare against
-        :type tuple
         """
         return map(
             lambda v: mag(
@@ -497,8 +490,6 @@ class DataPackage(object):
         it's location and size
 
         :param time: time index to calculate at
-        :type int
-
         """
         x, y, z = self.average_position(time)
         max_r = max(self.distances_from_at((x, y, z), time))
@@ -511,10 +502,7 @@ class DataPackage(object):
         each node to a given position
 
         :param time: time index to calculate at
-        :type int
-
         :param position: (x,y,z) position to compare against
-        :type tuple
         """
         return map(
             lambda p: mag(

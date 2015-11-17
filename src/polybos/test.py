@@ -38,7 +38,7 @@ class ExperimentGeneration(unittest.TestCase):
         self.assertEqual(len(s.get_behaviour_dict()[behaviour]), int(count * float(re.split('\(|\)|\%', v)[1]) / 100.0))
 
     def testRuntimeModification(self):
-        """Ensure that polybos appropriatly propogates simulation time using the run method"""
+        """Ensure that polybos appropriately propagates simulation time using the run method"""
         count = 4
         runcount = 1
         runtime = 10
@@ -54,7 +54,7 @@ class ExperimentGeneration(unittest.TestCase):
                                  v.datarun[0].tmax, runtime))
 
     def testRuntimeModificationParallel(self):
-        """Ensure that polybos appropriatly propogates simulation time using the run method"""
+        """Ensure that polybos appropriately propagates simulation time using the run method"""
         count = 4
         runcount = 1
         runtime = 10

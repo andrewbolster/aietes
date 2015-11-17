@@ -42,6 +42,8 @@ _boxplot_kwargs = {
 def lost_packet_distribution(dp=None, tx=None, title=None):
     """
     Return a dist+rug plot of lost packets for the given DataPackage
+    :param tx:
+    :param title:
     :param dp: bounos.DataPackage
     :return f: plt.figure
     """
@@ -132,6 +134,9 @@ def source_and_dest_delay_violin_plot(dp):
 def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12, 4)):
     """
     Return a plot of the source and destination RX delay CDF as two subplots.
+    :param rx:
+    :param title:
+    :param figsize:
     :param dp:
     :return:
     """
@@ -336,6 +341,8 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
                                 hide_annotations=False):
     """
 
+    :param rename_labels:
+    :param hide_annotations:
     :param stats:
     :param title:
     :param var:
@@ -397,6 +404,7 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
 def average_delays_across_variation(stats, title=None, var='Packet Rates', figsize=None, ylog=False):
     """
 
+    :param ylog:
     :param stats:
     :param title:
     :param var:
@@ -424,6 +432,7 @@ def average_delays_across_variation(stats, title=None, var='Packet Rates', figsi
 def rts_ratio_across_variation(stats, title=None, var='Packet Rates', figsize=None, ylog=False):
     """
 
+    :param ylog:
     :param stats:
     :param title:
     :param var:
@@ -515,7 +524,7 @@ def trust_perspectives_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
     :param trust_frame:
     :return:
     """
-    return(trust_perspectives_wrt_someone('observers'))
+    return trust_perspectives_wrt_someone('observers')
 
 
 
@@ -525,11 +534,12 @@ def trust_perspectives_wrt_targets(trust_frame):
     :param trust_frame:
     :return:
     """
-    return(trust_perspectives_wrt_someone('targets'))
+    return trust_perspectives_wrt_someone('targets')
 
 def trust_perspectives_wrt_someone(trust_frame, wrt='targets'):
     """
     Generates a 'matrix' of trust assessments of each nodes perspective from every other one, grouped by 'var'
+    :param wrt:
     :param trust_frame:
     :return:
     """
@@ -565,9 +575,13 @@ def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), 
                                 dropnet=False):
     """
     Generates a 'matrix' of trust assessments from each nodes perspective to every other one, grouped by 'var'
+    :param trust_group:
+    :param var:
+    :param texify:
+    :param xlabel:
+    :param dropnet:
     :param title:
     :param figsize:
-    :param trust_frame:
     :return:
     """
     df = trust_group.dropna()
@@ -770,6 +784,7 @@ def latexify(columns=1, factor=0.45):
     fig_width : float, optional, pts
     fig_height : float,  optional, pts
     columns : {0.5, 1, 2}
+    :param factor:
     """
 
     # code adapted from http://www.scipy.org/Cookbook/Matplotlib/LaTeX_Examples

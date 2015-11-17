@@ -194,6 +194,8 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
                                                as_matrix=True):
     """
     Generate an individual observer perspective i.e per node record
+    :param rho:
+    :param as_matrix:
     :param gf:
     :param metric_weights: Series of 1-normed metric weights, including text indexes. Negative metrics will be flipped
     :param flip_metrics: Metrics that are more 'good' as they get bigger
@@ -307,6 +309,11 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
 
     BY DEFAULT FLIPS THROUGHPUT METRICS
 
+    :param flip_metrics:
+    :param rho:
+    :param fillna:
+    :param par:
+    :param as_matrix:
     :param tf: pandas.DataFrame: Trust Metrics DataFrame; can be single or ['var','run'] indexed
     :param var: str: optional level name to group by as opposed to the standard 'var'
     :param metric_weights: numpy.ndarray: per-metric weighting array (default None)
@@ -516,6 +523,7 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     """
     Take an individual simulation run and get a dict of the standard network perspectives across given recommenders and indirect nodes
     (you could probably cludge together a few runs and the data format would still be ok, but I wouldn't try plotting it directly)
+    :param ewma:
     :param trust_run:
     :param observer:
     :param recommendation_nodes:

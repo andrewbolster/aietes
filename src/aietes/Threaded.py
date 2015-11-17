@@ -23,10 +23,8 @@ import os
 import logging
 import gc
 from time import gmtime, strftime
-
 from joblib import Parallel, delayed
 import numpy as np
-
 from aietes import Simulation
 
 
@@ -106,7 +104,6 @@ def parallel_sim(arglist):
 
 
 class QueueSim(object):
-
     def __init__(self, arglist, pool):
         import logging
 

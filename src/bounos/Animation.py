@@ -30,6 +30,8 @@ class AIETESAnimation(mplanimation.FuncAnimation):
         Saves a movie file by drawing every frame.
 
 
+        :param args:
+        :param kwargs:
         :param blit:
         :param frame_prefix:
         :param clear_temp:

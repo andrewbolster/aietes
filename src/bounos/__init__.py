@@ -81,6 +81,11 @@ class BounosModel(DataPackage):
         Call back function used by SimulationStep if doing real time simulation
 
         Imports DataPackage data from the running simulation up to the requested time (self.t)
+        :param p:
+        :param v:
+        :param names:
+        :param environment:
+        :param now:
         """
         self.log.debug("Updating data from simulator at %d" % now)
         self.update(p=p, v=v, names=names, environment=environment)
@@ -840,6 +845,7 @@ def global_adjust(figure, axes, scale=2):
 
 
 
+    :param axes:
     :param figure:
     :param axes:
     :param scale:

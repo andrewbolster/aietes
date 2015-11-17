@@ -12,9 +12,10 @@ import pandas as pd
 import sklearn.ensemble as ske
 from scipy.stats.stats import pearsonr
 
-import bounos.ChartBuilders as CB
+from bounos.ChartBuilders import format_axes, latexify
 from aietes.Tools import *
-from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_feature_extractor, generate_weighted_trust_perspectives
+from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_feature_extractor, \
+    generate_weighted_trust_perspectives
 
 
 ##################
@@ -43,7 +44,7 @@ def plot_result(result, title=None, stds=True):
 def assess_result(result, target='Alfa'):
     m = result.drop(target, 1).mean().mean() - result[target].mean()
     std = result.std().mean()
-    return (m, std)
+    return m, std
 
 
 def assess_results(perspectives_d, base_key='Fair'):
@@ -81,7 +82,7 @@ _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 
 golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 w = 6
-CB.latexify(columns=2, factor=0.55)
+latexify(columns=2, factor=0.55)
 
 phys_keys = ['INDD', 'INHD', 'Speed']
 comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
@@ -132,6 +133,7 @@ def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, 
     -------
     tuple
         (annotation, text)
+        :param x_width:
     """
 
     if txt_kwargs is None:
@@ -157,7 +159,9 @@ def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, 
 
 
 def build_outlier_weights(h5_path):
-    """Outliers should have keys of runs"""
+    """Outliers should have keys of runs
+    :param h5_path:
+    """
     with pd.get_store(h5_path) as store:
         keys = store.keys()
 
@@ -294,7 +298,7 @@ class Aaamas(unittest.TestCase):
 
     def testThreatSurfacePlot(self):
         fig_filename = 'img/threat_surface_sum'
-        fig_size = CB.latexify(columns=0.5, factor=0.9)
+        fig_size = latexify(columns=0.5, factor=0.9)
         fig_size = (fig_size[0], fig_size[1] / 2)
         print fig_size
 
@@ -354,7 +358,7 @@ class Aaamas(unittest.TestCase):
         for x in np.linspace(0, 1, 10):
             ax.add_patch(plt.Circle((x, ys[3]), radius=0.075, color='r', alpha=0.9))
 
-        axes = map(CB.format_axes, axes)
+        axes = map(format_axes, axes)
         fig.delaxes(axes[3])
         fig.savefig(fig_filename, transparent=False)
 
@@ -370,8 +374,6 @@ class Aaamas(unittest.TestCase):
 
         self.save_feature_plot(fair_feats, fig_filename)
 
-
-
     def testCommsMetricTrustRelevance(self):
         fig_filename = 'img/comms_metric_trust_relevance'
 
@@ -380,7 +382,7 @@ class Aaamas(unittest.TestCase):
         self.save_feature_plot(feats, fig_filename)
 
     def save_feature_plot(self, feats, fig_filename):
-        fig_size = CB.latexify(columns=0.5, factor=1)
+        fig_size = latexify(columns=0.5, factor=1)
         fig = plt.figure(figsize=fig_size)
         ax = fig.add_subplot(1, 1, 1)
         ax = feats[~(feats == 0).all(axis=1)].plot(
@@ -395,7 +397,7 @@ class Aaamas(unittest.TestCase):
         for bar, hatch in zip(bars, hatches):
             bar.set_hatch(hatch)
         ax.legend(loc='best', ncol=1)
-        CB.format_axes(ax)
+        format_axes(ax)
         fig.tight_layout(pad=0.3)
         fig.savefig(fig_filename, transparent=True)
         self.assertTrue(os.path.isfile(fig_filename + '.png'))

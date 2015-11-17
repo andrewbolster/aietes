@@ -2,7 +2,6 @@
 # coding=utf-8
 __author__ = 'andrewbolster'
 import numpy
-
 from polybos import ExperimentManager as ExpMan
 
 

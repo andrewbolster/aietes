@@ -8,10 +8,8 @@ import logging
 from copy import deepcopy
 import re
 import types
-
 from natsort import natsorted
 import pandas as pd
-
 from bounos import DataPackage, npz_in_dir, generate_sources
 from bounos.Analyses.Trust import generate_trust_logs_from_comms_logs
 from aietes.Tools import memory, swapsize

@@ -171,6 +171,10 @@ class Scenario(object):
         :param runtime:
         :param args:
         :param kwargs:
+        :param runcount:
+        :param runtime:
+        :param args:
+        :param kwargs:
         Args:
         """
         if runcount is None:
@@ -227,6 +231,8 @@ class Scenario(object):
         """
         Offload this to AIETES multiprocessing queue
 
+        :param queueing_pool:
+        :param kwargs:
         :param runtime:
         :param kwargs:
         :param runcount:
@@ -289,6 +295,7 @@ class Scenario(object):
         """
         Recieving a bounos.datapackage, generate relevant stats
         This is nasty and I can't remember why I did it this way
+        :param sim_run_dataset:
         :param sim_run_dataset:
         Returns:
             A list of dict's given from DataPackage.package_statistics()
@@ -605,6 +612,7 @@ class ExperimentManager(object):
         """
         Applys a behaviour (given as a string) to the experimental default for node generation
         :param config_dict:
+        :param config_dict:
         Args:
             behaviour(str): new default behaviour
         """
@@ -623,6 +631,7 @@ class ExperimentManager(object):
     def update_all_nodes(self, config_dict):
         """
         Applys a behaviour (given as a string) to the experimental default for node generation
+        :param config_dict:
         :param config_dict:
         Args:
             behaviour(str): new default behaviour
@@ -648,6 +657,8 @@ class ExperimentManager(object):
     def run(self, runtime=None, runcount=None, retain_data=True, queue=False, **kwargs):
         """
         Construct an execution environment and farm off simulation to scenarios
+        :param queue:
+        :param kwargs:
         :param runtime:
         :param runcount:
         :param retain_data:
@@ -767,6 +778,7 @@ class ExperimentManager(object):
         """
         Add a scenario with a range of configuration values to the experimental run
 
+        :param title_range:
         :param variable:
         :param value_range:
         :param title_range:
@@ -789,6 +801,7 @@ class ExperimentManager(object):
 
         This *UPDATES* the default nodes rather than adding custom ones
 
+        :param title_range:
         :param variable:
         :param value_range:
         :param title_range:
@@ -811,6 +824,7 @@ class ExperimentManager(object):
         """
         Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
 
+        :param title:
         :param behaviour_list:
         :param n_minority:
         :param title:
@@ -829,6 +843,8 @@ class ExperimentManager(object):
         """
         Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
 
+        :param application_list:
+        :param title:
         :param application_list:
         :param n_minority:
         :param title:
@@ -915,6 +931,8 @@ class ExperimentManager(object):
         manually set (i.e. operates only on the 'initial_position' value
 
         ONLY DEALS IN 2D AND ASSUMES ALL Z-VALUES ARE THE SAME
+        :param scale_environment:
+        :param base_scenario:
         :param scale_range:
         :param basis_node_name:
         :param title:

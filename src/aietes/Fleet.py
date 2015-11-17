@@ -142,30 +142,35 @@ class Fleet(Sim.Process):
     def nodenum(self, node):
         """
         Return the index of the requested node
+        :param node:
         """
         return node in self.nodes and self.nodes.index(node)
 
     def nodenum_from_id(self, node_id):
         """
         Return the index of the requested node node_id
+        :param node_id:
         """
         return map(attrgetter('id'), self.nodes).index(node_id)
 
     def nodenum_from_name(self, node_name):
         """
         Return the index of the requested node node_id
+        :param node_name:
         """
         return map(attrgetter('name'), self.nodes).index(node_name)
 
     def nodeid_from_name(self, node_name):
         """
         Return the id of the requested node by name
+        :param node_name:
         """
         return self.nodes[map(attrgetter('name'), self.nodes).index(node_name)].id
 
     def nodename_from_id(self, node_id):
         """
         Return the name of the requested node by id
+        :param node_id:
         """
         return self.nodes[self.nodenum_from_id(node_id)].name
 

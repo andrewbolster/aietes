@@ -5,9 +5,7 @@ import warnings
 import pandas as pd
 import itertools
 import logging
-
 from joblib import Parallel, delayed
-
 from bounos.ChartBuilders import weight_comparisons
 from bounos.Analyses import Trust
 from aietes.Tools import memory, swapsize

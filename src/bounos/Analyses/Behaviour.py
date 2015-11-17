@@ -28,6 +28,8 @@ def find_convergence(data, *args, **kwargs):
     Return the Time of estimated convergence of the fleet along with some certainty value
     using the Average of Inter Node Distances metric
     i.e. the stability of convergence
+    :param args:
+    :param kwargs:
     :param data:
     Args:
         data(DataPackage)
@@ -72,6 +74,8 @@ def detect_misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
                 raw deviance from the mean for each node for each t
             'metrics': as metric.data
                 Raw metric data
+                :param args:
+                :param kwargs:
     """
     metric = Analyses.get_valid_metric(metric)
 
@@ -148,6 +152,8 @@ def deviation_from_metric(data, *args, **kwargs):
                 Absolute deviance from metric highlight data
             'metrics': as metric.data
                 Raw metric data
+                :param args:
+                :param kwargs:
     """
 
     metric_arg = kwargs.get("metric", "PerNode_Internode_Distance_Avg")

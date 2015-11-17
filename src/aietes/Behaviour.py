@@ -110,6 +110,9 @@ class Behaviour(object):
     def add_memory(self, object_id, position, velocity):
         """
         Called by node lifecycle to update the internal representation of the environment
+        :param object_id:
+        :param position:
+        :param velocity:
         """
         # TODO expand this to do SLAM?
         self.memory += MapEntry(object_id, position, velocity)
@@ -164,7 +167,6 @@ class Behaviour(object):
         Returns an array of our nearest neighbours satisfying  the behaviour constraints set in _init_behaviour()
         :param position:
         :param n_neighbours:
-        :param distance:
         """
 
         if position is None:

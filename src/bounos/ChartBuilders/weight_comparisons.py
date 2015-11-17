@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import division
 import os
 import itertools
@@ -9,7 +10,7 @@ import matplotlib.pyplot as plt
 
 import aietes.Tools as Tools
 from aietes.Tools import map_levels
-import bounos.ChartBuilders as CB
+from bounos.ChartBuilders import format_axes, latexify, trust_network_wrt_observers
 import bounos.Analyses.Trust as Trust
 from bounos.Analyses import scenario_order, scenario_map
 
@@ -24,7 +25,7 @@ _boxplot_kwargs = {
 golden_mean = (np.sqrt(5) - 1.0) / 2.5  # because it fits
 w = 4
 
-CB.latexify(columns=2, factor=0.45)
+latexify(columns=2, factor=0.45)
 
 _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 # result_dirs_by_latest=sorted(filter(os.path.isdir,map(lambda p: os.path.abspath(os.path.join(Tools._results_dir,p)),os.listdir(Tools._results_dir))),key=lambda f:os.path.getmtime(f))
@@ -96,7 +97,7 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
     ax.axhline(0.5, linestyle="..")
     ax.set_ylabel('{}Trust Value'.format(trust.replace("_", " ").title()))
     ax.set_xlabel('Observation')
-    ax = CB.format_axes(ax)
+    ax = format_axes(ax)
     fig.tight_layout(pad=0.1)
     fig.savefig("img/trust_{}_{}{}.pdf".format(
         s, "emph_%s" % metric if metric else "even",
@@ -250,9 +251,9 @@ def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None,
                 tex_safe_s = scenario_map[s]
                 title = "{}{}".format(keyword, tex_safe_s)
 
-                fig = CB.trust_network_wrt_observers(tp_net.xs(tex_safe_s, level='var'),
-                                                     tex_safe_s, title=title if show_title else False,
-                                                     figsize=figsize, xlabel=xlabel, dropnet=dropnet)
+                fig = trust_network_wrt_observers(tp_net.xs(tex_safe_s, level='var'),
+                                                  tex_safe_s, title=title if show_title else False,
+                                                  figsize=figsize, xlabel=xlabel, dropnet=dropnet)
                 fig.tight_layout(pad=0)
                 fig.savefig("img/trust_{}{}.pdf".format(
                     s, "_" + keyword if keyword is not None else ""),

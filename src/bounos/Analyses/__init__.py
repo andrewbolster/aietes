@@ -78,6 +78,7 @@ def hdf_process_kickstart(logstore, directory, keys):
         b: A dataframe/dir or frames associated with a particular key/keys
         c: a fully set up path to somewhere to go depending on what directory it's been given
 
+    :param keys:
     :param logstore:
     :param directory:
     :return: keystring, df, path

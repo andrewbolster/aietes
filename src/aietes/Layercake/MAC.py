@@ -189,12 +189,14 @@ class ALOHA(MAC):
 
     def initiate_transmission(self, outgoing_packet):
         """ Function called from the upper layers to transmit a packet.
+        :param outgoing_packet:
         """
         self.outgoing_packet_queue.append(outgoing_packet)
         self.fsm.process("send_DATA")
 
     def on_new_packet_received(self, incoming_packet):
         """ Function called from the lower layers when a packet is received.
+        :param incoming_packet:
         """
         self.incoming_packet = incoming_packet
         if self.is_for_me():

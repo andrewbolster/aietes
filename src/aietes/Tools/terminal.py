@@ -73,6 +73,7 @@ def render(text):
     """Helper function to apply controls easily
     Example:
     apply("%(GREEN)s%(BOLD)stext%(NORMAL)s") -> a bold green text
+    :param text:
     """
     return text % MODULE.__dict__
 

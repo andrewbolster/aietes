@@ -46,6 +46,7 @@ def callsuper(method):
     method of the same name. If none is found, the exception is allowed to
     permeate. If one is found, it too is wrapped with the ``callsuper``
     decorator and called with the arguments passed to ``CallSuper.__init__()``.
+    :param method:
     """
 
     def callsuper_wrapper(self, *args, **kwargs):
@@ -89,6 +90,8 @@ class MetricView(object):
     def plot(self, wanted=None, time=None):
         """
         Update the Plot based on 'new' wanted data
+        :param wanted:
+        :param time:
         """
         self.ax.clear()
         self.ax.set_ylabel(self.label)

@@ -82,6 +82,7 @@ def interactive_plot(data):
     def update_viewport(val):
         """
         Update Line display across time
+        :param val:
         """
         for n, line in enumerate(lines):
             (xs, ys, zs) = data.trail_of(n, timeslider.val)
@@ -92,6 +93,7 @@ def interactive_plot(data):
     def update_headings(val):
         """
         Update Vector Heading display across time
+        :param val:
         """
         heading_vectors = data.heading_slice(timeslider.val)
         axh.cla()

@@ -118,6 +118,10 @@ class FSM(object):
 
         You can also set transitions for a list of symbols by using
         add_transition_list().
+        :param input_symbol:
+        :param state:
+        :param action:
+        :param next_state:
         """
         self.state_transitions[(input_symbol, state)] = (action, next_state)
 
@@ -126,6 +130,10 @@ class FSM(object):
         You can pass a list or a string. Note that it is handy to use
         string.digits, string.whitespace, string.letters, etc. to add
         transitions that match character classes.
+        :param list_input_symbols:
+        :param state:
+        :param action:
+        :param next_state:
         """
         for input_symbol in list_input_symbols:
             self.add_transition(input_symbol, state, action, next_state)
@@ -135,6 +143,9 @@ class FSM(object):
                 (current_state) --> (action, next_state)
         The process() method checks these associations if it cannot
         first find a match of an (input_symbol, current_state).
+        :param state:
+        :param action:
+        :param next_state:
         """
         self.state_transitions_any[state] = (action, next_state)
 
@@ -147,6 +158,8 @@ class FSM(object):
 
         The default transition can be removed by setting the attribute
         default_transition to None.
+        :param action:
+        :param next_state:
         """
         self.default_transition = (action, next_state)
 
@@ -165,6 +178,8 @@ class FSM(object):
            This catches any input_symbol and any state.
            This is a handler for errors, undefined states, or defaults.
         4. No transition was defined. If we get here then raise an exception.
+        :param input_symbol:
+        :param state:
         """
         if (input_symbol, self.current_state) in self.state_transitions:
             return self.state_transitions[(input_symbol, self.current_state)]

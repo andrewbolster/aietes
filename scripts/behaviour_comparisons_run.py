@@ -6,9 +6,9 @@ from contextlib import contextmanager
 import sys
 import os
 from subprocess import call
-
 from polybos import ExperimentManager as ExpMan
 from bounos.multi_loader import dump_trust_logs_and_stats_from_exp_paths
+
 
 @contextmanager
 def redirected(stdout):

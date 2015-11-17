@@ -109,12 +109,14 @@ class Layercake(object):
     def send(self, payload):
         """
         Initialise payload transmission down the stack
+        :param payload:
         """
         self.net.send_packet(payload)
 
     def recv(self, payload):
         """
         Trigger reception action from below
+        :param payload:
         """
         if self.app_rx_handler:
             self.app_rx_handler(payload)

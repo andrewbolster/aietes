@@ -67,7 +67,10 @@ too large, to avoid memory leakage."""
             heap[insertion_point] = new_pair
 
     def setdefault(self, key, val):
-        """Reimplement setdefault to call our customized __setitem__."""
+        """Reimplementing setdefault to call our customized __setitem__.
+        :param key:
+        :param val:
+        """
         if key not in self:
             self[key] = val
         return self[key]

@@ -51,6 +51,8 @@ class ProgressBar(object):
         """Print the progress bar
         percent -- the progress percentage %
         message -- message string (optional)
+        :param percent:
+        :param message:
         """
         if not self.alive:
             return -1

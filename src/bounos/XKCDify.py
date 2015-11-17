@@ -143,6 +143,8 @@ def xkcdify(ax, mag=1.0,
     expand_axes : bool
         if True, then expand axes to fill the figure (useful if there is only
         a single axes in the figure)
+        :param bgcolor:
+        :param yaxis_loc:
     """
     # Get axes aspect
     ext = ax.get_window_extent().extents

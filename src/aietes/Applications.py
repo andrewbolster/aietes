@@ -175,6 +175,7 @@ class Application(Sim.Process):
     def recv(self, from_below):
         """
         Called by RoutingTable on packet reception
+        :param from_below:
         """
         if DEBUG:
             self.logger.info("Got Packet {id} from {src}".format(
@@ -209,6 +210,7 @@ class Application(Sim.Process):
     def log_received_packet(self, packet):
         """
         Grab packet statistics
+        :param packet:
         """
         source = packet["route"][0][0]
 
@@ -644,6 +646,9 @@ class BehaviourTrust(Trust):
 
         INDD -
             $ m_i^t =
+            :param pos_log:
+            :param names:
+            :param single_value:
 
         """
 
@@ -1023,6 +1028,7 @@ class SelfishTargetSelection(CommsTrustRoundRobin):
     def query_fwd(self, packet):
         """
         Only allow forwarding packets to neighbours
+        :param packet:
         :return:bool
         """
         if packet['dest'] == self.layercake.hostname or packet['source'] == self.layercake.hostname:
@@ -1069,6 +1075,7 @@ class BadMouthingPowerControl(CommsTrustRoundRobin):
         """
         Increase the power to everyone except the target
         Called by send_packet in RoutingLayer via Layercake
+        :param packet:
         :return:bool
         """
         if packet['dest'] != self.bad_mouth_target:

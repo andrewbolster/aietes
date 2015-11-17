@@ -17,37 +17,34 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-import math
-import functools
-import random
-import logging
-import re
-import os
-import subprocess
-import warnings
-import traceback
-import errno
-from inspect import getmembers, isfunction
-from itertools import groupby
-from functools import partial
-from operator import itemgetter
-from datetime import datetime as dt
-from time import time
-import pickle
 import cPickle
-import collections
-import weakref
-from tempfile import mkdtemp
-from shelve import DbfilenameShelf
+import errno
+import functools
+import logging
+import math
+import os
+import pickle
+import random
+import re
+import subprocess
+import traceback
+import validate
+import warnings
 from ast import literal_eval
 from configobj import ConfigObj
-import validate
+from functools import partial
+from inspect import getmembers, isfunction
+from itertools import groupby
+from operator import itemgetter
+from shelve import DbfilenameShelf
+from tempfile import mkdtemp
+from time import time
 
 import notify2
 import numpy as np
 from SimPy import SimulationStep as Sim
-from joblib import Memory
 from colorlog import ColoredFormatter
+from joblib import Memory
 
 from aietes.Tools.humanize_time import seconds_to_str
 
@@ -65,8 +62,79 @@ _results_dir = '%s/../../results/' % _ROOT
 _config_dir = "%s/configs/" % _ROOT
 
 
-class SimTimeFilter(logging.Filter):
+_proc_status = '/proc/%d/status' % os.getpid()
 
+_scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
+          'KB': 1024.0, 'MB': 1024.0 * 1024.0}
+
+var_rename_dict = {'CombinedBadMouthingPowerControl': 'MPC',
+                   'CombinedSelfishTargetSelection': 'STS',
+                   'CombinedTrust': 'Fair',
+                   'Shadow': 'Shadow',
+                   'SlowCoach': 'SlowCoach'}
+
+metric_rename_dict = {
+    'ADelay': "$Delay$",
+    'ARXP': "$P_{RX}$",
+    'ATXP': "$P_{TX}$",
+    'RXThroughput': "$T^P_{RX}$",
+    'TXThroughput': "$T^P_{TX}$",
+    'PLR': '$PLR$',
+    'INDD': '$INDD$',
+    'INHD': '$INHD$',
+    'Speed': '$Speed$'
+}
+
+
+def _vmb(vmkey):
+    """Private.
+    """
+    global _proc_status, _scale
+    # get pseudo file  /proc/<pid>/status
+    try:
+        t = open(_proc_status)
+        v = t.read()
+        t.close()
+    except:
+        return 0.0  # non-Linux?
+        # get vmkey line e.g. 'VmRSS:  9999  kB\n ...'
+    i = v.index(vmkey)
+    v = v[i:].split(None, 3)  # whitespace
+    if len(v) < 3:
+        return 0.0  # invalid format?
+        # convert Vm value to bytes
+    return float(v[1]) * _scale[v[2]] / (1024 * 1024)
+
+
+def memory(since=0.0):
+    """Return memory usage in Megabytes.
+    :param since:
+    """
+    return _vmb('VmSize:') - since
+
+
+def swapsize(since=0.0):
+    """Return memory usage in Megabytes.
+    :param since:
+    """
+    return _vmb('VmSwap:') - since
+
+
+def resident(since=0.0):
+    """Return resident memory usage in Megabytes.
+    :param since:
+    """
+    return _vmb('VmRSS:') - since
+
+
+def stacksize(since=0.0):
+    """Return stack size in Megabytes.
+    :param since:
+    """
+    return _vmb('VmStk:') - since
+
+
+class SimTimeFilter(logging.Filter):
     """
     Brings Sim.now() into usefulness
     """
@@ -108,7 +176,6 @@ def notify_desktop(message):
 
 
 class ConfigError(Exception):
-
     """
     Raised when a configuration cannot be validated through ConfigObj/Validator
     Contains a 'status' with the boolean dict representation of the error
@@ -123,6 +190,7 @@ class ConfigError(Exception):
 
     def __str__(self):
         return repr(self.status)
+
 
 #
 # Magic Numbers
@@ -160,6 +228,8 @@ def angle_between(v1, v2):
             0.0
             >>> angle_between((1, 0, 0), (-1, 0, 0))
             3.1415926535897931
+            :param v1:
+            :param v2:
     """
     v1_u = unit(v1)
     v2_u = unit(v2)
@@ -384,7 +454,6 @@ def linear2db(linear):
 
 
 class Dotdictify(dict):
-
     """
 
     :param value:
@@ -461,7 +530,6 @@ class Dotdictify(dict):
 
 
 class Dotdict(dict):
-
     """
 
     :param arg:
@@ -487,7 +555,6 @@ class Dotdict(dict):
 
 
 class MemoryEntry(object):
-
     """
 
     :param object_id:
@@ -503,13 +570,13 @@ class MemoryEntry(object):
         self.position = position
         self.velocity = velocity
         self.distance = distance
+        raise PendingDeprecationWarning("Pending Deletion")
 
     def __repr__(self):
         return "%s:%s:%s" % (self.name, self.position, self.distance)
 
 
 class MapEntry(object):
-
     """
 
     :param object_id:
@@ -648,31 +715,6 @@ def listfix(list_type, value):
         return list_type(value)
 
 
-def timestamp():
-    """
-
-
-    :return:
-    """
-    return dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
-
-
-def grouper(data):
-    """
-
-    :param data:
-    :return:
-    """
-    ranges = []
-    for key, group in groupby(enumerate(data), lambda (index, item): index - item):
-        group = map(itemgetter(1), group)
-        if len(group) > 1:
-            ranges.append(range(group[0], group[-1]))
-        else:
-            ranges.append(group[0])
-    return ranges
-
-
 def range_grouper(data):
     """
 
@@ -731,28 +773,6 @@ def itersubclasses(cls, _seen=None):
                 yield ssub
 
 
-class KeepRefs(object):
-
-    """
-
-    """
-    __refs__ = collections.defaultdict(list)
-
-    def __init__(self):
-        self.__refs__[self.__class__].append(weakref.ref(self))
-
-    @classmethod
-    def get_instances(cls):
-        """
-
-
-        """
-        for inst_ref in cls.__refs__[cls]:
-            inst = inst_ref()
-            if inst is not None:
-                yield inst
-
-
 def update_dict(d, keys, value, safe=False):
     """
 
@@ -780,7 +800,7 @@ def list_functions(module):
 
 def unext(filename):
     """
-
+    Tidier Basename
     :param filename:
     :return:
     """
@@ -789,18 +809,18 @@ def unext(filename):
 
 def kwarger(**kwargs):
     """
-
+    Lasy Dict Generation using Function Keywords
     :param kwargs:
-    :return:
+    :return: dict
     """
     return kwargs
 
 
 def uncpickle(filename):
     """
-
+    UnCPickle, easy enough
     :param filename:
-    :return:
+    :return: data
     """
     with open(filename, 'rb') as f:
         data = cPickle.load(f)
@@ -809,10 +829,11 @@ def uncpickle(filename):
 
 def mkcpickle(filename, thing):
     """
+    CPickle, easy enough
 
     :param filename:
     :param thing:
-    :return:
+    :return: stringbuffer: closed
     """
     with open(filename, 'wb') as f:
         data = cPickle.dump(thing, f)
@@ -821,9 +842,9 @@ def mkcpickle(filename, thing):
 
 def unpickle(filename):
     """
-
+    UnPickle, easy enough
     :param filename:
-    :return:
+    :return: data
     """
     with open(filename, 'rb') as f:
         data = pickle.load(f)
@@ -832,10 +853,10 @@ def unpickle(filename):
 
 def mkpickle(filename, thing):
     """
-
+    Pickle, easy enough
     :param filename:
     :param thing:
-    :return:
+    :return: stringbuffer: closed
     """
     with open(filename, 'wb') as f:
         pickle.dump(thing, f)
@@ -1023,9 +1044,9 @@ def try_forever(exceptions_to_catch, fn):
 
 def timeit():
     """
+    Simple Function Timer Decorator that still returns the results
 
-
-    :return:
+    :return: decorator
     """
 
     def decorator(func):
@@ -1098,62 +1119,6 @@ def is_valid_aietes_datafile(filename):
     return test.search(filename)
 
 
-import os
-
-_proc_status = '/proc/%d/status' % os.getpid()
-
-_scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
-          'KB': 1024.0, 'MB': 1024.0 * 1024.0}
-
-
-def _vmb(vmkey):
-    """Private.
-    """
-    global _proc_status, _scale
-    # get pseudo file  /proc/<pid>/status
-    try:
-        t = open(_proc_status)
-        v = t.read()
-        t.close()
-    except:
-        return 0.0  # non-Linux?
-        # get vmkey line e.g. 'VmRSS:  9999  kB\n ...'
-    i = v.index(vmkey)
-    v = v[i:].split(None, 3)  # whitespace
-    if len(v) < 3:
-        return 0.0  # invalid format?
-        # convert Vm value to bytes
-    return float(v[1]) * _scale[v[2]] / (1024 * 1024)
-
-
-def memory(since=0.0):
-    """Return memory usage in Megabytes.
-    :param since:
-    """
-    return _vmb('VmSize:') - since
-
-
-def swapsize(since=0.0):
-    """Return memory usage in Megabytes.
-    :param since:
-    """
-    return _vmb('VmSwap:') - since
-
-
-def resident(since=0.0):
-    """Return resident memory usage in Megabytes.
-    :param since:
-    """
-    return _vmb('VmRSS:') - since
-
-
-def stacksize(since=0.0):
-    """Return stack size in Megabytes.
-    :param since:
-    """
-    return _vmb('VmStk:') - since
-
-
 def literal_eval_walk(node, tabs=0):
     """
 
@@ -1175,6 +1140,7 @@ def literal_eval_walk(node, tabs=0):
 
             except:
                 print '*' * tabs, key, "EOL FAIL"
+
 
 def map_paths(paths):
     subdirs = reduce(list.__add__, [filter(os.path.isdir,
@@ -1212,6 +1178,7 @@ def categorise_dataframe(df):
 def non_zero_rows(df):
     return df[~(df == 0).all(axis=1)]
 
+
 def try_to_open(filename):
     try:
         if sys.platform == 'linux2':
@@ -1227,7 +1194,6 @@ import sys
 
 
 class Capturing(list):
-
     def __enter__(self):
         self._stdout = sys.stdout
         sys.stdout = self._stringio = StringIO()
@@ -1236,22 +1202,3 @@ class Capturing(list):
     def __exit__(self, *args):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
-
-
-var_rename_dict = {'CombinedBadMouthingPowerControl': 'MPC',
-                   'CombinedSelfishTargetSelection': 'STS',
-                   'CombinedTrust': 'Fair',
-                   'Shadow': 'Shadow',
-                   'SlowCoach': 'SlowCoach'}
-
-metric_rename_dict = {
-    'ADelay': "$Delay$",
-    'ARXP': "$P_{RX}$",
-    'ATXP': "$P_{TX}$",
-    'RXThroughput': "$T^P_{RX}$",
-    'TXThroughput': "$T^P_{TX}$",
-    'PLR': '$PLR$',
-    'INDD': '$INDD$',
-    'INHD': '$INHD$',
-    'Speed': '$Speed$'
-}

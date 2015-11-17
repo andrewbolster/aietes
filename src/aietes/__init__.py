@@ -150,6 +150,8 @@ class Simulation(object):
         Returns:
             Dict: {'sim_time':prepared sim duration (int),}
             This is an extensible interface that can be added to but must maintain compatibility.
+            :param args:
+            :param kwargs:
         """
         # Attempt Validation and construct the simulation from that config.
         try:

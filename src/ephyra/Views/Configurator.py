@@ -23,9 +23,18 @@ from wx.lib.intctrl import IntCtrl
 from wx.lib.agw.floatspin import FloatSpin
 
 from ephyra import wx
-from aietes.Tools import generate_names, timestamp, itersubclasses
+from datetime import datetime as dt
+from aietes.Tools import generate_names, itersubclasses
 from aietes.Behaviour import Behaviour
 
+
+def timestamp():
+    """
+
+
+    :return:
+    """
+    return dt.now().strftime('%Y-%m-%d-%H-%M-%S.aietes')
 
 class Configurator(wx.Panel):
 

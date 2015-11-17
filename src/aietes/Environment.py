@@ -67,6 +67,9 @@ class Environment(object):
     def random_position(self, want_empty=True, on_a_plane=False, buff=30):
         """
         Return a random empty map reference within the environment volume
+        :param want_empty:
+        :param on_a_plane:
+        :param buff:
         """
         is_empty = False
         if on_a_plane:
@@ -86,6 +89,9 @@ class Environment(object):
     def position_around(self, position=None, stddev=30, on_a_plane=False):
         """
         Return a nearly-random map entry within the environment volume around a given position
+        :param position:
+        :param stddev:
+        :param on_a_plane:
         """
         if position is None:
             position = np.asarray(self.shape) / 2
@@ -129,6 +135,8 @@ class Environment(object):
     def is_empty(self, position, tolerance=10):
         """
         Return if a given position is 'empty' for a given proximity tolerance
+        :param position:
+        :param tolerance:
         """
         distances = [
             distance(position, entry.position) > tolerance for entry in self.map]
@@ -137,6 +145,9 @@ class Environment(object):
     def update(self, object_id, position, velocity):
         """
         Update the environment to reflect a movement
+        :param object_id:
+        :param position:
+        :param velocity:
         """
         object_name = self.simulation.reverse_node_lookup(object_id).name
         t = Sim.now()

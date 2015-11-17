@@ -11,7 +11,6 @@ __author__ = 'bolster'
 
 import os
 from os.path import expanduser
-
 import itertools
 import functools
 import unittest
@@ -24,9 +23,7 @@ logging.basicConfig()
 import pandas as pd
 import numpy as np
 from collections import OrderedDict
-
 import sklearn.ensemble as ske
-
 import matplotlib.pylab as plt
 import matplotlib.cm as cm
 from matplotlib import rc_context
@@ -36,11 +33,12 @@ loc_25 = plticker.MultipleLocator(base=0.25)  # this locator puts ticks at regul
 
 import aietes
 import aietes.Tools as Tools
-import bounos.ChartBuilders as CB
+
+from bounos.ChartBuilders import plot_nodes, latexify
 import bounos.Analyses.Trust as Trust
 from bounos.ChartBuilders import weight_comparisons, radar, format_axes
-
 import scipy.interpolate as interpolate
+
 # pylab.rcParams['figure.figsize'] = 16, 12
 
 ##################
@@ -58,7 +56,7 @@ scenario_order = list(reversed([u'bella_all_mobile', u'bella_allbut1_mobile', u'
 
 golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 w = 6
-CB.latexify(columns=2, factor=0.55)
+latexify(columns=2, factor=0.55)
 
 # # Data File Acquistion
 
@@ -231,12 +229,12 @@ def get_mobility_stats(mobility):
             trust = s.get('trust')
             # Reset Range for packet emission rate
             stats.index = stats.index.set_levels([
-                np.int32(
-                    (np.asarray(stats.index.levels[0].astype(np.float64)) * 100)),
-                # Var
-                stats.index.levels[1].astype(np.int32)  # Run
-            ] + (stats.index.levels[2:])
-            )
+                                                     np.int32(
+                                                         (np.asarray(stats.index.levels[0].astype(np.float64)) * 100)),
+                                                     # Var
+                                                     stats.index.levels[1].astype(np.int32)  # Run
+                                                 ] + (stats.index.levels[2:])
+                                                 )
 
             statsd[app_rate_from_path(store_path)] = stats.copy()
             trustd[app_rate_from_path(store_path)] = trust.copy()
@@ -261,15 +259,15 @@ def get_mobility_stats(mobility):
 
 
 class TrustCom(unittest.TestCase):
-
-    def setUpClass(self):
+    @classmethod
+    def setUpClass(cls):
 
         if use_temp_dir:
-            self.dirpath = tempfile.mkdtemp()
+            cls.dirpath = tempfile.mkdtemp()
         else:
-            self.dirpath = expanduser("~/src/thesis/papers/active/15_TrustCom/")
+            cls.dirpath = expanduser("~/src/thesis/papers/active/15_TrustCom/")
 
-        os.chdir(self.dirpath)
+        os.chdir(cls.dirpath)
 
         if not os.path.exists("img"):
             os.makedirs("img")
@@ -285,11 +283,13 @@ class TrustCom(unittest.TestCase):
             'linewidth': 2
         }
 
-        self.malicious = "MaliciousBadMouthingPowerControlTrustMedianTests-0.025-3-2015-02-19-23-27-01.h5"
-        self.good = "TrustMedianTests-0.025-3-2015-02-19-23-29-39.h5"
-        self.selfish = "MaliciousSelfishTargetSelectionTrustMedianTests-0.025-3-2015-03-29-19-32-36.h5"
-        self.outlier = "outliers.h5"
-        self.generated_files = []
+        cls.malicious = "MaliciousBadMouthingPowerControlTrustMedianTests-0.025-3-2015-02-19-23-27-01.h5"
+        cls.good = "TrustMedianTests-0.025-3-2015-02-19-23-29-39.h5"
+        cls.selfish = "MaliciousSelfishTargetSelectionTrustMedianTests-0.025-3-2015-03-29-19-32-36.h5"
+        cls.outlier = "outliers.h5"
+        cls.generated_files = []
+
+    def setUp(self):
 
         for filename in [self.good, self.malicious, self.selfish]:
             if not os.path.isfile(Tools.in_results(filename)):
@@ -310,7 +310,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        CB.latexify(columns=0.5, factor=0.5)
+        latexify(columns=0.5, factor=0.5)
 
         base_config = aietes.Simulation.populate_config(
             aietes.Tools.get_config('bella_static.conf'),
@@ -321,9 +321,9 @@ class TrustCom(unittest.TestCase):
                           base_config['Node']['Nodes'].items() if 'initial_position' in v}
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
         reload(CB)
-        # _=CB.plot_positions(node_positions, bounds=base_config.Environment.shape)
-        fig = CB.plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
-                            square=False)
+        # _=cb.plot_positions(node_positions, bounds=base_config.Environment.shape)
+        fig = plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
+                         square=False)
         fig.tight_layout(pad=0.3)
         fig.savefig("img/s1_layout.pdf", transparent=True)
         plt.close(fig)
@@ -344,7 +344,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        CB.latexify(columns=0.5, factor=0.5)
+        latexify(columns=0.5, factor=0.5)
 
         for mobility in ['static', 'all_mobile']:
             df = get_mobility_stats(mobility)
@@ -379,7 +379,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        figsize = CB.latexify(columns=0.5, factor=0.5)
+        figsize = latexify(columns=0.5, factor=0.5)
 
         selected_scenarios = ['bella_all_mobile', 'bella_static']
         weight_comparisons.plot_mtfm_boxplot(self.good, keyword="fair",
@@ -424,7 +424,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        figsize = CB.latexify(columns=0.5, factor=0.5)
+        figsize = latexify(columns=0.5, factor=0.5)
 
         selected_scenarios = ['bella_all_mobile', 'bella_static']
         for s in selected_scenarios:
@@ -456,7 +456,7 @@ class TrustCom(unittest.TestCase):
             except:
                 pass
 
-        CB.latexify(columns=0.5, factor=0.5)
+        latexify(columns=0.5, factor=0.5)
 
         def beta_trusts(trust, length=4096):
             trust['+'] = (trust.TXThroughput / length) * (1 - trust.PLR)
@@ -562,9 +562,9 @@ class TrustCom(unittest.TestCase):
             sum_by_weight = outliers.groupby(
                 ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index('bev')
             dp = pd.DataFrame.from_dict({
-                k: sum_by_weight[sum_by_weight.bev == k]['Delta']
-                for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
-            })
+                                            k: sum_by_weight[sum_by_weight.bev == k]['Delta']
+                                            for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
+                                            })
 
         # Perform Comparisons
         gm = comparer(dp.good, dp.malicious)[key_order]
@@ -572,7 +572,7 @@ class TrustCom(unittest.TestCase):
         ms = comparer(dp.malicious, dp.selfish)[key_order]
 
         # Bar Chart
-        figsize = CB.latexify(columns=1.0, factor=1.2)
+        figsize = latexify(columns=1.0, factor=1.2)
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1)
         _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(index=columns)
@@ -593,7 +593,7 @@ class TrustCom(unittest.TestCase):
 
         # Radar Base
         with rc_context(rc={'axes.labelsize': 8}):
-            figsize = CB.latexify(columns=1, factor=1.2)
+            figsize = latexify(columns=1, factor=1.2)
             r = radar.radar_factory(len(key_order))
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(1, 1, 1, projection='radar')

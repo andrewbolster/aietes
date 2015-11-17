@@ -3,7 +3,6 @@ __author__ = 'bolster'
 
 from datetime import datetime
 import os
-
 import ecea_deltarange_run
 import ecea_nodecount_run
 import ecea_dvlrange_run

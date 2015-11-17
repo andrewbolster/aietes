@@ -1,19 +1,17 @@
+# coding=utf-8
 from __future__ import absolute_import
 
 __author__ = 'bolster'
 
 import os
-
 import pandas as pd
 import itertools
-
 from bounos.Analyses.Weight import perform_weight_factor_outlier_analysis_on_trust_frame
 
 phys_metrics = [u'INDD', u'INHD', u'Speed']
 comms_metrics = [u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']
 
-
-results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-03-16-45-26" # Bad Simulation Config (Wrong Default leading Random Walk to actually be comms-malicious)
+results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-03-16-45-26"  # Bad Simulation Config (Wrong Default leading Random Walk to actually be comms-malicious)
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
 
 if __name__ == "__main__":

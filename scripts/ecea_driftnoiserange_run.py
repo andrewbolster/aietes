@@ -43,9 +43,9 @@ def set_exp():
     }
 
     e.add_custom_node_scenario('drift_noises',
-                                  [zeroed_noises, no_dvl, no_gyro, default_noises],
-                                  ["No Noise", "No DVL Noise", "No Gyro Noise", "Standard Noises"]
-                                  )
+                               [zeroed_noises, no_dvl, no_gyro, default_noises],
+                               ["No Noise", "No DVL Noise", "No Gyro Noise", "Standard Noises"]
+                               )
     e.update_duration(21600)  # 6hrs
     return e
 

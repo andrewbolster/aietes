@@ -75,6 +75,7 @@ class EphyraController(object):
     def load_data_file(self, file_path):
         """
         Raises IOError on File not found
+        :param file_path:
         """
         self.model.import_datafile(file_path)
         logging.debug("Loaded Datafile from {}".format(file_path))
