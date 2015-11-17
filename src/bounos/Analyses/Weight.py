@@ -27,6 +27,7 @@ from time import gmtime, strftime
 import itertools
 from joblib import Parallel, delayed
 
+from itertools import ifilter
 from functools import partial
 
 from bounos.Analyses import Trust
@@ -108,7 +109,7 @@ def generate_outlier_frame(good, trust_frame, w, par=False):
     outlier.set_index(['var', 't'], inplace=True)
     return outlier
 
-def perform_weight_factor_analysis_on_trust_frame(trust_frame, good, min_emphasis = 0, max_emphasis = 3, extra=None, verbose=False, par=False):
+def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min_emphasis = 0, max_emphasis = 3, extra=None, verbose=False, par=False):
     """
     For a given trust frame perform grey weight factor distribution analysis to
     generate a frame with metrics/metric weights as a multiindex with columns for each comparison between behaviours
@@ -158,6 +159,90 @@ def _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metr
 
     outliers = Parallel(n_jobs=-1, verbose=int(verbose)*50)(delayed(generate_outlier_frame)
                                    (good, trust_frame, norm_weight(w, trust_metrics), False)
+                                   for w in combinations)
+    return outliers
+
+
+def mean_T_delta(result, target='Alfa'):
+    return -np.subtract(*map(np.nanmean,np.split(result.values, [1], axis=1)))
+
+def generate_mean_T_delta_frame(good, trust_frame, w, target, par=False):
+    try:
+        _ = trust_frame.xs(good, level='var').mean()
+    except KeyError:
+        raise ValueError("Need to set a good behaviour that exists in the trust_frame")
+
+    # TODO experiment with wether it's better to parallelise the inner or outer version of this.... (i.e. par/w vs par/single
+    weighted_trust_perspectives = Trust.generate_node_trust_perspective(trust_frame,
+                                                                        flip_metrics=[],
+                                                                        metric_weights=w,
+                                                                        par=par)
+    l_outliers = []
+    for i, tf in weighted_trust_perspectives.groupby(level=['var','run', 'observer']):
+        l_outliers.append((i,mean_T_delta(tf, target)))
+    outlier = pd.Series(dict(l_outliers))
+    outlier.index.names = ['var','run', 'observer']
+    outlier = outlier.sort_index().dropna(how='all').reset_index()
+    for k in w.keys():
+        outlier[k] = w[k]
+    outlier.set_index(['var'], inplace=True)
+    return outlier
+
+def perform_weight_factor_target_mean_T_delta_analysis_on_trust_frame(trust_frame, good,
+                                                                      min_emphasis = 0, max_emphasis = 3, extra=None,
+                                                                      verbose=False, par=False, target='Alfa',
+                                                                      excluded=[]):
+    """
+    For a given trust frame perform grey weight factor distribution analysis to
+    generate a frame with metrics/metric weights as a multiindex with columns for each comparison between behaviours
+
+    :param trust_frame:
+    :param good: the baseline behaviour to assess against
+    :param min_metrics:
+    :param: max_metrics:
+    :param: max_emphasis:
+    :param: target:
+    :return:
+    """
+    # Extract trust metric names from frame
+    trust_metrics = list(trust_frame.keys())
+    if max_emphasis - min_emphasis < 2:
+        raise RuntimeError("Setting Max Emphasis <2 is pointless; Runs all Zeros")
+
+    if extra is None:
+        extra = ""
+
+    combinations = ifilter(np.any,
+                          itertools.product(
+                              xrange(
+                                  min_emphasis, max_emphasis
+                              ), repeat=len(trust_metrics)
+                          )
+    )
+    combinations = ifilter(lambda c: c not in excluded, combinations)
+    #combinations = sorted(combinations, key= lambda l: sum(map(abs,l)))
+    if par:
+        outliers = _target_mean_T_delta_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, target, verbose=True)
+    else:
+        outliers = _target_mean_T_delta_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, target, verbose=True)
+
+    sums = pd.concat(outliers).reset_index()
+    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{}{}{}_{}".format("meandelta",good,extra,max_emphasis))
+    return sums
+
+
+def _target_mean_T_delta_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, target, verbose):
+    outliers = []
+    for i, w in enumerate(combinations):
+        if verbose: print(strftime("%Y-%m-%d %H:%M:%S", gmtime()), i, w)
+        outlier = generate_mean_T_delta_frame(good, trust_frame, norm_weight(w, trust_metrics), target, par=True)
+        outliers.append(outlier)
+    return outliers
+
+def _target_mean_T_delta_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, target, verbose):
+
+    outliers = Parallel(n_jobs=-1, verbose=int(verbose)*50)(delayed(generate_mean_T_delta_frame)
+                                   (good, trust_frame, norm_weight(w, trust_metrics), target, False)
                                    for w in combinations)
     return outliers
 

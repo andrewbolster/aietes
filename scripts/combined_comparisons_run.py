@@ -77,7 +77,7 @@ if __name__ == "__main__":
     #             store.trust.xs('Charlie', level='observer', drop_level=False)
     #         ]).xs(run, level='run', drop_level=False)
     #
-    #     outliers = rwc.perform_weight_factor_analysis_on_trust_frame(sub_frame, "CombinedTrust", extra=run, min_emphasis=0,
+    #     outliers = rwc.perform_weight_factor_outlier_analysis_on_trust_frame(sub_frame, "CombinedTrust", extra=run, min_emphasis=0,
     #                                                       max_emphasis=3, par=False)
     #     outliers.to_hdf(os.path.join(exp.exp_path,"outliers.h5"),"CombinedTrust_{}_3".format(run))
 

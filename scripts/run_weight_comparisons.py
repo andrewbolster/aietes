@@ -7,7 +7,7 @@ import os
 import pandas as pd
 import itertools
 
-from bounos.Analyses.Weight import perform_weight_factor_analysis_on_trust_frame
+from bounos.Analyses.Weight import perform_weight_factor_outlier_analysis_on_trust_frame
 
 phys_metrics = [u'INDD', u'INHD', u'Speed']
 comms_metrics = [u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']
@@ -18,6 +18,6 @@ results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Compa
 
 if __name__ == "__main__":
     with pd.get_store(results_path + '.h5') as store:
-        outliers = perform_weight_factor_analysis_on_trust_frame(store.trust, "CombinedTrust",
-                                                                 min_emphasis=0, max_emphasis=2, par=True)
+        outliers = perform_weight_factor_outlier_analysis_on_trust_frame(store.trust, "CombinedTrust",
+                                                                         min_emphasis=0, max_emphasis=2, par=True)
     outliers.to_hdf(os.path.join(results_path, "outliers.h5"), "CombinedTrust_{}_3".format("SmallOne"))

@@ -189,7 +189,7 @@ def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, 
                   **txt_kwargs)
 
 
-def build_target_weights(h5_path):
+def build_outlier_weights(h5_path):
     """Outliers should have keys of runs"""
     with pd.get_store(h5_path) as store:
         keys = store.keys()
@@ -207,6 +207,12 @@ def build_target_weights(h5_path):
     sorted_joined_target_weights = joined_target_weights.reset_index('run', drop=True).sort()
 
     return sorted_joined_target_weights
+
+def build_mean_delta_t_weights(h5_path):
+
+    with pd.get_store(h5_path) as store:
+        mdts = store.get('meandeltaCombinedTrust_2')
+
 
 def calc_correlations_from_weights(weights):
 
@@ -285,7 +291,7 @@ class Aaamas(unittest.TestCase):
     def recompute_features_in_shared(cls):
         # All Metrics
         print "Building Joined Target Weights"
-        joined_target_weights = build_target_weights(results_path + "/outliers.bkup.h5")
+        joined_target_weights = build_outlier_weights(results_path + "/outliers.bkup.h5")
         joined_feats = format_features(
             target_weight_feature_extractor(
                 joined_target_weights
