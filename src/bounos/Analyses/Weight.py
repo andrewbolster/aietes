@@ -229,6 +229,42 @@ def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None, sign
         target_weights = time_summed_outliers.xs(target, level='target', axis=1)
     return target_weights.fillna(0.0)  # Nans map to no outliers
 
+def summed_outliers_per_weight_as_matrix(weight_df, observer, n_metrics, target=None, signed=False):
+
+    # Select Perspective here
+    weight_df = weight_df[weight_df.observer == observer]
+    weight_df = categorise_dataframe(weight_df)
+
+    # Metrics are the last sector of the frame, set these as leading indices
+    metric_keys = list(weight_df.keys()[-n_metrics:])
+    weight_df.set_index(metric_keys + ['var', 't'], inplace=True)
+
+    # REMEMBER TO CHECK THIS WHEN DOING MULTIPLE RUNS (although technically it shouldn't matter....)
+    weight_df.drop(['observer', 'run'], axis=1, inplace=True)
+
+    #TODO: Assert abs(signed) = unsigned
+    # Sum for each run (i.e. group by everything but time)
+    if signed:
+        d = {'upper':1, 'lower':-1}
+        r = weight_df['range'].apply(d.get)
+        f = lambda c: c*r
+        time_summed_outliers = \
+            weight_df\
+                .drop('range', axis=1)\
+                .apply(f)\
+                .groupby(level=list(weight_df.index.names[:-1]))\
+                .sum()\
+                .unstack('var')
+    else:
+        time_summed_outliers = \
+            weight_df\
+                .groupby(level=list(weight_df.index.names[:-1]))\
+                .sum()\
+                .unstack('var')
+
+    if target is not None:
+        target_weights = time_summed_outliers.xs(target, level='target', axis=1)
+    return target_weights.fillna(0.0)  # Nans map to no outliers
 
 if __name__ == "__main__":
     observer = 'Bravo'
@@ -236,28 +272,13 @@ if __name__ == "__main__":
     n_nodes = 6
     n_metrics = 9
 
-    results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-03-16-45-26"
+    results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
 
-    with pd.get_store('/home/bolster/src/aietes/results/outlier_backup.h5') as store:
+    with pd.get_store(results_path + "/outliers.bkup.h5") as store:
         target_weights_dict = {}
-        for runkey in store.keys():
-            print runkey
-            target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey), observer, n_metrics,
-                                                                     target=target)
-    target_weights = pd.concat(target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names)
-    # These results handily confirm that there is a 'signature' of badmouthing as RandomFlatWalk was incorrectly configured.
-    #
-    # Need to:
-    # 1. Perform multi-run tolerance analysis of metrics (i.e. turn the below into a boxplot)
-    # 2. Perform cross correlation analysis on metrics across runs/behaviours (what metrics are redundant)
-    known_good_features_d = {}
-    for basekey in target_weights.keys():  # Parallelisable
-        print basekey
-        # Single DataFrame of all features against one behaviour
-        var_weights = target_weights.apply(lambda s: s / target_weights[basekey], axis=0).dropna()
-        known_good_features_d[basekey] = pd.concat(
-            [feature_extractor(s.reset_index(), var) for var, s in var_weights.iteritems()],
-            keys=var_weights.keys(), names=['var', 'metric'])
+        weight_df = store.get(store.keys()[0])
+        summed_outliers_per_weight(weight_df, observer, n_metrics, target=target)
+
 
 
 
