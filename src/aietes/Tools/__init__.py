@@ -13,6 +13,8 @@
  * Contributors:
  *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
+from collections import defaultdict
+
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
@@ -451,6 +453,8 @@ def linear2db(linear):
 #
 # Helper Classes
 #
+
+tree = lambda: defaultdict(tree)
 
 
 class Dotdictify(dict):
