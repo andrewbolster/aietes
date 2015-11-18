@@ -1,17 +1,16 @@
 # coding=utf-8
 
 from __future__ import division
-
 import itertools
 import tempfile
 import unittest
 from collections import defaultdict
-
 import matplotlib.pylab as plt
 import pandas as pd
 import sklearn.ensemble as ske
 from scipy.stats.stats import pearsonr
 
+from bounos.Analyses.Trust import generate_node_trust_perspective
 from bounos.ChartBuilders import format_axes, latexify
 from aietes.Tools import *
 from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_feature_extractor, \
@@ -57,17 +56,23 @@ def assess_results(perspectives_d, base_key='Fair'):
     return results
 
 
-def feature_validation_plot(weighted_trust_perspectives, feat_weights, ewma=True, target='Alfa', observer='Bravo'):
+def feature_validation_plots(weighted_trust_perspectives, feat_weights, title='Weighted', ewma=True, target='Alfa',
+                             observer='Bravo'):
     if ewma:
         _f = lambda f: pd.stats.moments.ewma(f, span=4)
     else:
         _f = lambda f: f
 
     for key, trust in weighted_trust_perspectives.items():
-        ax = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(return_type='axes')
-        title = "Weighted {}".format('-'.join(key))
-        ax.set_title(title)
-        plt.show()
+        fig_size = latexify(columns=0.5, factor=1)
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.add_subplot(1, 1, 1)
+        _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
+        this_title = "{} {}".format(title, '-'.join(key))
+        ax.set_title(this_title)
+        format_axes(ax)
+        fig.tight_layout(pad=0.3)
+        yield (fig, ax)
 
 
 ###########
@@ -158,7 +163,7 @@ def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, 
                   **txt_kwargs)
 
 
-def build_outlier_weights(h5_path):
+def build_outlier_weights(h5_path, signed=False):
     """Outliers should have keys of runs
     :param h5_path:
     """
@@ -172,12 +177,13 @@ def build_outlier_weights(h5_path):
             target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey),
                                                                      observer, n_metrics,
                                                                      target=target,
-                                                                     signed=True)
+                                                                     signed=False)
 
-    joined_target_weights = pd.concat(target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names)
-    sorted_joined_target_weights = joined_target_weights.reset_index('run', drop=True).sort()
+    joined_target_weights = pd.concat(
+        target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names
+    ).reset_index('run', drop=True).sort()
 
-    return sorted_joined_target_weights
+    return joined_target_weights
 
 
 def build_mean_delta_t_weights(h5_path):
@@ -219,6 +225,8 @@ def format_features(feats):
 
 
 class Aaamas(unittest.TestCase):
+    signed = True
+
     @classmethod
     def setUpClass(self):
         if use_temp_dir:
@@ -242,33 +250,35 @@ class Aaamas(unittest.TestCase):
             'linewidth': 2
         }
         if recompute:
-            self.recompute_features_in_shared()
+            self.recompute_features_in_shared(signed=self.signed)
 
+        dumping_suffix = "_signed" if self.signed else "_unsigned"
         with pd.get_store(shared_h5_path) as store:
-            self.joined_target_weights = store.get('joined_target_weights')
-            self.joined_feats = store.get('joined_feats')
-            self.comms_only_feats = store.get('comms_only_feats')
-            self.phys_only_feats = store.get('phys_only_feats')
-            self.comms_only_weights = store.get('comms_only_weights')
-            self.phys_only_weights = store.get('phys_only_weights')
+            self.joined_target_weights = store.get('joined_target_weights' + dumping_suffix)
+            self.joined_feats = store.get('joined_feats' + dumping_suffix)
+            self.comms_only_feats = store.get('comms_only_feats' + dumping_suffix)
+            self.phys_only_feats = store.get('phys_only_feats' + dumping_suffix)
+            self.comms_only_weights = store.get('comms_only_weights' + dumping_suffix)
+            self.phys_only_weights = store.get('phys_only_weights' + dumping_suffix)
 
         self.joined_feat_weights = categorise_dataframe(non_zero_rows(self.joined_feats).T)
         self.comms_feat_weights = categorise_dataframe(non_zero_rows(self.comms_only_feats).T)
         self.phys_feat_weights = categorise_dataframe(non_zero_rows(self.phys_only_feats).T)
 
     @classmethod
-    def recompute_features_in_shared(cls):
+    def recompute_features_in_shared(cls, signed=False):
         # All Metrics
-        print "Building Joined Target Weights"
-        joined_target_weights = build_outlier_weights(results_path + "/outliers.bkup.h5")
+        print "Building Joined {} Target Weights".format("Signed" if signed else "Unsigned")
+        joined_target_weights = build_outlier_weights(results_path + "/outliers.bkup.h5", signed=signed)
         joined_feats = format_features(
             target_weight_feature_extractor(
                 joined_target_weights
             )
         )
+        dumping_suffix = "_signed" if signed else "_unsigned"
         print "Dumping Joined Target Weights"
-        joined_target_weights.to_hdf(shared_h5_path, 'joined_target_weights')
-        joined_feats.to_hdf(shared_h5_path, 'joined_feats')
+        joined_target_weights.to_hdf(shared_h5_path, 'joined_target_weights' + dumping_suffix)
+        joined_feats.to_hdf(shared_h5_path, 'joined_feats' + dumping_suffix)
         print "Building Comms Target Weights"
         comms_only_weights = drop_metrics_from_weights_by_key(
             joined_target_weights,
@@ -280,8 +290,8 @@ class Aaamas(unittest.TestCase):
             )
         )
         print "Dumping Comms Target Weights"
-        comms_only_weights.to_hdf(shared_h5_path, 'comms_only_weights')
-        comms_only_feats.to_hdf(shared_h5_path, 'comms_only_feats')
+        comms_only_weights.to_hdf(shared_h5_path, 'comms_only_weights' + dumping_suffix)
+        comms_only_feats.to_hdf(shared_h5_path, 'comms_only_feats' + dumping_suffix)
         print "Building Phys Target Weights"
         phys_only_weights = drop_metrics_from_weights_by_key(
             joined_target_weights,
@@ -293,8 +303,8 @@ class Aaamas(unittest.TestCase):
             )
         )
         print "Dumping Phys Target Weights"
-        phys_only_weights.to_hdf(shared_h5_path, 'phys_only_weights')
-        phys_only_feats.to_hdf(shared_h5_path, 'phys_only_feats')
+        phys_only_weights.to_hdf(shared_h5_path, 'phys_only_weights' + dumping_suffix)
+        phys_only_feats.to_hdf(shared_h5_path, 'phys_only_feats' + dumping_suffix)
 
     def testThreatSurfacePlot(self):
         fig_filename = 'img/threat_surface_sum'
@@ -464,6 +474,167 @@ class Aaamas(unittest.TestCase):
             scores = cross_validation.cross_val_score(reg, data, labels, scoring='mean_squared_error', n_jobs=4)
             print scores, sp.stats.describe(scores)
 
+    def test0ValidationBoxPlots(self):
+        """
 
-if __name__ == '__main__':
-    Aaamas.recompute_features_in_shared()
+        :return:
+        """
+        subset_str = "Full"
+        with pd.get_store(results_path + '.h5') as store:
+            trust_observations = store.trust.xs('Bravo', level='observer', drop_level=False).dropna()
+        feat_weights_d = {
+            "full": self.joined_feat_weights,
+            "comms only": self.comms_feat_weights,
+            "phys only": self.phys_feat_weights
+        }
+
+        for subset_str, feat_weights in feat_weights_d.items():
+            self.boxPlotValidations(trust_observations, feat_weights, subset_str)
+
+    def boxPlotValidations(self, trust_observations, feat_weights, subset_str):
+        fig_filename_prefix = 'img/boxplots_'
+        perspectives = generate_weighted_trust_perspectives(trust_observations, feat_weights)
+        fig_gen = feature_validation_plots(perspectives,
+                                           feat_weights,
+                                           title="{} {} Weighted".format(
+                                               subset_str.capitalize(),
+                                               "Signed" if self.signed else "Unsigned"
+                                           ))
+        for fig, ax in fig_gen:
+            fig_filename = fig_filename_prefix + ax.get_title().lower().replace(' ', '_') + '.png'
+            fig.savefig(fig_filename)
+            self.assertTrue(os.path.isfile(fig_filename))
+
+
+class AaamasResultSelection(unittest.TestCase):
+    signed = True
+
+    @classmethod
+    def setUpClass(self):
+        if use_temp_dir:
+            self.dirpath = tempfile.mkdtemp()
+        else:
+            self.dirpath = fig_basedir
+
+        os.chdir(self.dirpath)
+
+        if not os.path.exists("img"):
+            os.makedirs("img")
+        if not os.path.exists("input"):
+            os.makedirs("input")
+
+        # # Plot Style Config
+
+        _boxplot_kwargs = {
+            'showmeans': True,
+            'showbox': False,
+            'widths': 0.2,
+            'linewidth': 2
+        }
+
+        dumping_suffix = "_signed" if self.signed else "_unsigned"
+        with pd.get_store(shared_h5_path) as store:
+            self.joined_target_weights = store.get('joined_target_weights' + dumping_suffix)
+            self.joined_feats = store.get('joined_feats' + dumping_suffix)
+            self.comms_only_feats = store.get('comms_only_feats' + dumping_suffix)
+            self.phys_only_feats = store.get('phys_only_feats' + dumping_suffix)
+            self.comms_only_weights = store.get('comms_only_weights' + dumping_suffix)
+            self.phys_only_weights = store.get('phys_only_weights' + dumping_suffix)
+
+        self.joined_feat_weights = categorise_dataframe(non_zero_rows(self.joined_feats).T)
+        self.comms_feat_weights = categorise_dataframe(non_zero_rows(self.comms_only_feats).T)
+        self.phys_feat_weights = categorise_dataframe(non_zero_rows(self.phys_only_feats).T)
+
+    def testGetBestFullRuns(self):
+        """
+        Purpose of this is to get the best results for full-metric scope
+        (as defined as max(T_~Alfa.mean() - T_Alfa.mean())
+
+        :return:
+        """
+        pass
+
+
+
+    def testGetBestCommsRuns(self):
+        """
+        Purpose of this is to get the best results for full-metric scope
+        (as defined as max(T_~Alfa.mean() - T_Alfa.mean())
+        A "Run" is from
+            an individual node on an individual run
+        This returns a run for
+            each non-control behaviour
+
+        i.e. something that will be sensibly processed by
+        _inner = lambda x: map(np.nanmean,np.split(x, [1], axis=1))
+        assess = lambda x: -np.subtract(*_inner(x))
+        assess_run = lambda x: assess(x.xs(target_str, level='var').xs(0,level='run').values)
+
+        :return: best run
+        """
+
+
+        def drop_metrics_from_weights_by_key(target_weights, drop_keys):
+            reset_by_keys = target_weights.reset_index(level=drop_keys)
+            zero_indexes = (reset_by_keys[drop_keys] == 0.0).all(axis=1)
+            dropped_target_weights = reset_by_keys[zero_indexes].drop(drop_keys, 1)
+            return dropped_target_weights
+
+        with pd.get_store(results_path + '.h5') as store:
+            trust_observations = store.trust.dropna()
+
+
+
+        comms_weights = drop_metrics_from_weights_by_key(self.joined_target_weights, ['INDD', 'INHD', 'Speed'] )
+        feats = target_weight_feature_extractor(comms_weights, raw=True)
+
+        available_bev_keys = feats.keys()
+        base_str = 'CombinedTrust'
+        target_str = 'CombinedSelfishTargetSelection'
+        for target, reg in feats[base_str]:
+            if target == target_str:
+                f = reg.feature_importances_
+
+
+        _inner = lambda x: map(np.nanmean,np.split(x, [1], axis=1))
+        assess = lambda x: -np.subtract(*_inner(x))
+
+        def generate_weighted_trust_perspectives(trust_observations, feat_weights, par=True):
+            weighted_trust_perspectives = []
+            for w in feat_weights:
+                weighted_trust_perspectives.append(generate_node_trust_perspective(
+                    trust_observations,
+                    metric_weights=pd.Series(w),
+                    par=par
+                ))
+
+            return weighted_trust_perspectives
+
+
+        def best_group_in_perspective(perspective):
+            group = perspective.groupby(level=['observer','run']).apply(assess)
+            best_group = group.argmax()
+            return best_group, group[best_group]
+
+        combinations = [f * i for i in itertools.product([-1,1],repeat=6)]
+
+        perspectives = generate_weighted_trust_perspectives(trust_observations[comm_keys],
+                                                        combinations, par=True)
+        group_keys, assessments = zip(*map(best_group_in_perspective,perspectives))
+
+
+        best_weight = combinations[np.argmax(assessments)]
+        best_run = group_keys[np.argmax(assessments)]
+        if np.all(best_weight == f):
+            print("Actually got it right first time for a change!")
+        self.assertEqual(('Foxtrot', 0),best_run)
+        return best_weight, best_run
+
+
+
+
+
+
+#if __name__ == '__main__':
+#    Aaamas.recompute_features_in_shared(signed=True)
+#    Aaamas.recompute_features_in_shared(signed=False)

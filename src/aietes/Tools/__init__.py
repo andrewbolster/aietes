@@ -1100,7 +1100,9 @@ def get_latest_aietes_datafile(base_dir=None):
     fqp = os.getcwd() if base_dir is None else base_dir
     candidate_data_files = os.listdir(fqp)
     candidate_data_files = [
-        f for f in candidate_data_files if is_valid_aietes_datafile(f)]
+        f for f in candidate_data_files
+        if is_valid_aietes_datafile(f)
+    ]
     candidate_data_files.sort(key=os.path.getmtime, reverse=True)
     if len(candidate_data_files) == 0:
         raise ValueError(

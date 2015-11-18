@@ -312,22 +312,32 @@ def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None, sign
     return target_weights.fillna(0.0)  # Nans map to no outliers
 
 
-def feature_extractor(df, target):
+def feature_extractor(df, target, raw=False):
     data = df.drop(target, axis=1)
     reg = ske.ExtraTreesRegressor(n_jobs=-1, n_estimators=512)
     reg.fit(data, df[target])
-    return pd.Series(dict(zip(data.keys(), reg.feature_importances_)))
+    if raw:
+        result = target, reg
+    else:
+        result = pd.Series(dict(zip(data.keys(), reg.feature_importances_)))
+    return result
 
+def target_weight_feature_extractor(target_weights, comparison=None, raw=False):
+    if comparison is None:
+        comparison = np.subtract
 
-def target_weight_feature_extractor(target_weights):
     known_good_features_d = {}
     for basekey in target_weights.keys():  # Parallelisable
         print basekey
         # Single DataFrame of all features against one behaviour
-        var_weights = target_weights.apply(lambda s: s - target_weights[basekey], axis=0).dropna()
-        known_good_features_d[basekey] = \
-            pd.concat([feature_extractor(s.reset_index(), var) for var, s in var_weights.iteritems()],
-                      keys=var_weights.keys(), names=['var', 'metric'])
+        var_weights = target_weights.apply(lambda s: comparison(s, target_weights[basekey]), axis=0).dropna()
+        # Ending up with [basekey,var] as "Baseline" and "target" behaviours
+        if raw:
+            known_good_features_d[basekey] = [feature_extractor(s.reset_index(), var, raw=True) for var, s in var_weights.iteritems()]
+        else:
+            known_good_features_d[basekey] = \
+                pd.concat([feature_extractor(s.reset_index(), var) for var, s in var_weights.iteritems()],
+                          keys=var_weights.keys(), names=['var', 'metric'])
 
     return known_good_features_d
 
