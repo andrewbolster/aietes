@@ -1045,6 +1045,13 @@ def try_forever(exceptions_to_catch, fn):
 
     return new_fn
 
+def npuniq(a):
+    """
+    http://stackoverflow.com/questions/16970982/find-unique-rows-in-numpy-array
+    :param a:
+    :return:
+    """
+    return np.unique(a.view(np.dtype((np.void, a.dtype.itemsize*a.shape[1])))).view(a.dtype).reshape(-1, a.shape[1])
 
 def timeit():
     """
@@ -1070,7 +1077,7 @@ def timeit():
             """
             start = time()
             res = func(*args, **kwargs)
-            logging.info("%s (%s)" % (func.__name__, time() - start))
+            print("%s (%s)" % (func.__name__, time() - start))
             return res
 
         return wrapper

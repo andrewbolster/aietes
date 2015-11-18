@@ -21,23 +21,37 @@ from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_fea
 #  HELPER FUNCS  #
 ##################
 
-def plot_result(result, title=None, stds=True):
-    fig = plt.figure()
+def plot_result(result, title=None, stds=True, spans=None):
+    fig_size = latexify(columns=_texcol, factor=_texfac)
+
+    fig = plt.figure(figsize=fig_size)
     ax = fig.add_subplot(1, 1, 1)
-    result.plot(ax=ax)
-    pltlin = lambda v: ax.axhline(v, alpha=0.3, color='blue')
+    if spans is not None:
+        plottable = pd.stats.moments.ewma(result, span=spans)
+    else:
+        plottable = result
 
     def pltstd(tup):
         mean, std = tup
-        ax.axhline(mean + std, alpha=0.3, color='green')
-        ax.axhline(mean - std, alpha=0.3, color='red')
+        ax.axhline(mean + std, alpha=0.3, ls=':', color='green')
+        ax.axhline(mean - std, alpha=0.3, ls=':', color='red')
+    _=plottable.iloc[:,0].plot(ax=ax, alpha=0.8)
+    _=plottable.iloc[:,1:].plot(ax=ax, alpha=0.4)
 
-    map(pltlin, result.mean())
+    for i,v in enumerate(result.mean()):
+        if i: # Everyone Else
+            ax.axhline(v, alpha=0.3, ls='--', color='blue')
+        else: # Alfa
+            ax.axhline(v, alpha=0.6, ls='-', color='blue')
     if stds:
         map(pltstd, zip(result.mean(), result.std()))
-    ax.set_title(title)
-    print(result.describe())
-    plt.show()
+    ax.set_xlabel("Simulated Time (mins)")
+    ax.set_ylabel("Weighted Trust Value")
+    ax.legend().set_visible(False)
+    ax.set_xticks(np.arange(0,61,10))
+    ax.set_xticklabels(np.arange(0,61,10))
+
+    return fig,ax,result
 
 
 def assess_result(result, target='Alfa'):
@@ -64,20 +78,22 @@ def feature_validation_plots(weighted_trust_perspectives, feat_weights, title='W
         _f = lambda f: f
 
     for key, trust in weighted_trust_perspectives.items():
-        fig_size = latexify(columns=0.5, factor=1)
+        fig_size = latexify(columns=_texcol, factor=_texfac)
         fig = plt.figure(figsize=fig_size)
         ax = fig.add_subplot(1, 1, 1)
         _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
         this_title = "{} {}".format(title, '-'.join(key))
         ax.set_title(this_title)
         format_axes(ax)
-        fig.tight_layout(pad=0.3)
+        fig.tight_layout()
         yield (fig, ax)
 
 
 ###########
 # OPTIONS #
 ###########
+_texcol = 0.5
+_texfac = 0.9
 use_temp_dir = False
 show_outputs = False
 recompute = False
@@ -87,7 +103,6 @@ _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 
 golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 w = 6
-latexify(columns=2, factor=0.55)
 
 phys_keys = ['INDD', 'INHD', 'Speed']
 comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
@@ -98,6 +113,11 @@ observer = 'Bravo'
 target = 'Alfa'
 n_nodes = 6
 n_metrics = 9
+key_d = {
+    'full': None,
+    'comms': comm_keys,
+    'phys': phys_keys
+}
 
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
 shared_h5_path = '/dev/shm/shared.h5'
@@ -308,7 +328,7 @@ class Aaamas(unittest.TestCase):
 
     def testThreatSurfacePlot(self):
         fig_filename = 'img/threat_surface_sum'
-        fig_size = latexify(columns=0.5, factor=0.9)
+        fig_size = latexify(columns=_texcol, factor=_texfac)
         fig_size = (fig_size[0], fig_size[1] / 2)
         print fig_size
 
@@ -392,7 +412,8 @@ class Aaamas(unittest.TestCase):
         self.save_feature_plot(feats, fig_filename)
 
     def save_feature_plot(self, feats, fig_filename):
-        fig_size = latexify(columns=0.5, factor=1)
+        fig_size = latexify(columns=_texcol, factor=_texfac)
+        print(feats.keys())
         fig = plt.figure(figsize=fig_size)
         ax = fig.add_subplot(1, 1, 1)
         ax = feats[~(feats == 0).all(axis=1)].plot(
@@ -400,7 +421,7 @@ class Aaamas(unittest.TestCase):
             legend=False
         )
         ax.set_xlabel("Behaviour")
-        ax.set_ylabel("Est. Best Metric Weighting")
+        ax.set_ylabel("Est. Metric Significance")
         fig = ax.get_figure()
         bars = ax.patches
         hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
@@ -408,7 +429,7 @@ class Aaamas(unittest.TestCase):
             bar.set_hatch(hatch)
         ax.legend(loc='best', ncol=1)
         format_axes(ax)
-        fig.tight_layout(pad=0.3)
+        fig.tight_layout()
         fig.savefig(fig_filename, transparent=True)
         self.assertTrue(os.path.isfile(fig_filename + '.png'))
         if show_outputs:
@@ -474,32 +495,108 @@ class Aaamas(unittest.TestCase):
             scores = cross_validation.cross_val_score(reg, data, labels, scoring='mean_squared_error', n_jobs=4)
             print scores, sp.stats.describe(scores)
 
-    def test0ValidationBoxPlots(self):
+    def test0ValidationBestPlots(self):
         """
 
         :return:
         """
-        subset_str = "Full"
         with pd.get_store(results_path + '.h5') as store:
-            trust_observations = store.trust.xs('Bravo', level='observer', drop_level=False).dropna()
-        feat_weights_d = {
-            "full": self.joined_feat_weights,
-            "comms only": self.comms_feat_weights,
-            "phys only": self.phys_feat_weights
-        }
+            trust_observations = store.trust.dropna()
+        map_levels(trust_observations, var_rename_dict)
 
-        for subset_str, feat_weights in feat_weights_d.items():
-            self.boxPlotValidations(trust_observations, feat_weights, subset_str)
 
-    def boxPlotValidations(self, trust_observations, feat_weights, subset_str):
+        plots = {}
+        weights = {}
+        for subset_str, key in key_d.items():
+            if key is None:
+                _trust_observations = trust_observations
+            else:
+                _trust_observations = trust_observations[key]
+            best_d = uncpickle(fig_basedir+'/best_{}_runs'.format(subset_str))['Fair']
+            for target_str, best in best_d.items():
+                test_weight = generate_node_trust_perspective(
+                    _trust_observations.xs(target_str, level='var'),
+                    metric_weights=pd.Series(best[1]))
+                weights[(subset_str,target_str)] = best[1].copy()
+                plots[(subset_str,target_str)]=plot_result(test_weight\
+                            .xs(best[0], level=['observer','run'])\
+                            .dropna(axis=1, how='all'), stds=False, spans=6)
+        inverted_results = defaultdict(list)
+        for (subset_str, target_str), (fig,ax,result) in plots.items():
+            fig_filename = "img/best_{}_run_{}".format(subset_str, target_str)
+            #ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+            #    subset_str.capitalize(),
+            #    target_str
+            #))
+            format_axes(ax)
+            fig.savefig(fig_filename, transparent=True)
+            self.assertTrue(os.path.isfile(fig_filename + '.png'))
+            if show_outputs:
+                try_to_open(fig_filename + '.png')
+            print subset_str,target_str
+            inverted_results[subset_str].append((target_str,result))
+        for subset_str, results in inverted_results.items():
+            fig_size = latexify(columns=_texcol, factor=_texfac)
+            fig = plt.figure(figsize=fig_size)
+            ax = fig.add_subplot(1, 1, 1)
+
+            #        _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
+
+            #results.boxplot(ax=ax)
+            fig_filename = "img/box_{}_run_{}".format(subset_str, target_str)
+            ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+                subset_str.capitalize(),
+                target_str
+            ))
+            format_axes(ax)
+            #fig.savefig(fig_filename, transparent=True)
+            #self.assertTrue(os.path.isfile(fig_filename + '.png'))
+            if show_outputs:
+                try_to_open(fig_filename + '.png')
+            print subset_str,target_str
+
+    def test(self):
+        input_filename = 'input/phys_metric_correlations'
+        corrs = calc_correlations_from_weights(self.phys_only_weights)
+        with open(input_filename + '.tex', 'w') as f:
+            f.write(corrs.loc['Fair'].apply(lambda v: np.round(v, decimals=3)).to_latex(escape=False))
+        self.assertTrue(os.path.isfile(input_filename + '.tex'))
+
+    @unittest.skip("GAH")
+    def testValidationBoxPlots(self):
+        with pd.get_store(results_path + '.h5') as store:
+            trust_observations = store.trust.dropna()
+        map_levels(trust_observations, var_rename_dict)
+
+
+        plots = {}
+        weights = {}
+        for subset_str, key in key_d.items():
+            if key is None:
+                _trust_observations = trust_observations
+            else:
+                _trust_observations = trust_observations[key]
+            best_d = uncpickle(fig_basedir+'/best_{}_runs'.format(subset_str))['Fair']
+            for target_str, best in best_d.items():
+                test_weight = generate_node_trust_perspective(
+                    _trust_observations.xs(target_str, level='var'),
+                    metric_weights=pd.Series(best[1]))
+
         fig_filename_prefix = 'img/boxplots_'
-        perspectives = generate_weighted_trust_perspectives(trust_observations, feat_weights)
-        fig_gen = feature_validation_plots(perspectives,
-                                           feat_weights,
-                                           title="{} {} Weighted".format(
-                                               subset_str.capitalize(),
-                                               "Signed" if self.signed else "Unsigned"
-                                           ))
+        fig_gen = []
+
+        for (subset_str, target_str), (fig,ax,result) in plots.items():
+            fig_filename = "img/box_{}_run_{}".format(subset_str, target_str)
+            ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+                subset_str.capitalize(),
+                target_str
+            ))
+            format_axes(ax)
+            fig.savefig(fig_filename, transparent=False)
+            self.assertTrue(os.path.isfile(fig_filename + '.png'))
+            if show_outputs:
+                try_to_open(fig_filename + '.png')
+            print subset_str,target_str
         for fig, ax in fig_gen:
             fig_filename = fig_filename_prefix + ax.get_title().lower().replace(' ', '_') + '.png'
             fig.savefig(fig_filename)

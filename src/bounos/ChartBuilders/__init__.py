@@ -808,7 +808,7 @@ def latexify(columns=1, factor=0.45):
               'axes.labelsize': 10,  # fontsize for x and y labels (was 10)
               'axes.titlesize': 10,
               'font.size': 10,  # was 10/8
-              'legend.fontsize': 8,  # was 10,
+              'legend.fontsize': 10,  # was 10,
               'legend.labelspacing': 0.2,
               'legend.borderpad': 0,
               'xtick.labelsize': 8,

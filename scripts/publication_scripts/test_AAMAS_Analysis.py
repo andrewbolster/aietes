@@ -5,13 +5,14 @@ import itertools
 import tempfile
 import unittest
 import matplotlib.pylab as plt
+import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 
 from bounos.Analyses.Trust import generate_node_trust_perspective
 from bounos.ChartBuilders import format_axes, latexify
 import aietes.Tools
 from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_feature_extractor
-
 
 ##################
 #  HELPER FUNCS  #
@@ -44,9 +45,9 @@ show_outputs = False
 recompute = False
 shared_h5_path = '/dev/shm/shared.h5'
 
-_ = aietes.Tools.np.seterr(invalid='ignore')  # Pandas PITA Nan printing
+_ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 
-golden_mean = (aietes.Tools.np.sqrt(5) - 1.0) / 2.0  # because it looks good
+golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 w = 6
 latexify(columns=2, factor=0.55)
 
@@ -92,25 +93,6 @@ def build_mean_delta_t_weights(h5_path):
     with pd.get_store(h5_path) as store:
         mdts = store.get('meandeltaCombinedTrust_2')
 
-
-def calc_correlations_from_weights(weights):
-    def calc_correlations(base, comp, index=0):
-        dp_r = (comp / base).reset_index()
-        return dp_r.corr()[index][:-1]
-
-    _corrs = {}
-    for base, comp in itertools.permutations(weights.keys(), 2):
-        _corrs[(base, comp)] = \
-            calc_correlations(weights[base],
-                              weights[comp])
-
-    corrs = pd.DataFrame.from_dict(_corrs).T.rename(columns=aietes.Tools.metric_rename_dict)
-    aietes.Tools.map_levels(corrs, aietes.Tools.var_rename_dict, 0)
-    aietes.Tools.map_levels(corrs, aietes.Tools.var_rename_dict, 1)
-    corrs.index.set_names(['Control', 'Misbehaviour'], inplace=True)
-    return corrs
-
-
 def drop_metrics_from_weights_by_key(target_weights, drop_keys):
     reset_by_keys = target_weights.reset_index(level=drop_keys)
     zero_indexes = (reset_by_keys[drop_keys] == 0.0).all(axis=1)
@@ -125,17 +107,16 @@ def format_features(feats):
     return alt_feats
 
 
-class AaamasResultSelection(unittest.TestCase):
+class AaamasResultSelection(object):
     signed = True
 
-    @classmethod
-    def setUpClass(cls):
+    def __init__(self):
         if use_temp_dir:
-            cls.dirpath = tempfile.mkdtemp()
+            self.dirpath = tempfile.mkdtemp()
         else:
-            cls.dirpath = fig_basedir
+            self.dirpath = fig_basedir
 
-        aietes.Tools.os.chdir(cls.dirpath)
+        aietes.Tools.os.chdir(self.dirpath)
 
         if not aietes.Tools.os.path.exists("img"):
             aietes.Tools.os.makedirs("img")
@@ -151,12 +132,23 @@ class AaamasResultSelection(unittest.TestCase):
             'linewidth': 2
         }
 
-        dumping_suffix = "_signed" if cls.signed else "_unsigned"
+        dumping_suffix = "_signed" if self.signed else "_unsigned"
         with pd.get_store(shared_h5_path) as store:
-            cls.joined_target_weights = store.get('joined_target_weights' + dumping_suffix)
-            cls.joined_feats = store.get('joined_feats' + dumping_suffix)
+            self.joined_target_weights = store.get('joined_target_weights' + dumping_suffix)
+            self.joined_feats = store.get('joined_feats' + dumping_suffix)
+            self.comms_only_feats = store.get('comms_only_feats' + dumping_suffix)
+            self.phys_only_feats = store.get('phys_only_feats' + dumping_suffix)
+            self.comms_only_weights = store.get('comms_only_weights' + dumping_suffix)
+            self.phys_only_weights = store.get('phys_only_weights' + dumping_suffix)
 
-        cls.joined_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(cls.joined_feats).T)
+        self.joined_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.joined_feats).T)
+        self.comms_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.comms_only_feats).T)
+        self.phys_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.phys_only_feats).T)
+
+        print("Got Everything I Need!")
+        self.testGetBestFullRuns()
+
+
 
     def testGetBestFullRuns(self):
         """
@@ -174,117 +166,79 @@ class AaamasResultSelection(unittest.TestCase):
 
         :return: best run
         """
-
+        feat_d = {
+            'full':(self.joined_feat_weights, None),
+            #'comms':(self.comms_feat_weights, comm_keys),
+            'phys':(self.phys_feat_weights, phys_keys)
+        }
         with pd.get_store(results_path + '.h5') as store:
             trust_observations = store.trust.dropna()
+        for feat_str, (feats, keys) in feat_d.items():
+            print(feat_str)
+            if keys is not None:
+                best = self.best_of_all(feats, trust_observations[keys])
+            else:
+                best = self.best_of_all(feats, trust_observations)
+            aietes.Tools.mkcpickle('best_{}_runs'.format(feat_str), dict(best))
 
-        feats = target_weight_feature_extractor(self.joined_target_weights, raw=True)
 
-        best = self.best_of_all(feats, trust_observations)
 
-        aietes.Tools.mkcpickle('best_runs', dict(best))
-        self.assertTrue()
-
-    def testGetBestCommsRuns(self):
-        """
-        Purpose of this is to get the best results for comms-metric scope
-        (as defined as max(T_~Alfa.mean() - T_Alfa.mean())
-        A "Run" is from
-            an individual node on an individual run
-        This returns a run for
-            each non-control behaviour
-
-        i.e. something that will be sensibly processed by
-        _inner = lambda x: map(np.nanmean,np.split(x, [1], axis=1))
-        assess = lambda x: -np.subtract(*_inner(x))
-        assess_run = lambda x: assess(x.xs(target_str, level='var').xs(0,level='run').values)
-
-        :return: best run
-        """
-
-        with pd.get_store(results_path + '.h5') as store:
-            trust_observations = store.trust.dropna()
-
-        print("Got Trust")
-
-        comms_weights = drop_metrics_from_weights_by_key(self.joined_target_weights, phys_keys)
-        feats = target_weight_feature_extractor(comms_weights, raw=True)
-
-        best = self.best_of_all(feats, trust_observations)
-
-        aietes.Tools.mkcpickle('best_comms_runs', dict(best))
-        self.assertEqual(('Foxtrot', 0),
-                         best['CombinedTrust']['CombinedSelfishTargetSelection'][0])
 
     def best_of_all(self, feats, trust_observations):
         best = aietes.Tools.defaultdict(dict)
-        for base_str, reg_list in feats.items():
+        for (base_str, target_str), feat in feats.to_dict().items():
             print(base_str)
-            if base_str != "CombinedTrust":
+            if base_str != "Fair":
                 continue
-            for target_str, reg in reg_list:
-                if target_str == base_str:
-                    continue
-                else:
-                    print("---" + target_str)
-                    best[base_str][target_str] = \
-                        self.best_run_and_weight(
-                            reg.feature_importances_,
-                            trust_observations)
+
+            print("---" + target_str)
+            best[base_str][target_str] = \
+                self.best_run_and_weight(
+                    feat,
+                    trust_observations)
         return best
 
-    def testGetBestPhysRuns(self):
-        """
-        Purpose of this is to get the best results for phys-metric scope
-        (as defined as max(T_~Alfa.mean() - T_Alfa.mean())
-        A "Run" is from
-            an individual node on an individual run
-        This returns a run for
-            each non-control behaviour
 
-        i.e. something that will be sensibly processed by
-        _inner = lambda x: map(np.nanmean,np.split(x, [1], axis=1))
-        assess = lambda x: -np.subtract(*_inner(x))
-        assess_run = lambda x: assess(x.xs(target_str, level='var').xs(0,level='run').values)
-
-        :return: best run
-        """
-        with pd.get_store(results_path + '.h5') as store:
-            trust_observations = store.trust.dropna()
-
-        phys_weights = drop_metrics_from_weights_by_key(self.joined_target_weights, comm_keys)
-        feats = target_weight_feature_extractor(phys_weights, raw=True)
-
-        best = self.best_of_all(feats, trust_observations)
-
-
-        aietes.Tools.mkcpickle('best_phys_runs', dict(best))
-        self.assertTrue(True)
-
-    def best_run_and_weight(self, f, trust_observations):
-
+    def best_run_and_weight(self, f, trust_observations, par=False, tolerance=0.01):
+        f = pd.Series(f, index=trust_observations.keys())
+        f_val = f.values
+        def _assess(x):
+            return -np.subtract(*map(np.nanmean, np.split(x.values, [1], axis=1)))
+        @aietes.Tools.timeit()
         def generate_weighted_trust_perspectives(_trust_observations, feat_weights, par=True):
             weighted_trust_perspectives = []
             for w in feat_weights:
-                weighted_trust_perspectives.append(generate_node_trust_perspective(
-                    _trust_observations,
-                    metric_weights=pd.Series(w),
-                    par=par
+                weighted_trust_perspectives.append(
+                    generate_node_trust_perspective(
+                        _trust_observations,
+                        metric_weights=pd.Series(w),
+                        par=par
                 ))
             return weighted_trust_perspectives
 
         def best_group_in_perspective(perspective):
             group = perspective.groupby(level=['observer', 'run'])\
-                .apply(lambda x: -aietes.Tools.np.subtract(*map(aietes.Tools.np.nanmean, aietes.Tools.np.split(x, [1], axis=1))))
+                .apply(_assess)
             best_group = group.argmax()
             return best_group, group[best_group]
 
-        combinations = [f * i for i in itertools.product([-1, 1], repeat=len(f))]
-        perspectives = generate_weighted_trust_perspectives(trust_observations[comm_keys],
-                                                            combinations, par=False)
+        combinations = np.asarray([f_val * i for i in itertools.product([-1, 1], repeat=len(f))])
+        for i in f.values[np.abs(f_val)<tolerance]:
+            combinations[:,np.where(f_val==i)]=i
+        combinations = aietes.Tools.npuniq(combinations)
+
+        print("Have {} Combinations".format(len(combinations)))
+        perspectives = generate_weighted_trust_perspectives(trust_observations,
+                                                            combinations, par=par)
+        print("Got Perspectives")
         group_keys, assessments = zip(*map(best_group_in_perspective, perspectives))
-        best_weight = combinations[aietes.Tools.np.argmax(assessments)]
-        best_run = group_keys[aietes.Tools.np.argmax(assessments)]
-        if aietes.Tools.np.all(best_weight == f):
+        best_weight = combinations[np.argmax(assessments)]
+        best_run = group_keys[np.argmax(assessments)]
+        best_score = np.max(assessments)
+        print("Winner is {} with {}@{}".format(best_run, best_weight, best_score))
+        if np.all(best_weight == f):
             print("Actually got it right first time for a change!")
         return best_run, best_weight
+
+if __name__ == "__main__":
+    AaamasResultSelection()
