@@ -351,8 +351,10 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
         else:
             with np.errstate(all='raise'):
                 for k, g in tf.groupby(level=[var, 'run', 'observer']):
-                    trust = generate_single_observer_trust_perspective(g, **exec_args)
-                    trusts.extend([pd.Series(np.concatenate(trust),index=g.index.copy())])
+                    trust_perspective = generate_single_observer_trust_perspective(g, **exec_args)
+                    trust_con = np.concatenate(trust_perspective)
+                    trust_s = pd.Series(trust_con,index=g.index.copy())
+                    trusts.extend([trust_s])
 
         tf = pd.concat(trusts)
         tf.sort_values(inplace=True)
@@ -556,4 +558,3 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     assert any(_d > 1), "All Resultantant Trust Values should be less than 1"
     assert any(0 > _d), "All Resultantant Trust Values should be greater than 0"
     return _d
-

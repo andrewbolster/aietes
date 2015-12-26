@@ -1,6 +1,8 @@
 # coding=utf-8
 from __future__ import division
 
+from scripts.publication_scripts import get_mobility_stats
+
 __author__ = 'bolster'
 
 # coding: utf-8
@@ -8,7 +10,6 @@ __author__ = 'bolster'
 # # Required Modules and Configurations
 
 # In[1]:
-from scripts.publication_scripts import get_mobility_stats
 
 import os
 from os.path import expanduser
@@ -23,10 +24,8 @@ logging.basicConfig()
 
 import pandas as pd
 import numpy as np
-from collections import OrderedDict
 import sklearn.ensemble as ske
 import matplotlib.pylab as plt
-import matplotlib.cm as cm
 from matplotlib import rc_context
 import matplotlib.ticker as plticker
 
@@ -38,55 +37,34 @@ import aietes.Tools as Tools
 from bounos.ChartBuilders import plot_nodes, latexify
 import bounos.Analyses.Trust as Trust
 from bounos.ChartBuilders import weight_comparisons, radar, format_axes
-import scipy.interpolate as interpolate
 
 # pylab.rcParams['figure.figsize'] = 16, 12
 
 ##################
 # USING TEMP DIR #
 ##################
-use_temp_dir = True
+use_temp_dir = False
 
-in_results = functools.partial(os.path.join, Tools._results_dir)
-app_rate_from_path = lambda s: float(".".join(s.split('-')[2].split('.')[0:-1]))
-scenario_map = dict(zip(
-    [u'bella_all_mobile', u'bella_allbut1_mobile', u'bella_single_mobile', u'bella_static'],
-    ['All Mobile', '$n_1$ Static', '$n_1$ Mobile', 'All Static']
-))
-scenario_order = list(reversed([u'bella_all_mobile', u'bella_allbut1_mobile', u'bella_single_mobile', u'bella_static']))
+texify_cols = 1
+texify_factor = 1
 
-golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
-w = 6
-latexify(columns=2, factor=0.55)
+selected_scenarios = [
+#    'single_mobile',
+#    'allbut1_mobile',
+    'bella_all_mobile',
+    'bella_static',
+]
 
-# # Data File Acquistion
-
-# In[4]:
-
-_ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
-result_h5s_by_latest = sorted(filter(lambda p: os.path.basename(p).endswith("h5"),
-                                     map(lambda p: os.path.abspath(os.path.join(Tools._results_dir, p)),
-                                         os.listdir(Tools._results_dir))), key=lambda f: os.path.getmtime(f))
-rate_and_ranges = filter(lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest"),
-                         result_h5s_by_latest)
-app_rates = map(app_rate_from_path, rate_and_ranges)
-
-class TrustCom(unittest.TestCase):
+class ThesisLazyDiagrams(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
         if use_temp_dir:
             cls.dirpath = tempfile.mkdtemp()
         else:
-            cls.dirpath = expanduser("~/src/thesis/papers/active/15_TrustCom/")
+            cls.dirpath = expanduser("~/src/thesis/Figures")
 
         os.chdir(cls.dirpath)
-
-        if not os.path.exists("img"):
-            os.makedirs("img")
-        if not os.path.exists("input"):
-            os.makedirs("input")
-
         # # Plot Style Config
 
         _boxplot_kwargs = {
@@ -111,7 +89,7 @@ class TrustCom(unittest.TestCase):
     def tearDown(self):
         logging.info("Successfully Generated:\n{}".format(self.generated_files))
         if use_temp_dir:
-            shutil.rmtree(self.dirpath)
+            shutil.rmtree(self.dirpath, ignore_errors=True)
 
     def testPhysicalNodeLayout(self):
         # # Graph: Physical Layout of Nodes
@@ -119,11 +97,11 @@ class TrustCom(unittest.TestCase):
         #
         for f in required_files:
             try:
-                os.remove(os.path.join("img", f))
+                os.remove(f)
             except:
                 pass
 
-        latexify(columns=0.5, factor=0.5)
+        latexify(columns=texify_cols, factor=texify_factor) 
 
         base_config = aietes.Simulation.populate_config(
             aietes.Tools.get_config('bella_static.conf'),
@@ -137,11 +115,11 @@ class TrustCom(unittest.TestCase):
         fig = plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
                          square=False)
         fig.tight_layout(pad=0.3)
-        fig.savefig("img/s1_layout.pdf", transparent=True)
+        fig.savefig("s1_layout.pdf", transparent=True)
         plt.close(fig)
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img", f)))
+            self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
 
     def testThroughputLines(self):
@@ -152,11 +130,11 @@ class TrustCom(unittest.TestCase):
         ]
         for f in required_files:
             try:
-                os.remove(os.path.join("img", f))
+                os.remove(f)
             except:
                 pass
 
-        latexify(columns=0.5, factor=0.5)
+        latexify(columns=texify_cols, factor=texify_factor) 
 
         for mobility in ['static', 'all_mobile']:
             df = get_mobility_stats(mobility)
@@ -168,11 +146,11 @@ class TrustCom(unittest.TestCase):
             ax.set_xlabel("Packet Emission Rate (pps)")
             ax.set_ylabel("Avg. Throughput (bps)")
             fig.tight_layout()
-            fig.savefig("img/throughput_sep_lines_{}.pdf".format(mobility), transparent=True, facecolor='white')
+            fig.savefig("throughput_sep_lines_{}.pdf".format(mobility), transparent=True, facecolor='white')
             plt.close(fig)
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img", f)))
+            self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
 
     def testMTFMBoxplots(self):
@@ -187,24 +165,23 @@ class TrustCom(unittest.TestCase):
         ]
         for f in required_files:
             try:
-                os.remove(os.path.join("img", f))
+                os.remove(f)
             except:
                 pass
 
-        figsize = latexify(columns=0.5, factor=0.5)
+        figsize = latexify(columns=texify_cols, factor=texify_factor) 
 
-        selected_scenarios = ['bella_all_mobile', 'bella_static']
         weight_comparisons.plot_mtfm_boxplot(self.good, keyword="fair",
                                              s=selected_scenarios, figsize=figsize,
-                                             xlabel=False, dropnet=True)
+                                             xlabel=False, dropnet=True, prefix="")
         weight_comparisons.plot_mtfm_boxplot(self.malicious, keyword="malicious",
                                              s=selected_scenarios, figsize=figsize,
-                                             xlabel=False, dropnet=True)
+                                             xlabel=False, dropnet=True, prefix="")
         weight_comparisons.plot_mtfm_boxplot(self.selfish, keyword="selfish",
                                              s=selected_scenarios, figsize=figsize,
-                                             xlabel=False, dropnet=True)
+                                             xlabel=False, dropnet=True, prefix="")
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img", f)), f)
+            self.assertTrue(os.path.isfile(f), f)
             self.generated_files.append(f)
 
     def testWeightComparisons(self):
@@ -232,31 +209,33 @@ class TrustCom(unittest.TestCase):
         ]
         for f in required_files:
             try:
-                os.remove(os.path.join("img", f))
+                os.remove(f)
             except:
                 pass
 
-        figsize = latexify(columns=0.5, factor=0.5)
+        figsize = latexify(columns=texify_cols, factor=texify_factor) 
 
-        selected_scenarios = ['bella_all_mobile', 'bella_static']
         for s in selected_scenarios:
             weight_comparisons.plot_weight_comparisons(self.good, self.malicious,
                                                        malicious_behaviour="BadMouthingPowerControl",
                                                        s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair", "Malicious"]
+                                                       labels=["Fair", "Malicious"],
+                                                       prefix=""
                                                        )
             weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
                                                        malicious_behaviour="SelfishTargetSelection",
                                                        s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair", "Selfish"]
+                                                       labels=["Fair", "Selfish"],
+                                                       prefix=""
                                                        )
             weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
                                                        malicious_behaviour="SelfishTargetSelection",
                                                        s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair", "Selfish"]
+                                                       labels=["Fair", "Selfish"],
+                                                       prefix=""
                                                        )
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img", f)))
+            self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
 
     def testSummaryGraphsForMalGdScenarios(self):
@@ -264,16 +243,18 @@ class TrustCom(unittest.TestCase):
         required_files = ["trust_beta_otmf_fair.pdf", "trust_beta_otmf_malicious.pdf", "trust_beta_otmf_selfish.pdf"]
         for f in required_files:
             try:
-                os.remove(os.path.join("img", f))
+                os.remove(f)
             except:
                 pass
 
-        latexify(columns=0.5, factor=0.5)
+        latexify(columns=texify_cols, factor=texify_factor) 
 
         def beta_trusts(trust, length=4096):
+            #TODO This should be optimised to not use the same dataframe
             trust['+'] = (trust.TXThroughput / length) * (1 - trust.PLR)
             trust['-'] = (trust.TXThroughput / length) * trust.PLR
             beta_trust = trust[['+', '-']].unstack(level='target')
+            trust.drop(['+','-'], axis=1, inplace=True)
             return beta_trust
 
         def beta_calcs(beta_trust):
@@ -291,9 +272,9 @@ class TrustCom(unittest.TestCase):
 
             beta, otmf = beta_calcs(beta_trust)
             fig, ax = plt.subplots(1, 1, sharey=True)
-            ax.plot(beta.xs('n0', level='observer')['n1'], label="Hermes", linestyle='--')
-            ax.plot(otmf.xs('n0', level='observer')['n1'], label="OTMF", linestyle=':')
-            ax.plot(mtfm, label="MTFM")
+            ax.plot(beta.xs('n0', level='observer')['n1'].values, label="Hermes", linestyle='--')
+            ax.plot(otmf.xs('n0', level='observer')['n1'].values, label="OTMF", linestyle=':')
+            ax.plot(mtfm.values, label="MTFM")
             ax.set_ylim((0, 1))
             ax.set_ylabel("Trust Value".format(key))
             ax.set_xlabel("Observation")
@@ -302,7 +283,7 @@ class TrustCom(unittest.TestCase):
             ax.axhline(mtfm.mean(), color="r", linestyle='-.')
             ax.yaxis.set_major_locator(loc_25)
             fig.tight_layout()
-            fig.savefig("img/trust_beta_otmf{}.pdf".format("_" + key if key is not None else ""), transparent=True)
+            fig.savefig("trust_beta_otmf{}.pdf".format("_" + key if key is not None else ""), transparent=True)
             plt.close(fig)
 
         gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file, [self.good, self.malicious, self.selfish])
@@ -320,7 +301,7 @@ class TrustCom(unittest.TestCase):
         mal_beta_t['-'] = mal_beta_t['-'].applymap(lambda _: int(2.0 * np.random.random() / 1.5))
 
         gd_tp = Trust.generate_node_trust_perspective(gd_mobile)
-        mal_tp = Trust.generate_node_trust_perspective(mal_mobile)
+        mal_tp = Trust.generate_node_trust_perspective(mal_mobile, par=False)
         sel_tp = Trust.generate_node_trust_perspective(sel_mobile)
 
         gd_mtfm = Trust.generate_mtfm(gd_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
@@ -336,7 +317,7 @@ class TrustCom(unittest.TestCase):
         plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish")
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img", f)))
+            self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
 
     def testOutlierGraphs(self):
@@ -353,7 +334,7 @@ class TrustCom(unittest.TestCase):
         required_files = ["MaliciousSelfishMetricFactorsRad.png", "MaliciousSelfishMetricFactors.png"]
         for f in required_files:
             try:
-                os.remove(os.path.join("img", f))
+                os.remove(f)
             except:
                 pass
 
@@ -369,7 +350,7 @@ class TrustCom(unittest.TestCase):
             return sfet
 
         # Generate Outlier DataPackage
-        with pd.get_store(in_results('outliers.h5')) as s:
+        with pd.get_store(Tools.in_results('outliers.h5')) as s:
             outliers = s.get('outliers')
             sum_by_weight = outliers.groupby(
                 ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index('bev')
@@ -401,7 +382,7 @@ class TrustCom(unittest.TestCase):
         ax = format_axes(ax)
         fig.tight_layout()
         ax.grid(True, color='k', alpha=0.33, ls=':')
-        fig.savefig("img/MaliciousSelfishMetricFactors.png", transparent=True)
+        fig.savefig("MaliciousSelfishMetricFactors.png", transparent=True)
 
         # Radar Base
         with rc_context(rc={'axes.labelsize': 8}):
@@ -418,8 +399,16 @@ class TrustCom(unittest.TestCase):
             ax.yaxis.labelpad = -80
             ax.tick_params(direction='out', pad=-100)
             ax.legend(loc=5, mode='expand', bbox_to_anchor=(1.05, 1))
-            fig.savefig("img/MaliciousSelfishMetricFactorsRad.png", transparent=True)
+            fig.savefig("MaliciousSelfishMetricFactorsRad.png", transparent=True)
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(os.path.join("img", f)))
+            self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
+
+
+
+if __name__ == "__main__":
+    suite = unittest.TestSuite()
+    suite.addTest(ThesisLazyDiagrams("testSummaryGraphsForMalGdScenarios"))
+    runner = unittest.TextTestRunner()
+    runner.run(suite)

@@ -16,7 +16,7 @@ nose-exclude
 nosexcover
 notify2
 numexpr
-numpy
+numpy >= 1.9
 oct2py
 openpyxl==1.8.6
 pandas
