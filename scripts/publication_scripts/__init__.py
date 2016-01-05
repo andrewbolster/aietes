@@ -14,6 +14,7 @@ from aietes import Tools
 from bounos.ChartBuilders import latexify, plot_nodes
 
 in_results = functools.partial(os.path.join, Tools._results_dir)
+print Tools._results_dir
 app_rate_from_path = lambda s: float(".".join(s.split('-')[2].split('.')[0:-1]))
 scenario_map = dict(zip(
     [u'bella_all_mobile', u'bella_allbut1_mobile', u'bella_single_mobile', u'bella_static'],

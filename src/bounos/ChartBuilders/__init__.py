@@ -391,7 +391,7 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
     f, ax = plt.subplots(1, 1, figsize=figsize)
     packet_error_rates = (stats.rx_counts / stats.tx_counts).groupby(level='var').mean()
     packet_error_vars = (stats.rx_counts / stats.tx_counts).groupby(level='var').std()
-    ax.errorbar(list(packet_error_rates.index), packet_error_rates.values, packet_error_vars)
+    ax.errorbar(list(packet_error_rates.index), packet_error_rates.values, packet_error_vars.values)
     ax.set_ylabel("Probability of Timely Arrival")
     ax.set_xlabel(var)
     ax.set_ylim(0, 1)
@@ -808,7 +808,8 @@ def latexify(columns=1, factor=0.45):
               'axes.labelsize': 10,  # fontsize for x and y labels (was 10)
               'axes.titlesize': 10,
               'font.size': 10,  # was 10/8
-              'legend.fontsize': 10,  # was 10,
+              'text.fontsize': 10,
+              'legend.fontsize': 8,  # was 10,
               'legend.labelspacing': 0.2,
               'legend.borderpad': 0,
               'xtick.labelsize': 8,

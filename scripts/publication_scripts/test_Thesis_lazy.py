@@ -15,7 +15,7 @@ import os
 from os.path import expanduser
 import itertools
 import functools
-import unittest
+from unittest import TestCase
 import logging
 import tempfile
 import shutil
@@ -25,6 +25,7 @@ logging.basicConfig()
 import pandas as pd
 import numpy as np
 import sklearn.ensemble as ske
+import matplotlib as mpl
 import matplotlib.pylab as plt
 from matplotlib import rc_context
 import matplotlib.ticker as plticker
@@ -34,7 +35,7 @@ loc_25 = plticker.MultipleLocator(base=0.25)  # this locator puts ticks at regul
 import aietes
 import aietes.Tools as Tools
 
-from bounos.ChartBuilders import plot_nodes, latexify
+import bounos.ChartBuilders as cb
 import bounos.Analyses.Trust as Trust
 from bounos.ChartBuilders import weight_comparisons, radar, format_axes
 
@@ -47,6 +48,7 @@ use_temp_dir = False
 
 texify_cols = 1
 texify_factor = 1
+img_extn = 'pdf'
 
 selected_scenarios = [
 #    'single_mobile',
@@ -55,7 +57,7 @@ selected_scenarios = [
     'bella_static',
 ]
 
-class ThesisLazyDiagrams(unittest.TestCase):
+class ThesisLazyDiagrams(TestCase):
     @classmethod
     def setUpClass(cls):
 
@@ -91,9 +93,9 @@ class ThesisLazyDiagrams(unittest.TestCase):
         if use_temp_dir:
             shutil.rmtree(self.dirpath, ignore_errors=True)
 
-    def testPhysicalNodeLayout(self):
+    def test_PhysicalNodeLayout(self):
         # # Graph: Physical Layout of Nodes
-        required_files = ["s1_layout.pdf"]
+        required_files = ["s1_layout."+img_extn]
         #
         for f in required_files:
             try:
@@ -101,7 +103,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        latexify(columns=texify_cols, factor=texify_factor) 
+        cb.latexify(columns=texify_cols, factor=texify_factor) 
 
         base_config = aietes.Simulation.populate_config(
             aietes.Tools.get_config('bella_static.conf'),
@@ -112,21 +114,21 @@ class ThesisLazyDiagrams(unittest.TestCase):
                           base_config['Node']['Nodes'].items() if 'initial_position' in v}
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
 
-        fig = plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
+        fig = cb.plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
                          square=False)
         fig.tight_layout(pad=0.3)
-        fig.savefig("s1_layout.pdf", transparent=True)
+        fig.savefig("s1_layout."+img_extn, transparent=True)
         plt.close(fig)
 
         for f in required_files:
             self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
 
-    def testThroughputLines(self):
+    def test_ThroughputLines(self):
         # # Plot Throughput Lines
         required_files = [
-            "throughput_sep_lines_static.pdf",
-            "throughput_sep_lines_all_mobile.pdf"
+            "throughput_sep_lines_static."+img_extn,
+            "throughput_sep_lines_all_mobile."+img_extn
         ]
         for f in required_files:
             try:
@@ -134,7 +136,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        latexify(columns=texify_cols, factor=texify_factor) 
+        cb.latexify(columns=texify_cols, factor=texify_factor) 
 
         for mobility in ['static', 'all_mobile']:
             df = get_mobility_stats(mobility)
@@ -146,22 +148,24 @@ class ThesisLazyDiagrams(unittest.TestCase):
             ax.set_xlabel("Packet Emission Rate (pps)")
             ax.set_ylabel("Avg. Throughput (bps)")
             fig.tight_layout()
-            fig.savefig("throughput_sep_lines_{}.pdf".format(mobility), transparent=True, facecolor='white')
+            fig.savefig("throughput_sep_lines_{}.{}".format(
+                    mobility,
+                    img_extn), transparent=True, facecolor='white')
             plt.close(fig)
 
         for f in required_files:
             self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
 
-    def testMTFMBoxplots(self):
+    def test_MTFMBoxplots(self):
         # # MTFM Boxplots
         required_files = [
-            "trust_bella_static_fair.pdf",
-            "trust_bella_all_mobile_fair.pdf",
-            "trust_bella_static_malicious.pdf",
-            "trust_bella_all_mobile_malicious.pdf",
-            "trust_bella_static_selfish.pdf",
-            "trust_bella_all_mobile_selfish.pdf"
+            "trust_bella_static_fair."+img_extn,
+            "trust_bella_all_mobile_fair."+img_extn,
+            "trust_bella_static_malicious."+img_extn,
+            "trust_bella_all_mobile_malicious."+img_extn,
+            "trust_bella_static_selfish."+img_extn,
+            "trust_bella_all_mobile_selfish."+img_extn
         ]
         for f in required_files:
             try:
@@ -169,43 +173,138 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        figsize = latexify(columns=texify_cols, factor=texify_factor) 
+        figsize = cb.latexify(columns=texify_cols, factor=texify_factor) 
 
         weight_comparisons.plot_mtfm_boxplot(self.good, keyword="fair",
                                              s=selected_scenarios, figsize=figsize,
-                                             xlabel=False, dropnet=True, prefix="")
+                                             xlabel=False, dropnet=True, prefix="",
+                                             extension=img_extn)
         weight_comparisons.plot_mtfm_boxplot(self.malicious, keyword="malicious",
                                              s=selected_scenarios, figsize=figsize,
-                                             xlabel=False, dropnet=True, prefix="")
+                                             xlabel=False, dropnet=True, prefix="",
+                                             extension=img_extn)
         weight_comparisons.plot_mtfm_boxplot(self.selfish, keyword="selfish",
                                              s=selected_scenarios, figsize=figsize,
-                                             xlabel=False, dropnet=True, prefix="")
+                                             xlabel=False, dropnet=True, prefix="",
+                                             extension=img_extn)
         for f in required_files:
             self.assertTrue(os.path.isfile(f), f)
             self.generated_files.append(f)
 
-    def testWeightComparisons(self):
+    def test_PacketStatsGraphs(self):
+        ## TODO DO THIS PROPERLY
+        # Packet Emissions Graphs for Single Runs
+        app_rate_from_path = lambda s:float(".".join(s.split('-')[2].split('.')[0:-1]))
+        result_h5s_by_latest=sorted(
+                filter(
+                        lambda p: os.path.basename(p).endswith("h5"),
+                        map(lambda p: os.path.abspath(os.path.join(Tools._results_dir,p)),
+                            os.listdir(Tools._results_dir))
+                ),key=lambda f:os.path.getmtime(f)
+        )
+        rate_and_ranges=filter(
+                lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest"),
+                result_h5s_by_latest
+        )
+
+
+        statsd={}
+        for store_path in rate_and_ranges:
+            with pd.get_store(store_path) as s:
+                try:
+                    stats=s.get('stats')
+                except KeyError:
+                    print store_path
+                    print s.keys()
+                    raise
+                # Reset Range for packet emission rate
+                stats.throughput = stats.throughput/3600.0 # pps
+                stats.index = stats.index.set_levels([
+                     np.int32((np.asarray(stats.index.levels[0].astype(np.float64))*100)),  # Var
+                     stats.index.levels[1].astype(np.int32) # Run
+                    ]+(stats.index.levels[2:])
+                )
+                statsd[app_rate_from_path(store_path)] = stats.copy()
+        
+        df=pd.concat(statsd.values(), keys=statsd.keys(), names = ['rate','separation']+stats.index.names[1:])
+        base_df = df.reset_index().sort(['rate','separation']).set_index(['rate','separation','run','node'])
+        
+        
+        r_sep = df.groupby(level=['rate','separation']).mean().swaplevel('rate','separation').sort()
+        r_sep_diff = r_sep.diff()
+
+        def get_emmission_stats(df, separation=100):
+            stats = df.swaplevel('rate','separation').xs(separation,level='separation')
+            stats.index.names=['var']+stats.index.names[1:]
+        
+            # Reset Range for packet emission rate
+            stats.index = stats.index.set_levels([
+                 stats.index.levels[0].astype(np.float64),  # Var
+                 stats.index.levels[1].astype(np.int32) # Run
+                ]+(stats.index.levels[2:])
+            )
+            return stats
+        
+        def get_separation_stats(df, emission=0.015):
+            stats = df.xs(emission,level='rate')
+            stats.index.names=['var']+stats.index.names[1:]
+        
+            # Reset Range for packet emission rate
+            stats.index = stats.index.set_levels([
+                 stats.index.levels[0].astype(np.int32),  # Var
+                 stats.index.levels[1].astype(np.int32) # Run
+                ]+(stats.index.levels[2:])
+            )
+            return stats
+
+        stats = get_emmission_stats(base_df, 100)
+        var = "Packet Emmission Rate (pps)"
+        rename_labels={"rx_counts":"Successfully Received Packets","enqueued":"Enqueued Packets", "collisions":"Collisions"}
+
+        figsize = cb.latexify(columns=texify_cols, factor=texify_factor) 
+
+
+        fig=cb.performance_summary_for_var(stats, 
+                                           var=var, 
+                                           rename_labels=rename_labels, 
+                                           hide_annotations=True, figsize=figsize)
+        fig.tight_layout(pad=0.1)
+        fig.savefig("throughput_performance_static.pdf")
+
+        fig=cb.probability_of_timely_arrival(stats, var=var, figsize=figsize)
+        fig.tight_layout(pad=0.1)
+        fig.savefig("prod_breakdown_static.pdf")
+
+        fig=cb.average_delays_across_variation(stats, var=var, figsize=figsize)
+        fig.tight_layout(pad=0.1)
+        fig.savefig("delay_static.pdf")
+
+        fig=cb.rts_ratio_across_variation(stats, var=var, figsize=figsize)
+        fig.tight_layout(pad=0.1)
+        fig.savefig("rts_static.pdf")
+
+    def test_WeightComparisons(self):
         # # Weight Comparisons
 
         required_files = [
-            "trust_bella_static_emph_ADelay_BadMouthingPowerControl.pdf",
-            "trust_bella_static_emph_ATXP_BadMouthingPowerControl.pdf",
-            "trust_bella_static_emph_RXThroughput_BadMouthingPowerControl.pdf",
-            "trust_bella_static_emph_TXThroughput_BadMouthingPowerControl.pdf",
-            "trust_bella_all_mobile_emph_ADelay_BadMouthingPowerControl.pdf",
-            "trust_bella_all_mobile_emph_ARXP_BadMouthingPowerControl.pdf",
-            "trust_bella_all_mobile_emph_ATXP_BadMouthingPowerControl.pdf",
-            "trust_bella_all_mobile_emph_RXThroughput_BadMouthingPowerControl.pdf",
-            "trust_bella_all_mobile_emph_TXThroughput_BadMouthingPowerControl.pdf",
-            "trust_bella_static_emph_ADelay_SelfishTargetSelection.pdf",
-            "trust_bella_static_emph_ATXP_SelfishTargetSelection.pdf",
-            "trust_bella_static_emph_RXThroughput_SelfishTargetSelection.pdf",
-            "trust_bella_static_emph_TXThroughput_SelfishTargetSelection.pdf",
-            "trust_bella_all_mobile_emph_ADelay_SelfishTargetSelection.pdf",
-            "trust_bella_all_mobile_emph_ARXP_SelfishTargetSelection.pdf",
-            "trust_bella_all_mobile_emph_ATXP_SelfishTargetSelection.pdf",
-            "trust_bella_all_mobile_emph_RXThroughput_SelfishTargetSelection.pdf",
-            "trust_bella_all_mobile_emph_TXThroughput_SelfishTargetSelection.pdf"
+            "trust_bella_static_emph_ADelay_BadMouthingPowerControl."+img_extn,
+            "trust_bella_static_emph_ATXP_BadMouthingPowerControl."+img_extn,
+            "trust_bella_static_emph_RXThroughput_BadMouthingPowerControl."+img_extn,
+            "trust_bella_static_emph_TXThroughput_BadMouthingPowerControl."+img_extn,
+            "trust_bella_all_mobile_emph_ADelay_BadMouthingPowerControl."+img_extn,
+            "trust_bella_all_mobile_emph_ARXP_BadMouthingPowerControl."+img_extn,
+            "trust_bella_all_mobile_emph_ATXP_BadMouthingPowerControl."+img_extn,
+            "trust_bella_all_mobile_emph_RXThroughput_BadMouthingPowerControl."+img_extn,
+            "trust_bella_all_mobile_emph_TXThroughput_BadMouthingPowerControl."+img_extn,
+            "trust_bella_static_emph_ADelay_SelfishTargetSelection."+img_extn,
+            "trust_bella_static_emph_ATXP_SelfishTargetSelection."+img_extn,
+            "trust_bella_static_emph_RXThroughput_SelfishTargetSelection."+img_extn,
+            "trust_bella_static_emph_TXThroughput_SelfishTargetSelection."+img_extn,
+            "trust_bella_all_mobile_emph_ADelay_SelfishTargetSelection."+img_extn,
+            "trust_bella_all_mobile_emph_ARXP_SelfishTargetSelection."+img_extn,
+            "trust_bella_all_mobile_emph_ATXP_SelfishTargetSelection."+img_extn,
+            "trust_bella_all_mobile_emph_RXThroughput_SelfishTargetSelection."+img_extn,
+            "trust_bella_all_mobile_emph_TXThroughput_SelfishTargetSelection."+img_extn
         ]
         for f in required_files:
             try:
@@ -213,41 +312,41 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        figsize = latexify(columns=texify_cols, factor=texify_factor) 
+        figsize = cb.latexify(columns=texify_cols, factor=texify_factor) 
 
         for s in selected_scenarios:
             weight_comparisons.plot_weight_comparisons(self.good, self.malicious,
                                                        malicious_behaviour="BadMouthingPowerControl",
                                                        s=s, figsize=figsize, show_title=False,
                                                        labels=["Fair", "Malicious"],
-                                                       prefix=""
+                                                       prefix="", extension=img_extn
                                                        )
             weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
                                                        malicious_behaviour="SelfishTargetSelection",
                                                        s=s, figsize=figsize, show_title=False,
                                                        labels=["Fair", "Selfish"],
-                                                       prefix=""
+                                                       prefix="", extension=img_extn
                                                        )
             weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
                                                        malicious_behaviour="SelfishTargetSelection",
                                                        s=s, figsize=figsize, show_title=False,
                                                        labels=["Fair", "Selfish"],
-                                                       prefix=""
+                                                       prefix="", extension=img_extn
                                                        )
         for f in required_files:
             self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
 
-    def testSummaryGraphsForMalGdScenarios(self):
+    def test_SummaryGraphsForMalGdScenarios(self):
         # # Summary Graphs with malicious, selfish and fair scenarios
-        required_files = ["trust_beta_otmf_fair.pdf", "trust_beta_otmf_malicious.pdf", "trust_beta_otmf_selfish.pdf"]
+        required_files = ["trust_beta_otmf_fair."+img_extn, "trust_beta_otmf_malicious."+img_extn, "trust_beta_otmf_selfish."+img_extn]
         for f in required_files:
             try:
                 os.remove(f)
             except:
                 pass
 
-        latexify(columns=texify_cols, factor=texify_factor) 
+        cb.latexify(columns=texify_cols, factor=texify_factor) 
 
         def beta_trusts(trust, length=4096):
             #TODO This should be optimised to not use the same dataframe
@@ -268,7 +367,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             otmf_vals = beta_trust.apply(lambda r: otmf_t(r['+'], r['-']), axis=1)
             return beta_vals, otmf_vals
 
-        def plot_beta_mtmf_comparison(beta_trust, mtfm, key):
+        def plot_beta_mtmf_comparison(beta_trust, mtfm, key, extension="pdf"):
 
             beta, otmf = beta_calcs(beta_trust)
             fig, ax = plt.subplots(1, 1, sharey=True)
@@ -283,7 +382,9 @@ class ThesisLazyDiagrams(unittest.TestCase):
             ax.axhline(mtfm.mean(), color="r", linestyle='-.')
             ax.yaxis.set_major_locator(loc_25)
             fig.tight_layout()
-            fig.savefig("trust_beta_otmf{}.pdf".format("_" + key if key is not None else ""), transparent=True)
+            fig.savefig("trust_beta_otmf{}.{}".format(
+                    "_" + key if key is not None else "",
+                    extension), transparent=True)
             plt.close(fig)
 
         gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file, [self.good, self.malicious, self.selfish])
@@ -312,15 +413,15 @@ class ThesisLazyDiagrams(unittest.TestCase):
         mal_mtfm = pd.stats.moments.ewma(mal_mtfm, span=mtfm_span)
         sel_mtfm = pd.stats.moments.ewma(sel_mtfm, span=mtfm_span)
 
-        plot_beta_mtmf_comparison(gd_beta_t, gd_mtfm, key="fair")
-        plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="malicious")
-        plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish")
+        plot_beta_mtmf_comparison(gd_beta_t, gd_mtfm, key="fair", extension=img_extn)
+        plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="malicious", extension=img_extn)
+        plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish", extension=img_extn)
 
         for f in required_files:
             self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
 
-    def testOutlierGraphs(self):
+    def test_OutlierGraphs(self):
         columns = {'ADelay': "$Delay$",
                    'ARXP': "$P_{RX}$",
                    'ATXP': "$P_{TX}$",
@@ -365,7 +466,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
         ms = comparer(dp.malicious, dp.selfish)[key_order]
 
         # Bar Chart
-        figsize = latexify(columns=1.0, factor=1.2)
+        figsize = cb.latexify(columns=1.0, factor=1.2)
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1)
         _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(index=columns)
@@ -386,7 +487,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
         # Radar Base
         with rc_context(rc={'axes.labelsize': 8}):
-            figsize = latexify(columns=1, factor=1.2)
+            figsize = cb.latexify(columns=1, factor=1.2)
             r = radar.radar_factory(len(key_order))
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(1, 1, 1, projection='radar')
@@ -404,11 +505,3 @@ class ThesisLazyDiagrams(unittest.TestCase):
         for f in required_files:
             self.assertTrue(os.path.isfile(f))
             self.generated_files.append(f)
-
-
-
-if __name__ == "__main__":
-    suite = unittest.TestSuite()
-    suite.addTest(ThesisLazyDiagrams("testSummaryGraphsForMalGdScenarios"))
-    runner = unittest.TextTestRunner()
-    runner.run(suite)

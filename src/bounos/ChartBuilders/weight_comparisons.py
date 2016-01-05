@@ -63,7 +63,7 @@ def per_scenario_gd_mal_trusts(gd_file, mal_file):
 
 
 def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, keyword=None,
-                    figsize=None, labels=None, prefix="img/"):
+                    figsize=None, labels=None, prefix="img/", extension="pdf"):
     if labels is None:
         labels = ["Fair", "Selfish"]
 
@@ -99,10 +99,11 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
     ax.set_xlabel('Observation')
     ax = format_axes(ax)
     fig.tight_layout(pad=0.1)
-    fig.savefig("{}trust_{}_{}{}.pdf".format(
+    fig.savefig("{}trust_{}_{}{}.{}".format(
         prefix,
         s, "emph_%s" % metric if metric else "even",
-        "_%s" % keyword if keyword else ""), transparent=True
+        "_%s" % keyword if keyword else "",
+        extension), transparent=True
     )
     plt.close(fig)
 
@@ -117,7 +118,7 @@ def cross_scenario_plot():
 def plot_weight_comparisons(gd_file, mal_file,
                             malicious_behaviour="Selfish", s="bella_static",
                             excluded=None, show_title=True, figsize=None,
-                            labels=None, prefix="img/"):
+                            labels=None, prefix="img/", extension="pdf"):
     if labels is None:
         labels = ["Fair", "Selfish"]
 
@@ -135,7 +136,7 @@ def plot_weight_comparisons(gd_file, mal_file,
 
         plot_comparison(gd_mtfm, mal_mtfm, s=s,
                         show_title=show_title, keyword=malicious_behaviour,
-                        figsize=figsize, labels=labels, prefix=prefix)
+                        figsize=figsize, labels=labels, prefix=prefix, extension=extension)
         for i, mi in enumerate(trust_metrics):
             if mi not in excluded:
                 gd_tp, mal_tp = per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, s=s,
@@ -144,8 +145,8 @@ def plot_weight_comparisons(gd_file, mal_file,
                 gd_mtfm = Trust.generate_mtfm(gd_tp, *mtfm_args).sum(axis=1)
                 mal_mtfm = Trust.generate_mtfm(mal_tp, *mtfm_args).sum(axis=1)
 
-                plot_comparison(gd_mtfm, mal_mtfm, s, metric=mi, show_title=show_title, prefix="",
-                                keyword=malicious_behaviour, figsize=figsize, labels=labels)
+                plot_comparison(gd_mtfm, mal_mtfm, s, metric=mi, show_title=show_title, prefix=prefix,
+                                keyword=malicious_behaviour, figsize=figsize, labels=labels, extension=extension)
 
 
 def per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, weight_vector=None, s=None,
@@ -228,7 +229,8 @@ def beta_otmf_vals(beta_trust):
 
 
 def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None, prefix="img/",
-                      metric_weights=None, figsize=None, xlabel=True, dropnet=False):
+                      metric_weights=None, figsize=None, xlabel=True, dropnet=False,
+                      extension="pdf"):
     if figsize is None:
         figsize = (w, w * golden_mean)
     with mpl.rc_context(rc={'text.usetex': 'True'}):
@@ -254,8 +256,9 @@ def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None, prefix="
                                                   tex_safe_s, title=title if show_title else False,
                                                   figsize=figsize, xlabel=xlabel, dropnet=dropnet)
                 fig.tight_layout(pad=0)
-                fig.savefig("{}trust_{}{}.pdf".format(
+                fig.savefig("{}trust_{}{}.{}".format(
                     prefix,
                     s,
-                    "_" + keyword if keyword is not None else ""),
+                    "_" + keyword if keyword is not None else "",
+                    extension),
                     transparent=True)
