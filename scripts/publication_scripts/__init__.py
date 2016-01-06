@@ -2,13 +2,18 @@
 import itertools
 import os
 from collections import OrderedDict
+import warnings
 
 import functools
 
 import numpy as np
 import pandas as pd
+import pylatex
 from matplotlib import pylab as plt, cm, cm, cm, cm
+from mpl_toolkits.mplot3d import axes3d, Axes3D
 from scipy import interpolate as interpolate
+import matplotlib2tikz as mpl2tkz
+
 
 from aietes import Tools
 from bounos.ChartBuilders import latexify, plot_nodes
@@ -224,3 +229,83 @@ def get_mobility_stats(mobility):
     sdf['tdivdel'] = sdf.throughput / sdf.average_rx_delay
     sdf.reset_index(inplace=True)
     return sdf
+
+def app_rate_from_path(s):
+    return float(".".join(s.split('-')[2].split('.')[0:-1]))
+
+result_h5s_by_latest = sorted(
+        filter(
+                lambda p: os.path.basename(p).endswith("h5"),
+                map(lambda p: os.path.abspath(os.path.join(Tools._results_dir, p)),
+                    os.listdir(Tools._results_dir))
+        ), key=lambda f: os.path.getmtime(f)
+)
+rate_and_ranges = filter(
+        lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest"),
+        result_h5s_by_latest
+)
+
+def get_emmission_stats(df, separation=100):
+    stats = df.swaplevel('rate', 'separation').xs(separation, level='separation')
+    stats.index.names = ['var'] + stats.index.names[1:]
+
+    # Reset Range for packet emission rate
+    stats.index = stats.index.set_levels([
+                                             stats.index.levels[0].astype(np.float64),  # Var
+                                             stats.index.levels[1].astype(np.int32)  # Run
+                                         ] + (stats.index.levels[2:])
+                                         )
+    return stats
+
+def get_separation_stats(df, emission=0.015):
+    stats = df.xs(emission, level='rate')
+    stats.index.names = ['var'] + stats.index.names[1:]
+
+    # Reset Range for packet emission rate
+    stats.index = stats.index.set_levels([
+                                             stats.index.levels[0].astype(np.int32),  # Var
+                                             stats.index.levels[1].astype(np.int32)  # Run
+                                         ] + (stats.index.levels[2:])
+                                         )
+    return stats
+
+def interpolate_rate_sep(df, key):
+    X,Y,Z = df.rate, df.separation, df[key]
+
+    xi = np.linspace(X.min(),X.max(),16)
+    yi = np.linspace(Y.min(),Y.max(),16)
+    # VERY IMPORTANT, to tell matplotlib how is your data organized
+    zi = interpolate.griddata((X, Y), Z, (xi[None,:], yi[:,None]), method='linear')
+    return xi,yi,zi, X, Y
+
+def savefig(fig, name, extn="pdf", tight=True, **kwargs):
+    _kwargs = Tools.kwarger()
+    _kwargs.update(kwargs)
+    if tight:
+        fig.tight_layout(pad=0.1)
+    fig.savefig("{}.{}".format(name, extn), **_kwargs)
+    try:
+        mpl2tkz.save("{}.tex".format(name), fig)
+    except:
+        warnings.warn("Couldn't tkzify {}, skipping".format(name))
+
+
+
+def generate_figure_contact_tex(fig_paths, target_path='.'):
+    """
+    Generate a contact sheet of the listed figure paths.
+    Assumes figpaths are graphics files acceptable to pdflatex
+    :param fig_paths: iterable of image paths
+    :param target_path: destination directory
+    :return:
+    """
+    doc = pylatex.Document(default_filepath=os.path.join(target_path,'generated_figures'))
+
+    with doc.create(pylatex.Section('Generated Figures')):
+        for image_path in sorted(fig_paths):
+            filename = os.path.split(image_path)[-1]
+            with doc.create(pylatex.Figure(position='h!')) as fig:
+                fig.add_image(image_path, width=pylatex.NoEscape(r'\linewidth'))
+                fig.add_caption(filename)
+
+    doc.generate_tex()

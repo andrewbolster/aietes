@@ -1,7 +1,8 @@
 # coding=utf-8
 from __future__ import division
 
-from scripts.publication_scripts import get_mobility_stats
+from scripts.publication_scripts import savefig, interpolate_rate_sep, plot_contour_2d, plot_contour_3d, \
+    get_mobility_stats, get_emmission_stats, rate_and_ranges, app_rate_from_path, generate_figure_contact_tex
 
 __author__ = 'bolster'
 
@@ -15,7 +16,7 @@ import os
 from os.path import expanduser
 import itertools
 import functools
-from unittest import TestCase
+import unittest
 import logging
 import tempfile
 import shutil
@@ -46,18 +47,21 @@ from bounos.ChartBuilders import weight_comparisons, radar, format_axes
 ##################
 use_temp_dir = False
 
-texify_cols = 1
+texify_cols = 0.5
 texify_factor = 1
 img_extn = 'pdf'
 
 selected_scenarios = [
-#    'single_mobile',
-#    'allbut1_mobile',
+    #    'single_mobile',
+    #    'allbut1_mobile',
     'bella_all_mobile',
     'bella_static',
 ]
 
-class ThesisLazyDiagrams(TestCase):
+
+class ThesisLazyDiagrams(unittest.TestCase):
+    longMessage = True
+
     @classmethod
     def setUpClass(cls):
 
@@ -90,12 +94,23 @@ class ThesisLazyDiagrams(TestCase):
 
     def tearDown(self):
         logging.info("Successfully Generated:\n{}".format(self.generated_files))
+        with open("generated_files.txt", 'w') as f:
+            f.write('\n'.join(self.generated_files))
+        generate_figure_contact_tex(self.generated_files)
         if use_temp_dir:
             shutil.rmtree(self.dirpath, ignore_errors=True)
 
+    def assertFileExists(self, f):
+        try:
+            self.assertTrue(os.path.isfile(f))
+        except AssertionError:
+            print f
+            raise
+        self.generated_files.append(f)
+
     def test_PhysicalNodeLayout(self):
         # # Graph: Physical Layout of Nodes
-        required_files = ["s1_layout."+img_extn]
+        required_files = ["s1_layout." + img_extn]
         #
         for f in required_files:
             try:
@@ -103,11 +118,11 @@ class ThesisLazyDiagrams(TestCase):
             except:
                 pass
 
-        cb.latexify(columns=texify_cols, factor=texify_factor) 
+        cb.latexify(columns=texify_cols, factor=texify_factor)
 
         base_config = aietes.Simulation.populate_config(
-            aietes.Tools.get_config('bella_static.conf'),
-            retain_default=True
+                aietes.Tools.get_config('bella_static.conf'),
+                retain_default=True
         )
         texify = lambda t: "${}_{}$".format(t[0], t[1])
         node_positions = {texify(k): np.asarray(v['initial_position'], dtype=float) for k, v in
@@ -115,9 +130,9 @@ class ThesisLazyDiagrams(TestCase):
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
 
         fig = cb.plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
-                         square=False)
+                            square=False)
         fig.tight_layout(pad=0.3)
-        fig.savefig("s1_layout."+img_extn, transparent=True)
+        fig.savefig("s1_layout." + img_extn, transparent=True)
         plt.close(fig)
 
         for f in required_files:
@@ -127,8 +142,8 @@ class ThesisLazyDiagrams(TestCase):
     def test_ThroughputLines(self):
         # # Plot Throughput Lines
         required_files = [
-            "throughput_sep_lines_static."+img_extn,
-            "throughput_sep_lines_all_mobile."+img_extn
+            "throughput_sep_lines_static." + img_extn,
+            "throughput_sep_lines_all_mobile." + img_extn
         ]
         for f in required_files:
             try:
@@ -136,7 +151,7 @@ class ThesisLazyDiagrams(TestCase):
             except:
                 pass
 
-        cb.latexify(columns=texify_cols, factor=texify_factor) 
+        cb.latexify(columns=texify_cols, factor=texify_factor)
 
         for mobility in ['static', 'all_mobile']:
             df = get_mobility_stats(mobility)
@@ -160,12 +175,12 @@ class ThesisLazyDiagrams(TestCase):
     def test_MTFMBoxplots(self):
         # # MTFM Boxplots
         required_files = [
-            "trust_bella_static_fair."+img_extn,
-            "trust_bella_all_mobile_fair."+img_extn,
-            "trust_bella_static_malicious."+img_extn,
-            "trust_bella_all_mobile_malicious."+img_extn,
-            "trust_bella_static_selfish."+img_extn,
-            "trust_bella_all_mobile_selfish."+img_extn
+            "trust_bella_static_fair." + img_extn,
+            "trust_bella_all_mobile_fair." + img_extn,
+            "trust_bella_static_malicious." + img_extn,
+            "trust_bella_all_mobile_malicious." + img_extn,
+            "trust_bella_static_selfish." + img_extn,
+            "trust_bella_all_mobile_selfish." + img_extn
         ]
         for f in required_files:
             try:
@@ -173,7 +188,7 @@ class ThesisLazyDiagrams(TestCase):
             except:
                 pass
 
-        figsize = cb.latexify(columns=texify_cols, factor=texify_factor) 
+        figsize = cb.latexify(columns=texify_cols, factor=texify_factor)
 
         weight_comparisons.plot_mtfm_boxplot(self.good, keyword="fair",
                                              s=selected_scenarios, figsize=figsize,
@@ -192,127 +207,188 @@ class ThesisLazyDiagrams(TestCase):
             self.generated_files.append(f)
 
     def test_PacketStatsGraphs(self):
-        ## TODO DO THIS PROPERLY
         # Packet Emissions Graphs for Single Runs
-        app_rate_from_path = lambda s:float(".".join(s.split('-')[2].split('.')[0:-1]))
-        result_h5s_by_latest=sorted(
-                filter(
-                        lambda p: os.path.basename(p).endswith("h5"),
-                        map(lambda p: os.path.abspath(os.path.join(Tools._results_dir,p)),
-                            os.listdir(Tools._results_dir))
-                ),key=lambda f:os.path.getmtime(f)
-        )
-        rate_and_ranges=filter(
-                lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest"),
-                result_h5s_by_latest
-        )
 
+        def plot_packet_stats_for_scenario_containing(scenario_partial):
+            statsd = {}
+            for store_path in filter(lambda s: scenario_partial in s, rate_and_ranges):
+                with pd.get_store(store_path) as s:
+                    try:
+                        stats = s.get('stats')
+                    except KeyError:
+                        print store_path
+                        print s.keys()
+                        raise
+                    # Reset Range for packet emission rate
+                    stats.throughput = stats.throughput / 3600.0  # pps
+                    stats.index = stats.index.set_levels([
+                                                             np.int32((np.asarray(
+                                                                     stats.index.levels[0].astype(np.float64)) * 100)),
+                                                             # Var
+                                                             stats.index.levels[1].astype(np.int32)  # Run
+                                                         ] + (stats.index.levels[2:])
+                                                         )
+                    statsd[app_rate_from_path(store_path)] = stats.copy()
 
-        statsd={}
-        for store_path in rate_and_ranges:
-            with pd.get_store(store_path) as s:
-                try:
-                    stats=s.get('stats')
-                except KeyError:
-                    print store_path
-                    print s.keys()
-                    raise
-                # Reset Range for packet emission rate
-                stats.throughput = stats.throughput/3600.0 # pps
-                stats.index = stats.index.set_levels([
-                     np.int32((np.asarray(stats.index.levels[0].astype(np.float64))*100)),  # Var
-                     stats.index.levels[1].astype(np.int32) # Run
-                    ]+(stats.index.levels[2:])
+            df = pd.concat(statsd.values(), keys=statsd.keys(), names=['rate', 'separation'] + stats.index.names[1:])
+            base_df = df.reset_index().sort(['rate', 'separation']).set_index(['rate', 'separation', 'run', 'node'])
+
+            stats = get_emmission_stats(base_df, 100)
+            var = "Packet Emmission Rate (pps)"
+            rename_labels = {"rx_counts": "Successfully Received Packets",
+                             "enqueued": "Enqueued Packets",
+                             "collisions": "Collisions"}
+
+            figsize = cb.latexify(columns=texify_cols, factor=texify_factor)
+
+            fig = cb.performance_summary_for_var(stats,
+                                                 var=var,
+                                                 rename_labels=rename_labels,
+                                                 hide_annotations=True, figsize=figsize)
+            savefig(fig, "throughput_performance_" + scenario_partial, img_extn, tight=False)
+
+            fig = cb.probability_of_timely_arrival(stats, var=var, figsize=figsize)
+            savefig(fig, "prod_breakdown_" + scenario_partial, img_extn)
+
+            fig = cb.average_delays_across_variation(stats, var=var, figsize=figsize)
+            savefig(fig, "delay_variation_" + scenario_partial, img_extn)
+
+            fig = cb.rts_ratio_across_variation(stats, var=var, figsize=figsize)
+            savefig(fig, "rts_ratio_" + scenario_partial, img_extn)
+
+        required_file_prefixes = [
+            "throughput_performance_",
+            "prod_breakdown_",
+            "delay_variation_",
+            "rts_ratio_"
+        ]
+        for scenario in selected_scenarios:
+            for prefix in required_file_prefixes:
+                Tools.remove("{}{}.{}".format(
+                        prefix,
+                        scenario,
+                        img_extn
+                ))
+            plot_packet_stats_for_scenario_containing(scenario)
+            for prefix in required_file_prefixes:
+                f = "{}{}.{}".format(
+                        prefix,
+                        scenario,
+                        img_extn
                 )
-                statsd[app_rate_from_path(store_path)] = stats.copy()
-        
-        df=pd.concat(statsd.values(), keys=statsd.keys(), names = ['rate','separation']+stats.index.names[1:])
-        base_df = df.reset_index().sort(['rate','separation']).set_index(['rate','separation','run','node'])
-        
-        
-        r_sep = df.groupby(level=['rate','separation']).mean().swaplevel('rate','separation').sort()
-        r_sep_diff = r_sep.diff()
+                self.assertTrue(os.path.isfile(f))
+                self.generated_files.append(f)
 
-        def get_emmission_stats(df, separation=100):
-            stats = df.swaplevel('rate','separation').xs(separation,level='separation')
-            stats.index.names=['var']+stats.index.names[1:]
-        
-            # Reset Range for packet emission rate
-            stats.index = stats.index.set_levels([
-                 stats.index.levels[0].astype(np.float64),  # Var
-                 stats.index.levels[1].astype(np.int32) # Run
-                ]+(stats.index.levels[2:])
-            )
-            return stats
-        
-        def get_separation_stats(df, emission=0.015):
-            stats = df.xs(emission,level='rate')
-            stats.index.names=['var']+stats.index.names[1:]
-        
-            # Reset Range for packet emission rate
-            stats.index = stats.index.set_levels([
-                 stats.index.levels[0].astype(np.int32),  # Var
-                 stats.index.levels[1].astype(np.int32) # Run
-                ]+(stats.index.levels[2:])
-            )
-            return stats
+    def test_RateRangePlots(self):
+        # Plot the Fancy 2d/3d graphs of rate/range/performance
 
-        stats = get_emmission_stats(base_df, 100)
-        var = "Packet Emmission Rate (pps)"
-        rename_labels={"rx_counts":"Successfully Received Packets","enqueued":"Enqueued Packets", "collisions":"Collisions"}
+        def rate_range_plots_per_scenario(scenario_partial):
+            statsd = {}
+            for store_path in filter(lambda s: scenario_partial in s, rate_and_ranges):
+                with pd.get_store(store_path) as s:
+                    try:
+                        stats = s.get('stats')
+                    except KeyError:
+                        print store_path
+                        print s.keys()
+                        raise
+                    # Reset Range for packet emission rate
+                    stats.throughput = stats.throughput / 3600.0  # pps
+                    stats.index = stats.index.set_levels([
+                                                             np.int32((np.asarray(
+                                                                     stats.index.levels[0].astype(np.float64)) * 100)),
+                                                             # Var
+                                                             stats.index.levels[1].astype(np.int32)  # Run
+                                                         ] + (stats.index.levels[2:])
+                                                         )
+                    statsd[app_rate_from_path(store_path)] = stats.copy()
 
-        figsize = cb.latexify(columns=texify_cols, factor=texify_factor) 
+            df = pd.concat(statsd.values(), keys=statsd.keys(), names=['rate', 'separation'] + stats.index.names[1:])
+            base_df = df.reset_index().sort(['rate', 'separation']).set_index(['rate', 'separation', 'run', 'node'])
 
+            df = base_df.groupby(level=['rate', 'separation']).mean().reset_index()
 
-        fig=cb.performance_summary_for_var(stats, 
-                                           var=var, 
-                                           rename_labels=rename_labels, 
-                                           hide_annotations=True, figsize=figsize)
-        fig.tight_layout(pad=0.1)
-        fig.savefig("throughput_performance_static.pdf")
+            norm = lambda df: (df - np.nanmin(df)) / (np.nanmax(df) - np.nanmin(df))
+            df['average_rx_delay_norm'] = 1 - norm(df.average_rx_delay)
+            df['throughput_norm'] = norm(df.throughput)
+            df['co_norm'] = df.average_rx_delay_norm * df.throughput_norm
+            df = df.set_index(['rate', 'separation']).dropna()
+            df['tdivdel'] = (df.throughput / df.average_rx_delay)
+            df.reset_index(inplace=True)
 
-        fig=cb.probability_of_timely_arrival(stats, var=var, figsize=figsize)
-        fig.tight_layout(pad=0.1)
-        fig.savefig("prod_breakdown_static.pdf")
+            xt, yt, zt, Xt, Yt = interpolate_rate_sep(df.dropna(), "throughput")
+            fig = plot_contour_2d(xt, yt, zt, Xt, Yt, "Throughput (bps)")
+            savefig(fig, "throughput_2d_" + scenario_partial, img_extn)
 
-        fig=cb.average_delays_across_variation(stats, var=var, figsize=figsize)
-        fig.tight_layout(pad=0.1)
-        fig.savefig("delay_static.pdf")
+            xd, yd, zd, Xd, Yd = interpolate_rate_sep(df.dropna(), "average_rx_delay")
+            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Average Delay (s)")
+            savefig(fig, "delay_2d_" + scenario_partial, img_extn)
 
-        fig=cb.rts_ratio_across_variation(stats, var=var, figsize=figsize)
-        fig.tight_layout(pad=0.1)
-        fig.savefig("rts_static.pdf")
+            xd, yd, zd, Xd, Yd = interpolate_rate_sep(df, "tdivdel")
+            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Throughput Delay Ratio")
+            savefig(fig, "2d_ratio_" + scenario_partial, img_extn)
+
+            fig = plot_contour_3d(xd, yd, zd, rot=45, labels={'x': 'pps', 'y': 'm', 'z': ''})
+            savefig(fig, "3d_ratio_" + scenario_partial, img_extn, transparent=True, facecolor='white')
+
+            xd, yd, zd, Xd, Yd = interpolate_rate_sep(df, "co_norm")
+            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Normalised Throughput Delay Product", norm=True)
+            savefig(fig, "2d_normed_product_" + scenario_partial, img_extn)
+
+            fig = plot_contour_3d(xd, yd, zd, rot=45, labels={'x': 'pps', 'y': 'm', 'z': ''})
+            savefig(fig, "3d_normed_product_" + scenario_partial, img_extn, transparent=True, facecolor='white')
+
+        required_file_prefixes = [
+            "throughput_2d_",
+            "delay_2d_",
+            "2d_ratio_",
+            "3d_ratio_",
+            "2d_normed_product_",
+            "3d_normed_product_"
+        ]
+        for scenario in selected_scenarios:
+            for prefix in required_file_prefixes:
+                Tools.remove("{}{}.{}".format(
+                        prefix,
+                        scenario,
+                        img_extn
+                ))
+            rate_range_plots_per_scenario(scenario)
+            for prefix in required_file_prefixes:
+                f = "{}{}.{}".format(
+                        prefix,
+                        scenario,
+                        img_extn
+                )
+                self.assertFileExists(f)
 
     def test_WeightComparisons(self):
         # # Weight Comparisons
 
         required_files = [
-            "trust_bella_static_emph_ADelay_BadMouthingPowerControl."+img_extn,
-            "trust_bella_static_emph_ATXP_BadMouthingPowerControl."+img_extn,
-            "trust_bella_static_emph_RXThroughput_BadMouthingPowerControl."+img_extn,
-            "trust_bella_static_emph_TXThroughput_BadMouthingPowerControl."+img_extn,
-            "trust_bella_all_mobile_emph_ADelay_BadMouthingPowerControl."+img_extn,
-            "trust_bella_all_mobile_emph_ARXP_BadMouthingPowerControl."+img_extn,
-            "trust_bella_all_mobile_emph_ATXP_BadMouthingPowerControl."+img_extn,
-            "trust_bella_all_mobile_emph_RXThroughput_BadMouthingPowerControl."+img_extn,
-            "trust_bella_all_mobile_emph_TXThroughput_BadMouthingPowerControl."+img_extn,
-            "trust_bella_static_emph_ADelay_SelfishTargetSelection."+img_extn,
-            "trust_bella_static_emph_ATXP_SelfishTargetSelection."+img_extn,
-            "trust_bella_static_emph_RXThroughput_SelfishTargetSelection."+img_extn,
-            "trust_bella_static_emph_TXThroughput_SelfishTargetSelection."+img_extn,
-            "trust_bella_all_mobile_emph_ADelay_SelfishTargetSelection."+img_extn,
-            "trust_bella_all_mobile_emph_ARXP_SelfishTargetSelection."+img_extn,
-            "trust_bella_all_mobile_emph_ATXP_SelfishTargetSelection."+img_extn,
-            "trust_bella_all_mobile_emph_RXThroughput_SelfishTargetSelection."+img_extn,
-            "trust_bella_all_mobile_emph_TXThroughput_SelfishTargetSelection."+img_extn
+            "trust_bella_static_emph_ADelay_BadMouthingPowerControl." + img_extn,
+            "trust_bella_static_emph_ATXP_BadMouthingPowerControl." + img_extn,
+            "trust_bella_static_emph_RXThroughput_BadMouthingPowerControl." + img_extn,
+            "trust_bella_static_emph_TXThroughput_BadMouthingPowerControl." + img_extn,
+            "trust_bella_all_mobile_emph_ADelay_BadMouthingPowerControl." + img_extn,
+            "trust_bella_all_mobile_emph_ARXP_BadMouthingPowerControl." + img_extn,
+            "trust_bella_all_mobile_emph_ATXP_BadMouthingPowerControl." + img_extn,
+            "trust_bella_all_mobile_emph_RXThroughput_BadMouthingPowerControl." + img_extn,
+            "trust_bella_all_mobile_emph_TXThroughput_BadMouthingPowerControl." + img_extn,
+            "trust_bella_static_emph_ADelay_SelfishTargetSelection." + img_extn,
+            "trust_bella_static_emph_ATXP_SelfishTargetSelection." + img_extn,
+            "trust_bella_static_emph_RXThroughput_SelfishTargetSelection." + img_extn,
+            "trust_bella_static_emph_TXThroughput_SelfishTargetSelection." + img_extn,
+            "trust_bella_all_mobile_emph_ADelay_SelfishTargetSelection." + img_extn,
+            "trust_bella_all_mobile_emph_ARXP_SelfishTargetSelection." + img_extn,
+            "trust_bella_all_mobile_emph_ATXP_SelfishTargetSelection." + img_extn,
+            "trust_bella_all_mobile_emph_RXThroughput_SelfishTargetSelection." + img_extn,
+            "trust_bella_all_mobile_emph_TXThroughput_SelfishTargetSelection." + img_extn
         ]
         for f in required_files:
-            try:
-                os.remove(f)
-            except:
-                pass
+            Tools.remove(f)
 
-        figsize = cb.latexify(columns=texify_cols, factor=texify_factor) 
+        figsize = cb.latexify(columns=texify_cols, factor=texify_factor)
 
         for s in selected_scenarios:
             weight_comparisons.plot_weight_comparisons(self.good, self.malicious,
@@ -334,26 +410,27 @@ class ThesisLazyDiagrams(TestCase):
                                                        prefix="", extension=img_extn
                                                        )
         for f in required_files:
-            self.assertTrue(os.path.isfile(f))
-            self.generated_files.append(f)
+            self.assertFileExists(f)
 
     def test_SummaryGraphsForMalGdScenarios(self):
         # # Summary Graphs with malicious, selfish and fair scenarios
-        required_files = ["trust_beta_otmf_fair."+img_extn, "trust_beta_otmf_malicious."+img_extn, "trust_beta_otmf_selfish."+img_extn]
+        required_files = ["trust_beta_otmf_fair." + img_extn,
+                          "trust_beta_otmf_malicious." + img_extn,
+                          "trust_beta_otmf_selfish." + img_extn]
         for f in required_files:
             try:
                 os.remove(f)
             except:
                 pass
 
-        cb.latexify(columns=texify_cols, factor=texify_factor) 
+        cb.latexify(columns=texify_cols, factor=texify_factor)
 
         def beta_trusts(trust, length=4096):
-            #TODO This should be optimised to not use the same dataframe
+            # TODO This should be optimised to not use the same dataframe
             trust['+'] = (trust.TXThroughput / length) * (1 - trust.PLR)
             trust['-'] = (trust.TXThroughput / length) * trust.PLR
             beta_trust = trust[['+', '-']].unstack(level='target')
-            trust.drop(['+','-'], axis=1, inplace=True)
+            trust.drop(['+', '-'], axis=1, inplace=True)
             return beta_trust
 
         def beta_calcs(beta_trust):
@@ -361,8 +438,8 @@ class ThesisLazyDiagrams(TestCase):
             beta_t_confidence = lambda s, f: 1 - np.sqrt((12 * s * f) / ((s + f + 1) * (s + f) ** 2))
             beta_t = lambda s, f: s / (s + f)
             otmf_t = lambda s, f: 1 - np.sqrt(
-                ((((beta_t(s, f) - 1) ** 2) / 2) + (((beta_t_confidence(s, f) - 1) ** 2) / 9))) / np.sqrt(
-                (1 / 2) + (1 / 9))
+                    ((((beta_t(s, f) - 1) ** 2) / 2) + (((beta_t_confidence(s, f) - 1) ** 2) / 9))) / np.sqrt(
+                    (1 / 2) + (1 / 9))
             beta_vals = beta_trust.apply(lambda r: beta_t(r['+'], r['-']), axis=1)
             otmf_vals = beta_trust.apply(lambda r: otmf_t(r['+'], r['-']), axis=1)
             return beta_vals, otmf_vals
@@ -418,8 +495,7 @@ class ThesisLazyDiagrams(TestCase):
         plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish", extension=img_extn)
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(f))
-            self.generated_files.append(f)
+            self.assertFileExists(f)
 
     def test_OutlierGraphs(self):
         columns = {'ADelay': "$Delay$",
@@ -454,7 +530,8 @@ class ThesisLazyDiagrams(TestCase):
         with pd.get_store(Tools.in_results('outliers.h5')) as s:
             outliers = s.get('outliers')
             sum_by_weight = outliers.groupby(
-                ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index('bev')
+                    ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index(
+                    'bev')
             dp = pd.DataFrame.from_dict({
                                             k: sum_by_weight[sum_by_weight.bev == k]['Delta']
                                             for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
@@ -503,5 +580,4 @@ class ThesisLazyDiagrams(TestCase):
             fig.savefig("MaliciousSelfishMetricFactorsRad.png", transparent=True)
 
         for f in required_files:
-            self.assertTrue(os.path.isfile(f))
-            self.generated_files.append(f)
+            self.assertFileExists(f)

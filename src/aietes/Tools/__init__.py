@@ -1215,3 +1215,20 @@ class Capturing(list):
     def __exit__(self, *args):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
+
+def remove(filename, no_exist_ok = True):
+    try:
+        os.remove(filename)
+    except OSError as exc: # Python >2.5
+        # If it's not there and we don't care, don't raise
+        if exc.errno == errno.ENOENT and no_exist_ok:
+            pass
+        else: raise
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise

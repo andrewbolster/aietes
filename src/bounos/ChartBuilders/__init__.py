@@ -357,13 +357,19 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
     if rename_labels:
         grp.rename(columns=rename_labels, inplace=True)
 
+    if title is not False:
+        title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
+
     grp.index = grp.index.astype(np.float64)
     grp.plot(ax=ax,
              secondary_y=labels['collisions'],  # subplots=True,
              style=["-", "--", "-.", ":"],
              grid='on',
-             title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
+             title=title
              )
+    axes=f.get_axes()
+    axes[1].set_yticks(np.linspace(axes[1].get_yticks()[0],axes[1].get_yticks()[-1],len(axes[0].get_yticks())))
+
     ax.set_xlabel(var)
     ax.set_ylabel("Total Packets")
     if not hide_annotations:
@@ -383,7 +389,7 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
     """
 
     :param stats:
-    :param title:
+    :param title: if title is False, no title will be shown
     :param var:
     :param figsize:
     :return:
@@ -396,8 +402,9 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
     ax.set_xlabel(var)
     ax.set_ylim(0, 1)
 
-    ax.set_title(
-        "Probability of Timely Arrival of Varying {},{}".format(var, (':' + title if title is not None else "")))
+    if title is not False:
+        ax.set_title(
+            "Probability of Timely Arrival of Varying {},{}".format(var, (':' + title if title is not None else "")))
     return f
 
 
@@ -423,9 +430,10 @@ def average_delays_across_variation(stats, title=None, var='Packet Rates', figsi
     # Cannot have negative delay
     ax.set_ylim((0, ax.get_ylim()[1]))
 
-    ax.set_title(
-        "Average End to End Delay for Varying {},{}. \n showing standard deviation of result, with a max of {}".format(
-            var, (':' + title if title is not None else ""), np.around(np.max(packet_delays_std), decimals=2)))
+    if title is not False:
+        ax.set_title(
+            "Average End to End Delay for Varying {},{}. \n showing standard deviation of result, with a max of {}".format(
+                var, (':' + title if title is not None else ""), np.around(np.max(packet_delays_std), decimals=2)))
     return f
 
 
@@ -452,12 +460,13 @@ def rts_ratio_across_variation(stats, title=None, var='Packet Rates', figsize=No
     # Cannot have negative ratio
     ax.set_ylim((0, ax.get_ylim()[1]))
 
-    ax.set_title("RTS / Data Ratio of Varying {},{}. "
-                 "\n showing standard deviation of result, with a max of {}".format(
-                     var,
-                     (':' + title if title is not None else ""),
-                     np.around(np.max(r_std.values), decimals=2))
-                 )
+    if title is not False:
+        ax.set_title("RTS / Data Ratio of Varying {},{}. "
+                     "\n showing standard deviation of result, with a max of {}".format(
+                         var,
+                         (':' + title if title is not None else ""),
+                         np.around(np.max(r_std.values), decimals=2))
+                     )
     return f
 
 
@@ -677,7 +686,8 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
     :return:
     """
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
-    f.suptitle("Node Layout and mobility {}".format("for " + title if title is not None else ""))
+    if title is not False:
+        f.suptitle("Node Layout and mobility {}".format("for " + title if title is not None else ""))
     for n, (name, node_p) in enumerate(df.groupby(level='node')):
         x, y, z = initial = node_p.iloc[0]
 
@@ -713,7 +723,7 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
     return f
 
 
-def plot_positions(d, bounds=None):
+def plot_positions(d, bounds=None, show_title=False):
     """
     d as a dict of x,y,z positions (list or ndarray)
     bounds as x,y,z extent of the environment
@@ -758,8 +768,11 @@ def plot_positions(d, bounds=None):
 
     area = area_of_centroid(my_d)
     avg_dist = avg_range(my_d)
-    f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(np.around(avg_dist), np.around(area)),
-               fontsize=18)
+    if show_title is not False:
+        f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(
+                np.around(avg_dist),
+                np.around(area)
+        ), fontsize=18)
     ax1.set_title("X-Y (Top)")
     ax1.set_aspect('equal', adjustable='datalim')
     ax2.set_title("Y-Z (Side)")
@@ -803,21 +816,22 @@ def latexify(columns=1, factor=0.45):
               "so will reduce to" + max_height_inches + "inches.")
         fig_height_in = max_height_inches
 
-    params = {'backend': 'ps',
-              'text.latex.preamble': ['\usepackage{gensymb}'],
-              'axes.labelsize': 10,  # fontsize for x and y labels (was 10)
-              'axes.titlesize': 10,
-              'font.size': 10,  # was 10/8
-              'text.fontsize': 10,
-              'legend.fontsize': 8,  # was 10,
-              'legend.labelspacing': 0.2,
-              'legend.borderpad': 0,
-              'xtick.labelsize': 8,
-              'ytick.labelsize': 8,
-              'text.usetex': True,
-              'figure.figsize': [fig_width_in, fig_height_in],
-              'font.family': 'serif'
-              }
+    params = {
+        'axes.labelsize': 10,  # fontsize for x and y labels (was 10)
+        'axes.titlesize': 10,
+        'backend': 'ps',
+        'figure.figsize': [fig_width_in, fig_height_in],
+        'font.family': 'serif',
+        'font.size': 10,  # was 10/8
+        'legend.borderpad': 0,
+        'legend.fontsize': 8,  # was 10,
+        'legend.labelspacing': 0.2,
+        'text.fontsize': 10,
+        'text.latex.preamble': ['\usepackage{gensymb}'],
+        'text.usetex': True,
+        'xtick.labelsize': 8,
+        'ytick.labelsize': 8,
+    }
 
     mpl.rcParams.update(params)
     return fig_width_in, fig_height_in
