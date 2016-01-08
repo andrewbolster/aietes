@@ -29,7 +29,7 @@ def exec_comms_range(scenario, title, app_rate):
     e.add_position_scaling_range(np.linspace(1, 8, 8), basis_node_name="n1")
     e.update_all_nodes({"app_rate": app_rate})
     e.run(
-        runcount=1,
+        runcount=8,
         retain_data=False,
         queue=True
     )
@@ -67,6 +67,6 @@ if __name__ == "__main__":
             print("Saved detection stats to {}".format(exp.exp_path))
             base_name = re.split('\.|\/', base_scenario)[-2]
             try:
-                dump_trust_logs_and_stats_from_exp_paths([path], title="{}-{}-{}".format(title, base_name, app_rate))
+                dump_trust_logs_and_stats_from_exp_paths([path], title="{}-{}-{:.4f}".format(title, base_name, app_rate))
             except:
                 log.exception("Crashed in trust logging, moving on")

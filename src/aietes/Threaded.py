@@ -25,6 +25,7 @@ import gc
 from time import gmtime, strftime
 from joblib import Parallel, delayed
 import numpy as np
+import signal
 from aietes import Simulation
 
 
@@ -77,8 +78,8 @@ def queue_mask(i, args):
     try:
         results = sim_mask(args)
         return i, results
-    except:
-        return
+    except KeyboardInterrupt, e:
+        pass
 
 
 def parallel_sim(arglist):
@@ -119,6 +120,15 @@ class QueueSim(object):
         ))
         for i, args in enumerate(self.tasklist):
             self.pending_results[i] = self.pool.apply_async(queue_mask, args=(i, args))
+
+    def terminate(self):
+        """
+        Kill all humans
+        :return:
+        """
+        self.pool.terminate()
+        for p in self.pending_results:
+            p.get()
 
     def finished(self):
         """

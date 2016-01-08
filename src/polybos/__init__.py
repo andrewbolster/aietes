@@ -36,7 +36,8 @@ import collections
 from configobj import ConfigObj
 import numpy as np
 
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
+import signal
 
 # Must use the aietes path to get the config files
 from aietes import Simulation
@@ -682,7 +683,7 @@ class ExperimentManager(object):
         try:
             os.chdir(self.exp_path)
             if self.parallel and queue:
-                queue = Pool(processes=4)
+                queue = Pool(processes=cpu_count())
                 # Q: Is this acting on the reference to scenario or the item in scenarios?
                 logging.info("Launching Queue")
                 for scenario_title, scenario in self.scenarios.items():
@@ -712,7 +713,10 @@ class ExperimentManager(object):
                     else:
                         scenario.run(**kwargs)
 
-        except (KeyboardInterrupt, SystemExit):
+        except (KeyboardInterrupt, SystemExit) as e:
+            logging.warn("Exit: Terminating Queue")
+            queue.join()
+            queue.terminate()
             raise
         except ConfigError as e:
             print("Caught Configuration error %s on scenario config \n%s" %
