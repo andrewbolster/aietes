@@ -14,7 +14,7 @@ import numpy as np
 
 from bounos import npz_in_dir, load_sources, generate_sources
 from bounos.Analyses import Trust
-from aietes.Tools import memory, swapsize, map_paths
+from aietes.Tools import memory, swapsize, map_paths, mkcpickle
 
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,
@@ -53,8 +53,9 @@ def generate_inverted_logs_from_paths(paths):
     logs = {} #TODO Update this to a defaultdict implementation.
     # Transpose per-var-per-run statistics into Per 'log' stats (i.e. rx, tx, trust, stats, etc)
     for var, runs in scenarios_comms(paths):
+        print("Var:{}".format(var))
         for run, data in runs:
-
+            print("---{}".format(run))
             nodes = dict(data['logs'].items() + [('stats', data['stats']), ('positions', data['positions'])])
             data = None
             run = run.split('-')[-1]
@@ -153,10 +154,17 @@ def generate_dataframes_from_inverted_log(tup):
     return k, df
 
 
-def dump_trust_logs_and_stats_from_exp_paths(paths, title=None):
+def dump_trust_logs_and_stats_from_exp_paths(paths, title=None, dump=False):
     if title is None:
         title = 'logs'
+
+    print("Using {} as title".format(title))
+
+    if dump:
+        print("Dumping intermediates to intermediate_{}_*.npz".format(title))
     inverted_logs = generate_inverted_logs_from_paths(paths)
+    if dump:
+        mkcpickle("intermediate_{}_inverted_logs".format(title),inverted_logs)
     log.info("First Cycle:{:8.2f}/{:8.2f} MiB".format(memory(), swapsize()))
     dfs = {k: v for k, v in map(generate_dataframes_from_inverted_log, inverted_logs.iteritems())}
 
@@ -175,5 +183,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load multiple scenarios or experiments into a single output hdfstore")
     parser.add_argument('paths', metavar='P', type=str, nargs='+', default=[os.curdir],
                         help="List of directories to walk for dataruns")
+    parser.add_argument('--title', metavar='T', type=str, default=None,
+                        help="Title")
+    parser.add_argument('--dump', action='store_true', default=False,
+                        help="Dump intermediate files to the current directory as intermediate_*.npz")
     args = parser.parse_args()
-    dump_trust_logs_and_stats_from_exp_paths(args.paths)
+    dump_trust_logs_and_stats_from_exp_paths(args.paths, dump=args.dump)
