@@ -194,6 +194,17 @@ def dump_trust_logs_and_stats_from_exp_paths(paths, title=None, dump=False):
             v.to_hdf('{}.h5'.format(title), k, complevel=5, complib='zlib')
     log.info("Done!:{:8.2f}/{:8.2f} MiB".format(memory(), swapsize()))
 
+def results_path_parser(path):
+    # Stretch and then compress the path to make sure we're in the right place
+    abspath = os.path.abspath(path)
+    assert os.path.isdir(path), "Expected a path! got {}".format(path)
+    s=os.path.basename(abspath)
+    args = s.split('-')
+    title = args[0]
+    scenario = args[1]
+    var = args[2]
+    #date = datetime(*map(int,args[3:]))
+    return title, scenario, var#, date
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load multiple scenarios or experiments into a single output hdfstore")
@@ -203,5 +214,13 @@ if __name__ == "__main__":
                         help="Title")
     parser.add_argument('--dump', action='store_true', default=False,
                         help="Dump intermediate files to the current directory as intermediate_*.npz")
+    parser.add_argument('--infer', action='store_true', default=False,
+                        help="Attempt to guess the title format from the given paths")
     args = parser.parse_args()
-    dump_trust_logs_and_stats_from_exp_paths(args.paths, dump=args.dump)
+    for path in args.paths:
+        if args.infer:
+            if args.title is not None:
+                raise RuntimeError("Can't infer and set the title at the same time!")
+            title, base_name, var = results_path_parser(path)
+        dump_trust_logs_and_stats_from_exp_paths([path], dump=args.dump,
+                                                 title="{}-{}-{:.4f}".format(title, base_name, var))
