@@ -86,11 +86,25 @@ def generate_dataframes_from_inverted_log(tup):
     log.info("Generating {} structure:{:8.2f}/{:8.2f} MiB".format(k, memory(), swapsize()))
     try:
         v = OrderedDict(sorted(v.iteritems(), key=lambda _k: _k))
-        if k not in ['stats', 'positions']:
-            # Var/Run/Node/(N/t) MultiIndex
+        if k not in ['stats', 'positions', 'trust']:
+            # Var/Run/Node/(N/t) MultiIndex with forgiveness for variable-length inner arrays
             df = pd.concat([
                 pd.concat([
-                    pd.concat([pd.DataFrame(iiiv)
+                              pd.concat([pd.DataFrame(iiiv)
+                               for iiik, iiiv in iiv.iteritems()],
+                              keys=iiv.keys())
+                    for iik, iiv in _runs.iteritems()],
+                    keys=_runs.keys()
+                )
+                for _var, _runs in v.iteritems()],
+                keys=v.keys(),
+                names=['var', 'run', 'node', 't']
+            )
+        elif k in ['trust']:
+            # Strict Var/Run/Node/t MultiIndex
+            df = pd.concat([
+                pd.concat([
+                    pd.concat([pd.DataFrame(dict([ (_k,pd.Series(_v)) for _k,_v in iiiv.iteritems() ]))
                                for iiik, iiiv in iiv.iteritems()],
                               keys=iiv.keys())
                     for iik, iiv in iv.iteritems()],
@@ -104,9 +118,9 @@ def generate_dataframes_from_inverted_log(tup):
             # Var/Run/T/Node MultiIndex
             df = pd.concat([
                 pd.concat([iiv
-                           for iik, iiv in iv.iteritems()],
-                          keys=iv.keys())
-                for ik, iv in v.iteritems()],
+                           for iik, iiv in _runs.iteritems()],
+                          keys=_runs.keys())
+                for _var, _runs in v.iteritems()],
                 keys=v.keys(),
                 names=['var', 'run', 't', 'node']
             )
@@ -114,9 +128,9 @@ def generate_dataframes_from_inverted_log(tup):
             # Var/Run MultiIndex
             df = pd.concat([
                 pd.concat([iiv
-                           for iik, iiv in iv.iteritems()],
-                          keys=iv.keys())
-                for ik, iv in v.iteritems()],
+                           for iik, iiv in _runs.iteritems()],
+                          keys=_runs.keys())
+                for _var, _runs in v.iteritems()],
                 keys=v.keys(),
                 names=['var', 'run', 'node']
             )
@@ -152,14 +166,16 @@ def generate_dataframes_from_inverted_log(tup):
 
     return k, df
 
+def trust_frames_from_logs(inverted_logs):
+    return {k: v for k, v in map(generate_dataframes_from_inverted_log, inverted_logs.iteritems())}
+
 
 def dump_trust_logs_and_stats_from_exp_paths(paths, title=None):
     if title is None:
         title = 'logs'
     inverted_logs = generate_inverted_logs_from_paths(paths)
     log.info("First Cycle:{:8.2f}/{:8.2f} MiB".format(memory(), swapsize()))
-    dfs = {k: v for k, v in map(generate_dataframes_from_inverted_log, inverted_logs.iteritems())}
-
+    dfs = trust_frames_from_logs(inverted_logs)
     filename = '{}.h5'.format(title)
     log.info("Dumping to {}:{:8.2f}/{:8.2f} MiB".format(filename, memory(), swapsize()))
     if os.path.isfile(filename):

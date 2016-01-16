@@ -2,7 +2,8 @@
 from __future__ import division
 
 from scripts.publication_scripts import savefig, interpolate_rate_sep, plot_contour_2d, plot_contour_3d, \
-    get_mobility_stats, get_emmission_stats, rate_and_ranges, app_rate_from_path, generate_figure_contact_tex
+    get_mobility_stats, get_emmission_stats, rate_and_ranges, app_rate_from_path, generate_figure_contact_tex, \
+    get_separation_stats
 
 __author__ = 'bolster'
 
@@ -16,6 +17,7 @@ import os
 from os.path import expanduser
 import itertools
 import functools
+import warnings
 import unittest
 import logging
 import tempfile
@@ -47,13 +49,15 @@ from bounos.ChartBuilders import weight_comparisons, radar, format_axes
 ##################
 use_temp_dir = False
 
-texify_cols = 0.5
-texify_factor = 1
+_texcol = 0.5
+_texfac = 1.0
+
+hatching = False
 img_extn = 'pdf'
 
 selected_scenarios = [
-    #    'single_mobile',
-    #    'allbut1_mobile',
+    'bella_single_mobile',
+    'bella_allbut1_mobile',
     'bella_all_mobile',
     'bella_static',
 ]
@@ -118,7 +122,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        cb.latexify(columns=texify_cols, factor=texify_factor)
+        cb.latexify(columns=_texcol, factor=_texfac)
 
         base_config = aietes.Simulation.populate_config(
                 aietes.Tools.get_config('bella_static.conf'),
@@ -151,7 +155,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        cb.latexify(columns=texify_cols, factor=texify_factor)
+        cb.latexify(columns=_texcol, factor=_texfac)
 
         for mobility in ['static', 'all_mobile']:
             df = get_mobility_stats(mobility)
@@ -188,7 +192,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        figsize = cb.latexify(columns=texify_cols, factor=texify_factor)
+        figsize = cb.latexify(columns=_texcol, factor=_texfac)
 
         weight_comparisons.plot_mtfm_boxplot(self.good, keyword="fair",
                                              s=selected_scenarios, figsize=figsize,
@@ -220,7 +224,6 @@ class ThesisLazyDiagrams(unittest.TestCase):
                         print s.keys()
                         raise
                     # Reset Range for packet emission rate
-                    stats.throughput = stats.throughput / 3600.0  # pps
                     stats.index = stats.index.set_levels([
                                                              np.int32((np.asarray(
                                                                      stats.index.levels[0].astype(np.float64)) * 100)),
@@ -231,50 +234,78 @@ class ThesisLazyDiagrams(unittest.TestCase):
                     statsd[app_rate_from_path(store_path)] = stats.copy()
 
             df = pd.concat(statsd.values(), keys=statsd.keys(), names=['rate', 'separation'] + stats.index.names[1:])
-            base_df = df.reset_index().sort(['rate', 'separation']).set_index(['rate', 'separation', 'run', 'node'])
+            base_df = df.reset_index().sort_values(by=['rate', 'separation']).set_index(['rate', 'separation', 'run', 'node'])
 
-            stats = get_emmission_stats(base_df, 100)
-            var = "Packet Emmission Rate (pps)"
-            rename_labels = {"rx_counts": "Successfully Received Packets",
+            rename_labels = {"rx_counts": "Received Packets",
+                             "tx_counts": "Transmitted Packets",
                              "enqueued": "Enqueued Packets",
                              "collisions": "Collisions"}
 
-            figsize = cb.latexify(columns=texify_cols, factor=texify_factor)
+            figsize = cb.latexify(columns=_texcol, factor=_texfac)
+
+            # Emission Stats
+
+            stats = get_emmission_stats(base_df, separation=100)
+            var = "Packet Emmission Rate (pps)"
 
             fig = cb.performance_summary_for_var(stats,
-                                                 var=var,
+                                                 var=var, title=False,
                                                  rename_labels=rename_labels,
                                                  hide_annotations=True, figsize=figsize)
-            savefig(fig, "throughput_performance_" + scenario_partial, img_extn, tight=False)
+            savefig(fig, "emission_throughput_performance_" + scenario_partial, img_extn, tight=False)
 
-            fig = cb.probability_of_timely_arrival(stats, var=var, figsize=figsize)
-            savefig(fig, "prod_breakdown_" + scenario_partial, img_extn)
+            fig = cb.probability_of_timely_arrival(stats, var=var, title=False, figsize=figsize)
+            savefig(fig, "emission_prod_breakdown_" + scenario_partial, img_extn)
 
-            fig = cb.average_delays_across_variation(stats, var=var, figsize=figsize)
-            savefig(fig, "delay_variation_" + scenario_partial, img_extn)
+            fig = cb.average_delays_across_variation(stats, var=var, title=False, figsize=figsize)
+            savefig(fig, "emission_delay_variation_" + scenario_partial, img_extn)
 
-            fig = cb.rts_ratio_across_variation(stats, var=var, figsize=figsize)
-            savefig(fig, "rts_ratio_" + scenario_partial, img_extn)
+            fig = cb.rts_ratio_across_variation(stats, var=var, title=False, figsize=figsize)
+            savefig(fig, "emission_rts_ratio_" + scenario_partial, img_extn)
+
+            # Separation Stats
+
+            stats = get_separation_stats(base_df, emission=0.015)
+            var = "Packet Emmission Rate (pps)"
+
+            fig = cb.performance_summary_for_var(stats,
+                                                 var=var, title=False,
+                                                 rename_labels=rename_labels,
+                                                 hide_annotations=True, figsize=figsize)
+            savefig(fig, "separation_throughput_performance_" + scenario_partial, img_extn, tight=False)
+
+            fig = cb.probability_of_timely_arrival(stats, var=var, title=False, figsize=figsize)
+            savefig(fig, "separation_prod_breakdown_" + scenario_partial, img_extn)
+
+            fig = cb.average_delays_across_variation(stats, var=var, title=False, figsize=figsize)
+            savefig(fig, "separation_delay_variation_" + scenario_partial, img_extn)
+
+            fig = cb.rts_ratio_across_variation(stats, var=var, title=False, figsize=figsize)
+            savefig(fig, "separation_rts_ratio_" + scenario_partial, img_extn)
 
         required_file_prefixes = [
-            "throughput_performance_",
-            "prod_breakdown_",
-            "delay_variation_",
-            "rts_ratio_"
+            "throughput_performance",
+            "prod_breakdown",
+            "delay_variation",
+            "rts_ratio"
         ]
+        supra_prefixes = ['emission', 'separation']
         for scenario in selected_scenarios:
-            for prefix in required_file_prefixes:
-                Tools.remove("{}{}.{}".format(
-                        prefix,
-                        scenario,
-                        img_extn
-                ))
+            for supra in supra_prefixes:
+                for prefix in required_file_prefixes:
+                    Tools.remove("{}_{}_{}.{}".format(
+                            supra,
+                            prefix,
+                            scenario,
+                            img_extn
+                    ))
             plot_packet_stats_for_scenario_containing(scenario)
             for prefix in required_file_prefixes:
-                f = "{}{}.{}".format(
-                        prefix,
-                        scenario,
-                        img_extn
+                f = "{}_{}_{}.{}".format(
+                            supra,
+                            prefix,
+                            scenario,
+                            img_extn
                 )
                 self.assertTrue(os.path.isfile(f))
                 self.generated_files.append(f)
@@ -293,7 +324,6 @@ class ThesisLazyDiagrams(unittest.TestCase):
                         print s.keys()
                         raise
                     # Reset Range for packet emission rate
-                    stats.throughput = stats.throughput / 3600.0  # pps
                     stats.index = stats.index.set_levels([
                                                              np.int32((np.asarray(
                                                                      stats.index.levels[0].astype(np.float64)) * 100)),
@@ -388,27 +418,30 @@ class ThesisLazyDiagrams(unittest.TestCase):
         for f in required_files:
             Tools.remove(f)
 
-        figsize = cb.latexify(columns=texify_cols, factor=texify_factor)
+        figsize = cb.latexify(columns=_texcol, factor=_texfac)
 
         for s in selected_scenarios:
-            weight_comparisons.plot_weight_comparisons(self.good, self.malicious,
-                                                       malicious_behaviour="BadMouthingPowerControl",
-                                                       s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair", "Malicious"],
-                                                       prefix="", extension=img_extn
-                                                       )
-            weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
-                                                       malicious_behaviour="SelfishTargetSelection",
-                                                       s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair", "Selfish"],
-                                                       prefix="", extension=img_extn
-                                                       )
-            weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
-                                                       malicious_behaviour="SelfishTargetSelection",
-                                                       s=s, figsize=figsize, show_title=False,
-                                                       labels=["Fair", "Selfish"],
-                                                       prefix="", extension=img_extn
-                                                       )
+            try:
+                weight_comparisons.plot_weight_comparisons(self.good, self.malicious,
+                                                           malicious_behaviour="BadMouthingPowerControl",
+                                                           s=s, figsize=figsize, show_title=False,
+                                                           labels=["Fair", "Malicious"],
+                                                           prefix="", extension=img_extn
+                                                           )
+                weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
+                                                           malicious_behaviour="SelfishTargetSelection",
+                                                           s=s, figsize=figsize, show_title=False,
+                                                           labels=["Fair", "Selfish"],
+                                                           prefix="", extension=img_extn
+                                                           )
+                weight_comparisons.plot_weight_comparisons(self.good, self.selfish,
+                                                           malicious_behaviour="SelfishTargetSelection",
+                                                           s=s, figsize=figsize, show_title=False,
+                                                           labels=["Fair", "Selfish"],
+                                                           prefix="", extension=img_extn
+                                                           )
+            except KeyError:
+                warnings.warn("Scenario {} not in trust run, skipping".format(s))
         for f in required_files:
             self.assertFileExists(f)
 
@@ -423,7 +456,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        cb.latexify(columns=texify_cols, factor=texify_factor)
+        cb.latexify(columns=_texcol, factor=_texfac)
 
         def beta_trusts(trust, length=4096):
             # TODO This should be optimised to not use the same dataframe
@@ -543,16 +576,17 @@ class ThesisLazyDiagrams(unittest.TestCase):
         ms = comparer(dp.malicious, dp.selfish)[key_order]
 
         # Bar Chart
-        figsize = cb.latexify(columns=1.0, factor=1.2)
+        figsize = cb.latexify(columns=_texcol, factor=_texfac)
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1)
         _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(index=columns)
         ax = _df.plot(kind='bar', position=0.5, ax=ax, legend=False)
         bars = ax.patches
-        hatches = ''.join(h * len(_df) for h in 'x/O.')
 
-        for bar, hatch in zip(bars, hatches):
-            bar.set_hatch(hatch)
+        if hatching:
+            hatches = ''.join(h * len(_df) for h in 'x/O.')
+            for bar, hatch in zip(bars, hatches):
+                bar.set_hatch(hatch)
         ax.set_xticklabels(_df.index, rotation=0)
         ax.set_ylabel("Relative Significance")
         ax.legend(loc='center right', bbox_to_anchor=(1, 1), ncol=4)
@@ -564,7 +598,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
         # Radar Base
         with rc_context(rc={'axes.labelsize': 8}):
-            figsize = cb.latexify(columns=1, factor=1.2)
+            figsize = cb.latexify(columns=_texcol, factor=_texfac)
             r = radar.radar_factory(len(key_order))
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(1, 1, 1, projection='radar')

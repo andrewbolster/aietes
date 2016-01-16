@@ -2,6 +2,7 @@
 from __future__ import division
 import os
 import itertools
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -251,14 +252,16 @@ def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None, prefix="
             for s in scenarios:
                 tex_safe_s = scenario_map[s]
                 title = "{}{}".format(keyword, tex_safe_s)
-
-                fig = trust_network_wrt_observers(tp_net.xs(tex_safe_s, level='var'),
-                                                  tex_safe_s, title=title if show_title else False,
-                                                  figsize=figsize, xlabel=xlabel, dropnet=dropnet)
-                fig.tight_layout(pad=0)
-                fig.savefig("{}trust_{}{}.{}".format(
-                    prefix,
-                    s,
-                    "_" + keyword if keyword is not None else "",
-                    extension),
-                    transparent=True)
+                try:
+                    fig = trust_network_wrt_observers(tp_net.xs(tex_safe_s, level='var'),
+                                                      tex_safe_s, title=title if show_title else False,
+                                                      figsize=figsize, xlabel=xlabel, dropnet=dropnet)
+                    fig.tight_layout(pad=0)
+                    fig.savefig("{}trust_{}{}.{}".format(
+                        prefix,
+                        s,
+                        "_" + keyword if keyword is not None else "",
+                        extension),
+                        transparent=True)
+                except KeyError:
+                    warnings.warn("Scenario {} not in trust run, skipping".format(tex_safe_s))

@@ -14,6 +14,7 @@ from bounos.ChartBuilders import format_axes, latexify
 import aietes.Tools
 from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_feature_extractor
 
+
 ##################
 #  HELPER FUNCS  #
 ##################
@@ -66,6 +67,7 @@ fig_basedir = "/home/bolster/src/thesis/papers/active/16_AAMAS"
 
 assert aietes.Tools.os.path.isdir(fig_basedir)
 
+
 def build_outlier_weights(h5_path, signed=False):
     """Outliers should have keys of runs
     :param h5_path:
@@ -83,28 +85,10 @@ def build_outlier_weights(h5_path, signed=False):
                                                                      signed=False)
 
     joined_target_weights = pd.concat(
-        target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names
+            target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names
     ).reset_index('run', drop=True).sort()
 
     return joined_target_weights
-
-
-def build_mean_delta_t_weights(h5_path):
-    with pd.get_store(h5_path) as store:
-        mdts = store.get('meandeltaCombinedTrust_2')
-
-def drop_metrics_from_weights_by_key(target_weights, drop_keys):
-    reset_by_keys = target_weights.reset_index(level=drop_keys)
-    zero_indexes = (reset_by_keys[drop_keys] == 0.0).all(axis=1)
-    dropped_target_weights = reset_by_keys[zero_indexes].drop(drop_keys, 1)
-    return dropped_target_weights
-
-def format_features(feats):
-    alt_feats = pd.concat(feats, names=['base', 'comp', 'metric']).unstack('metric')
-    alt_feats.index.set_levels(
-        [[u'MPC', u'STS', u'Fair', u'Shadow', u'SlowCoach'], [u'MPC', u'STS', u'Fair', u'Shadow', u'SlowCoach']],
-        inplace=True)
-    return alt_feats
 
 
 class AaamasResultSelection(object):
@@ -148,8 +132,6 @@ class AaamasResultSelection(object):
         print("Got Everything I Need!")
         self.testGetBestFullRuns()
 
-
-
     def testGetBestFullRuns(self):
         """
         Purpose of this is to get the best results for full-metric scope
@@ -167,9 +149,9 @@ class AaamasResultSelection(object):
         :return: best run
         """
         feat_d = {
-            'full':(self.joined_feat_weights, None),
-            #'comms':(self.comms_feat_weights, comm_keys),
-            'phys':(self.phys_feat_weights, phys_keys)
+            'full': (self.joined_feat_weights, None),
+            'comms':(self.comms_feat_weights, comm_keys),
+            'phys': (self.phys_feat_weights, phys_keys)
         }
         with pd.get_store(results_path + '.h5') as store:
             trust_observations = store.trust.dropna()
@@ -181,9 +163,6 @@ class AaamasResultSelection(object):
                 best = self.best_of_all(feats, trust_observations)
             aietes.Tools.mkcpickle('best_{}_runs'.format(feat_str), dict(best))
 
-
-
-
     def best_of_all(self, feats, trust_observations):
         best = aietes.Tools.defaultdict(dict)
         for (base_str, target_str), feat in feats.to_dict().items():
@@ -194,37 +173,38 @@ class AaamasResultSelection(object):
             print("---" + target_str)
             best[base_str][target_str] = \
                 self.best_run_and_weight(
-                    feat,
-                    trust_observations)
+                        feat,
+                        trust_observations)
         return best
-
 
     def best_run_and_weight(self, f, trust_observations, par=False, tolerance=0.01):
         f = pd.Series(f, index=trust_observations.keys())
         f_val = f.values
+
         def _assess(x):
             return -np.subtract(*map(np.nanmean, np.split(x.values, [1], axis=1)))
+
         @aietes.Tools.timeit()
         def generate_weighted_trust_perspectives(_trust_observations, feat_weights, par=True):
             weighted_trust_perspectives = []
             for w in feat_weights:
                 weighted_trust_perspectives.append(
-                    generate_node_trust_perspective(
-                        _trust_observations,
-                        metric_weights=pd.Series(w),
-                        par=par
-                ))
+                        generate_node_trust_perspective(
+                                _trust_observations,
+                                metric_weights=pd.Series(w),
+                                par=par
+                        ))
             return weighted_trust_perspectives
 
         def best_group_in_perspective(perspective):
-            group = perspective.groupby(level=['observer', 'run'])\
+            group = perspective.groupby(level=['observer', 'run']) \
                 .apply(_assess)
             best_group = group.argmax()
             return best_group, group[best_group]
 
         combinations = np.asarray([f_val * i for i in itertools.product([-1, 1], repeat=len(f))])
-        for i in f.values[np.abs(f_val)<tolerance]:
-            combinations[:,np.where(f_val==i)]=i
+        for i in f.values[np.abs(f_val) < tolerance]:
+            combinations[:, np.where(f_val == i)] = i
         combinations = aietes.Tools.npuniq(combinations)
 
         print("Have {} Combinations".format(len(combinations)))
@@ -239,6 +219,7 @@ class AaamasResultSelection(object):
         if np.all(best_weight == f):
             print("Actually got it right first time for a change!")
         return best_run, best_weight
+
 
 if __name__ == "__main__":
     AaamasResultSelection()

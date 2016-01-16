@@ -279,8 +279,8 @@ class Application(Sim.Process):
                 "hops": self.stats['packets_hops'],
                 "dhops": self.stats['packets_dhops'],
                 "average_length": avg_length,
-                "throughput": throughput,
-                "offeredload": offeredload,
+                "throughput": throughput, #bps
+                "offeredload": offeredload, #bps
                 "enqueued": left_in_q
             }
             app_stats.update(self.layercake.phy.dump_stats())

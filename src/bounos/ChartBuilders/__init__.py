@@ -22,6 +22,7 @@ from collections import OrderedDict
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
+
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -38,6 +39,12 @@ _boxplot_kwargs = {
     "whis": 1
 }
 
+
+def unique_cm_dict_from_list(items):
+    cm = plt.get_cmap('gist_rainbow')
+    cNorm  = mpl.colors.Normalize(vmin=0, vmax=len(items))
+    scalarMap = mpl.cm.ScalarMappable(norm=cNorm, cmap=cm)
+    return dict(zip(items,[scalarMap.to_rgba(i) for i in range(len(items))]))
 
 def lost_packet_distribution(dp=None, tx=None, title=None):
     """
@@ -353,7 +360,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
     labels.update(rename_labels)
 
     f, ax = plt.subplots(1, 1, figsize=figsize)
-    grp = stats.groupby(level='var')[['rx_counts', 'enqueued', 'collisions']].mean()
+    grp = stats.groupby(level='var')[['tx_counts', 'rx_counts']].mean().sort_index()
     if rename_labels:
         grp.rename(columns=rename_labels, inplace=True)
 
@@ -362,13 +369,13 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
 
     grp.index = grp.index.astype(np.float64)
     grp.plot(ax=ax,
-             secondary_y=labels['collisions'],  # subplots=True,
              style=["-", "--", "-.", ":"],
              grid='on',
              title=title
              )
-    axes=f.get_axes()
-    axes[1].set_yticks(np.linspace(axes[1].get_yticks()[0],axes[1].get_yticks()[-1],len(axes[0].get_yticks())))
+    # Can't remember what this does but it's broken anyway
+    # axes=f.get_axes()
+    # axes[1].set_yticks(np.linspace(axes[1].get_yticks()[0],axes[1].get_yticks()[-1],len(axes[0].get_yticks())))
 
     ax.set_xlabel(var)
     ax.set_ylabel("Total Packets")
@@ -826,7 +833,6 @@ def latexify(columns=1, factor=0.45):
         'legend.borderpad': 0,
         'legend.fontsize': 8,  # was 10,
         'legend.labelspacing': 0.2,
-        'text.fontsize': 10,
         'text.latex.preamble': ['\usepackage{gensymb}'],
         'text.usetex': True,
         'xtick.labelsize': 8,

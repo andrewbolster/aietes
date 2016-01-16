@@ -269,13 +269,13 @@ def get_separation_stats(df, emission=0.015):
                                          )
     return stats
 
-def interpolate_rate_sep(df, key):
+def interpolate_rate_sep(df, key, method='linear'):
     X,Y,Z = df.rate, df.separation, df[key]
 
     xi = np.linspace(X.min(),X.max(),16)
     yi = np.linspace(Y.min(),Y.max(),16)
     # VERY IMPORTANT, to tell matplotlib how is your data organized
-    zi = interpolate.griddata((X, Y), Z, (xi[None,:], yi[:,None]), method='linear')
+    zi = interpolate.griddata(points=(X, Y), values=Z, xi=(xi[None,:], yi[:,None]), method=method)
     return xi,yi,zi, X, Y
 
 def savefig(fig, name, extn="pdf", tight=True, **kwargs):
