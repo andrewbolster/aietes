@@ -360,7 +360,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
     labels.update(rename_labels)
 
     f, ax = plt.subplots(1, 1, figsize=figsize)
-    grp = stats.groupby(level='var')[['tx_counts', 'rx_counts']].mean().sort_index()
+    grp = stats.groupby(level='var')[['rx_counts', 'tx_counts', 'collisions', 'enqueued']].mean().sort_index()
     if rename_labels:
         grp.rename(columns=rename_labels, inplace=True)
 
@@ -368,11 +368,15 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
         title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
 
     grp.index = grp.index.astype(np.float64)
-    grp.plot(ax=ax,
-             style=["-", "--", "-.", ":"],
-             grid='on',
-             title=title
-             )
+
+    for k,v in grp.iteritems():
+        ax.plot(v, label=k)
+    ax.legend(loc=0)
+    ##grp.plot(ax=ax,
+     #        style=["-", "--", "-.", ":"],
+     #        grid='on',
+     #        title=title
+     #        )
     # Can't remember what this does but it's broken anyway
     # axes=f.get_axes()
     # axes[1].set_yticks(np.linspace(axes[1].get_yticks()[0],axes[1].get_yticks()[-1],len(axes[0].get_yticks())))
@@ -405,7 +409,7 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
     packet_error_rates = (stats.rx_counts / stats.tx_counts).groupby(level='var').mean()
     packet_error_vars = (stats.rx_counts / stats.tx_counts).groupby(level='var').std()
     ax.errorbar(list(packet_error_rates.index), packet_error_rates.values, packet_error_vars.values)
-    ax.set_ylabel("Probability of Timely Arrival")
+    ax.set_ylabel("Probability of Arrival")
     ax.set_xlabel(var)
     ax.set_ylim(0, 1)
 
@@ -429,7 +433,7 @@ def average_delays_across_variation(stats, title=None, var='Packet Rates', figsi
     packet_delays = stats.groupby(level='var').average_rx_delay.mean()
     packet_delays_std = stats.groupby(level='var').average_rx_delay.std()
     ax.errorbar(list(packet_delays.index), packet_delays.values, yerr=packet_delays_std.values)
-    ax.set_ylabel("Average End to End Delay(s)")
+    ax.set_ylabel("Mean End to End Delay(s)")
     ax.set_xlabel(var)
     if ylog:
         ax.set_yscale('log')
@@ -824,12 +828,12 @@ def latexify(columns=1, factor=0.45):
         fig_height_in = max_height_inches
 
     params = {
-        'axes.labelsize': 10,  # fontsize for x and y labels (was 10)
-        'axes.titlesize': 10,
+        'axes.labelsize': 8,  # fontsize for x and y labels (was 10)
+        'axes.titlesize': 8,
         'backend': 'ps',
         'figure.figsize': [fig_width_in, fig_height_in],
         'font.family': 'serif',
-        'font.size': 10,  # was 10/8
+        'font.size': 8,  # was 10/8
         'legend.borderpad': 0,
         'legend.fontsize': 8,  # was 10,
         'legend.labelspacing': 0.2,

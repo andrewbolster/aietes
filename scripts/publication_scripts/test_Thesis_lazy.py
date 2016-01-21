@@ -3,7 +3,7 @@ from __future__ import division
 
 from scripts.publication_scripts import savefig, interpolate_rate_sep, plot_contour_2d, plot_contour_3d, \
     get_mobility_stats, get_emmission_stats, rate_and_ranges, app_rate_from_path, generate_figure_contact_tex, \
-    get_separation_stats
+    get_separation_stats, saveinput
 
 __author__ = 'bolster'
 
@@ -212,6 +212,26 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
     def test_PacketStatsGraphs(self):
         # Packet Emissions Graphs for Single Runs
+        def write_packet_stats_table(stats, var, prefix, suffix, include_ideal=False):
+
+            stats['error_rate'] = stats.rx_counts/stats.tx_counts
+            colmap={'error_rate':'Probability of Arrival','average_rx_delay':'Delay(s)'}
+            table = stats[['average_rx_delay','error_rate']].groupby(level='var').mean().rename(columns=colmap)
+            table.index.set_names(var,inplace=True)
+
+
+            ratio = (stats.rts_counts / stats.rx_counts)
+            r_mean = ratio.groupby(level='var').mean()
+            table['RTS/Data Ratio'] = r_mean
+
+            table.reset_index(inplace=True)
+            #table['Ideal Delivery Time(s)'] = table[var]/1400.0 + 9600.0/(10000.0)
+
+            tex=table.to_latex(float_format=lambda x:"%1.4f"%x, index=False, column_format="""
+            *{2}{@{\\hspace{1em}}r@{\\hspace{1em}}}
+            *{3}{@{\\hspace{1em}}p{0.1\\textwidth} @{\\hspace{1em}}}  """)
+            saveinput(tex, "{}_packet_stats_{}".format(prefix, suffix))
+            print tex
 
         def plot_packet_stats_for_scenario_containing(scenario_partial):
             statsd = {}
@@ -236,17 +256,19 @@ class ThesisLazyDiagrams(unittest.TestCase):
             df = pd.concat(statsd.values(), keys=statsd.keys(), names=['rate', 'separation'] + stats.index.names[1:])
             base_df = df.reset_index().sort_values(by=['rate', 'separation']).set_index(['rate', 'separation', 'run', 'node'])
 
-            rename_labels = {"rx_counts": "Received Packets",
-                             "tx_counts": "Transmitted Packets",
+            rename_labels = {"rx_counts": "Throughput",
+                             "tx_counts": "Offered Load",
                              "enqueued": "Enqueued Packets",
                              "collisions": "Collisions"}
 
-            figsize = cb.latexify(columns=_texcol, factor=_texfac)
+            figsize = cb.latexify(columns=_texcol*2, factor=_texfac)
 
             # Emission Stats
 
             stats = get_emmission_stats(base_df, separation=100)
-            var = "Packet Emmission Rate (pps)"
+            var = "Packet Emission Rate (pps)"
+
+            write_packet_stats_table(stats, var, 'emission', scenario_partial)
 
             fig = cb.performance_summary_for_var(stats,
                                                  var=var, title=False,
@@ -265,8 +287,10 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
             # Separation Stats
 
-            stats = get_separation_stats(base_df, emission=0.015)
+            stats = get_separation_stats(base_df, emission=0.02)
             var = "Packet Emmission Rate (pps)"
+
+            write_packet_stats_table(stats, var, 'emission', scenario_partial, include_ideal=True)
 
             fig = cb.performance_summary_for_var(stats,
                                                  var=var, title=False,
@@ -282,6 +306,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
             fig = cb.rts_ratio_across_variation(stats, var=var, title=False, figsize=figsize)
             savefig(fig, "separation_rts_ratio_" + scenario_partial, img_extn)
+
+            plt.close('all')
 
         required_file_prefixes = [
             "throughput_performance",
@@ -300,15 +326,16 @@ class ThesisLazyDiagrams(unittest.TestCase):
                             img_extn
                     ))
             plot_packet_stats_for_scenario_containing(scenario)
-            for prefix in required_file_prefixes:
-                f = "{}_{}_{}.{}".format(
-                            supra,
-                            prefix,
-                            scenario,
-                            img_extn
-                )
-                self.assertTrue(os.path.isfile(f))
-                self.generated_files.append(f)
+            for supra in supra_prefixes:
+                for prefix in required_file_prefixes:
+                    f = "{}_{}_{}.{}".format(
+                                supra,
+                                prefix,
+                                scenario,
+                                img_extn
+                    )
+                    self.assertTrue(os.path.isfile(f))
+                    self.generated_files.append(f)
 
     def test_RateRangePlots(self):
         # Plot the Fancy 2d/3d graphs of rate/range/performance

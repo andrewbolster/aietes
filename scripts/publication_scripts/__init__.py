@@ -289,6 +289,11 @@ def savefig(fig, name, extn="pdf", tight=True, **kwargs):
     except:
         warnings.warn("Couldn't tkzify {}, skipping".format(name))
 
+def saveinput(text, name, extn='tex'):
+    Tools.mkdir_p('input')
+    with open("input/{}.{}".format(name, extn), 'w') as f:
+       f.write(text)
+
 
 
 def generate_figure_contact_tex(fig_paths, target_path='.'):
