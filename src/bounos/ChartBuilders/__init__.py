@@ -371,18 +371,15 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
 
     for k,v in grp.iteritems():
         ax.plot(v, label=k)
-    ax.legend(loc=0)
-    ##grp.plot(ax=ax,
-     #        style=["-", "--", "-.", ":"],
-     #        grid='on',
-     #        title=title
-     #        )
+
     # Can't remember what this does but it's broken anyway
     # axes=f.get_axes()
     # axes[1].set_yticks(np.linspace(axes[1].get_yticks()[0],axes[1].get_yticks()[-1],len(axes[0].get_yticks())))
 
-    ax.set_xlabel(var)
     ax.set_ylabel("Total Packets")
+    ax.set_xlabel(var)
+    ax.legend(loc=0)
+
     if not hide_annotations:
         maxes = stats.groupby(level='var')['rx_counts'].max()
         maxes.index = maxes.index.astype(np.float64)

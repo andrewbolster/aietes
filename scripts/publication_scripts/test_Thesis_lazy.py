@@ -225,7 +225,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
             table['RTS/Data Ratio'] = r_mean
 
             table.reset_index(inplace=True)
-            #table['Ideal Delivery Time(s)'] = table[var]/1400.0 + 9600.0/(10000.0)
+            if include_ideal:
+                table['Ideal Delivery Time(s)'] = table[var]/1400.0 + 9600.0/(10000.0)
 
             tex=table.to_latex(float_format=lambda x:"%1.4f"%x, index=False, column_format="""
             *{2}{@{\\hspace{1em}}r@{\\hspace{1em}}}
@@ -274,7 +275,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
                                                  var=var, title=False,
                                                  rename_labels=rename_labels,
                                                  hide_annotations=True, figsize=figsize)
-            savefig(fig, "emission_throughput_performance_" + scenario_partial, img_extn, tight=False)
+            savefig(fig, "emission_throughput_performance_" + scenario_partial, img_extn)
 
             fig = cb.probability_of_timely_arrival(stats, var=var, title=False, figsize=figsize)
             savefig(fig, "emission_prod_breakdown_" + scenario_partial, img_extn)
@@ -288,15 +289,15 @@ class ThesisLazyDiagrams(unittest.TestCase):
             # Separation Stats
 
             stats = get_separation_stats(base_df, emission=0.02)
-            var = "Packet Emmission Rate (pps)"
+            var = "Initial Node Separation (m)"
 
-            write_packet_stats_table(stats, var, 'emission', scenario_partial, include_ideal=True)
+            write_packet_stats_table(stats, var, 'separation', scenario_partial, include_ideal=True)
 
             fig = cb.performance_summary_for_var(stats,
                                                  var=var, title=False,
                                                  rename_labels=rename_labels,
                                                  hide_annotations=True, figsize=figsize)
-            savefig(fig, "separation_throughput_performance_" + scenario_partial, img_extn, tight=False)
+            savefig(fig, "separation_throughput_performance_" + scenario_partial, img_extn)
 
             fig = cb.probability_of_timely_arrival(stats, var=var, title=False, figsize=figsize)
             savefig(fig, "separation_prod_breakdown_" + scenario_partial, img_extn)
@@ -366,6 +367,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             df = base_df.groupby(level=['rate', 'separation']).mean().reset_index()
 
             norm = lambda df: (df - np.nanmin(df)) / (np.nanmax(df) - np.nanmin(df))
+
             df['average_rx_delay_norm'] = 1 - norm(df.average_rx_delay)
             df['throughput_norm'] = norm(df.throughput)
             df['co_norm'] = df.average_rx_delay_norm * df.throughput_norm
@@ -373,23 +375,25 @@ class ThesisLazyDiagrams(unittest.TestCase):
             df['tdivdel'] = (df.throughput / df.average_rx_delay)
             df.reset_index(inplace=True)
 
+            figsize = cb.latexify(columns=_texcol*2, factor=_texfac)
+
             xt, yt, zt, Xt, Yt = interpolate_rate_sep(df.dropna(), "throughput")
-            fig = plot_contour_2d(xt, yt, zt, Xt, Yt, "Throughput (bps)")
+            fig = plot_contour_2d(xt, yt, zt, Xt, Yt, "Throughput (bps)", figsize=figsize)
             savefig(fig, "throughput_2d_" + scenario_partial, img_extn)
 
             xd, yd, zd, Xd, Yd = interpolate_rate_sep(df.dropna(), "average_rx_delay")
-            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Average Delay (s)")
+            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Average Delay (s)", figsize=figsize)
             savefig(fig, "delay_2d_" + scenario_partial, img_extn)
 
             xd, yd, zd, Xd, Yd = interpolate_rate_sep(df, "tdivdel")
-            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Throughput Delay Ratio")
+            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Throughput Delay Ratio", figsize=figsize)
             savefig(fig, "2d_ratio_" + scenario_partial, img_extn)
 
             fig = plot_contour_3d(xd, yd, zd, rot=45, labels={'x': 'pps', 'y': 'm', 'z': ''})
             savefig(fig, "3d_ratio_" + scenario_partial, img_extn, transparent=True, facecolor='white')
 
             xd, yd, zd, Xd, Yd = interpolate_rate_sep(df, "co_norm")
-            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Normalised Throughput Delay Product", norm=True)
+            fig = plot_contour_2d(xd, yd, zd, Xd, Yd, "Normalised Throughput Delay Product", norm=True, figsize=figsize)
             savefig(fig, "2d_normed_product_" + scenario_partial, img_extn)
 
             fig = plot_contour_3d(xd, yd, zd, rot=45, labels={'x': 'pps', 'y': 'm', 'z': ''})

@@ -114,13 +114,17 @@ def plot_contour_3d(xi, yi, zi, rot=120, labels=None):
     return fig
 
 
-def plot_contour_2d(xi, yi, zi, x=None, y=None, var=None, norm=False):
+def plot_contour_2d(xi, yi, zi, x=None, y=None, var=None, norm=False, figsize=None):
     if x is None:
         x = []
     if y is None:
         y = []
 
-    fig = plt.figure(figsize=(w, golden_mean * w), facecolor='white')
+    if figsize is None:
+        figsize = (w, golden_mean * w)
+
+    fig = plt.figure(figsize=figsize, facecolor='white')
+
     ax = fig.add_subplot(1, 1, 1)
     xig, yig = np.meshgrid(xi, yi)
     x_min, y_min = map(np.nanmin, (xi, yi))
@@ -147,7 +151,7 @@ def plot_contour_2d(xi, yi, zi, x=None, y=None, var=None, norm=False):
         cbar.set_label(var)
 
     if len(x) and len(y):
-        ax.scatter(x, y, color='k', marker='.')
+        ax.scatter(x, y, color='k', marker='.', s=1)
 
     # ax.clabel(cset,inline=1)
     return fig
