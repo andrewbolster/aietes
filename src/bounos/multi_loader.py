@@ -223,4 +223,4 @@ if __name__ == "__main__":
                 raise RuntimeError("Can't infer and set the title at the same time!")
             title, base_name, var = results_path_parser(path)
         dump_trust_logs_and_stats_from_exp_paths([path], dump=args.dump,
-                                                 title="{}-{}-{:.4f}".format(title, base_name, var))
+                                                 title="{}-{}-{}".format(title, base_name, var))

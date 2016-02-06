@@ -7,6 +7,7 @@ colorlog
 configobj
 futures
 joblib >=0.8.0a3
+matplotlib2tikz
 matplotlib >= 1.3.1
 natsort
 networkx
@@ -24,6 +25,7 @@ pubsub
 pydot
 pykalman
 pylab
+pylatex
 quantities
 scikit-learn
 scipy
