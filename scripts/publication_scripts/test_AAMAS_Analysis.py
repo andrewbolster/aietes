@@ -63,7 +63,7 @@ n_nodes = 6
 n_metrics = 9
 
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
-fig_basedir = "/home/bolster/src/thesis/papers/active/16_AAMAS"
+fig_basedir = "/home/bolster/src/thesis/Figures"
 
 assert aietes.Tools.os.path.isdir(fig_basedir)
 
@@ -177,7 +177,7 @@ class AaamasResultSelection(object):
                         trust_observations)
         return best
 
-    def best_run_and_weight(self, f, trust_observations, par=False, tolerance=0.01):
+    def best_run_and_weight(self, f, trust_observations, par=True, tolerance=0.01):
         f = pd.Series(f, index=trust_observations.keys())
         f_val = f.values
 

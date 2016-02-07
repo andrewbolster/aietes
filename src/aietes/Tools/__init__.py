@@ -36,11 +36,12 @@ from ast import literal_eval
 from configobj import ConfigObj
 from functools import partial
 from inspect import getmembers, isfunction
-from itertools import groupby
+from itertools import groupby, chain, combinations
 from operator import itemgetter
 from shelve import DbfilenameShelf
 from tempfile import mkdtemp
 from time import time
+
 
 import notify2
 import numpy as np
@@ -79,14 +80,15 @@ metric_rename_dict = {
     'ADelay': "$Delay$",
     'ARXP': "$P_{RX}$",
     'ATXP': "$P_{TX}$",
-    'RXThroughput': "$T^P_{RX}$",
-    'TXThroughput': "$T^P_{TX}$",
+    'RXThroughput': "$S$", # Throughput
+    'TXThroughput': "$G$", # Offered Load
     'PLR': '$PLR$',
     'INDD': '$INDD$',
     'INHD': '$INHD$',
     'Speed': '$Speed$'
 }
 
+key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
 
 def _vmb(vmkey):
     """Private.
@@ -792,6 +794,13 @@ def update_dict(d, keys, value, safe=False):
         d = d.setdefault(key, {})
     d[keys[-1]] = value
 
+def invert_dict(d):
+    """
+    Return an inverted {v:k} dict
+    :param d:
+    :return: dict()
+    """
+    return dict((v,k) for k, v in d.iteritems())
 
 def list_functions(module):
     """
@@ -1232,3 +1241,13 @@ def mkdir_p(path):
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else: raise
+
+def powerset(iterable):
+    """
+    Return a powerset iterable for a given iterable, i.e. the set of r-length combinations for all r in len(iterable)
+    :param iterable:
+    :return:
+    """
+    "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))

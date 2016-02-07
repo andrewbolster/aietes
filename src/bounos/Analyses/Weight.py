@@ -25,10 +25,8 @@ from time import gmtime, strftime
 import itertools
 from joblib import Parallel, delayed
 from itertools import ifilter
-from functools import partial
 from aietes.Tools import var_rename_dict, metric_rename_dict, categorise_dataframe, map_levels
 from bounos.Analyses import Trust
-from bounos.ChartBuilders import weight_comparisons
 from bounos.ChartBuilders.weight_comparisons import norm_weight
 
 
@@ -312,9 +310,9 @@ def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None, sign
     return target_weights.fillna(0.0)  # Nans map to no outliers
 
 
-def feature_extractor(df, target, raw=False):
+def feature_extractor(df, target, raw=False, n_estimators=128):
     data = df.drop(target, axis=1)
-    reg = ske.ExtraTreesRegressor(n_jobs=-1, n_estimators=512)
+    reg = ske.ExtraTreesRegressor(n_jobs=-1, n_estimators=n_estimators)
     reg.fit(data, df[target])
     if raw:
         result = target, reg
@@ -322,7 +320,7 @@ def feature_extractor(df, target, raw=False):
         result = pd.Series(dict(zip(data.keys(), reg.feature_importances_)))
     return result
 
-def target_weight_feature_extractor(target_weights, comparison=None, raw=False):
+def target_weight_feature_extractor(target_weights, comparison=None, raw=False, n_estimators=128):
     if comparison is None:
         comparison = np.subtract
 
@@ -333,10 +331,10 @@ def target_weight_feature_extractor(target_weights, comparison=None, raw=False):
         var_weights = target_weights.apply(lambda s: comparison(s, target_weights[basekey]), axis=0).dropna()
         # Ending up with [basekey,var] as "Baseline" and "target" behaviours
         if raw:
-            known_good_features_d[basekey] = [feature_extractor(s.reset_index(), var, raw=True) for var, s in var_weights.iteritems()]
+            known_good_features_d[basekey] = [feature_extractor(s.reset_index(), var, raw=True, n_estimators=n_estimators) for var, s in var_weights.iteritems()]
         else:
             known_good_features_d[basekey] = \
-                pd.concat([feature_extractor(s.reset_index(), var) for var, s in var_weights.iteritems()],
+                pd.concat([feature_extractor(s.reset_index(), var, n_estimators=n_estimators) for var, s in var_weights.iteritems()],
                           keys=var_weights.keys(), names=['var', 'metric'])
 
     return known_good_features_d
@@ -373,3 +371,51 @@ if __name__ == "__main__":
         target_weights_dict = {}
         weight_df = store.get(store.keys()[0])
         summed_outliers_per_weight(weight_df, observer, n_metrics, target=target)
+
+
+def build_outlier_weights(h5_path, observer, target, n_metrics, signed=False):
+    """Outliers should have keys of runs
+    :param h5_path:
+    """
+    with pd.get_store(h5_path) as store:
+        keys = store.keys()
+
+    target_weights_dict = {}
+    for runkey in filter(lambda s: s.startswith('/CombinedTrust'), keys):
+        with pd.get_store(h5_path) as store:
+            print runkey
+            target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey),
+                                                                     observer, n_metrics,
+                                                                     target=target,
+                                                                     signed=False)
+
+    joined_target_weights = pd.concat(
+        target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names
+    ).reset_index('run', drop=True).sort()
+
+    return joined_target_weights
+
+
+def calc_correlations_from_weights(weights):
+    def calc_correlations(base, comp, index=0):
+        dp_r = (comp / base).reset_index()
+        return dp_r.corr()[index][:-1]
+
+    _corrs = {}
+    for base, comp in itertools.permutations(weights.keys(), 2):
+        _corrs[(base, comp)] = \
+            calc_correlations(weights[base],
+                              weights[comp])
+
+    corrs = pd.DataFrame.from_dict(_corrs).T.rename(columns=metric_rename_dict)
+    map_levels(corrs, var_rename_dict, 0)
+    map_levels(corrs, var_rename_dict, 1)
+    corrs.index.set_names(['Control', 'Misbehaviour'], inplace=True)
+    return corrs
+
+
+def drop_metrics_from_weights_by_key(target_weights, drop_keys):
+    reset_by_keys = target_weights.reset_index(level=drop_keys)
+    zero_indexes = (reset_by_keys[drop_keys] == 0.0).all(axis=1)
+    dropped_target_weights = reset_by_keys[zero_indexes].drop(drop_keys, 1)
+    return dropped_target_weights

@@ -562,15 +562,6 @@ class ThesisLazyDiagrams(unittest.TestCase):
             self.assertFileExists(f)
 
     def test_OutlierGraphs(self):
-        columns = {'ADelay': "$Delay$",
-                   'ARXP': "$P_{RX}$",
-                   'ATXP': "$P_{TX}$",
-                   'RXThroughput': "$T^P_{RX}$",
-                   'TXThroughput': "$T^P_{TX}$",
-                   'PLR': '$PLR$'
-                   }
-        key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
-
         # Plot relative importance of outlier metrics
         required_files = ["MaliciousSelfishMetricFactorsRad.png", "MaliciousSelfishMetricFactors.png"]
         for f in required_files:
@@ -602,15 +593,15 @@ class ThesisLazyDiagrams(unittest.TestCase):
                                             })
 
         # Perform Comparisons
-        gm = comparer(dp.good, dp.malicious)[key_order]
-        gs = comparer(dp.good, dp.selfish)[key_order]
-        ms = comparer(dp.malicious, dp.selfish)[key_order]
+        gm = comparer(dp.good, dp.malicious)[Tools.key_order]
+        gs = comparer(dp.good, dp.selfish)[Tools.key_order]
+        ms = comparer(dp.malicious, dp.selfish)[Tools.key_order]
 
         # Bar Chart
         figsize = cb.latexify(columns=_texcol, factor=_texfac)
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1)
-        _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(index=columns)
+        _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(index=Tools.metric_rename_dict)
         ax = _df.plot(kind='bar', position=0.5, ax=ax, legend=False)
         bars = ax.patches
 
@@ -630,14 +621,14 @@ class ThesisLazyDiagrams(unittest.TestCase):
         # Radar Base
         with rc_context(rc={'axes.labelsize': 8}):
             figsize = cb.latexify(columns=_texcol, factor=_texfac)
-            r = radar.radar_factory(len(key_order))
+            r = radar.radar_factory(len(Tools.key_order))
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(1, 1, 1, projection='radar')
             ax.plot(r, gm.values, ls='--', marker='x', label="F/M")
             ax.plot(r, gs.values, ls=':', marker='x', label="F/S")
             ax.plot(r, ms.values, ls='-.', marker='x', label="M/S")
             ax.grid(True, color='k', alpha=0.33, ls=':')
-            ax.set_varlabels([columns[k] for k in key_order])
+            ax.set_varlabels([Tools.metric_rename_dict[k] for k in Tools.key_order])
             ax.set_ylabel("Relative\nSignificance")
             ax.yaxis.labelpad = -80
             ax.tick_params(direction='out', pad=-100)

@@ -50,3 +50,6 @@ results/
 
 # Sphinx
 _build
+
+# ipython cleanup
+.ipynb_checkpoints

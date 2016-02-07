@@ -1,24 +1,21 @@
 # coding=utf-8
 
 from __future__ import division
-import itertools
+
 import tempfile
 import unittest
-from collections import defaultdict
+
 import matplotlib.pylab as plt
 import pandas as pd
 import sklearn.ensemble as ske
 from scipy.stats.stats import pearsonr
 
-from bounos.Analyses.Trust import generate_node_trust_perspective
-from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list
 from aietes.Tools import *
-from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_feature_extractor, \
-    generate_weighted_trust_perspectives
-
-
-
-
+from bounos.Analyses.Trust import generate_node_trust_perspective
+from bounos.Analyses.Weight import target_weight_feature_extractor, \
+    generate_weighted_trust_perspectives, build_outlier_weights, calc_correlations_from_weights, \
+    drop_metrics_from_weights_by_key
+from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list
 
 ###########
 # OPTIONS #
@@ -27,7 +24,7 @@ _texcol = 0.5
 _texfac = 0.9
 use_temp_dir = False
 show_outputs = False
-recompute = True
+recompute = False
 _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 
 golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
@@ -35,7 +32,6 @@ w = 6
 
 phys_keys = ['INDD', 'INHD', 'Speed']
 comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
-key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
 
 observer = 'Bravo'
 target = 'Alfa'
@@ -66,7 +62,7 @@ else:
 #  HELPER FUNCS  #
 ##################
 
-def plot_result(result, title=None, stds=True, spans=None):
+def plot_trust_line_graph(result, title=None, stds=True, spans=None):
     fig_size = latexify(columns=_texcol, factor=_texfac)
 
     fig = plt.figure(figsize=fig_size)
@@ -111,7 +107,7 @@ def assess_results(perspectives_d, base_key='Fair'):
     for bev_key in keys:
         for run_i, run in perspectives_d[(base_key, bev_key)].xs(bev_key, level='var').groupby(level='run'):
             results[bev_key][run_i] = assess_result(run)
-            plot_result(run, title="{}{}".format(bev_key, run_i))
+            plot_trust_line_graph(run, title="{}{}".format(bev_key, run_i))
     return results
 
 
@@ -136,116 +132,6 @@ def feature_validation_plots(weighted_trust_perspectives, feat_weights, title='W
 
 
 assert os.path.isdir(fig_basedir)
-
-
-def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, arrow_kwargs=None):
-    """
-    Adds horizontal arrow annotation with text in the middle
-
-    Parameters
-    ----------
-    ax : matplotlib.Axes
-        The axes to draw to
-
-    start : float
-        start of line
-
-    end : float
-        end of line
-
-    txt_str : string
-        The text to add
-
-    y_height : float
-        The height of the line
-
-    txt_kwargs : dict or None
-        Extra kwargs to pass to the text
-
-    arrow_kwargs : dict or None
-        Extra kwargs to pass to the annotate
-
-    Returns
-    -------
-    tuple
-        (annotation, text)
-        :param x_width:
-    """
-
-    if txt_kwargs is None:
-        txt_kwargs = {}
-    if arrow_kwargs is None:
-        # default to your arrowprops
-        arrow_kwargs = {'arrowprops': dict(arrowstyle="<->",
-                                           connectionstyle="bar",
-                                           ec="k",
-                                           shrinkA=5, shrinkB=5,
-                                           )}
-
-    trans = ax.get_xaxis_transform()
-
-    ann = ax.annotate('', xy=(x_width, start),
-                      xytext=(x_width, end),
-                      transform=trans,
-                      **arrow_kwargs)
-    txt = ax.text(x_width + .05,
-                  (start + end) / 2,
-                  txt_str,
-                  **txt_kwargs)
-
-
-def build_outlier_weights(h5_path, signed=False):
-    """Outliers should have keys of runs
-    :param h5_path:
-    """
-    with pd.get_store(h5_path) as store:
-        keys = store.keys()
-
-    target_weights_dict = {}
-    for runkey in filter(lambda s: s.startswith('/CombinedTrust'), keys):
-        with pd.get_store(h5_path) as store:
-            print runkey
-            target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey),
-                                                                     observer, n_metrics,
-                                                                     target=target,
-                                                                     signed=False)
-
-    joined_target_weights = pd.concat(
-        target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names
-    ).reset_index('run', drop=True).sort()
-
-    return joined_target_weights
-
-
-def build_mean_delta_t_weights(h5_path):
-    with pd.get_store(h5_path) as store:
-        mdts = store.get('meandeltaCombinedTrust_2')
-
-
-def calc_correlations_from_weights(weights):
-    def calc_correlations(base, comp, index=0):
-        dp_r = (comp / base).reset_index()
-        return dp_r.corr()[index][:-1]
-
-    _corrs = {}
-    for base, comp in itertools.permutations(weights.keys(), 2):
-        _corrs[(base, comp)] = \
-            calc_correlations(weights[base],
-                              weights[comp])
-
-    corrs = pd.DataFrame.from_dict(_corrs).T.rename(columns=metric_rename_dict)
-    map_levels(corrs, var_rename_dict, 0)
-    map_levels(corrs, var_rename_dict, 1)
-    corrs.index.set_names(['Control', 'Misbehaviour'], inplace=True)
-    return corrs
-
-
-def drop_metrics_from_weights_by_key(target_weights, drop_keys):
-    reset_by_keys = target_weights.reset_index(level=drop_keys)
-    zero_indexes = (reset_by_keys[drop_keys] == 0.0).all(axis=1)
-    dropped_target_weights = reset_by_keys[zero_indexes].drop(drop_keys, 1)
-    return dropped_target_weights
-
 
 def format_features(feats):
     alt_feats = pd.concat(feats, names=['base', 'comp', 'metric']).unstack('metric')
@@ -309,7 +195,9 @@ class ThesisDiagrams(unittest.TestCase):
     def recompute_features_in_shared(cls, signed=False):
         # All Metrics
         print "Building Joined {} Target Weights".format("Signed" if signed else "Unsigned")
-        joined_target_weights = build_outlier_weights(results_path + "/outliers.bkup.h5", signed=signed)
+        joined_target_weights = build_outlier_weights(results_path + "/outliers.bkup.h5",
+                                                      observer=observer, target=target,
+                                                      n_metrics=n_metrics, signed=signed)
         joined_feats = format_features(
             target_weight_feature_extractor(
                 joined_target_weights
@@ -345,6 +233,36 @@ class ThesisDiagrams(unittest.TestCase):
         print "Dumping Phys Target Weights"
         phys_only_weights.to_hdf(shared_h5_path, 'phys_only_weights' + dumping_suffix)
         phys_only_feats.to_hdf(shared_h5_path, 'phys_only_feats' + dumping_suffix)
+
+    def save_feature_plot(self, feats, fig_filename, hatches=False):
+        fig_size = latexify(columns=_texcol, factor=_texfac)
+        # Make sure feats are appropriately ordered for plotting
+        sorted_feat_keys = sorted(feats.keys(), key=lambda x: key_order.index(invert_dict(metric_rename_dict)[x]))
+        feats = feats[sorted_feat_keys]
+        these_feature_colours = [self.metric_colour_map[k] for k in feats.keys().tolist()]
+
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.add_subplot(1, 1, 1)
+        ax = feats[~(feats == 0).all(axis=1)].plot(
+            ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
+            legend=False, colors=these_feature_colours
+        )
+        ax.set_xlabel("Behaviour")
+        ax.set_ylabel("Est. Metric Significance")
+        fig = ax.get_figure()
+        bars = ax.patches
+        if hatches:
+            hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
+            for bar, hatch in zip(bars, hatches):
+                bar.set_hatch(hatch)
+        ax.legend(loc='best', ncol=1)
+        format_axes(ax)
+        ax.xaxis.grid(False) # Disable vertical lines
+        fig.tight_layout()
+        fig.savefig(fig_filename, transparent=True)
+        self.assertTrue(os.path.isfile(fig_filename + '.png'))
+        if show_outputs:
+            try_to_open(fig_filename + '.png')
 
     def testThreatSurfacePlot(self):
         fig_filename = 'threat_surface_sum'
@@ -431,32 +349,6 @@ class ThesisDiagrams(unittest.TestCase):
 
         self.save_feature_plot(feats, fig_filename)
 
-    def save_feature_plot(self, feats, fig_filename, hatches=False):
-        fig_size = latexify(columns=_texcol, factor=_texfac)
-        print(feats.keys())
-        these_feature_colours = [self.metric_colour_map[k] for k in feats.keys().tolist()]
-
-        fig = plt.figure(figsize=fig_size)
-        ax = fig.add_subplot(1, 1, 1)
-        ax = feats[~(feats == 0).all(axis=1)].plot(
-            ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
-            legend=False, colors=these_feature_colours
-        )
-        ax.set_xlabel("Behaviour")
-        ax.set_ylabel("Est. Metric Significance")
-        fig = ax.get_figure()
-        bars = ax.patches
-        if hatches:
-            hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
-            for bar, hatch in zip(bars, hatches):
-                bar.set_hatch(hatch)
-        ax.legend(loc='best', ncol=1)
-        format_axes(ax)
-        fig.tight_layout()
-        fig.savefig(fig_filename, transparent=True)
-        self.assertTrue(os.path.isfile(fig_filename + '.png'))
-        if show_outputs:
-            try_to_open(fig_filename + '.png')
 
     def testPhysMetricTrustRelevance(self):
         fig_filename = 'phys_metric_trust_relevance'
@@ -520,7 +412,6 @@ class ThesisDiagrams(unittest.TestCase):
 
     def test0ValidationBestPlots(self):
         """
-
         :return:
         """
         with pd.get_store(results_path + '.h5') as store:
@@ -530,6 +421,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         plots = {}
         weights = {}
+        deltaTs = {}
         for subset_str, key in key_d.items():
             if key is None:
                 _trust_observations = trust_observations
@@ -541,12 +433,13 @@ class ThesisDiagrams(unittest.TestCase):
                     _trust_observations.xs(target_str, level='var'),
                     metric_weights=pd.Series(best[1]))
                 weights[(subset_str,target_str)] = best[1].copy()
-                plots[(subset_str,target_str)]=plot_result(test_weight\
-                            .xs(best[0], level=['observer','run'])\
-                            .dropna(axis=1, how='all'), stds=False, spans=6)
+                plots[(subset_str,target_str)] = plot_trust_line_graph(test_weight \
+                                                                     .xs(best[0], level=['observer','run']) \
+                                                                     .dropna(axis=1, how='all'), stds=False, spans=6)
+                deltaTs[(subset_str,target_str)] = None
         inverted_results = defaultdict(list)
         for (subset_str, target_str), (fig,ax,result) in plots.items():
-            fig_filename = "img/best_{}_run_{}".format(subset_str, target_str)
+            fig_filename = "best_{}_run_{}".format(subset_str, target_str)
             #ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
@@ -558,6 +451,33 @@ class ThesisDiagrams(unittest.TestCase):
                 try_to_open(fig_filename + '.png')
             print subset_str,target_str
             inverted_results[subset_str].append((target_str,result))
+
+        #mkcpickle("/dev/shm/inverted_results", inverted_results)
+        perfd = defaultdict()
+        # Generate performance assessments for each weighted metric subset domain against tested behaviour
+        for subset_str, results in inverted_results.items():
+            _rd = {k:v for k,v in results}
+            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev','var','t'])
+            df_mean = _df.groupby(level='bev').agg(np.nanmean)
+            # Take the mean of mean trust values from all other nodes and subtract suspicious node
+            perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
+
+        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset','bev']).unstack('bev')
+        perf_df['Avg.']=perf_df.mean(axis=1)
+        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
+        perf_df = perf_df.rename(str.capitalize)
+
+        tex=perf_df.to_latex(float_format=lambda x:"%1.2f"%x, index=True, column_format="|l|*{4}{c}|r|")\
+            .replace('bev','\diagbox{Domain}{Behaviour}')\
+            .split('\n')
+        tex.pop(3) #second dimension header; overridden by the above replacement
+        tex.insert(-4, '\hline') # Hline before averages
+        tex='\n'.join(tex)
+        with open('input/domain_deltas.tex','w') as f:
+            f.write(tex)
+        print tex
+
+
         for subset_str, results in inverted_results.items():
             fig_size = latexify(columns=_texcol, factor=_texfac)
             fig = plt.figure(figsize=fig_size)
@@ -566,14 +486,14 @@ class ThesisDiagrams(unittest.TestCase):
             #        _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
 
             #results.boxplot(ax=ax)
-            fig_filename = "img/box_{}_run_{}".format(subset_str, target_str)
+            fig_filename = "box_{}_run_{}".format(subset_str, target_str)
             ax.set_title("Example {} Metric Weighted Assessment for {}".format(
                 subset_str.capitalize(),
                 target_str
             ))
             format_axes(ax)
-            #fig.savefig(fig_filename, transparent=True)
-            #self.assertTrue(os.path.isfile(fig_filename + '.png'))
+            fig.savefig(fig_filename, transparent=True)
+            self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
             print subset_str,target_str

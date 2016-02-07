@@ -908,3 +908,60 @@ def avg_range(d):
     :return:
     """
     return np.average(squareform(pdist(np.asarray(d.values()))))
+
+def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, arrow_kwargs=None):
+    """
+    Adds horizontal arrow annotation with text in the middle
+
+    Parameters
+    ----------
+    ax : matplotlib.Axes
+        The axes to draw to
+
+    start : float
+        start of line
+
+    end : float
+        end of line
+
+    txt_str : string
+        The text to add
+
+    y_height : float
+        The height of the line
+
+    txt_kwargs : dict or None
+        Extra kwargs to pass to the text
+
+    arrow_kwargs : dict or None
+        Extra kwargs to pass to the annotate
+
+    Returns
+    -------
+    tuple
+        (annotation, text)
+        :param x_width:
+    """
+
+    if txt_kwargs is None:
+        txt_kwargs = {}
+    if arrow_kwargs is None:
+        # default to your arrowprops
+        arrow_kwargs = {'arrowprops': dict(arrowstyle="<->",
+                                           connectionstyle="bar",
+                                           ec="k",
+                                           shrinkA=5, shrinkB=5,
+                                           )}
+
+    trans = ax.get_xaxis_transform()
+
+    ann = ax.annotate('', xy=(x_width, start),
+                      xytext=(x_width, end),
+                      transform=trans,
+                      **arrow_kwargs)
+    txt = ax.text(x_width + .05,
+                  (start + end) / 2,
+                  txt_str,
+                  **txt_kwargs)
+
+    return ax
