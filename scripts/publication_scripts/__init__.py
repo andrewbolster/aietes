@@ -318,3 +318,26 @@ def generate_figure_contact_tex(fig_paths, target_path='.'):
                 fig.add_caption(filename)
 
     doc.generate_tex()
+
+
+phys_keys = ['INDD', 'INHD', 'Speed']
+comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
+key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
+comm_keys_alt = ['ATXP', 'RXThroughput', 'TXThroughput', 'PLR','INDD']
+phys_keys_alt = ['ADelay','ARXP', 'INDD', 'INHD', 'Speed']
+observer = 'Bravo'
+target = 'Alfa'
+n_nodes = 6
+n_metrics = 9
+results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
+fig_basedir = "/home/bolster/src/thesis/Figures"
+
+def subset_renamer(s):
+    """
+    Capitalise a string and make it tex-safe (i.e. avoid the madness of _alt)
+    :param s:
+    :return: string
+    """
+    s = str.capitalize(s)
+    s = s.replace("_alt", " Alt.")
+    return s

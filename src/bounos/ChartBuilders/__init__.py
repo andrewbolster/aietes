@@ -845,17 +845,20 @@ def latexify(columns=1, factor=0.45):
 
 
 def format_axes(ax, spine_color='gray'):
-    ax.grid(True, color=spine_color, alpha=0.5)
-    for spine in ['top', 'right']:
-        ax.spines[spine].set_visible(False)
-    for spine in ['bottom', 'left']:
-        ax.spines[spine].set_color(spine_color)
+    if isinstance(ax, list):
+        ax = map(format_axes, ax)
+    else:
+        ax.grid(True, color=spine_color, alpha=0.5)
+        for spine in ['top', 'right']:
+            ax.spines[spine].set_visible(False)
+        for spine in ['bottom', 'left']:
+            ax.spines[spine].set_color(spine_color)
 
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('left')
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
 
-    for axis in [ax.xaxis, ax.yaxis]:
-        axis.set_tick_params(direction='out', color=spine_color)
+        for axis in [ax.xaxis, ax.yaxis]:
+            axis.set_tick_params(direction='out', color=spine_color)
 
     return ax
 

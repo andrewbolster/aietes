@@ -1,24 +1,25 @@
 # coding=utf-8
 
 from __future__ import division
+
 import itertools
 import tempfile
-import unittest
+
 import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 
-from bounos.Analyses.Trust import generate_node_trust_perspective
-from bounos.ChartBuilders import format_axes, latexify
 import aietes.Tools
-from bounos.Analyses.Weight import summed_outliers_per_weight, target_weight_feature_extractor
+from bounos.Analyses.Trust import generate_node_trust_perspective
+from bounos.Analyses.Weight import summed_outliers_per_weight
+from bounos.ChartBuilders import latexify
 
+from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, n_metrics, results_path, \
+    fig_basedir
 
 ##################
 #  HELPER FUNCS  #
 ##################
-
 def plot_result(result, title=None, stds=True):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
@@ -52,18 +53,7 @@ golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 w = 6
 latexify(columns=2, factor=0.55)
 
-phys_keys = ['INDD', 'INHD', 'Speed']
-comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
-
-key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
-
-observer = 'Bravo'
-target = 'Alfa'
-n_nodes = 6
-n_metrics = 9
-
-results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
-fig_basedir = "/home/bolster/src/thesis/Figures"
+# These were arrived at through visual interpretation of the complete metric relevancy graphs
 
 assert aietes.Tools.os.path.isdir(fig_basedir)
 
@@ -120,14 +110,20 @@ class AaamasResultSelection(object):
         with pd.get_store(shared_h5_path) as store:
             self.joined_target_weights = store.get('joined_target_weights' + dumping_suffix)
             self.joined_feats = store.get('joined_feats' + dumping_suffix)
-            self.comms_only_feats = store.get('comms_only_feats' + dumping_suffix)
-            self.phys_only_feats = store.get('phys_only_feats' + dumping_suffix)
             self.comms_only_weights = store.get('comms_only_weights' + dumping_suffix)
+            self.comms_only_feats = store.get('comms_only_feats' + dumping_suffix)
             self.phys_only_weights = store.get('phys_only_weights' + dumping_suffix)
+            self.phys_only_feats = store.get('phys_only_feats' + dumping_suffix)
+            self.comms_alt_only_weights = store.get('comms_alt_only_weights' + dumping_suffix)
+            self.comms_alt_only_feats = store.get('comms_alt_only_feats' + dumping_suffix)
+            self.phys_alt_only_weights = store.get('phys_alt_only_weights' + dumping_suffix)
+            self.phys_alt_only_feats = store.get('phys_alt_only_feats' + dumping_suffix)
 
         self.joined_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.joined_feats).T)
         self.comms_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.comms_only_feats).T)
         self.phys_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.phys_only_feats).T)
+        self.comms_alt_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.comms_alt_only_feats).T)
+        self.phys_alt_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.phys_alt_only_feats).T)
 
         print("Got Everything I Need!")
         self.testGetBestFullRuns()
@@ -149,9 +145,11 @@ class AaamasResultSelection(object):
         :return: best run
         """
         feat_d = {
-            'full': (self.joined_feat_weights, None),
-            'comms':(self.comms_feat_weights, comm_keys),
-            'phys': (self.phys_feat_weights, phys_keys)
+            #'full': (self.joined_feat_weights, key_order),
+            #'comms':(self.comms_feat_weights, comm_keys),
+            #'phys': (self.phys_feat_weights, phys_keys),
+            'comms_alt': (self.comms_alt_feat_weights, comm_keys_alt),
+            'phys_alt': (self.phys_alt_feat_weights, phys_keys_alt),
         }
         with pd.get_store(results_path + '.h5') as store:
             trust_observations = store.trust.dropna()
@@ -166,9 +164,9 @@ class AaamasResultSelection(object):
     def best_of_all(self, feats, trust_observations):
         best = aietes.Tools.defaultdict(dict)
         for (base_str, target_str), feat in feats.to_dict().items():
-            print(base_str)
             if base_str != "Fair":
                 continue
+            print(base_str)
 
             print("---" + target_str)
             best[base_str][target_str] = \

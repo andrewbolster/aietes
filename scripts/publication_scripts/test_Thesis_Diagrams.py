@@ -8,6 +8,7 @@ import unittest
 import matplotlib.pylab as plt
 import pandas as pd
 import sklearn.ensemble as ske
+from matplotlib import gridspec
 from scipy.stats.stats import pearsonr
 
 from aietes.Tools import *
@@ -16,6 +17,8 @@ from bounos.Analyses.Weight import target_weight_feature_extractor, \
     generate_weighted_trust_perspectives, build_outlier_weights, calc_correlations_from_weights, \
     drop_metrics_from_weights_by_key
 from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list
+from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, n_metrics, results_path, \
+    fig_basedir, subset_renamer
 
 ###########
 # OPTIONS #
@@ -27,20 +30,17 @@ show_outputs = False
 recompute = False
 _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 
-golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
-w = 6
-
-phys_keys = ['INDD', 'INHD', 'Speed']
-comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
 
 observer = 'Bravo'
 target = 'Alfa'
 n_nodes = 6
 n_metrics = 9
 key_d = {
-    'full': None,
+    'full': key_order,
     'comms': comm_keys,
-    'phys': phys_keys
+    'phys': phys_keys,
+    'comms_alt': comm_keys_alt,
+    'phys_alt': phys_keys_alt
 }
 
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
@@ -62,11 +62,16 @@ else:
 #  HELPER FUNCS  #
 ##################
 
-def plot_trust_line_graph(result, title=None, stds=True, spans=None):
+def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None):
+
+    dropna = lambda x: x[~np.isnan(x)]
+
     fig_size = latexify(columns=_texcol, factor=_texfac)
 
     fig = plt.figure(figsize=fig_size)
-    ax = fig.add_subplot(1, 1, 1)
+    #ax = fig.add_subplot(1, 1, 1)
+    gs = gridspec.GridSpec(1,2,width_ratios=[4,1])
+    ax = plt.subplot(gs[0])
     if spans is not None:
         plottable = pd.stats.moments.ewma(result, span=spans)
     else:
@@ -92,7 +97,21 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None):
     ax.set_xticks(np.arange(0,61,10))
     ax.set_xticklabels(np.arange(0,61,10))
 
-    return fig,ax,result
+
+    if box is not None:
+        meanlineprops = dict(linestyle='-', color='blue', alpha=0.8)
+
+        axb = plt.subplot(gs[1])
+        if box is 'summary':
+            axb.boxplot([dropna(plottable.iloc[:,0].values), plottable.iloc[:,1:].stack().values],
+                        labels=['Misbehaver', 'Other Nodes'], widths=0.8, showmeans=True, meanline=True, meanprops=meanlineprops)
+        elif box is 'complete':
+            plottable.boxplot(rot=90, showmeans=True, meanline=True, meanprops=meanlineprops)
+        plt.setp(axb.get_yticklabels(), visible=False)
+
+    fig.tight_layout()
+
+    return fig,[ax, axb],result
 
 
 def assess_result(result, target='Alfa'):
@@ -175,14 +194,22 @@ class ThesisDiagrams(unittest.TestCase):
         with pd.get_store(shared_h5_path) as store:
             self.joined_target_weights = store.get('joined_target_weights' + dumping_suffix)
             self.joined_feats = store.get('joined_feats' + dumping_suffix)
-            self.comms_only_feats = store.get('comms_only_feats' + dumping_suffix)
-            self.phys_only_feats = store.get('phys_only_feats' + dumping_suffix)
             self.comms_only_weights = store.get('comms_only_weights' + dumping_suffix)
+            self.comms_only_feats = store.get('comms_only_feats' + dumping_suffix)
             self.phys_only_weights = store.get('phys_only_weights' + dumping_suffix)
+            self.phys_only_feats = store.get('phys_only_feats' + dumping_suffix)
+
+            self.comms_alt_only_weights = store.get('comms_alt_only_weights' + dumping_suffix)
+            self.comms_alt_only_feats = store.get('comms_alt_only_feats' + dumping_suffix)
+            self.phys_alt_only_weights = store.get('phys_alt_only_weights' + dumping_suffix)
+            self.phys_alt_only_feats = store.get('phys_alt_only_feats' + dumping_suffix)
 
         self.joined_feat_weights = categorise_dataframe(non_zero_rows(self.joined_feats).T)
         self.comms_feat_weights = categorise_dataframe(non_zero_rows(self.comms_only_feats).T)
         self.phys_feat_weights = categorise_dataframe(non_zero_rows(self.phys_only_feats).T)
+
+        self.comms_alt_feat_weights = categorise_dataframe(non_zero_rows(self.comms_alt_only_feats).T)
+        self.phys_alt_feat_weights = categorise_dataframe(non_zero_rows(self.phys_alt_only_feats).T)
 
         # Consistent Colouring for Metrics (Currently only applies to relevance charts)
         self.metric_colour_map = unique_cm_dict_from_list(self.joined_feats.keys().tolist())
@@ -207,32 +234,28 @@ class ThesisDiagrams(unittest.TestCase):
         print "Dumping Joined Target Weights"
         joined_target_weights.to_hdf(shared_h5_path, 'joined_target_weights' + dumping_suffix)
         joined_feats.to_hdf(shared_h5_path, 'joined_feats' + dumping_suffix)
-        print "Building Comms Target Weights"
-        comms_only_weights = drop_metrics_from_weights_by_key(
-            joined_target_weights,
-            phys_keys
+        _, _ = cls.metric_subset_weight_and_feature_extractor('comms',comm_keys, joined_target_weights, dumping_suffix)
+        _, _ = cls.metric_subset_weight_and_feature_extractor('phys',phys_keys, joined_target_weights, dumping_suffix)
+        _, _ = cls.metric_subset_weight_and_feature_extractor('comms_alt',comm_keys_alt, joined_target_weights, dumping_suffix)
+        _, _ = cls.metric_subset_weight_and_feature_extractor('phys_alt',phys_keys_alt, joined_target_weights, dumping_suffix)
+
+    @classmethod
+    def metric_subset_weight_and_feature_extractor(cls, subset_str, desired_keys, complete_target_weights, dumping_suffix):
+        print "Building {} Target Weights".format(subset_str)
+        subset_only_weights = drop_metrics_from_weights_by_key(
+            complete_target_weights,
+            metric_key_inverter(desired_keys)
         )
-        comms_only_feats = format_features(
+        subset_only_feats = format_features(
             target_weight_feature_extractor(
-                comms_only_weights
+                subset_only_weights
             )
         )
-        print "Dumping Comms Target Weights"
-        comms_only_weights.to_hdf(shared_h5_path, 'comms_only_weights' + dumping_suffix)
-        comms_only_feats.to_hdf(shared_h5_path, 'comms_only_feats' + dumping_suffix)
-        print "Building Phys Target Weights"
-        phys_only_weights = drop_metrics_from_weights_by_key(
-            joined_target_weights,
-            comm_keys
-        )
-        phys_only_feats = format_features(
-            target_weight_feature_extractor(
-                phys_only_weights
-            )
-        )
-        print "Dumping Phys Target Weights"
-        phys_only_weights.to_hdf(shared_h5_path, 'phys_only_weights' + dumping_suffix)
-        phys_only_feats.to_hdf(shared_h5_path, 'phys_only_feats' + dumping_suffix)
+        print "Dumping {} Target Weights".format(subset_str)
+        subset_only_weights.to_hdf(shared_h5_path, "{}_only_weights{}".format(subset_str,dumping_suffix))
+        subset_only_feats.to_hdf(shared_h5_path, "{}_only_feats{}".format(subset_str,dumping_suffix))
+
+        return subset_only_weights, subset_only_feats
 
     def save_feature_plot(self, feats, fig_filename, hatches=False):
         fig_size = latexify(columns=_texcol, factor=_texfac)
@@ -421,7 +444,6 @@ class ThesisDiagrams(unittest.TestCase):
 
         plots = {}
         weights = {}
-        deltaTs = {}
         for subset_str, key in key_d.items():
             if key is None:
                 _trust_observations = trust_observations
@@ -429,14 +451,16 @@ class ThesisDiagrams(unittest.TestCase):
                 _trust_observations = trust_observations[key]
             best_d = uncpickle(fig_basedir+'/best_{}_runs'.format(subset_str))['Fair']
             for target_str, best in best_d.items():
-                test_weight = generate_node_trust_perspective(
+                trust_perspective = generate_node_trust_perspective(
                     _trust_observations.xs(target_str, level='var'),
                     metric_weights=pd.Series(best[1]))
                 weights[(subset_str,target_str)] = best[1].copy()
-                plots[(subset_str,target_str)] = plot_trust_line_graph(test_weight \
+                plots[(subset_str,target_str)] = plot_trust_line_graph(trust_perspective \
                                                                      .xs(best[0], level=['observer','run']) \
-                                                                     .dropna(axis=1, how='all'), stds=False, spans=6)
-                deltaTs[(subset_str,target_str)] = None
+                                                                     .dropna(axis=1, how='all'),
+                                                                       stds=False,
+                                                                       spans=6,
+                                                                       box='complete')
         inverted_results = defaultdict(list)
         for (subset_str, target_str), (fig,ax,result) in plots.items():
             fig_filename = "best_{}_run_{}".format(subset_str, target_str)
@@ -452,9 +476,45 @@ class ThesisDiagrams(unittest.TestCase):
             print subset_str,target_str
             inverted_results[subset_str].append((target_str,result))
 
-        #mkcpickle("/dev/shm/inverted_results", inverted_results)
-        perfd = defaultdict()
+        # Dump Best weights from best runs to a table
+        w_df = pd.concat([pd.Series(weight, index=key_d[subset.lower()])
+                          for (subset,_), weight in weights.items()],
+                         keys=weights.keys(),
+                         names=['subset','target','metric']).unstack(level='metric')
+
+
+        # TODO Guaranteed to break (or give really weird results) when new subsets added
+        if len(w_df.index.levels[0]) == 3:
+            subset_reindex_keys = ['full','comms','phys']
+        elif len(w_df.index.levels[0]) == 5:
+            subset_reindex_keys = ['full','comms','comms_alt','phys','phys_alt']
+        else:
+            raise ValueError("Incorrect number of subsets included; {}".format(w_df.index.levels[0]))
+        w_df = w_df.reindex(subset_reindex_keys,level='subset')[key_order].rename(columns=metric_rename_dict)
+        w_df = w_df.unstack('target').rename(subset_renamer).stack('target')
+        tex = w_df.to_latex(float_format=lambda x:"%1.3f"%x, index=True, escape=False, column_format="|l|l|*{{{}}}{{c|}}".format(len(key_order)))\
+            .replace('nan','')\
+            .split('\n')
+        tex[2]='\multicolumn{2}{|c|}{\diagbox{Domain, Behaviour}{Metric}}'+tex[2].lstrip()[1:] # get rid of the pesky field separator
+        tex.pop(3) #second dimension header; overridden by the above replacement
+        # Add hlines between subsets
+        hlines=[]
+        for i, line in enumerate(tex):
+            begin = line.lstrip()
+            if begin and not begin.startswith('&') and not begin.startswith('\\'): # if I'm a subset header line
+                hlines.append(i)
+        for i,j in enumerate(hlines):
+            if i: # first one already covered by midrule
+                tex.insert(i+j-1,'\midrule') # add a hline above the i found in prev loop
+        tex='\n'.join(tex)
+        with open('input/optimised_weights.tex','w') as f:
+            f.write(tex)
+        print tex
+
+        #mkcpickle("/dev/shm/weights", weights)
+
         # Generate performance assessments for each weighted metric subset domain against tested behaviour
+        perfd = defaultdict()
         for subset_str, results in inverted_results.items():
             _rd = {k:v for k,v in results}
             _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev','var','t'])
@@ -462,10 +522,13 @@ class ThesisDiagrams(unittest.TestCase):
             # Take the mean of mean trust values from all other nodes and subtract suspicious node
             perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
 
-        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset','bev']).unstack('bev')
+        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset','bev'])\
+            .unstack('bev').reindex(subset_reindex_keys)
         perf_df['Avg.']=perf_df.mean(axis=1)
         perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
-        perf_df = perf_df.rename(str.capitalize)
+        perf_df = perf_df.rename(subset_renamer)
+
+        #mkcpickle("/dev/shm/inverted_results", inverted_results)
 
         tex=perf_df.to_latex(float_format=lambda x:"%1.2f"%x, index=True, column_format="|l|*{4}{c}|r|")\
             .replace('bev','\diagbox{Domain}{Behaviour}')\
@@ -488,7 +551,7 @@ class ThesisDiagrams(unittest.TestCase):
             #results.boxplot(ax=ax)
             fig_filename = "box_{}_run_{}".format(subset_str, target_str)
             ax.set_title("Example {} Metric Weighted Assessment for {}".format(
-                subset_str.capitalize(),
+                subset_renamer(subset_str),
                 target_str
             ))
             format_axes(ax)
@@ -531,7 +594,7 @@ class ThesisDiagrams(unittest.TestCase):
         for (subset_str, target_str), (fig,ax,result) in plots.items():
             fig_filename = "img/box_{}_run_{}".format(subset_str, target_str)
             ax.set_title("Example {} Metric Weighted Assessment for {}".format(
-                subset_str.capitalize(),
+                subset_renamer(subset_str),
                 target_str
             ))
             format_axes(ax)

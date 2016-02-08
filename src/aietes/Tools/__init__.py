@@ -90,6 +90,10 @@ metric_rename_dict = {
 
 key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
 
+def metric_key_inverter(desired_keys):
+    drop_keys = sorted(list(set(key_order).difference(desired_keys)),key=lambda x: key_order.index(x))
+    return drop_keys
+
 def _vmb(vmkey):
     """Private.
     """
