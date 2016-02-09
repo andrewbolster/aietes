@@ -257,7 +257,17 @@ class ThesisDiagrams(unittest.TestCase):
 
         return subset_only_weights, subset_only_feats
 
-    def save_feature_plot(self, feats, fig_filename, hatches=False):
+    def save_feature_plot(self, feats, fig_filename, hatches=False, annotate=None):
+        """
+        Plot the Metric Features Extraction plots from Multi-Domain Analysis section
+
+
+        :param feats:
+        :param fig_filename:
+        :param hatches: (bool) Print-safe Hatching
+        :param annotate: (None, int) Annotate N highest rated significances for each class
+        :return:
+        """
         fig_size = latexify(columns=_texcol, factor=_texfac)
         # Make sure feats are appropriately ordered for plotting
         sorted_feat_keys = sorted(feats.keys(), key=lambda x: key_order.index(invert_dict(metric_rename_dict)[x]))
@@ -278,6 +288,22 @@ class ThesisDiagrams(unittest.TestCase):
             hatches = ''.join(h * 4 for h in ['-', 'x', '\\', '*', 'o', '+', 'O', '.', '_'])
             for bar, hatch in zip(bars, hatches):
                 bar.set_hatch(hatch)
+
+        if annotate:
+            scenario_bars_d = defaultdict(list)
+            for _i, bar in enumerate(bars):
+                # patches are added in order, so each 'class' is i/M, and each metric is i%m
+                scenario_bars_d[_i // len(these_feature_colours)].append(bar)
+            for _i, scenario_bars in scenario_bars_d.items():
+                if isinstance(annotate, int):
+                    for bar in  sorted(scenario_bars, key=lambda b: b.get_height(),reverse=True)[:annotate]:
+                        ax.text(bar.get_x() + bar.get_width()/2, 1.05*bar.get_height(), "{:.2}".format(bar.get_height()), ha='center', va='bottom')
+                elif isinstance(annotate, float):
+                    for bar in  filter(lambda b: b.get_height() > annotate, sorted(scenario_bars, key=lambda b: b.get_height(),reverse=True)):
+                        ax.text(bar.get_x() + bar.get_width()/2, 1.05*bar.get_height(), "{:.2}".format(bar.get_height()), ha='center', va='bottom')
+                else:
+                    raise NotImplementedError("Can't handle an annotation value of type {}; try float or int".format(type(annotate)))
+
         ax.legend(loc='best', ncol=1)
         format_axes(ax)
         ax.xaxis.grid(False) # Disable vertical lines
@@ -363,21 +389,22 @@ class ThesisDiagrams(unittest.TestCase):
 
         fair_feats = self.joined_feats.loc['Fair'].rename(columns=metric_rename_dict)
 
-        self.save_feature_plot(fair_feats, fig_filename)
+        self.save_feature_plot(fair_feats, fig_filename, annotate=3)
 
     def testCommsMetricTrustRelevance(self):
         fig_filename = 'comms_metric_trust_relevance'
 
         feats = self.comms_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
 
-        self.save_feature_plot(feats, fig_filename)
+        self.save_feature_plot(feats, fig_filename, annotate= 0.2)
 
 
     def testPhysMetricTrustRelevance(self):
         fig_filename = 'phys_metric_trust_relevance'
 
         feats = self.phys_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
-        self.save_feature_plot(feats, fig_filename)
+
+        self.save_feature_plot(feats, fig_filename, annotate = 1)
 
     def testFullMetricCorrs(self):
         input_filename = 'input/full_metric_correlations'
@@ -521,6 +548,7 @@ class ThesisDiagrams(unittest.TestCase):
             df_mean = _df.groupby(level='bev').agg(np.nanmean)
             # Take the mean of mean trust values from all other nodes and subtract suspicious node
             perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
+
 
         perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset','bev'])\
             .unstack('bev').reindex(subset_reindex_keys)

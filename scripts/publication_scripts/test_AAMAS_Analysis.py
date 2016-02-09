@@ -145,11 +145,11 @@ class AaamasResultSelection(object):
         :return: best run
         """
         feat_d = {
-            #'full': (self.joined_feat_weights, key_order),
+            'full': (self.joined_feat_weights, key_order),
             #'comms':(self.comms_feat_weights, comm_keys),
             #'phys': (self.phys_feat_weights, phys_keys),
-            'comms_alt': (self.comms_alt_feat_weights, comm_keys_alt),
-            'phys_alt': (self.phys_alt_feat_weights, phys_keys_alt),
+            #'comms_alt': (self.comms_alt_feat_weights, comm_keys_alt),
+            #'phys_alt': (self.phys_alt_feat_weights, phys_keys_alt),
         }
         with pd.get_store(results_path + '.h5') as store:
             trust_observations = store.trust.dropna()

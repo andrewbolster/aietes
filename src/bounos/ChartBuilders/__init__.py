@@ -369,6 +369,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
 
     grp.index = grp.index.astype(np.float64)
 
+    # TODO Fix the colour cycle on these
     for k,v in grp.iteritems():
         ax.plot(v, label=k)
 
