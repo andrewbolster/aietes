@@ -1,7 +1,7 @@
 # coding=utf-8
 import itertools
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import warnings
 
 import functools
@@ -9,14 +9,14 @@ import functools
 import numpy as np
 import pandas as pd
 import pylatex
-from matplotlib import pylab as plt, cm, cm, cm, cm
+from matplotlib import pylab as plt, cm, cm, cm, cm, gridspec
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 from scipy import interpolate as interpolate
 import matplotlib2tikz as mpl2tkz
 
 
 from aietes import Tools
-from bounos.ChartBuilders import latexify, plot_nodes
+from bounos.ChartBuilders import latexify, plot_nodes, format_axes
 
 in_results = functools.partial(os.path.join, Tools._results_dir)
 print Tools._results_dir
@@ -29,7 +29,10 @@ scenario_order = list(reversed([u'bella_all_mobile', u'bella_allbut1_mobile', u'
 
 golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 w = 6
-latexify(columns=2, factor=0.55)
+_texcol = 0.5
+_texfac = 0.9
+
+latexify(columns=_texcol, factor=_texfac)
 
 # # Data File Acquistion
 
@@ -341,3 +344,142 @@ def subset_renamer(s):
     s = str.capitalize(s)
     s = s.replace("_alt", " Alt.")
     return s
+
+
+def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, means=None, target=None,
+                          _texcol=_texcol, _texfac=_texfac):
+    """
+    Plot weighted trust result line graph (i.e. T vs t)
+    Optionally ewma smooth the results with `spans`>0
+    Optionally plot +- std-envelop around means.
+
+    By default, mean lines are across time.
+
+    :param result:
+    :param title:
+    :param stds:
+    :param spans:
+    :param box:
+    :param means: ['time','instantaneous']
+    :param target: column name in results that maps to the "target" or "suspect" node. if none given, assumes first column
+    :return:
+    """
+
+    _target_alpha = 0.8
+    _default_alpha = 0.4
+
+    if means is None:
+        means = 'time'
+    if means not in ['time','instantaneous']:
+        raise ValueError("Invalid `means` argument")
+
+    if target is None:
+        target = result.columns[0]
+
+    target_index=result.columns.get_loc(target)
+
+    dropna = lambda x: x[~np.isnan(x)]
+
+    fig_size = latexify(columns=_texcol, factor=_texfac)
+
+    fig = plt.figure(figsize=fig_size)
+    gs = gridspec.GridSpec(1,2,width_ratios=[4,1])
+    ax = plt.subplot(gs[0])
+    if spans is not None:
+        plottable = pd.stats.moments.ewma(result, span=spans)
+    else:
+        plottable = result
+
+    def pltstd(tup):
+        mean, std = tup
+        ax.axhline(mean + std, alpha=0.3, ls=':', color='green')
+        ax.axhline(mean - std, alpha=0.3, ls=':', color='red')
+
+
+    if means is 'time':
+        # Plot all lines
+        _=plottable[target].plot(ax=ax, alpha=_target_alpha)
+        _=plottable[[c for c in plottable.columns if c != target]].plot(ax=ax, alpha=_default_alpha)
+        for k,v in result.mean().iteritems():
+            if k != target: # Everyone Else
+                ax.axhline(v, alpha=0.3, ls='--', color='blue')
+            else: # Alfa
+                ax.axhline(v, alpha=0.6, ls='-', color='blue')
+    elif means is 'instantaneous':
+        # Plot Target and the Average of the other nodes
+        _=plottable[target].plot(ax=ax, alpha=_target_alpha, style='-')
+        _=plottable[[c for c in plottable.columns if c != target]].mean(axis=1).plot(ax=ax, alpha=_default_alpha, style='--')
+    else:
+        raise RuntimeError("There should have been no way to get here; this case was supposed to be caught on launch")
+
+    if stds:
+        map(pltstd, zip(result.mean(), result.std()))
+    ax.set_xlabel("Simulated Time (mins)")
+    ax.set_ylabel("Weighted Trust Value")
+    ax.legend().set_visible(False)
+    ax.set_xticks(np.arange(0,61,10))
+    ax.set_xticklabels(np.arange(0,61,10))
+
+
+    if box is not None:
+        meanlineprops = dict(linestyle='-', color='blue', alpha=0.8)
+
+        axb = plt.subplot(gs[1])
+        if box is 'summary':
+            axb.boxplot([dropna(plottable.iloc[:,0].values), plottable.iloc[:,1:].stack().values],
+                        labels=['Misbehaver', 'Other Nodes'], widths=0.8, showmeans=True, meanline=True, meanprops=meanlineprops)
+        elif box is 'complete':
+            plottable.boxplot(rot=90, ax=axb, showmeans=True, meanline=True, meanprops=meanlineprops)
+        index_width = len(result.columns)
+        target_x = (0.5+target_index) / index_width
+        axb.annotate('', xy=(target_x, 0.95), xycoords='axes fraction', xytext=(target_x, 1.05),
+            arrowprops=dict(arrowstyle="->", color='r', linewidth=2))
+
+        plt.setp(axb.get_yticklabels(), visible=False)
+
+    fig.tight_layout()
+
+    return fig,[ax, axb],result
+
+
+def assess_result(result, target='Alfa'):
+    m = result.drop(target, 1).mean().mean() - result[target].mean()
+    std = result.std().mean()
+    return m, std
+
+
+def assess_results(perspectives_d, base_key='Fair'):
+    keys = map(lambda k: k[1], filter(lambda k: k[0] == base_key, perspectives_d.keys()))
+    results = defaultdict(dict)
+    for bev_key in keys:
+        for run_i, run in perspectives_d[(base_key, bev_key)].xs(bev_key, level='var').groupby(level='run'):
+            results[bev_key][run_i] = assess_result(run)
+            plot_trust_line_graph(run, title="{}{}".format(bev_key, run_i))
+    return results
+
+
+def feature_validation_plots(weighted_trust_perspectives, feat_weights, title='Weighted', ewma=True, target='Alfa',
+                             observer='Bravo'):
+    if ewma:
+        _f = lambda f: pd.stats.moments.ewma(f, span=4)
+    else:
+        _f = lambda f: f
+
+    for key, trust in weighted_trust_perspectives.items():
+        fig_size = latexify(columns=_texcol, factor=_texfac)
+        fig = plt.figure(figsize=fig_size)
+        ax = fig.add_subplot(1, 1, 1)
+        _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
+        this_title = "{} {}".format(title, '-'.join(key))
+        ax.set_title(this_title)
+        format_axes(ax)
+        fig.tight_layout()
+        yield (fig, ax)
+
+
+def format_features(feats):
+    alt_feats = pd.concat(feats, names=['base', 'comp', 'metric']).unstack('metric')
+    alt_feats.index.set_levels(
+        [[u'MPC', u'STS', u'Fair', u'Shadow', u'SlowCoach'], [u'MPC', u'STS', u'Fair', u'Shadow', u'SlowCoach']],
+        inplace=True)
+    return alt_feats
