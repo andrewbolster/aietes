@@ -67,7 +67,7 @@ class Fleet(Sim.Process):
 
     def lifecycle(self):
         def all_nodes_passive():
-            return all([n.passive() for n in self.nodes])
+            return all( n.passive() for n in self.nodes)
 
         def not_waiting():
             if self.simulation.waits:

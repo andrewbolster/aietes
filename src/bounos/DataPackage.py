@@ -812,7 +812,7 @@ class DataPackage(object):
         :return bool:
         """
 
-        return all(['tx' in v and 'rx' in v for v in self.comms['logs'].values()])
+        return all( 'tx' in v and 'rx' in v for v in self.comms['logs'].values())
 
     def has_trust_data(self):
         """
@@ -822,4 +822,4 @@ class DataPackage(object):
         :return bool:
         """
 
-        return self.has_comms_data() and all(['trust' in v for v in self.comms['logs'].values()])
+        return self.has_comms_data() and all( 'trust' in v for v in self.comms['logs'].values())
