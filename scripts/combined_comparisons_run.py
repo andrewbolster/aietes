@@ -55,12 +55,6 @@ if __name__ == "__main__":
     logpath = "{path}/{title}.log".format(path=exp.exp_path, title=exp.title.replace(' ', '_'))
     exp.dump_analysis()
 
-    with redirected(stdout=logpath):
-        ExpMan.print_stats(exp, verbose=True)
-
-    with open(logpath, 'r') as fin:
-        print fin.read()
-
     print("Saved detection stats to {}".format(logpath))
     path = exp.exp_path
     print("Saved detection stats to {}".format(exp.exp_path))

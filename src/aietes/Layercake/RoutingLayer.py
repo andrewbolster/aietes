@@ -26,6 +26,7 @@
 nodes_geo = {}
 import collections
 import math
+import numpy as np
 import operator
 
 from aietes.Layercake.priodict import PriorityDictionary
@@ -861,7 +862,7 @@ class FBR(SimpleRoutingTable):
         new_level = None
 
         # ANY0/ANY1 etc
-        if destination.startswith("ANY"):
+        if np.all(destination[0:3] == "ANY"):
             new_level = int(destination[3])
         else:
             r = distance(self.layercake.get_current_position(), destination)
@@ -993,7 +994,7 @@ class FBR(SimpleRoutingTable):
         ener = {}
         score = {}
 
-        if candidates:
+        if not candidates:
             # There have been no answers
             self.logger.debug("Unable to reach " + current_through)
 
