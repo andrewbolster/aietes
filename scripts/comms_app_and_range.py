@@ -65,7 +65,7 @@ if __name__ == "__main__":
                 continue
             path = exp.exp_path
             print("Saved detection stats to {}".format(exp.exp_path))
-            base_name = re.split('\.|\/', base_scenario)[-2]
+            base_name = re.split('\.|/', base_scenario)[-2]
             try:
                 dump_trust_logs_and_stats_from_exp_paths([path],
                                                          title="{}-{}-{:.4f}".format(title, base_name, app_rate))

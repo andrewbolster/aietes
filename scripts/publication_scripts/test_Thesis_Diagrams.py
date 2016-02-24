@@ -50,7 +50,7 @@ if os.path.exists(shared_h5_path):
     try:
         with pd.get_store(shared_h5_path) as store:
             store.get('joined_target_weights' + "_signed")
-    except:
+    except AttributeError:
         print("Forcing recompute as the thing I expected to be there, well, isn't")
         recompute = True
 else:

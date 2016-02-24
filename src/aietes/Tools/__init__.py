@@ -514,7 +514,7 @@ class Dotdictify(dict):
         key_intersect = set(self.keys()).intersection(other.keys())
 
         # Basic sanity check
-        if not len(key_intersect) > 0:
+        if not key_intersect:
             return False
         if not key_intersect == self.keys() and key_intersect == other.keys():
             return False
@@ -653,7 +653,7 @@ def fudge_normal(value, stdev):
     # Deal with multiple inputs
     if hasattr(value, 'shape'):
         shape = value.shape
-    elif isinstance(value, int) or isinstance(value, float):
+    elif isinstance(value, (int, float)):
         shape = 1
     elif isinstance(value, list):
         shape = len(value)

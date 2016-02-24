@@ -1,6 +1,5 @@
 # coding=utf-8
-
-# coding: utf-8
+from __future__ import division
 
 # #Introduction/Background
 #
@@ -359,8 +358,6 @@ fig.savefig("3d_normed_product_static.pdf", transparent=True, facecolor='white')
 
 # In[ ]:
 
-stats
-
 # # TRUST
 #
 # Reload rate and ranges for trust assessment on selected range and rate... (0.015 and 600)
@@ -414,7 +411,6 @@ _ = (stats.unstack(level='node').throughput / 3600).groupby(level='var').boxplot
 
 # In[ ]:
 
-from __future__ import division
 
 choices = zip(range(5), np.random.random_integers(1000, 10000, 5))
 names, distances = zip(*choices)

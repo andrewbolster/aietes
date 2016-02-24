@@ -993,7 +993,7 @@ class FBR(SimpleRoutingTable):
         ener = {}
         score = {}
 
-        if len(candidates) == 0:
+        if candidates:
             # There have been no answers
             self.logger.debug("Unable to reach " + current_through)
 

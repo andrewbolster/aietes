@@ -72,7 +72,7 @@ def callsuper(method):
 
 class MetricView(object):
     """
-    This Class is a plotable view of the Metric class availiable from Bounos.
+    This Class is a plotable view of the Metric class available from Bounos.
     It is instantiated with the representative Bounos.Metric base metric
     """
 

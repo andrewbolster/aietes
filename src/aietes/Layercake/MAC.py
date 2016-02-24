@@ -1152,9 +1152,9 @@ class DACAP(MAC):
         :param packet_type:
         :param t:
         """
-        if packet_type == "RTS" or packet_type == "WAR":
+        if packet_type in ["RTS", "WAR"]:
             backoff = 2 * t + 2 * t - self.Tw_min * t
-        elif packet_type == "CTS" or packet_type == "SIL":
+        elif packet_type in ["CTS", "SIL"]:
             backoff = 2 * t + 2 * t - self.Tw_min * t + self.t_data
         elif packet_type == "DATA":
             backoff = 2 * t
@@ -1392,7 +1392,7 @@ class DACAP(MAC):
         self.transmission_attempts = 0
 
         # Is there anything else to do?
-        if len(self.outgoing_packet_queue) > 0:
+        if self.outgoing_packet_queue:
             random_delay = random.random() * self.max_wait_to_retransmit
             self.TimerRequest.signal((random_delay, "send_DATA"))
             self.transmission_attempts = 0
@@ -2185,7 +2185,7 @@ class CSMA(MAC):
         """
         if packet_type == "RTS":
             backoff = 4 * t + 2 * self.t_control + self.t_data
-        elif packet_type == "CTS" or packet_type == "SIL":
+        elif packet_type in ["CTS", "SIL"]:
             backoff = 3 * t + self.t_control + self.t_data
         elif packet_type == "DATA":
             backoff = 2 * t + self.t_control
@@ -2553,7 +2553,7 @@ class FAMA(CSMA):
         """
         if packet_type == "RTS":
             backoff = 4 * t
-        elif packet_type == "CTS" or packet_type == "SIL":
+        elif packet_type in [ "CTS", "SIL"]:
             backoff = 3 * t
         elif packet_type == "DATA":
             backoff = 2 * t

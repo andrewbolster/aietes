@@ -434,12 +434,11 @@ class DataPackage(object):
         Returns an array of overall heading stddevs across the dataset
 
         """
-        deviations = [
-            np.std(
+        deviations = []
+        for time in range(self.tmax):
+            deviations.append(np.std(
                 self.deviation_from_at(self.average_heading(time), time)
-            )
-            for time in range(self.tmax)
-            ]
+            ))
         return deviations
 
     def average_position(self, time):

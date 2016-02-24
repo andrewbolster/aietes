@@ -17,7 +17,7 @@ until the heap is rebuilt."""
 
     def smallest(self):
         """Find smallest item after removing deleted items from heap."""
-        if len(self) == 0:
+        if not self:
             raise IndexError, "smallest of empty priorityDictionary"
         heap = self.__heap
         while heap[0][1] not in self or self[heap[0][1]] != heap[0][0]:
@@ -39,7 +39,7 @@ until the heap is rebuilt."""
         """Create destructive sorted iterator of priorityDictionary."""
 
         def iterfn():
-            while len(self) > 0:
+            while self:
                 x = self.smallest()
                 yield x
                 del self[x]

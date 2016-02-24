@@ -130,7 +130,7 @@ class PhysicalLayer(object):
 
     # Before transmitting, we should check if the system is idle or not
     def is_idle(self):
-        if len(self.transducer.activeQ) > 0:
+        if self.transducer.activeQ:
             if DEBUG:
                 self.logger.debug(
                     "The channel is not idle. Currently receiving: " + str(

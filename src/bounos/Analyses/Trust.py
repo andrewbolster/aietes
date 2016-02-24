@@ -391,9 +391,9 @@ def invert_node_trust_perspective(node_trust_perspective):
     trust_inverted = {}
     for j_node in node_trust_perspective[-1].keys():
         trust_inverted[j_node] = np.array([0.5 for _ in range(len(node_trust_perspective))])
-        for t in range(len(node_trust_perspective)):
-            if t < len(node_trust_perspective) and j_node in node_trust_perspective[t]:
-                trust_inverted[j_node][t] = node_trust_perspective[t][j_node]
+        for x_node_v, t in enumerate(node_trust_perspective):
+            if t < len(node_trust_perspective) and j_node in x_node_v:
+                trust_inverted[j_node][t] = x_node_v[j_node]
 
     return trust_inverted
 

@@ -296,11 +296,11 @@ def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None, sign
     if signed:
         d = {'upper': 1, 'lower': -1}
         r = weight_df['range'].apply(d.get)
-        f = lambda c: c * r
+
         time_summed_outliers = \
             weight_df \
                 .drop('range', axis=1) \
-                .apply(f) \
+                .apply(lambda c: c * r) \
                 .groupby(level=list(weight_df.index.names[:-1])) \
                 .sum() \
                 .unstack('var')

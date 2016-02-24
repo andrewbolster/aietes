@@ -34,7 +34,7 @@ class ExperimentGeneration(unittest.TestCase):
         e.add_ratio_scenarios(behaviour)
         self.assertEqual(len(e.scenarios), count + 1)
         v, s = e.scenarios.items()[count / 2]
-        self.assertEqual(len(s.get_behaviour_dict()[behaviour]), int(count * float(re.split('\(|\)|\%', v)[1]) / 100.0))
+        self.assertEqual(len(s.get_behaviour_dict()[behaviour]), int(count * float(re.split('\(|\)|%', v)[1]) / 100.0))
 
     def testRuntimeModification(self):
         """Ensure that polybos appropriately propagates simulation time using the run method"""

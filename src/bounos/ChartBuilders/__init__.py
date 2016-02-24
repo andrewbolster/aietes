@@ -21,11 +21,10 @@ from collections import OrderedDict
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator
-
-import seaborn as sns
 import numpy as np
 import pandas as pd
+import seaborn as sns
+from matplotlib.ticker import MultipleLocator
 from scipy.spatial.distance import pdist, squareform
 
 import bounos
@@ -42,9 +41,9 @@ _boxplot_kwargs = {
 
 def unique_cm_dict_from_list(items):
     cm = plt.get_cmap('gist_rainbow')
-    cNorm = mpl.colors.Normalize(vmin=0, vmax=len(items))
-    scalarMap = mpl.cm.ScalarMappable(norm=cNorm, cmap=cm)
-    return dict(zip(items, [scalarMap.to_rgba(i) for i in range(len(items))]))
+    cnorm = mpl.colors.Normalize(vmin=0, vmax=len(items))
+    scalarmap = mpl.cm.ScalarMappable(norm=cnorm, cmap=cm)
+    return dict(zip(items, [scalarmap.to_rgba(i) for i in range(len(items))]))
 
 
 def lost_packet_distribution(dp=None, tx=None, title=None):

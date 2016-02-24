@@ -21,8 +21,8 @@ from collections import Counter
 from copy import deepcopy
 
 import numpy as np
-from numpy.random import poisson
 import pandas as pd
+from numpy.random import poisson
 from scipy.spatial.distance import squareform, pdist
 
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
@@ -385,7 +385,7 @@ class RoutingTest(Application):
         # Update packet_counters with information from the routing layer
         indirect_nodes = filter(
             lambda n: n not in self.total_counter.keys(), self.layercake.net.keys())
-        if len(indirect_nodes):
+        if indirect_nodes:
             self.logger.debug("Inferred new nodes: {}".format(indirect_nodes))
             for node in indirect_nodes:
                 self.total_counter[node] = 0
@@ -549,12 +549,7 @@ class Trust(RoutingTest):
             tick_assessments = [tick() for tick in self.tick_assessors]
             assert all([not isinstance(t, list) for t in
                         tick_assessments]), "All Tick Assessors should return a 1-d list of values"
-            tick_keys = set([
-                                i
-                                for t in tick_assessments
-                                for i in t.keys().tolist()
-                                ]
-                            )
+            tick_keys = { i for t in tick_assessments for i in t.keys().tolist() }
             target_stats = {
                 node:
                     pd.concat([pd.Series(tick[node]) for tick in tick_assessments if node in tick])

@@ -20,7 +20,7 @@ __email__ = "me@andrewbolster.info"
 import os
 import sys
 
-if not sys.modules.has_key("wx"):
+if not "wx" in sys.modules:
     import wxversion
 
     wxversion.ensureMinimal("2.8")

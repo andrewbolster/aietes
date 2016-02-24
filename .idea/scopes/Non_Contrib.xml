@@ -1,3 +1,3 @@
 <component name="DependencyValidationManager">
-  <scope name="Non Contrib" pattern="(file[aietes]:scripts//*||file[aietes]:src//*)&amp;&amp;!file[aietes]:src/contrib//*||file:setup.py||file:README.md" />
+  <scope name="Non Contrib" pattern="((file[aietes]:scripts//*||file[aietes]:src//*)&amp;&amp;!file[aietes]:src/contrib//*||file:setup.py||file:README.md)&amp;&amp;!file[aietes]:build/*&amp;&amp;!file[aietes]:build//*||file[aietes]:docs//*" />
 </component>

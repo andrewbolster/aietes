@@ -17,10 +17,10 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-from operator import attrgetter
 import logging
-from itertools import product
 from collections import namedtuple
+from itertools import product
+from operator import attrgetter
 
 import numpy as np
 

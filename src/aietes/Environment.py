@@ -17,8 +17,8 @@ __author__ = "Andrew Bolster"
 __license__ = "EPL"
 __email__ = "me@andrewbolster.info"
 
-from operator import attrgetter
 from collections import namedtuple
+from operator import attrgetter
 
 import numpy as np
 from SimPy import Simulation as Sim

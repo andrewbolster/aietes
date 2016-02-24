@@ -142,7 +142,7 @@ class Configurator(wx.Panel):
         for item in root:
             try:
                 print "%s:" % str([prefix, item.get_label()])
-                if len(item):
+                if item:
                     self.print_tree(item, prefix=prefix + "+")
             except AttributeError:
                 print "%s" % item

@@ -13,7 +13,6 @@
  * Contributors:
  *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
-from pprint import pformat
 
 __author__ = "Andrew Bolster"
 __license__ = "EPL"
@@ -29,6 +28,7 @@ import cProfile
 from configobj import ConfigObj
 from time import time
 from datetime import datetime as dt
+from pprint import pformat
 
 import pandas as pd
 import numpy as np
@@ -87,7 +87,7 @@ class Simulation(object):
             # handlers
             try:
                 _tmplogdict = logging.Logger.manager.loggerDict[__name__]
-                while len(_tmplogdict.handlers) > 0:
+                while _tmplogdict.handlers:
                     _tmplogdict.removeHandler(_tmplogdict.handlers[0])
             except KeyError:
                 """Assumes that this is the first one"""

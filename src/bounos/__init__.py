@@ -203,10 +203,8 @@ def multirun(args, basedir=os.curdir):
     if args.source is None:
         sources = filter(
             os.path.isdir, map(os.path.abspath, os.listdir(basedir)))
+
     args.noplot = True
-    get_confidence = lambda x: x['suspect_confidence']
-    get_distrust = lambda x: x['suspect_distrust']
-    get_name = lambda x: x['suspect_name']
     panel = {}
     best_runs = {}
     for sourcedir in filter(os.path.isdir, sources):
@@ -597,19 +595,19 @@ def run_detection_fusion(data, args=None):
 
     # Now go left to right to adjust the scaling to match
 
-    for j in range(len(axes[0])):
+    for axj, j in enumerate(axes[0]):
         (m_ymax, m_ymin) = (None, None)
         (m_xmax, m_xmin) = (None, None)
-        for i in range(len(axes)):
-            (ymin, ymax) = axes[i][j].get_ylim()
-            (xmin, xmax) = axes[i][j].get_xlim()
+        for axi, i in enumerate(axes):
+            (ymin, ymax) = axi[j].get_ylim()
+            (xmin, xmax) = axi[j].get_xlim()
             m_ymax = max(ymax, m_ymax)
             m_ymin = min(ymin, m_ymin)
             m_xmax = max(xmax, m_xmax)
             m_xmin = min(xmin, m_xmin)
 
         # Do it again to apply the row_max
-        for i in range(len(axes)):
+        for _, i in enumerate(axes):
             axes[i][j].set_ylim((m_ymin, m_ymax * 1.1))
             axes[i][j].set_xlim((0, m_xmax))
 
