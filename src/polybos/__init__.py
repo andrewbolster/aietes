@@ -996,12 +996,12 @@ class ExperimentManager(object):
             elif hasattr(experiment, 'scenarios_file'):
                 scenario_dict = AutoSyncShelf(experiment.scenarios_file)
         elif isinstance(experiment, list) \
-                and all([isinstance(entry, Scenario) for entry in experiment]):
+                and all( isinstance(entry, Scenario) for entry in experiment):
             # Have been given list of Scenarios entities in a single
             # 'scenario', treat as normalo
             scenario_dict = {s.title: s for s in experiment}
         elif isinstance(experiment, list) \
-                and all([isinstance(entry, DataPackage) for entry in experiment]):
+                and all( isinstance(entry, DataPackage) for entry in experiment):
             # Have been given list of DataPackage entities in a single
             # 'scenario', treat as single virtual scenario
             scenario_dict = {dp.title: PseudoScenario(dp.title, dp) for dp in experiment}

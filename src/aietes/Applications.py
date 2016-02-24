@@ -547,8 +547,8 @@ class Trust(RoutingTest):
             trust_period = Sim.now() // self.trust_assessment_period
 
             tick_assessments = [tick() for tick in self.tick_assessors]
-            assert all([not isinstance(t, list) for t in
-                        tick_assessments]), "All Tick Assessors should return a 1-d list of values"
+            assert all( not isinstance(t, list) for t in
+                        tick_assessments), "All Tick Assessors should return a 1-d list of values"
             tick_keys = { i for t in tick_assessments for i in t.keys().tolist() }
             target_stats = {
                 node:

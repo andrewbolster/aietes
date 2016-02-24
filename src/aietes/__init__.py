@@ -302,7 +302,7 @@ class Simulation(object):
 
         # If any node is using waypoint bev, grab it.
 
-        if any([isinstance(node.behaviour, Behaviour.WaypointMixin) for node in self.nodes]):
+        if any( isinstance(node.behaviour, Behaviour.WaypointMixin) for node in self.nodes):
             waypointss = [
                 getattr(node.behaviour, "waypoints", None) for node in self.nodes]
             if all(w is None for w in waypointss):
@@ -318,7 +318,7 @@ class Simulation(object):
         #
         # THIS drift value is the original intended value, but to keep consistent naming for drift and
         # non drift simulations, it kinda makes sense.
-        if any([node.drifting for node in self.nodes]):
+        if any( node.drifting for node in self.nodes):
             drift_positions = []
             for node in self.nodes:
                 drift = node.pos_log[:, :Sim.now()]
@@ -326,7 +326,7 @@ class Simulation(object):
                 drift_positions.append(drift)
             state.update({'drift_positions': np.asarray(drift_positions)})
 
-        if any([node.ecea for node in self.nodes]):
+        if any( node.ecea for node in self.nodes):
             # ECEA does not operate at every time step, (delta),
             # therefore use the shared map data that tracks the error
             # information (hopefully)

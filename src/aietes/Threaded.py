@@ -135,7 +135,7 @@ class QueueSim(object):
         Is execution complete? (Note, this may be different than when results are ready)
         :return: bool
         """
-        return all([r.ready() for r in self.pending_results])
+        return all( r.ready() for r in self.pending_results)
 
     def populate(self):
         """
