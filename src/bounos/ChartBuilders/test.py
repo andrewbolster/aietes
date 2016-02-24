@@ -57,7 +57,7 @@ class ChartBuilders(unittest.TestCase):
         :return:
         """
         if not self.dp.has_comms_data():
-            raise unittest.SkipTest("Latest DataPackage has no Comms data: {}".format(self.dp.title))
+            raise unittest.SkipTest("Latest DataPackage has no Comms data: {0}".format(self.dp.title))
         tx = self.dp.get_global_packet_logs(pkt_type='tx')
 
         died = tx[tx.delivered != True].count().max()
@@ -75,7 +75,7 @@ class ChartBuilders(unittest.TestCase):
         :return:
         """
         if not self.dp.has_comms_data():
-            raise unittest.SkipTest("Latest DataPackage has no Comms data: {}".format(self.dp.title))
+            raise unittest.SkipTest("Latest DataPackage has no Comms data: {0}".format(self.dp.title))
 
         test_figure = bounos.ChartBuilders.end_to_end_delay_distribution(self.dp)
         self.assertIsInstance(test_figure, Figure)
@@ -86,7 +86,7 @@ class ChartBuilders(unittest.TestCase):
         :return:
         """
         if not self.dp.has_comms_data():
-            raise unittest.SkipTest("Latest DataPackage has no Comms data: {}".format(self.dp.title))
+            raise unittest.SkipTest("Latest DataPackage has no Comms data: {0}".format(self.dp.title))
 
         test_figure = bounos.ChartBuilders.source_and_dest_delay_violin_plot(self.dp)
         self.assertIsInstance(test_figure, Figure)
@@ -97,7 +97,7 @@ class ChartBuilders(unittest.TestCase):
         :return:
         """
         if not self.dp.has_comms_data():
-            raise unittest.SkipTest("Latest DataPackage has no Comms data: {}".format(self.dp.title))
+            raise unittest.SkipTest("Latest DataPackage has no Comms data: {0}".format(self.dp.title))
 
         test_figure = bounos.ChartBuilders.channel_occupancy_distribution(self.dp)
         self.assertIsInstance(test_figure, Figure)
@@ -109,7 +109,7 @@ class ChartBuilders(unittest.TestCase):
         :return:
         """
         if not self.dp.has_trust_data():
-            raise unittest.SkipTest("Latest DataPackage has no Trust data: {}".format(self.dp.title))
+            raise unittest.SkipTest("Latest DataPackage has no Trust data: {0}".format(self.dp.title))
 
         test_figure = bounos.ChartBuilders.combined_trust_observation_summary(self.dp, target=self.dp.names[1])
         self.assertIsInstance(test_figure, Figure)

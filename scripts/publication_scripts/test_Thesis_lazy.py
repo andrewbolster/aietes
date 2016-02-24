@@ -94,10 +94,10 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
         for filename in [self.good, self.malicious, self.selfish]:
             if not os.path.isfile(Tools.in_results(filename)):
-                self.fail("No file {}".format(filename))
+                self.fail("No file {0}".format(filename))
 
     def tearDown(self):
-        logging.info("Successfully Generated:\n{}".format(self.generated_files))
+        logging.info("Successfully Generated:\n{0}".format(self.generated_files))
         with open("generated_files.txt", 'w') as f:
             f.write('\n'.join(self.generated_files))
         generate_figure_contact_tex(self.generated_files)
@@ -128,7 +128,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             aietes.Tools.get_config('bella_static.conf'),
             retain_default=True
         )
-        texify = lambda t: "${}_{}$".format(t[0], t[1])
+        texify = lambda t: "${0}_{1}$".format(t[0], t[1])
         node_positions = {texify(k): np.asarray(v['initial_position'], dtype=float) for k, v in
                           base_config['Node']['Nodes'].items() if 'initial_position' in v}
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
@@ -167,7 +167,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             ax.set_xlabel("Packet Emission Rate (pps)")
             ax.set_ylabel("Avg. Throughput (bps)")
             fig.tight_layout()
-            fig.savefig("throughput_sep_lines_{}.{}".format(
+            fig.savefig("throughput_sep_lines_{0}.{1}".format(
                 mobility,
                 img_extn), transparent=True, facecolor='white')
             plt.close(fig)
@@ -229,7 +229,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
             tex = table.to_latex(float_format=lambda x: "{0:1.4f}".format(x), index=False, column_format="""
             *{5}{@{\\hspace{1em}}p{0.15\\textwidth} @{\\hspace{1em}}}  """)
-            saveinput(tex, "{}_packet_stats_{}".format(prefix, suffix))
+            saveinput(tex, "{0}_packet_stats_{1}".format(prefix, suffix))
             print tex
 
         def plot_packet_stats_for_scenario_containing(scenario_partial):
@@ -319,7 +319,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
         for scenario in selected_scenarios:
             for supra in supra_prefixes:
                 for prefix in required_file_prefixes:
-                    Tools.remove("{}_{}_{}.{}".format(
+                    Tools.remove("{0}_{1}_{2}.{3}".format(
                         supra,
                         prefix,
                         scenario,
@@ -328,7 +328,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             plot_packet_stats_for_scenario_containing(scenario)
             for supra in supra_prefixes:
                 for prefix in required_file_prefixes:
-                    f = "{}_{}_{}.{}".format(
+                    f = "{0}_{1}_{2}.{3}".format(
                         supra,
                         prefix,
                         scenario,
@@ -408,14 +408,14 @@ class ThesisLazyDiagrams(unittest.TestCase):
         ]
         for scenario in selected_scenarios:
             for prefix in required_file_prefixes:
-                Tools.remove("{}{}.{}".format(
+                Tools.remove("{0}{1}.{2}".format(
                     prefix,
                     scenario,
                     img_extn
                 ))
             rate_range_plots_per_scenario(scenario)
             for prefix in required_file_prefixes:
-                f = "{}{}.{}".format(
+                f = "{0}{1}.{2}".format(
                     prefix,
                     scenario,
                     img_extn
@@ -471,7 +471,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
                                                            prefix="", extension=img_extn
                                                            )
             except KeyError:
-                warnings.warn("Scenario {} not in trust run, skipping".format(s))
+                warnings.warn("Scenario {0} not in trust run, skipping".format(s))
         for f in required_files:
             self.assertFileExists(f)
 
@@ -522,7 +522,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             ax.axhline(mtfm.mean(), color="r", linestyle='-.')
             ax.yaxis.set_major_locator(loc_25)
             fig.tight_layout()
-            fig.savefig("trust_beta_otmf{}.{}".format(
+            fig.savefig("trust_beta_otmf{0}.{1}".format(
                 "_" + key if key is not None else "",
                 extension), transparent=True)
             plt.close(fig)

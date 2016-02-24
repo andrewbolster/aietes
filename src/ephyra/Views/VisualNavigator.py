@@ -472,7 +472,7 @@ class VisualNavigator(wx.Panel):
                 contributions = self.ctl.get_node_contribs(node, self.t)
             except Exception as e:
                 self.log.error(
-                    "something went bad, quitting Contrib display: {}".format(e))
+                    "something went bad, quitting Contrib display: {0}".format(e))
                 self.node_contrib_enabled = False
                 break
 
@@ -805,7 +805,7 @@ class DriftingNavigator(VisualNavigator):
                 node=n, time_start=self.t, length=self.trail_length)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
-            line.set_label("({})".format(self.names[n]))
+            line.set_label("({0})".format(self.names[n]))
             try:
                 label.set_position((xs[0], ys[0]))
                 label.set_3d_properties(zs[0])
@@ -847,7 +847,7 @@ class ECEANavigator(DriftingNavigator):
                 node=n, time_start=self.t, length=self.trail_length, source=self.source)
             line.set_data(xs, ys)
             line.set_3d_properties(zs)
-            line.set_label("({})".format(self.names[n]))
+            line.set_label("({0})".format(self.names[n]))
             try:
                 label.set_position((xs[0], ys[0]))
                 label.set_3d_properties(zs[0])

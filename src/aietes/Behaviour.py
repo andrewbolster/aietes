@@ -40,7 +40,7 @@ class BasicWaypoint(object):
         self.prox = prox
 
     def __repr__(self):
-        return "({},{})".format(self.position, self.prox)
+        return "({0},{1})".format(self.position, self.prox)
 
 
 waypoint = namedtuple("waypoint", ['position', 'prox'])
@@ -276,7 +276,7 @@ class Behaviour(object):
                     response = repulse
             except RuntimeError:
                 raise RuntimeError(
-                    "Crashed out of environment with given position:{}, wall position:{}".format(position,
+                    "Crashed out of environment with given position:{0}, wall position:{1}".format(position,
                                                                                                  avoiding_position))
                 # response = (avoiding_position-position)
             self.logger.debug("Wall Avoidance:{0!s}".format(response))
@@ -755,7 +755,7 @@ class FleetLawnmower(Flock, WaypointMixin):
             target = self.waypoints[self.nextwaypoint]
             angle = angle_between(target.position - position, velocity)
             if self.debug:
-                self.logger.info("Boresight:{}@{}".format(
+                self.logger.info("Boresight:{0}@{1}".format(
                     np.rad2deg(angle), distance(target.position, position)))
             force_vector = -velocity * np.pi * angle * self.waypoint_factor
         return force_vector
@@ -877,7 +877,7 @@ class FleetLawnmower(Flock, WaypointMixin):
         bottom = min(extent[2])
         mid_z = 2 * (top + bottom) / 3.0
 
-        self.logger.info("Survey area:{}km^2 ({}), swath:{}, overlap:{}".format(
+        self.logger.info("Survey area:{0}km^2 ({1}), swath:{2}, overlap:{3}".format(
             (front - back) * (right - left) / 1e6,
             [front, back, right, left],
             swath, overlap)

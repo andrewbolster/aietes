@@ -221,7 +221,7 @@ class Transducer(Sim.Resource):
 
         self.physical_layer = physical_layer
         self.logger = physical_layer.logger.getChild(
-            "{}".format(self.__class__.__name__))
+            "{0}".format(self.__class__.__name__))
 
         # Interference is initialized as ambient noise
         self.interference = ambient_noise
@@ -322,7 +322,7 @@ class Transducer(Sim.Resource):
             # This should never appear, and in fact, it doesn't, but just to
             # detect bugs (we cannot have a negative SIR in lineal scale).
             raise RuntimeError(
-                "This really shouldn't happen: Negative min_sir from type {} from {} to {} through {} detected by {}".format(
+                "This really shouldn't happen: Negative min_sir from type {0} from {1} to {2} through {3} detected by {4}".format(
                     new_packet["type"], new_packet["source"], new_packet["dest"], new_packet["through"],
                     self.physical_layer.layercake.hostname)
             )
@@ -359,7 +359,7 @@ class IncomingPacket(Sim.Process):
         :param physical_layer: PhysicalLayer instance
         :return:
         """
-        Sim.Process.__init__(self, name="({})RX from {}".format(
+        Sim.Process.__init__(self, name="({0})RX from {1}".format(
             physical_layer.layercake.hostname,
             packet['source']
         ))
@@ -429,12 +429,12 @@ class OutgoingPacket(Sim.Process):
     """
 
     def __init__(self, physical_layer):
-        Sim.Process.__init__(self, name="({})TX".format(
+        Sim.Process.__init__(self, name="({0})TX".format(
             physical_layer.layercake.hostname
         ))
         self.physical_layer = physical_layer
         self.logger = physical_layer.logger.getChild(
-            "{}".format(self.__class__.__name__))
+            "{0}".format(self.__class__.__name__))
 
     def transmit(self, packet, power):
         """

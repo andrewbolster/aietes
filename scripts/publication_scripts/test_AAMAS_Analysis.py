@@ -140,7 +140,7 @@ class AaamasResultSelection(object):
                 best = best_of_all(feats, trust_observations[keys])
             else:
                 best = best_of_all(feats, trust_observations)
-            aietes.Tools.mkcpickle('best_{}_runs'.format(feat_str), dict(best))
+            aietes.Tools.mkcpickle('best_{0}_runs'.format(feat_str), dict(best))
 
 
 if __name__ == "__main__":

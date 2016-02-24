@@ -22,13 +22,13 @@ def redirected(stdout):
 
 
 def exec_scaled_behaviour_range(base_scenarios, title, app_rate=0.025, scale=1, malice=False):
-    e = ExpMan(title="{}{}-{}-{}".format(
-        "Malicious{}".format(malice) if malice else "",
+    e = ExpMan(title="{0}{1}-{2}-{3}".format(
+        "Malicious{0}".format(malice) if malice else "",
         title, app_rate, scale),
         parallel=False
     )
     for base_scenario in base_scenarios:
-        e.add_position_scaling_range([scale], title="{}({})".format(e.title, re.split('\.|/', base_scenario)[-2]),
+        e.add_position_scaling_range([scale], title="{0}({1})".format(e.title, re.split('\.|/', base_scenario)[-2]),
                                      base_scenario=base_scenario, basis_node_name="n1")
     e.update_all_nodes({"app_rate": app_rate})
     if malice:
@@ -65,7 +65,7 @@ if __name__ == "__main__":
             )
 
             path = exp.exp_path
-            print("Saved detection stats to {}".format(exp.exp_path))
+            print("Saved detection stats to {0}".format(exp.exp_path))
             try:
                 dump_trust_logs_and_stats_from_exp_paths([path], title=exp.title)
             except:

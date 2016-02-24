@@ -50,7 +50,7 @@ class SimpleRoutingTable(dict):
         dict.__init__(self)
         self.layercake = layercake
         self.logger = layercake.logger.getChild(
-            "{}".format(self.__class__.__name__))
+            "{0}".format(self.__class__.__name__))
         # if not DEBUG: self.logger.setLevel(logging.WARNING) # You always
         # forget about this
         self.has_routing_table = False
@@ -62,7 +62,7 @@ class SimpleRoutingTable(dict):
             (self.layercake.hostname, self.layercake.get_current_position()))
         try:
             packet["through"] = self[packet["dest"][0]]
-            self.logger.warn("Routing {} through {} to {}".format(
+            self.logger.warn("Routing {0} through {1} to {2}".format(
                 packet['ID'],
                 packet['through'],
                 packet['dest']
@@ -70,7 +70,7 @@ class SimpleRoutingTable(dict):
         except KeyError:
             packet["through"] = packet["dest"]
         except TypeError as e:
-            raise RuntimeError("Possibly malformed/incomplete packet {}: raised {}".format(
+            raise RuntimeError("Possibly malformed/incomplete packet {0}: raised {1}".format(
                 packet, e
             ))
 
@@ -86,7 +86,7 @@ class SimpleRoutingTable(dict):
             packet["dest_position"] = None
 
         if DEBUG:
-            self.logger.info("NET initiating TX of {}".format(packet['ID']))
+            self.logger.info("NET initiating TX of {0}".format(packet['ID']))
         self.layercake.mac.initiate_transmission(packet)
 
     def on_packet_reception(self, packet):
@@ -213,17 +213,17 @@ class DSDV(SimpleRoutingTable):
                 new_entry = RoutingEntry(
                     packet['source'], hop + len(packet['route']), seq_no)
                 self.logger.info(
-                    "Creating entry for {}:{}".format(dest, new_entry))
+                    "Creating entry for {0}:{1}".format(dest, new_entry))
                 self[dest] = new_entry
             elif seq_no > self[dest].seq:
                 new_entry = RoutingEntry(
                     packet['source'], hop + len(packet['route']), seq_no)
                 self.logger.info(
-                    "Updating entry for {}:{}".format(dest, new_entry))
+                    "Updating entry for {0}:{1}".format(dest, new_entry))
                 self[dest] = new_entry
 
         self.logger.info(
-            "After update, table contains {}".format(self.items()))
+            "After update, table contains {0}".format(self.items()))
 
 
 class Static(SimpleRoutingTable):
@@ -792,7 +792,7 @@ class FBR(SimpleRoutingTable):
                 # If I've been given a silly level, this will trip the exception.
                 self.layercake.phy.level2delay(self.incoming_packet['level'])
             except KeyError:
-                self.logger.debug("Route to {} not set. Starting Discovery".format(
+                self.logger.debug("Route to {0} not set. Starting Discovery".format(
                     self.incoming_packet['dest']
                 ))
                 self.incoming_packet["through"] = "ANY0"
@@ -812,7 +812,7 @@ class FBR(SimpleRoutingTable):
         """
         level_that_would_work = self.get_level_for(dest_pos)
         if level_that_would_work is None:
-            self.logger.info("No Level will work to get to {}".format(dest_pos))
+            self.logger.info("No Level will work to get to {0}".format(dest_pos))
             reachable = False
         else:
             reachable = int(level_that_would_work) <= current_level
@@ -847,7 +847,7 @@ class FBR(SimpleRoutingTable):
             elif self.get_level_for(self.nodes_pos[self[destination]]) < current_level:
                 return True
             else:
-                self.logger.warn("Not ACKing to {}".format(destination))
+                self.logger.warn("Not ACKing to {0}".format(destination))
                 return False
 
         return True
@@ -933,12 +933,12 @@ class FBR(SimpleRoutingTable):
 
         if valid:
             if self.layercake.query_drop_forward(packet):
-                self.logger.debug("I'm a valid candidate for {} BUT IM IGNORING IT".format(
+                self.logger.debug("I'm a valid candidate for {0} BUT IM IGNORING IT".format(
                     packet["dest"]
                 ))
                 valid = False
             else:
-                self.logger.debug("I'm a valid candidate for {}".format(
+                self.logger.debug("I'm a valid candidate for {0}".format(
                     packet["dest"]
                 ))
 
@@ -1017,15 +1017,15 @@ class FBR(SimpleRoutingTable):
                 # This is a multicast selection, but not with the maximum
                 # transmission power level
                 level = int(current_through[3]) + 1
-                self.logger.debug("Increasing power to level {}".format(level))
+                self.logger.debug("Increasing power to level {0}".format(level))
 
                 if self.is_reachable(level, nodes_geo[destination]):
-                    self.logger.debug("{} is reachable".format(
+                    self.logger.debug("{0} is reachable".format(
                         destination
                     ))
                     return "NEIGH" + str(level), 0
                 else:
-                    self.logger.debug("{} is not reachable".format(
+                    self.logger.debug("{0} is not reachable".format(
                         destination
                     ))
                     return "ANY" + str(level), 0
@@ -1038,7 +1038,7 @@ class FBR(SimpleRoutingTable):
             # There have been answers: for a given transmission power, I should
             # always look for the one that is closer to the destination
             if destination in candidates:
-                self.logger.debug("Selecting {} as direct route".format(
+                self.logger.debug("Selecting {0} as direct route".format(
                     destination
                 ))
                 return destination, candidates[destination][2]
@@ -1065,7 +1065,7 @@ class FBR(SimpleRoutingTable):
 
             sc = dict(map(lambda item: (item[1], item[0]), score.items()))
             min_score = sc[min(sc.keys())]
-            self.logger.debug("Selecting {} as indirect route for {}".format(
+            self.logger.debug("Selecting {0} as indirect route for {1}".format(
                 min_score,
                 destination
             ))

@@ -53,14 +53,14 @@ class Environment(object):
                 shape = np.asarray(shape)
                 if shape is None or not isinstance(shape, np.ndarray) or len(shape) != 3:
                     raise ConfigError(
-                        "Shape doesn't make sense: {}{}".format(shape, type(shape)))
+                        "Shape doesn't make sense: {0}{1}".format(shape, type(shape)))
             except:
                 raise
         self.shape = shape
 
     def _start_log(self, parent, name):
         self.logger = parent.logger.getChild(
-            "{}{}".format(name, self.__class__.__name__))
+            "{0}{1}".format(name, self.__class__.__name__))
         self.logger.debug('creating instance')
 
     def random_position(self, want_empty=True, on_a_plane=False, buff=30):
@@ -107,7 +107,7 @@ class Environment(object):
 
         if self.is_outside(position):
             raise ValueError(
-                "Position is not within volume: {}".format(position))
+                "Position is not within volume: {0}".format(position))
         else:
             valid = False
             while not valid:
@@ -185,7 +185,7 @@ class Environment(object):
                                     ))
         else:
             self.logger.debug(
-                "Reaching end of simulation: Dropping {}th frame for array size consistency (0->{}={})".format(t, t,
+                "Reaching end of simulation: Dropping {0}th frame for array size consistency (0->{1}={2})".format(t, t,
                                                                                                                t + 1))
 
     def node_pos_log(self, uid):
@@ -216,7 +216,7 @@ class Environment(object):
                 last_log[log.object_id] = log
                 if DEBUG:
                     self.logger.debug(
-                        "Object {} last seen at {} @ {}".format(log.name, log.position, log.time))
+                        "Object {0} last seen at {1} @ {2}".format(log.name, log.position, log.time))
             if None not in last_log.values():
                 break
 

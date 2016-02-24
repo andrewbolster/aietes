@@ -20,7 +20,7 @@ def scenarios_comms(paths, generator=False):
     subdirs = natsorted(map_paths(paths))
     for i, subdir in enumerate(natsorted(subdirs)):
         sources = npz_in_dir(subdir)
-        print("{:%}:{}".format(float(i) / float(len(subdirs)), subdir))
+        print("{0:%}:{1}".format(float(i) / float(len(subdirs)), subdir))
         if generator:
             yield (subdir, generate_sources(sources, comms_only=True))
         else:

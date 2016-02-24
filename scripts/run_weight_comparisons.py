@@ -18,4 +18,4 @@ if __name__ == "__main__":
     with pd.get_store(results_path + '.h5') as store:
         outliers = perform_weight_factor_outlier_analysis_on_trust_frame(store.trust, "CombinedTrust",
                                                                          min_emphasis=0, max_emphasis=2, par=True)
-    outliers.to_hdf(os.path.join(results_path, "outliers.h5"), "CombinedTrust_{}_3".format("SmallOne"))
+    outliers.to_hdf(os.path.join(results_path, "outliers.h5"), "CombinedTrust_{0}_3".format("SmallOne"))
