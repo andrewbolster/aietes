@@ -517,7 +517,7 @@ class ThesisDiagrams(unittest.TestCase):
             raise ValueError("Incorrect number of subsets included; {}".format(w_df.index.levels[0]))
         w_df = w_df.reindex(subset_reindex_keys, level='subset')[key_order].rename(columns=metric_rename_dict)
         w_df = w_df.unstack('target').rename(subset_renamer).stack('target')
-        tex = w_df.to_latex(float_format=lambda x: "%1.3f" % x, index=True, escape=False,
+        tex = w_df.to_latex(float_format=lambda x: "{0:1.3f}".format(x), index=True, escape=False,
                             column_format="|l|l|*{{{}}}{{c|}}".format(len(key_order))) \
             .replace('nan', '') \
             .split('\n')
@@ -581,7 +581,7 @@ class ThesisDiagrams(unittest.TestCase):
         perf_df['Avg.'] = perf_df.mean(axis=1)
         perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
         perf_df = perf_df.rename(subset_renamer)
-        tex = perf_df.to_latex(float_format=lambda x: "%1.2f" % x, index=True, column_format="|l|*{4}{c}|r|") \
+        tex = perf_df.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=True, column_format="|l|*{4}{c}|r|") \
             .replace('bev', '\diagbox{Domain}{Behaviour}') \
             .split('\n')
         tex.pop(3)  # second dimension header; overridden by the above replacement
@@ -608,7 +608,7 @@ class ThesisDiagrams(unittest.TestCase):
         perf_df['Avg.'] = perf_df.mean(axis=1)
         perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
         perf_df = perf_df.rename(subset_renamer)
-        tex = perf_df.to_latex(float_format=lambda x: "%1.2f" % x, index=True, column_format="|l|*{4}{c}|r|") \
+        tex = perf_df.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=True, column_format="|l|*{4}{c}|r|") \
             .replace('bev', '\diagbox{Domain}{Behaviour}') \
             .split('\n')
         tex.pop(3)  # second dimension header; overridden by the above replacement
@@ -631,7 +631,7 @@ class ThesisDiagrams(unittest.TestCase):
         perf_df['Avg.'] = perf_df.mean(axis=1)
         perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
         perf_df = perf_df.rename(subset_renamer)
-        tex = perf_df.to_latex(float_format=lambda x: "%1.2f" % x, index=True, column_format="|l|*{4}{c}|r|") \
+        tex = perf_df.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=True, column_format="|l|*{4}{c}|r|") \
             .replace('bev', '\diagbox{Domain}{Behaviour}') \
             .split('\n')
         tex.pop(3)  # second dimension header; overridden by the above replacement
@@ -658,7 +658,7 @@ class ThesisDiagrams(unittest.TestCase):
         perf_df['Avg.'] = perf_df.mean(axis=1)
         perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
         perf_df = perf_df.rename(subset_renamer)
-        tex = perf_df.to_latex(float_format=lambda x: "%1.2f" % x, index=True, column_format="|l|*{4}{c}|r|") \
+        tex = perf_df.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=True, column_format="|l|*{4}{c}|r|") \
             .replace('bev', '\diagbox{Domain}{Behaviour}') \
             .split('\n')
         tex.pop(3)  # second dimension header; overridden by the above replacement

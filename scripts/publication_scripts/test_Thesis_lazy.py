@@ -227,7 +227,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             if include_ideal:
                 table['Ideal Delivery Time(s)'] = table[var] / 1400.0 + 9600.0 / (10000.0)
 
-            tex = table.to_latex(float_format=lambda x: "%1.4f" % x, index=False, column_format="""
+            tex = table.to_latex(float_format=lambda x: "{0:1.4f}".format(x), index=False, column_format="""
             *{5}{@{\\hspace{1em}}p{0.15\\textwidth} @{\\hspace{1em}}}  """)
             saveinput(tex, "{}_packet_stats_{}".format(prefix, suffix))
             print tex

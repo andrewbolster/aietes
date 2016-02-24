@@ -43,7 +43,7 @@ parser.add_option("-d", "--distribute",
 options, args = parser.parse_args()
 
 if options.version is not None:
-    VERSION = '==%s' % options.version
+    VERSION = '=={0!s}'.format(options.version)
 else:
     VERSION = ''
 
@@ -76,7 +76,7 @@ except ImportError:
 if sys.platform == 'win32':
     def quote(c):
         if ' ' in c:
-            return '"%s"' % c  # work around spawn lamosity on windows
+            return '"{0!s}"'.format(c)  # work around spawn lamosity on windows
         else:
             return c
 else:

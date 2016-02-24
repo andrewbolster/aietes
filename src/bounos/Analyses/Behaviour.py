@@ -94,7 +94,7 @@ def detect_misbehaviour(data, metric="PerNode_Internode_Distance_Avg",
         try:
             deviance[t] = metric.data[t] - metric.highlight_data[t]
         except TypeError as e:
-            raise TypeError("%s:%s" % (metric.__class__.__name__, e))
+            raise TypeError("{0!s}:{1!s}".format(metric.__class__.__name__, e))
 
         # Select culprits that are deviating by 1 sigma/frac from the norm
         detection_envelope[t] = this_detection_envelope = np.std(
@@ -168,7 +168,7 @@ def deviation_from_metric(data, *args, **kwargs):
         try:
             deviance[t] = abs(metric.data[t] - metric.highlight_data[t])
         except TypeError as e:
-            raise TypeError("%s:%s" % (metric.__class__.__name__, e))
+            raise TypeError("{0!s}:{1!s}".format(metric.__class__.__name__, e))
 
         stddev[t] = np.std(deviance[t])
 
@@ -269,14 +269,14 @@ def behaviour_identification(deviance, trust, metrics, names=None, verbose=False
         if verbose:
             print("Untrustworthy behaviour detected")
             if names is None:
-                print("\n".join(["%s:%d(%f)" % (metrics[i].label, m_subtot, detection_totals[
+                print("\n".join(["{0!s}:{1:d}({2:f})".format(metrics[i].label, m_subtot, detection_totals[
                     i]) for i, m_subtot in enumerate(detection_subtot)]))
-                print("Prime Suspect:%s:%s" % (
+                print("Prime Suspect:{0!s}:{1!s}".format(
                     prime_distrusted_node, str(trust_average[prime_distrusted_node])))
             else:
-                print("\n".join(["%s:%s(%f)" % (metrics[i].label, names[
+                print("\n".join(["{0!s}:{1!s}({2:f})".format(metrics[i].label, names[
                     m_subtot], detection_totals[i]) for i, m_subtot in enumerate(detection_subtot)]))
-                print("Prime Suspect:%s:%s" % (
+                print("Prime Suspect:{0!s}:{1!s}".format(
                     names[prime_distrusted_node], str(trust_average[prime_distrusted_node])))
 
     confidence = (trust_average[prime_distrusted_node] - np.average(trust_average)) / np.std(trust_average)

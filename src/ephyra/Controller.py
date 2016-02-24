@@ -25,7 +25,7 @@ from joblib import Parallel, delayed
 
 parallel = False  # Doesn't make a damned difference.
 if parallel:
-    os.system("taskset -p 0xff %d" % os.getpid())
+    os.system("taskset -p 0xff {0:d}".format(os.getpid()))
 
 from bounos import BounosModel
 from bounos.Metrics import *
@@ -37,7 +37,7 @@ def log_and_call():
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             # set name_override to func.__name__
-            logging.info("Entered %s (%s)" % (func.__name__, kwargs))
+            logging.info("Entered {0!s} ({1!s})".format(func.__name__, kwargs))
             return func(*args, **kwargs)
 
         return wrapper
@@ -139,7 +139,7 @@ class EphyraController(object):
             return self.metrics[i]
         else:
             raise NotImplementedError(
-                "Metrics Views must be addressed by int's or nothing! (%s)" % str(i))
+                "Metrics Views must be addressed by int's or nothing! ({0!s})".format(str(i)))
 
     def set_view(self, view):
         self.view = view

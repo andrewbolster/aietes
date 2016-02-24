@@ -102,7 +102,7 @@ class ALOHA(MAC):
 
     def __init__(self, layercake, config):
         self.layercake = layercake
-        self.logger = layercake.logger.getChild("%s" % self.__class__.__name__)
+        self.logger = layercake.logger.getChild("{0!s}".format(self.__class__.__name__))
 
         self.ack_packet_length = config["ack_packet_length"]
         self.packet_signal = {"ACK": "got_ACK", "DATA": "got_DATA"}
@@ -697,7 +697,7 @@ class DACAP(MAC):
 
     def __init__(self, layercake, config):
         self.layercake = layercake
-        self.logger = layercake.logger.getChild("%s" % self.__class__.__name__)
+        self.logger = layercake.logger.getChild("{0!s}".format(self.__class__.__name__))
 
         self.initialise_state_machine()
         self.timer = self.InternalTimer(self.fsm)
@@ -1788,10 +1788,10 @@ class CSMA(MAC):
         self.config = config
         self.logger = getattr(self.layercake, "logger", None)
         if self.logger is not None:
-            self.logger = self.logger.getChild("%s" % self.__class__.__name__)
+            self.logger = self.logger.getChild("{0!s}".format(self.__class__.__name__))
         else:
             logging.basicConfig()
-            self.logger = logging.getLogger("%s" % self.__class__.__name__)
+            self.logger = logging.getLogger("{0!s}".format(self.__class__.__name__))
 
         self.initialise_state_machine()
         self.timer = self.InternalTimer(self.fsm)

@@ -124,7 +124,7 @@ def interactive_plot(data):
 
     shape = data.environment
     ax.legend()
-    ax.set_title("Tracking overview of %s" % data.title)
+    ax.set_title("Tracking overview of {0!s}".format(data.title))
     ax.set_xlim3d((0, shape[0]))
     ax.set_ylim3d((0, shape[1]))
     ax.set_zlim3d((0, shape[2]))
@@ -136,7 +136,7 @@ def interactive_plot(data):
 
 
 def kf_metric_plot(metric):
-    assert isinstance(metric, Metric), "Not a metric: %s" % metric
+    assert isinstance(metric, Metric), "Not a metric: {0!s}".format(metric)
     assert hasattr(metric, 'data'), "No Data"
 
     import numpy as np
@@ -169,10 +169,9 @@ def kf_metric_plot(metric):
             print(i)
             raise e
 
-    print("%f%% Masked" % ((masked * 100.0) / data.tmax))
+    print("{0:f}% Masked".format(((masked * 100.0) / data.tmax)))
 
-    print("Records: Shape: %s, ndim: %s, type: %s" %
-          (records.shape, records.ndim, type(records)))
+    print("Records: Shape: {0!s}, ndim: {1!s}, type: {2!s}".format(records.shape, records.ndim, type(records)))
 
     # create a Kalman Filter by hinting at the size of the state and observation
     # space.  If you already have good guesses for the initial parameters, put them
@@ -232,6 +231,6 @@ def kf_metric_plot(metric):
 
     fig.suptitle(data.title)
 
-    print("Predicted ideal %s: %s" % (metric.label, str(p[-1])))
+    print("Predicted ideal {0!s}: {1!s}".format(metric.label, str(p[-1])))
 
     plt.show()

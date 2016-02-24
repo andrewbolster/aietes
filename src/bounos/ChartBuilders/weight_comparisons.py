@@ -101,8 +101,8 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
     fig.tight_layout(pad=0.1)
     fig.savefig("{}trust_{}_{}{}.{}".format(
         prefix,
-        s, "emph_%s" % metric if metric else "even",
-        "_%s" % keyword if keyword else "",
+        s, "emph_{0!s}".format(metric) if metric else "even",
+        "_{0!s}".format(keyword) if keyword else "",
         extension), transparent=True
     )
     plt.close(fig)

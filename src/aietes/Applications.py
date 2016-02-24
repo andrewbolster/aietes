@@ -69,13 +69,13 @@ class Application(Sim.Process):
                 self.packet_rate = packet_rate
                 if DEBUG:
                     self.logger.debug(
-                        "Taking Packet_Rate from config: %s" % self.packet_rate)
+                        "Taking Packet_Rate from config: {0!s}".format(self.packet_rate))
             elif packet_count > 0 and packet_rate == 0:
                 # If packet count defined, only send our N packets
                 self.packet_rate = packet_count / float(self.sim_duration)
                 if DEBUG:
                     self.logger.debug(
-                        "Taking Packet_Count from config: %s" % self.packet_rate)
+                        "Taking Packet_Count from config: {0!s}".format(self.packet_rate))
             else:
                 raise ConfigError("Packet Rate/Count doesn't make sense! {}/{}".format(
                     packet_rate,
@@ -88,7 +88,7 @@ class Application(Sim.Process):
 
     def _start_log(self, parent):
         self.logger = parent.logger.getChild(
-            "App:%s" % self.__class__.__name__)
+            "App:{0!s}".format(self.__class__.__name__))
 
     def activate(self):
 
@@ -165,7 +165,7 @@ class Application(Sim.Process):
             if packet is not None:
                 if DEBUG:
                     self.logger.debug(
-                        "Generated Payload %s: Waiting %s" % (packet['data'], period))
+                        "Generated Payload {0!s}: Waiting {1!s}".format(packet['data'], period))
                 self.layercake.send(packet)
                 self.log_sent_packet(packet)
 
@@ -214,7 +214,7 @@ class Application(Sim.Process):
         source = packet["route"][0][0]
 
         if DEBUG:
-            self.logger.info("App Packet received from %s" % source)
+            self.logger.info("App Packet received from {0!s}".format(source))
         self.stats['packets_received'] += 1
 
         delay = packet['delay'] = packet.get('received', Sim.now()) - packet['time_stamp']
@@ -228,7 +228,7 @@ class Application(Sim.Process):
         self.stats['packets_hops'] += hops
         self.stats['packets_dhops'] += (delay / hops)
 
-        self.logger.debug("Packet received from %s over %d hops with a delay of %s (d/h=%s)" % (
+        self.logger.debug("Packet received from {0!s} over {1:d} hops with a delay of {2!s} (d/h={3!s})".format(
             source, hops, str(delay), str(delay / hops)))
 
     def dump_stats(self):

@@ -69,7 +69,7 @@ class Metric(object):
         raise NotImplementedError("Uninitialised Metric generator")
 
     def __repr__(self):
-        return "Metric: %s with %s entries" % (
+        return "Metric: {0!s} with {1!s} entries".format(
             self.label,
             self.n if self.n is not None else "Unknown"
         )

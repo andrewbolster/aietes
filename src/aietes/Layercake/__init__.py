@@ -46,7 +46,7 @@ class Layercake(object):
         self.hostname = host.name
         self.config = config
         self.channel_event = self.host.simulation.channel_event
-        self.logger = host.logger.getChild("%s" % self.__class__.__name__)
+        self.logger = host.logger.getChild("{0!s}".format(self.__class__.__name__))
         self.sim_duration = host.simulation.duration_intervals
         self.packet_length = None
         ###

@@ -69,8 +69,7 @@ class DataPackage(object):
         """
         Attempts to extract DataPackage data from a source dict
         """
-        logging.debug("Caught exception on sink:%s source:%s (%s) attempting to recover"
-                      % (sink, source, exp))
+        logging.debug("Caught exception on sink:{0!s} source:{1!s} ({2!s}) attempting to recover".format(sink, source, exp))
         # Per Attrib Fixes in the case of failure
         if sink is "title":
             # If simulation title not explicitly given, use the filename -npz
@@ -88,7 +87,7 @@ class DataPackage(object):
             # If config file is not listed, look for one in the same dir with
             # the same name
             potential_config_file = unext(source_filename) + ".conf"
-            logging.error("Potential Config %s" % potential_config_file)
+            logging.error("Potential Config {0!s}".format(potential_config_file))
             self.config = validate_config(potential_config_file)
         elif sink is "drift_positions":
             logging.debug("Non-drifting Datapackage")
@@ -111,7 +110,7 @@ class DataPackage(object):
             setattr(self, sink, None)
 
         else:
-            raise ValueError("Can't find %s(%s) in source" % (source, sink))
+            raise ValueError("Can't find {0!s}({1!s}) in source".format(source, sink))
 
     def __init__(self, source=None, *args, **kwargs):
         """
@@ -199,7 +198,7 @@ class DataPackage(object):
         :param kwargs:
         :raise ValueError:
         """
-        logging.debug("Updating from tmax %d" % self.tmax)
+        logging.debug("Updating from tmax {0:d}".format(self.tmax))
 
         if all(x is not None for x in [p, v, names, environment]):
             self.p = p
@@ -231,11 +230,11 @@ class DataPackage(object):
                  **data
                  )
         co = ConfigObj(self.config, list_values=False)
-        co.filename = "%s.conf" % filename
+        co.filename = "{0!s}.conf".format(filename)
         co.write()
         if track_mat:
             self.export_track_mat(filename)
-        return "%s.npz" % filename, co.filename
+        return "{0!s}.npz".format(filename), co.filename
 
     # Data has the format:
     # [n][x,y,z][t]
@@ -391,7 +390,7 @@ class DataPackage(object):
         try:
             return self.p[node, :, :]
         except IndexError as e:
-            logging.debug("Position Query for n:%d @ all for position shape %s" % (
+            logging.debug("Position Query for n:{0:d} @ all for position shape {1!s}".format(
                 node, self.p[node].shape))
             raise e
 
@@ -403,7 +402,7 @@ class DataPackage(object):
         try:
             return self.v[node, :, :]
         except IndexError as e:
-            logging.debug("Heading Query for n:%d @ all for heading shape %s" % (
+            logging.debug("Heading Query for n:{0:d} @ all for heading shape {1!s}".format(
                 node, self.v[node].shape))
             raise e
 
@@ -451,7 +450,7 @@ class DataPackage(object):
         """
         if not (0 <= time <= self.tmax):
             raise ValueError(
-                "Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
+                "Time must be in the range of the dataset: {0!s}, {1!s}".format(time, self.tmax))
 
         return np.average(self.position_slice(time), axis=0)
 
@@ -463,7 +462,7 @@ class DataPackage(object):
         """
         if not (0 <= time <= self.tmax):
             raise ValueError(
-                "Time must be in the range of the dataset: %s, %s" % (time, self.tmax))
+                "Time must be in the range of the dataset: {0!s}, {1!s}".format(time, self.tmax))
 
         return np.average(self.heading_slice(time), axis=0)
 
@@ -543,7 +542,7 @@ class DataPackage(object):
         except IndexError as e:
             try:
                 logging.debug(
-                    "Contribution Query for n:%d @ all for position shape %s" % (node, self.contributions[node].shape))
+                    "Contribution Query for n:{0:d} @ all for position shape {1!s}".format(node, self.contributions[node].shape))
                 raise e
             except AttributeError as e:
                 logging.error(
@@ -709,22 +708,22 @@ class DataPackage(object):
         line_ani = AIETESAnimation(fig, updatelines, frames=int(n_frames), fargs=(self.p, lines, display_frames),
                                    interval=1000 / fps, repeat_delay=300, blit=True, )
         if movie_file:
-            logging.info("Writing animation to %s.mp4" % filename)
+            logging.info("Writing animation to {0!s}.mp4".format(filename))
             line_ani.save(
                 filename=filename,
                 fps=fps,
                 codec='mpeg4',
                 clear_temp=True
             )
-            return_dict['ani_file'] = "%s.mp4" % filename
+            return_dict['ani_file'] = "{0!s}.mp4".format(filename)
         if gif:
-            logging.info("Writing animation to %s.gif" % filename)
+            logging.info("Writing animation to {0!s}.gif".format(filename))
             from matplotlib import animation as mplanimation
             from matplotlib import verbose
 
             verbose.level = "DEBUG"
 
-            return_dict['ani_file'] = "%s.gif" % filename
+            return_dict['ani_file'] = "{0!s}.gif".format(filename)
             mplanimation.FuncAnimation.save(line_ani, filename=return_dict['ani_file'], extra_args="-colors 8",
                                             writer='imagemagick', bitrate=-1, fps=fps)
         return plt, return_dict

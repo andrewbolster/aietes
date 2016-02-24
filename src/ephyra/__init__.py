@@ -88,9 +88,9 @@ def main():
     elif args.data_file is not None:
         if not is_valid_aietes_datafile(args.data_file):
             raise ValueError(
-                "Provided data file does not appear to be an aietes dataset:%s" % args.data_file)
+                "Provided data file does not appear to be an aietes dataset:{0!s}".format(args.data_file))
 
-    logging.info("Using Latest AIETES file: %s" % args.data_file)
+    logging.info("Using Latest AIETES file: {0!s}".format(args.data_file))
 
     if True:
         app = wx.PySimpleApp()

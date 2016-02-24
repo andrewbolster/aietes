@@ -59,11 +59,11 @@ FUDGED = False
 
 _ROOT = os.path.abspath(os.path.dirname(__file__) + '/../')
 
-_config_spec = '%s/configs/default.conf' % _ROOT
+_config_spec = '{0!s}/configs/default.conf'.format(_ROOT)
 _results_dir = '/home/bolster/src/aietes/results/'
-_config_dir = "%s/configs/" % _ROOT
+_config_dir = "{0!s}/configs/".format(_ROOT)
 
-_proc_status = '/proc/%d/status' % os.getpid()
+_proc_status = '/proc/{0:d}/status'.format(os.getpid())
 
 _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
           'KB': 1024.0, 'MB': 1024.0 * 1024.0}
@@ -192,7 +192,7 @@ class ConfigError(Exception):
     def __init__(self, message, errors=None):
         super(ConfigError, self).__init__(message)
 
-        logging.critical("Invalid Config; Dying: %s" % message)
+        logging.critical("Invalid Config; Dying: {0!s}".format(message))
         self.status = message
         self.errors = errors
 
@@ -583,7 +583,7 @@ class MemoryEntry(object):
         raise PendingDeprecationWarning("Pending Deletion")
 
     def __repr__(self):
-        return "%s:%s:%s" % (self.name, self.position, self.distance)
+        return "{0!s}:{1!s}:{2!s}".format(self.name, self.position, self.distance)
 
 
 class MapEntry(object):
@@ -605,7 +605,7 @@ class MapEntry(object):
         self.time = Sim.now()
 
     def __repr__(self):
-        return "%s:%s:%s" % (self.name, self.position, self.time)
+        return "{0!s}:{1!s}:{2!s}".format(self.name, self.position, self.time)
 
 
 class AutoSyncShelf(DbfilenameShelf):
@@ -658,8 +658,7 @@ def fudge_normal(value, stdev):
     elif isinstance(value, list):
         shape = len(value)
     else:
-        raise ValueError("Cannot process value type %s:%s" %
-                         (type(value), value))
+        raise ValueError("Cannot process value type {0!s}:{1!s}".format(type(value), value))
 
     if stdev <= 0:
         return value
@@ -694,7 +693,7 @@ def generate_names(count, naming_convention=None, existing_names=None):
     if count > len(naming_convention):
         # If the naming convention can't provide unique names, bail
         raise ConfigError(
-            "Not Enough Names in dictionary for number of nodes requested:%s/%s!" % (
+            "Not Enough Names in dictionary for number of nodes requested:{0!s}/{1!s}!".format(
                 count, len(naming_convention))
         )
 
@@ -968,10 +967,9 @@ def get_config(source_config=None, config_spec=_config_spec):
     config_status = config.validate(validate.Validator(), copy=True)
     if not config_status:
         if source_config_file is None:
-            raise RuntimeError("Configspec is Broken: %s" % config_spec)
+            raise RuntimeError("Configspec is Broken: {0!s}".format(config_spec))
         else:
-            raise RuntimeError("Configspec doesn't match given input structure: %s"
-                               % source_config_file)
+            raise RuntimeError("Configspec doesn't match given input structure: {0!s}".format(source_config_file))
     return config
 
 
@@ -1001,7 +999,7 @@ def validate_config(config=None, final_check=False):
     if not config_status:
         # If config_spec doesn't match the input, bail
         raise ConfigError(
-            "Configspec doesn't match given input structure: %s" % config_status)
+            "Configspec doesn't match given input structure: {0!s}".format(config_status))
 
     return config
 
@@ -1028,7 +1026,7 @@ def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
             try:
                 return fn(*args, **kwargs)
             except exceptions_to_catch as e:
-                print "Failed %d/%d: %s" % (i, x, e)
+                print "Failed {0:d}/{1:d}: {2!s}".format(i, x, e)
         raise exception_to_raise
 
     return new_fn
@@ -1056,7 +1054,7 @@ def try_forever(exceptions_to_catch, fn):
                 return fn(*args, **kwargs)
             except exceptions_to_catch as e:
                 count += 1
-                print "Failed %d: %s" % (count, e)
+                print "Failed {0:d}: {1!s}".format(count, e)
 
     return new_fn
 
@@ -1094,7 +1092,7 @@ def timeit():
             """
             start = time()
             res = func(*args, **kwargs)
-            print("%s (%s)" % (func.__name__, time() - start))
+            print("{0!s} ({1!s})".format(func.__name__, time() - start))
             return res
 
         return wrapper
@@ -1134,7 +1132,7 @@ def get_latest_aietes_datafile(base_dir=None):
     candidate_data_files.sort(key=os.path.getmtime, reverse=True)
     if len(candidate_data_files) == 0:
         raise ValueError(
-            "There are no valid datafiles in the working directory:%s" % os.getcwd())
+            "There are no valid datafiles in the working directory:{0!s}".format(os.getcwd()))
     return os.path.join(fqp, candidate_data_files[0])
 
 

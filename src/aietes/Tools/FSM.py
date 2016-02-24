@@ -90,7 +90,7 @@ class FSM(object):
         # Map (current_state) --> (action, next_state).
         self.state_transitions_any = {}
         self.default_transition = None
-        self.logger = parent.logger.getChild("%s" % self.__class__.__name__)
+        self.logger = parent.logger.getChild("{0!s}".format(self.__class__.__name__))
 
         self.input_symbol = None
         self.initial_state = initial_state
@@ -186,8 +186,7 @@ class FSM(object):
         elif self.default_transition is not None:
             return self.default_transition
         else:
-            raise ExceptionFSM('Transition is undefined: (%s, %s).' %
-                               (str(input_symbol), str(self.current_state)))
+            raise ExceptionFSM('Transition is undefined: ({0!s}, {1!s}).'.format(str(input_symbol), str(self.current_state)))
 
     def process(self, input_symbol):
         """This is the main method that you call to process input.

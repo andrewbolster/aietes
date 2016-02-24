@@ -141,13 +141,13 @@ class Configurator(wx.Panel):
         prefix = prefix if prefix is not None else ""
         for item in root:
             try:
-                print "%s:" % str([prefix, item.get_label()])
+                print "{0!s}:".format(str([prefix, item.get_label()]))
                 if item:
                     self.print_tree(item, prefix=prefix + "+")
             except AttributeError:
-                print "%s" % item
+                print "{0!s}".format(item)
             except TypeError:
-                print "%s" % item
+                print "{0!s}".format(item)
 
     def build_tree(self, config, tree_node):
         for config_node in config:
@@ -161,7 +161,7 @@ class Configurator(wx.Panel):
         try:
             node = self.tree.GetPyData(item)
         except Exception as e:
-            print("%s:%s" % (item.get_label(), e))
+            print("{0!s}:{1!s}".format(item.get_label(), e))
 
         child, boza = self.tree.GetFirstChild(item)
         for s in node:
@@ -187,7 +187,7 @@ class Configurator(wx.Panel):
                 child, boza = self.tree.GetNextChild(item, boza)
             map(self.tree.Delete, extra)
         else:
-            raise RuntimeError, "Child is probably bad: %s:%s" % (node, child)
+            raise RuntimeError, "Child is probably bad: {0!s}:{1!s}".format(node, child)
 
     def on_resize(self, event):
         """
@@ -212,7 +212,7 @@ class Configurator(wx.Panel):
         :param kw:
         """
 
-        fleetid = self.fleets.append(ListNode("%s" % kw.get("name", "Fleet %d" % index), [
+        fleetid = self.fleets.append(ListNode("{0!s}".format(kw.get("name", "Fleet {0:d}".format(index))), [
             ListNode("Nodes"),
             ListNode("Behaviours", data=kw.get(
                 "behaviours", self.defaults[2].get_data()))
@@ -231,30 +231,30 @@ class Configurator(wx.Panel):
         node_names = [n.get_label() for n in self.fleets[fleetid][0]]
         myname = kw.get(
             "name", str(generate_names(1, existing_names=node_names)[0]))
-        logging.info("Added %s to fleet %d" % (myname, fleetid))
+        logging.info("Added {0!s} to fleet {1:d}".format(myname, fleetid))
         self.fleets[fleetid][0].append(
-            ListNode("%s" % myname, data=self.defaults[1].get_data()))
+            ListNode("{0!s}".format(myname), data=self.defaults[1].get_data()))
 
     def set_config_panel(self, item):
         """
         Create and layout the widgets in the dialog
         :param item:
         """
-        logging.info("Setting config for :%s" % item)
+        logging.info("Setting config for :{0!s}".format(item))
         data = None
         try:
             data = self.tree.GetPyData(item)
         except Exception as e:
-            print("%s:%s" % (item.get_label(), e))
+            print("{0!s}:{1!s}".format(item.get_label(), e))
 
-        logging.info("Clicked on %s" % data)
+        logging.info("Clicked on {0!s}".format(data))
         self.current_selection = item
 
         main_sizer = self.config_panel.GetSizer()
         if main_sizer:
             widgets = self.config_panel.GetChildren()
             for widget in widgets:
-                logging.info("Destroying: %s" % (str(widget)))
+                logging.info("Destroying: {0!s}".format((str(widget))))
                 widget.Destroy()
                 self.Layout()
             logging.info("Removing: MainSizer")
@@ -273,7 +273,7 @@ class Configurator(wx.Panel):
             font = wx.Font(10, wx.SWISS, wx.NORMAL, wx.BOLD)
 
             for key, value in values.iteritems():
-                logging.info("Parsing: %s %s" % (key, value))
+                logging.info("Parsing: {0!s} {1!s}".format(key, value))
 
                 lbl = wx.StaticText(self.config_panel, label=key)
                 lbl.SetFont(font)
@@ -317,7 +317,7 @@ class Configurator(wx.Panel):
                         input_choice.AddMany(
                             [(thing, 0, wx.ALL | wx.EXPAND | wx.ALIGN_RIGHT, 5) for thing in (i_lbl, widget)])
                 else:
-                    raise NotImplementedError, "Value (%s, %s) has not been coped with by set_config_panel" % (
+                    raise NotImplementedError, "Value ({0!s}, {1!s}) has not been coped with by set_config_panel".format(
                         str(value),
                         type(value)
                     )
@@ -376,7 +376,7 @@ class Configurator(wx.Panel):
                 data['Config'][name] = value
                 self.tree.SetPyData(self.current_selection, data)
             except Exception as E:
-                logging.error("%s: %s" % (E, name))
+                logging.error("{0!s}: {1!s}".format(E, name))
                 raise E
 
 
@@ -402,7 +402,7 @@ class ListNode(object):
             elif isinstance(children, ListNode):
                 self._nl = [children]
             else:
-                raise RuntimeError, "Unknown Children:%s" % children
+                raise RuntimeError, "Unknown Children:{0!s}".format(children)
         self._tt = title
         self._data = data
 

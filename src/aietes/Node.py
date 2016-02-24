@@ -40,7 +40,7 @@ class Node(Sim.Process):
         self.id = uuid.uuid4()  # Hopefully unique id
         Sim.Process.__init__(self, name=name)
         self.logger = kwargs.get(
-            "logger", simulation.logger.getChild("%s[%s]" % (__name__, self.name)))
+            "logger", simulation.logger.getChild("{0!s}[{1!s}]".format(__name__, self.name)))
 
         # fileHandler = logging.FileHandler("{0}/{1}.log".format(logPath, fileName))
         # fileHandler.setFormatter(log_fmt)
@@ -84,7 +84,7 @@ class Node(Sim.Process):
         # Physical Configuration
         #
         # Extract (X,Y,Z) vector from 6-vector as position
-        assert len(vector) == 3, "Malformed Vector%s" % vector
+        assert len(vector) == 3, "Malformed Vector{0!s}".format(vector)
         self.position = np.array(vector, dtype=np.float)
         # Implied six vector velocity
         self.velocity = np.array([0, 0, 0], dtype=np.float)
@@ -106,8 +106,8 @@ class Node(Sim.Process):
                     application = application[0]
             app_mod = getattr(Applications, application)
         except AttributeError:
-            raise ConfigError("Can't find Application: %s" %
-                              node_config['app'])
+            raise ConfigError("Can't find Application: {0!s}".format(
+                              node_config['app']))
         if app_mod.HAS_LAYERCAKE:
             self.layercake = Layercake(self, node_config)
         else:
@@ -270,7 +270,7 @@ class Node(Sim.Process):
         if Sim.now() < self.settling_time:
             force_vector = np.zeros(shape=force_vector.shape)
             contributions = {}
-        assert len(force_vector) == 3 and not np.isnan(sum(force_vector)), "Out of spec vector: %s,%s" % (
+        assert len(force_vector) == 3 and not np.isnan(sum(force_vector)), "Out of spec vector: {0!s},{1!s}".format(
             force_vector, type(force_vector))
         self.acceleration_force = force_vector
         self.contributions_log.append(contributions)
@@ -299,7 +299,7 @@ class Node(Sim.Process):
             self.logger.error(
                 "shouldn't really be here: {},{}".format(velocity, mag(velocity)))
         if DEBUG:
-            self.logger.error("Cruise: From %f against %f and vel of %f" % (
+            self.logger.error("Cruise: From {0:f} against {1:f} and vel of {2:f}".format(
                 mag(velocity), cruisev, mag(new_v)))
         return new_v
 
@@ -331,13 +331,13 @@ class Node(Sim.Process):
             self.velocity = self.cruise_control(new_velocity, self.velocity)
             if DEBUG:
                 self.logger.debug(
-                    "Normalized Velocity: %s, clipped: %s" % (new_velocity, self.velocity))
+                    "Normalized Velocity: {0!s}, clipped: {1!s}".format(new_velocity, self.velocity))
         else:
             if DEBUG:
-                self.logger.debug("Velocity: %s" % new_velocity)
+                self.logger.debug("Velocity: {0!s}".format(new_velocity))
             self.velocity = new_velocity
 
-        assert mag(self.velocity) < max(self.max_speed), "Breaking the speed limit: %s, %s" % (
+        assert mag(self.velocity) < max(self.max_speed), "Breaking the speed limit: {0!s}, {1!s}".format(
             mag(self.velocity), self.cruising_speed
         )
 
@@ -362,10 +362,10 @@ class Node(Sim.Process):
         self.vec_log[:, self._lastupdate] = self.velocity
 
         if DEBUG:
-            self.logger.debug("Moving by %s at %s * %f from %s to %s" % (
+            self.logger.debug("Moving by {0!s} at {1!s} * {2:f} from {3!s} to {4!s}".format(
                 self.velocity, mag(self.velocity), dt, old_pos, self.position))
         if not self.wall_check():
-            self.logger.critical("Moving by %s at %s * %f from %s to %s" % (
+            self.logger.critical("Moving by {0!s} at {1!s} * {2:f} from {3!s} to {4!s}".format(
                 self.velocity, mag(self.velocity), dt, old_pos, self.position))
             raise RuntimeError(
                 "{} Crashed out of the environment at {}".format(self.name, Sim.now()))
@@ -523,7 +523,7 @@ class Node(Sim.Process):
             self.achievements_log[self._lastupdate].append(achievement)
         else:
             raise RuntimeError(
-                "Non standard Achievement passed:%s" % achievement)
+                "Non standard Achievement passed:{0!s}".format(achievement))
 
     def time_since_last_achievement(self):
         """
