@@ -27,6 +27,6 @@ class TestGetResultsPath(TestCase):
 
         path = Tools.get_results_path(proposed, results_dir=result_dir, make=True)
 
-        self.assertTrue(os.path.exists(result_dir), "Path: {}".format(result_dir))
+        self.assertTrue(os.path.exists(result_dir), "Path: {0}".format(result_dir))
         os.rmdir(result_dir)
         self.assertFalse(os.path.exists(result_dir))

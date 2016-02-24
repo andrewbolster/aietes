@@ -15,7 +15,7 @@ def set_exp():
         'positioning': 'surface',
         'drifting': 'DriftFactorPy',
     })
-    e.add_custom_node_scenario('ecea', ["Simple{}".format(n) for n in range(1, 4)])
+    e.add_custom_node_scenario('ecea', ["Simple{0}".format(n) for n in range(1, 4)])
     e.update_duration(21600)
     return e
 

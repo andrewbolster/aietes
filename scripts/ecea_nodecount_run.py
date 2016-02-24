@@ -7,7 +7,7 @@ from polybos import ExperimentManager as ExpMan
 def set_exp():
     variations = list(reversed([1, 2, 4, 6, 9]))
     e = ExpMan(node_count=4,
-               title="FleetLawnmowerNodeVar-{}".format(variations),
+               title="FleetLawnmowerNodeVar-{0}".format(variations),
                parallel=True, future=True,
                retain_data='files')
     e.update_default_node({

@@ -23,4 +23,4 @@ if __name__ == "__main__":
 
     outliers = perform_weight_factor_outlier_analysis_on_trust_frame(trust, "CombinedTrust",
                                                                      min_emphasis=-1, max_emphasis=2, par=True)
-    outliers.to_hdf(os.path.join(results_path, "outliers.h5"), "CombinedTrust_{}_3".format("Signed"))
+    outliers.to_hdf(os.path.join(results_path, "outliers.h5"), "CombinedTrust_{0}_3".format("Signed"))

@@ -107,10 +107,10 @@ class TrustCom(unittest.TestCase):
 
         for filename in [self.good, self.malicious, self.selfish]:
             if not os.path.isfile(Tools.in_results(filename)):
-                self.fail("No file {}".format(filename))
+                self.fail("No file {0}".format(filename))
 
     def tearDown(self):
-        logging.info("Successfully Generated:\n{}".format(self.generated_files))
+        logging.info("Successfully Generated:\n{0}".format(self.generated_files))
         if use_temp_dir:
             shutil.rmtree(self.dirpath)
 
@@ -130,7 +130,7 @@ class TrustCom(unittest.TestCase):
             aietes.Tools.get_config('bella_static.conf'),
             retain_default=True
         )
-        texify = lambda t: "${}_{}$".format(t[0], t[1])
+        texify = lambda t: "${0}_{1}$".format(t[0], t[1])
         node_positions = {texify(k): np.asarray(v['initial_position'], dtype=float) for k, v in
                           base_config['Node']['Nodes'].items() if 'initial_position' in v}
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
@@ -169,7 +169,7 @@ class TrustCom(unittest.TestCase):
             ax.set_xlabel("Packet Emission Rate (pps)")
             ax.set_ylabel("Avg. Throughput (bps)")
             fig.tight_layout()
-            fig.savefig("img/throughput_sep_lines_{}.pdf".format(mobility), transparent=True, facecolor='white')
+            fig.savefig("img/throughput_sep_lines_{0}.pdf".format(mobility), transparent=True, facecolor='white')
             plt.close(fig)
 
         for f in required_files:
@@ -303,7 +303,7 @@ class TrustCom(unittest.TestCase):
             ax.axhline(mtfm.mean(), color="r", linestyle='-.')
             ax.yaxis.set_major_locator(loc_25)
             fig.tight_layout()
-            fig.savefig("img/trust_beta_otmf{}.pdf".format("_" + key if key is not None else ""), transparent=True)
+            fig.savefig("img/trust_beta_otmf{0}.pdf".format("_" + key if key is not None else ""), transparent=True)
             plt.close(fig)
 
         gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file, [self.good, self.malicious, self.selfish])

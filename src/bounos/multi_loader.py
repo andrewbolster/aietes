@@ -33,7 +33,7 @@ def scenarios_comms(paths, generator=True):
         title = os.path.basename(subdir)
         sources = npz_in_dir(subdir)
         subtitle = re.split('\(|\)', title)[1]
-        log.info("{:.2%}:{}:{}:{:8.2f}/{:8.2f}MiB".format(
+        log.info("{0:.2%}:{1}:{2}:{3:8.2f}/{4:8.2f}MiB".format(
             float(i) / float(len(subdirs)),
             title, subtitle,
             memory(), swapsize()))
@@ -44,8 +44,8 @@ def scenarios_comms(paths, generator=True):
 
 
 def hdfstore(filename, obj):
-    log.info("Storing into {}.h5".format(filename))
-    store = pd.HDFStore("{}.h5".format(filename), mode='w')
+    log.info("Storing into {0}.h5".format(filename))
+    store = pd.HDFStore("{0}.h5".format(filename), mode='w')
     store.append(filename, object)
 
 
@@ -53,13 +53,13 @@ def generate_inverted_logs_from_paths(paths):
     logs = {}  # TODO Update this to a defaultdict implementation.
     # Transpose per-var-per-run statistics into Per 'log' stats (i.e. rx, tx, trust, stats, etc)
     for var, runs in scenarios_comms(paths):
-        print("Var:{}".format(var))
+        print("Var:{0}".format(var))
         for run, data in runs:
-            print("---{}".format(run))
+            print("---{0}".format(run))
             nodes = dict(data['logs'].items() + [('stats', data['stats']), ('positions', data['positions'])])
             data = None
             run = run.split('-')[-1]
-            log.info("------:{}:{:8.2f}/{:8.2f} MiB".format(
+            log.info("------:{0}:{1:8.2f}/{2:8.2f} MiB".format(
                 run,
                 memory(), swapsize()))
             for node, inner_logs in nodes.iteritems():
@@ -84,7 +84,7 @@ def generate_inverted_logs_from_paths(paths):
 
 def generate_dataframes_from_inverted_log(tup):
     k, v = tup
-    log.info("Generating {} structure:{:8.2f}/{:8.2f} MiB".format(k, memory(), swapsize()))
+    log.info("Generating {0} structure:{1:8.2f}/{2:8.2f} MiB".format(k, memory(), swapsize()))
     try:
         v = OrderedDict(sorted(v.iteritems(), key=lambda _k: _k))
         if k not in ['stats', 'positions', 'trust']:
@@ -177,30 +177,30 @@ def dump_trust_logs_and_stats_from_exp_paths(paths, title=None, dump=False):
     if title is None:
         title = 'logs'
 
-    print("Using {} as title".format(title))
+    print("Using {0} as title".format(title))
 
     if dump:
-        print("Dumping intermediates to intermediate_{}_*.npz".format(title))
+        print("Dumping intermediates to intermediate_{0}_*.npz".format(title))
     inverted_logs = generate_inverted_logs_from_paths(paths)
     if dump:
-        mkcpickle("intermediate_{}_inverted_logs".format(title), inverted_logs)
-    log.info("First Cycle:{:8.2f}/{:8.2f} MiB".format(memory(), swapsize()))
+        mkcpickle("intermediate_{0}_inverted_logs".format(title), inverted_logs)
+    log.info("First Cycle:{0:8.2f}/{1:8.2f} MiB".format(memory(), swapsize()))
     dfs = trust_frames_from_logs(inverted_logs)
-    filename = '{}.h5'.format(title)
-    log.info("Dumping to {}:{:8.2f}/{:8.2f} MiB".format(filename, memory(), swapsize()))
+    filename = '{0}.h5'.format(title)
+    log.info("Dumping to {0}:{1:8.2f}/{2:8.2f} MiB".format(filename, memory(), swapsize()))
     if os.path.isfile(filename):
         os.remove(filename)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for k, v in dfs.iteritems():
-            v.to_hdf('{}.h5'.format(title), k, complevel=5, complib='zlib')
-    log.info("Done!:{:8.2f}/{:8.2f} MiB".format(memory(), swapsize()))
+            v.to_hdf('{0}.h5'.format(title), k, complevel=5, complib='zlib')
+    log.info("Done!:{0:8.2f}/{1:8.2f} MiB".format(memory(), swapsize()))
 
 
 def results_path_parser(path):
     # Stretch and then compress the path to make sure we're in the right place
     abspath = os.path.abspath(path)
-    assert os.path.isdir(path), "Expected a path! got {}".format(path)
+    assert os.path.isdir(path), "Expected a path! got {0}".format(path)
     s = os.path.basename(abspath)
     args = s.split('-')
     title = args[0]
@@ -227,4 +227,4 @@ if __name__ == "__main__":
                 raise RuntimeError("Can't infer and set the title at the same time!")
             title, base_name, var = results_path_parser(path)
         dump_trust_logs_and_stats_from_exp_paths([path], dump=args.dump,
-                                                 title="{}-{}-{}".format(title, base_name, var))
+                                                 title="{0}-{1}-{2}".format(title, base_name, var))

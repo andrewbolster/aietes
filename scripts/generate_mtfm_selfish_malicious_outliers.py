@@ -42,8 +42,8 @@ outliers = Parallel(n_jobs=-1, verbose=10, pre_dispatch=8)(
 )
 sums = pd.concat(outliers).reset_index()
 
-filename = '{}.h5'.format("/dev/shm/outliers")
-log.info("Dumping to {}:{:8.2f}/{:8.2f} MiB".format(filename, memory(), swapsize()))
+filename = '{0}.h5'.format("/dev/shm/outliers")
+log.info("Dumping to {0}:{1:8.2f}/{2:8.2f} MiB".format(filename, memory(), swapsize()))
 if os.path.isfile(filename):
     os.remove(filename)
 with warnings.catch_warnings():

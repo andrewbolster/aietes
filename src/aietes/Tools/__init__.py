@@ -490,13 +490,13 @@ class Dotdictify(dict):
             dict.__setitem__(self, key, value)
         except TypeError:
             logging.error(
-                "NOPE! {},{},{},{}".format(type(key), key, type(value), value))
+                "NOPE! {0},{1},{2},{3}".format(type(key), key, type(value), value))
             raise
 
     def __getitem__(self, key):
         found = self.get(key, Dotdictify.marker)
         if found is Dotdictify.marker:
-            raise AttributeError("Key {} not found".format(key))
+            raise AttributeError("Key {0} not found".format(key))
 
         return found
 
@@ -529,7 +529,7 @@ class Dotdictify(dict):
                     if not self[k] == other[k]:
                         return False
             except:
-                print("Crashed on key {}{}:{}{}".format(
+                print("Crashed on key {0}{1}:{2}{3}".format(
                     k, type(k), type(self[k]), type(other[k])))
                 raise
 
@@ -942,7 +942,7 @@ def get_config_file(config):
     # If file is defined but not a file then something is wrong
     config = os.path.abspath(os.path.join(_config_dir, config))
     if not os.path.isfile(config):
-        raise OSError(errno.ENOENT, "Given Source File {} is not present in {}".format(
+        raise OSError(errno.ENOENT, "Given Source File {0} is not present in {1}".format(
             config, _config_dir
         ), config)
 
@@ -1198,7 +1198,7 @@ def categorise_dataframe(df):
         try:
             df[obj_key] = df[obj_key].astype('category')
         except TypeError:
-            print("Couldn't categorise {}".format(obj_key))
+            print("Couldn't categorise {0}".format(obj_key))
             pass
     return df
 

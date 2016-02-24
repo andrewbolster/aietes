@@ -120,7 +120,7 @@ class ThesisDiagrams(unittest.TestCase):
     @classmethod
     def recompute_features_in_shared(cls, signed=False):
         # All Metrics
-        print "Building Joined {} Target Weights".format("Signed" if signed else "Unsigned")
+        print "Building Joined {0} Target Weights".format("Signed" if signed else "Unsigned")
         joined_target_weights = build_outlier_weights(results_path + "/outliers.bkup.h5",
                                                       observer=observer, target=target,
                                                       n_metrics=n_metrics, signed=signed)
@@ -143,7 +143,7 @@ class ThesisDiagrams(unittest.TestCase):
     @classmethod
     def metric_subset_weight_and_feature_extractor(cls, subset_str, desired_keys, complete_target_weights,
                                                    dumping_suffix):
-        print "Building {} Target Weights".format(subset_str)
+        print "Building {0} Target Weights".format(subset_str)
         subset_only_weights = drop_metrics_from_weights_by_key(
             complete_target_weights,
             metric_key_inverter(desired_keys)
@@ -153,9 +153,9 @@ class ThesisDiagrams(unittest.TestCase):
                 subset_only_weights
             )
         )
-        print "Dumping {} Target Weights".format(subset_str)
-        subset_only_weights.to_hdf(shared_h5_path, "{}_only_weights{}".format(subset_str, dumping_suffix))
-        subset_only_feats.to_hdf(shared_h5_path, "{}_only_feats{}".format(subset_str, dumping_suffix))
+        print "Dumping {0} Target Weights".format(subset_str)
+        subset_only_weights.to_hdf(shared_h5_path, "{0}_only_weights{1}".format(subset_str, dumping_suffix))
+        subset_only_feats.to_hdf(shared_h5_path, "{0}_only_feats{1}".format(subset_str, dumping_suffix))
 
         return subset_only_weights, subset_only_feats
 
@@ -200,15 +200,15 @@ class ThesisDiagrams(unittest.TestCase):
                 if isinstance(annotate, int):
                     for bar in sorted(scenario_bars, key=lambda b: b.get_height(), reverse=True)[:annotate]:
                         ax.text(bar.get_x() + bar.get_width() / 2, 1.05 * bar.get_height(),
-                                "{:.2}".format(bar.get_height()), ha='center', va='bottom')
+                                "{0:.2}".format(bar.get_height()), ha='center', va='bottom')
                 elif isinstance(annotate, float):
                     for bar in filter(lambda b: b.get_height() > annotate,
                                       sorted(scenario_bars, key=lambda b: b.get_height(), reverse=True)):
                         ax.text(bar.get_x() + bar.get_width() / 2, 1.05 * bar.get_height(),
-                                "{:.2}".format(bar.get_height()), ha='center', va='bottom')
+                                "{0:.2}".format(bar.get_height()), ha='center', va='bottom')
                 else:
                     raise NotImplementedError(
-                        "Can't handle an annotation value of type {}; try float or int".format(type(annotate)))
+                        "Can't handle an annotation value of type {0}; try float or int".format(type(annotate)))
 
         ax.legend(loc='best', ncol=1)
         format_axes(ax)
@@ -385,7 +385,7 @@ class ThesisDiagrams(unittest.TestCase):
                 _trust_observations = trust_observations
             else:
                 _trust_observations = trust_observations[key]
-            best_d = uncpickle(fig_basedir + '/best_{}_runs'.format(subset_str))['Fair']
+            best_d = uncpickle(fig_basedir + '/best_{0}_runs'.format(subset_str))['Fair']
             for target_str, best in best_d.items():
                 trust_perspective = generate_node_trust_perspective(
                     _trust_observations.xs(target_str, level='var'),
@@ -446,7 +446,7 @@ class ThesisDiagrams(unittest.TestCase):
         inverted_results = defaultdict(list)
         # Time meaned plots and Result inversion
         for (subset_str, target_str), (fig, ax, result) in time_meaned_plots.items():
-            fig_filename = "best_{}_run_time_{}".format(subset_str, target_str)
+            fig_filename = "best_{0}_run_time_{1}".format(subset_str, target_str)
             # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
@@ -461,7 +461,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         # instanteous plots
         for (subset_str, target_str), (fig, ax, result) in instantaneous_meaned_plots.items():
-            fig_filename = "best_{}_run_instantaneous_{}".format(subset_str, target_str)
+            fig_filename = "best_{0}_run_instantaneous_{1}".format(subset_str, target_str)
             # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
@@ -475,7 +475,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         # ALTERNATE Time meaned plots and Result inversion
         for (subset_str, target_str), (fig, ax, result) in alt_time_meaned_plots.items():
-            fig_filename = "best_{}_run_alt_time_{}".format(subset_str, target_str)
+            fig_filename = "best_{0}_run_alt_time_{1}".format(subset_str, target_str)
             # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
@@ -490,7 +490,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         # ALTERNATE instanteous plots
         for (subset_str, target_str), (fig, ax, result) in alt_instantaneous_meaned_plots.items():
-            fig_filename = "best_{}_run_alt_instantaneous_{}".format(subset_str, target_str)
+            fig_filename = "best_{0}_run_alt_instantaneous_{1}".format(subset_str, target_str)
             # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
@@ -514,11 +514,11 @@ class ThesisDiagrams(unittest.TestCase):
         elif len(w_df.index.levels[0]) == 5:
             subset_reindex_keys = ['full', 'comms', 'phys', 'comms_alt', 'phys_alt']
         else:
-            raise ValueError("Incorrect number of subsets included; {}".format(w_df.index.levels[0]))
+            raise ValueError("Incorrect number of subsets included; {0}".format(w_df.index.levels[0]))
         w_df = w_df.reindex(subset_reindex_keys, level='subset')[key_order].rename(columns=metric_rename_dict)
         w_df = w_df.unstack('target').rename(subset_renamer).stack('target')
         tex = w_df.to_latex(float_format=lambda x: "{0:1.3f}".format(x), index=True, escape=False,
-                            column_format="|l|l|*{{{}}}{{c|}}".format(len(key_order))) \
+                            column_format="|l|l|*{{{0}}}{{c|}}".format(len(key_order))) \
             .replace('nan', '') \
             .split('\n')
         tex[2] = '\multicolumn{2}{|c|}{\diagbox{Domain, Behaviour}{Metric}}' + tex[2].lstrip()[
@@ -556,8 +556,8 @@ class ThesisDiagrams(unittest.TestCase):
             #        _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
 
             # results.boxplot(ax=ax)
-            fig_filename = "box_{}_run_{}".format(subset_str, target_str)
-            ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+            fig_filename = "box_{0}_run_{1}".format(subset_str, target_str)
+            ax.set_title("Example {0} Metric Weighted Assessment for {1}".format(
                 subset_renamer(subset_str),
                 target_str
             ))
@@ -688,7 +688,7 @@ class ThesisDiagrams(unittest.TestCase):
                 _trust_observations = trust_observations
             else:
                 _trust_observations = trust_observations[key]
-            best_d = uncpickle(fig_basedir + '/best_{}_runs'.format(subset_str))['Fair']
+            best_d = uncpickle(fig_basedir + '/best_{0}_runs'.format(subset_str))['Fair']
             for target_str, best in best_d.items():
                 test_weight = generate_node_trust_perspective(
                     _trust_observations.xs(target_str, level='var'),
@@ -698,8 +698,8 @@ class ThesisDiagrams(unittest.TestCase):
         fig_gen = []
 
         for (subset_str, target_str), (fig, ax, result) in plots.items():
-            fig_filename = "img/box_{}_run_{}".format(subset_str, target_str)
-            ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+            fig_filename = "img/box_{0}_run_{1}".format(subset_str, target_str)
+            ax.set_title("Example {0} Metric Weighted Assessment for {1}".format(
                 subset_renamer(subset_str),
                 target_str
             ))

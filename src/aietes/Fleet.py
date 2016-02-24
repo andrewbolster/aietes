@@ -67,7 +67,7 @@ class Fleet(Sim.Process):
 
     def lifecycle(self):
         def all_nodes_passive():
-            return all([n.passive() for n in self.nodes])
+            return all( n.passive() for n in self.nodes)
 
         def not_waiting():
             if self.simulation.waits:
@@ -110,7 +110,7 @@ class Fleet(Sim.Process):
             if self.is_mission_complete():
                 if uss_abraham_lincoln:
                     self.logger.critical(
-                        "Mission accomplished at {}".format(seconds_to_str(Sim.now())))
+                        "Mission accomplished at {0}".format(seconds_to_str(Sim.now())))
                     uss_abraham_lincoln = False
                     Sim.stopSimulation()
 
@@ -201,13 +201,13 @@ class Fleet(Sim.Process):
             positions[index] = log.position
             times[index] = log.time
             if DEBUG:
-                self.logger.debug("Node last seen at {} at {} @ {}".format(
+                self.logger.debug("Node last seen at {0} at {1} @ {2}".format(
                     log.name, log.position, log.time
                 ))
 
         if len(set(times)) > 1:
             raise ValueError(
-                "Latest shared logs not coalesced:{}".format(times))
+                "Latest shared logs not coalesced:{0}".format(times))
 
         return np.asarray(positions)
 

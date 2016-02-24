@@ -328,7 +328,7 @@ class Scenario(object):
         if self.committed:
             raise (RuntimeError("Attempted to commit twice (or more)"))
         logging.info(
-            "Scenario {} Committed with {} nodes configured and {} inherited from config file".format(self.title,
+            "Scenario {0} Committed with {1} nodes configured and {2} inherited from config file".format(self.title,
                                                                                                       len(
                                                                                                           self.nodes.keys(
                                                                                                           )),
@@ -532,7 +532,7 @@ class Scenario(object):
         if self.committed:
             raise RuntimeError(
                 "Attempting to update default node config after committing")
-        logging.info("Updating Default node: {}:{}".format(variable, value))
+        logging.info("Updating Default node: {0}:{1}".format(variable, value))
         self.update_node(self._default_node_config, variable, value)
         logging.info(self._default_node_config['MAC']['protocol'])
 
@@ -576,7 +576,7 @@ class ExperimentManager(object):
             self.title = title
 
         if not kwargs.get("no_time", False):
-            self.title = "{}-{}".format(self.title, datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
+            self.title = "{0}-{1}".format(self.title, datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
 
         self.exp_path = os.path.abspath(
             os.path.join(
@@ -595,10 +595,10 @@ class ExperimentManager(object):
         if node_count is None:
             default_node_count = self._default_scenario.node_count
             self._default_scenario.set_node_count(default_node_count)
-            logging.info("Default Node Count Set to {} from default scenario".format(default_node_count))
+            logging.info("Default Node Count Set to {0} from default scenario".format(default_node_count))
         else:
             self._default_scenario.set_node_count(node_count)
-            logging.info("Default Node Count Set to {} from argument".format(node_count))
+            logging.info("Default Node Count Set to {0} from argument".format(node_count))
 
         self.node_count = self._default_scenario.node_count
         self.parallel = parallel
@@ -692,7 +692,7 @@ class ExperimentManager(object):
                     timeout = 0
                     while not s._pending_queue.populate():
                         timeout += 1
-                        logging.warn("Not Finished, Sleeping for {}".format(timeout))
+                        logging.warn("Not Finished, Sleeping for {0}".format(timeout))
                         time.sleep(timeout)
                     s.datarun = s._pending_queue.results
                     del s._pending_queue
@@ -725,7 +725,7 @@ class ExperimentManager(object):
 
             print("Experimental results stored in {0!s}".format(self.exp_path))
         self.runtime = time.time() - start
-        msg = "Runtime:{}".format(seconds_to_str(self.runtime))
+        msg = "Runtime:{0}".format(seconds_to_str(self.runtime))
         notify_desktop(msg)
         print(msg)
 
@@ -769,7 +769,7 @@ class ExperimentManager(object):
                 self.scenarios[t].set_environment(environment)
         else:
             raise ValueError(
-                "Incorrect Environment Type given:{}{}".format(environment, type(environment)))
+                "Incorrect Environment Type given:{0}{1}".format(environment, type(environment)))
 
     def add_custom_node_scenario(self, variable, value_range, title_range=None):
         """
@@ -784,7 +784,7 @@ class ExperimentManager(object):
             value_range(range or generator): values to be tested against.
         """
         if title_range is None:
-            title_range = ["{}({})".format(variable, v) for v in value_range]
+            title_range = ["{0}({1})".format(variable, v) for v in value_range]
         for i, v in enumerate(value_range):
             s = Scenario(title=title_range[i],
                          default_config=self._default_scenario.generate_configobj())
@@ -807,7 +807,7 @@ class ExperimentManager(object):
             value_range(range or generator): values to be tested against.
         """
         if title_range is None:
-            title_range = ["{}({})".format(variable, v) for v in value_range]
+            title_range = ["{0}({1})".format(variable, v) for v in value_range]
         for i, v in enumerate(value_range):
             s = Scenario(title=title_range[i],
                          default_config=self._default_scenario.generate_configobj())
@@ -917,7 +917,7 @@ class ExperimentManager(object):
         """
         for i in range(runcount):
             s = Scenario(default_config=self._default_scenario.generate_configobj(),
-                         title=title if title is not None else "{}({})".format(self.title, i))
+                         title=title if title is not None else "{0}({1})".format(self.title, i))
             self.scenarios[s.title] = s
 
     def add_position_scaling_range(self, scale_range, title=None, basis_node_name='n1', scale_environment=True,
@@ -966,12 +966,12 @@ class ExperimentManager(object):
                     new_config['Node']['Nodes'][k]['initial_position'] = list(v)  # ndarrays make literal_eval cry
 
                 s = Scenario(default_config=Simulation.populate_config(new_config, retain_default=True),
-                             title="{}({:.2f})".format(self.title, scale) if title is None else title
+                             title="{0}({1:.2f})".format(self.title, scale) if title is None else title
                              )
                 self.scenarios[s.title] = s
             else:
                 raise ConfigError(
-                    "Scale {} is outside the defined environment: pos:{}, env:{}, corr:{}".format(scale, new_positions,
+                    "Scale {0} is outside the defined environment: pos:{1}, env:{2}, corr:{3}".format(scale, new_positions,
                                                                                                   new_env, env_offset))
 
     @staticmethod
@@ -996,12 +996,12 @@ class ExperimentManager(object):
             elif hasattr(experiment, 'scenarios_file'):
                 scenario_dict = AutoSyncShelf(experiment.scenarios_file)
         elif isinstance(experiment, list) \
-                and all([isinstance(entry, Scenario) for entry in experiment]):
+                and all( isinstance(entry, Scenario) for entry in experiment):
             # Have been given list of Scenarios entities in a single
             # 'scenario', treat as normalo
             scenario_dict = {s.title: s for s in experiment}
         elif isinstance(experiment, list) \
-                and all([isinstance(entry, DataPackage) for entry in experiment]):
+                and all( isinstance(entry, DataPackage) for entry in experiment):
             # Have been given list of DataPackage entities in a single
             # 'scenario', treat as single virtual scenario
             scenario_dict = {dp.title: PseudoScenario(dp.title, dp) for dp in experiment}
@@ -1107,20 +1107,20 @@ class ExperimentManager(object):
         total = correct + incorrect
         n_scenarios = len(scenario_dict)
 
-        print("Detection Accuracy pct with {} runs: {:.2%}".format(
+        print("Detection Accuracy pct with {0} runs: {1:.2%}".format(
             total, correct / total
         ))
 
-        print("False-Confidence pct with {} runs: {:.2%}".format(
+        print("False-Confidence pct with {0} runs: {1:.2%}".format(
             total, nct / total
         ))
 
-        print("True-Confidence pct with {} runs: {:.2%}".format(
+        print("True-Confidence pct with {0} runs: {1:.2%}".format(
             total, cct / total
         ))
 
         print(
-            "True-Confidence pct with {} runs factoring in the Waypoint state (i.e. positive negatives or missed-detections via lack of confidence): {:.2%}".format(
+            "True-Confidence pct with {0} runs factoring in the Waypoint state (i.e. positive negatives or missed-detections via lack of confidence): {1:.2%}".format(
                 total, (cnt - (total * (1 / n_scenarios))) / total
             ))
 
@@ -1142,7 +1142,7 @@ class ExperimentManager(object):
             dumppath = os.path.abspath(
                 os.path.join(self.exp_path, self.title + ".exp"))
             start = time.clock()
-            print("Writing Experiment to {}".format(dumppath))
+            print("Writing Experiment to {0}".format(dumppath))
             # Scenarios have their own storage in self.scenarios_file
             pickle.dump(self, open(dumppath, 'wb'))
             del self.scenarios

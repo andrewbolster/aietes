@@ -163,7 +163,7 @@ def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min
         outliers = _outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, verbose=True)
 
     sums = pd.concat(outliers).reset_index()
-    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{}{}_{}".format(good, extra, max_emphasis))
+    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{0}{1}_{2}".format(good, extra, max_emphasis))
     return sums
 
 
@@ -258,7 +258,7 @@ def perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust_fram
 
     sums = pd.concat(outliers).reset_index()
     sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5',
-                "{}{}{}_{}".format("meandelta", good, extra, max_emphasis))
+                "{0}{1}{2}_{3}".format("meandelta", good, extra, max_emphasis))
     return sums
 
 

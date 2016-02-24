@@ -61,8 +61,8 @@ class LookupMethods(unittest.TestCase):
     def testDirSearchValidOnEmpty(self):
         empty_dir = tempfile.mkdtemp()
         sources = bounos.npz_in_dir(empty_dir)
-        self.assertIsInstance(sources, list, 'Sources should be list type:{}'.format(type(sources)))
-        self.assertItemsEqual(sources, [], 'Sources should be empty for empty dir: {}'.format(sources))
+        self.assertIsInstance(sources, list, 'Sources should be list type:{0}'.format(type(sources)))
+        self.assertItemsEqual(sources, [], 'Sources should be empty for empty dir: {0}'.format(sources))
 
     def testDirSearchInvalidOnNonExist(self):
         fake_dir = tempfile.mkdtemp()

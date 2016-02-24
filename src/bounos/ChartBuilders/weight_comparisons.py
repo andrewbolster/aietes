@@ -52,7 +52,7 @@ def per_scenario_gd_mal_trusts(gd_file, mal_file):
         if all(map(os.path.isfile, map(Tools.in_results, [gd_file, mal_file]))):
             gd_file, mal_file = map(Tools.in_results, [gd_file, mal_file])
         else:
-            raise OSError("Either {} or {} is not present".format(gd_file, mal_file))
+            raise OSError("Either {0} or {1} is not present".format(gd_file, mal_file))
     with pd.get_store(mal_file) as store:
         mal_trust = store.get('trust')
         map_levels(mal_trust, scenario_map)
@@ -87,7 +87,7 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
     ax.fill_between(x, df2, top, where=df2 > top, interpolate=True, facecolor='green', alpha=0.25)
 
     if show_title:
-        ax.set_title("{} {}".format(tex_safe_s, "Emphasising {}".format(metric) if metric else ""))
+        ax.set_title("{0} {1}".format(tex_safe_s, "Emphasising {0}".format(metric) if metric else ""))
     ax.set_ylim([0, 1])
     if df2.mean() > 0.5:  # Selfish bar is much more highlighted
         ax.legend(loc='lower left', ncol=2)
@@ -95,11 +95,11 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
         ax.legend(loc='upper left', ncol=2)
 
     ax.axhline(0.5, linestyle=":")
-    ax.set_ylabel('{}Trust Value'.format(trust.replace("_", " ").title()))
+    ax.set_ylabel('{0}Trust Value'.format(trust.replace("_", " ").title()))
     ax.set_xlabel('Observation')
     ax = format_axes(ax)
     fig.tight_layout(pad=0.1)
-    fig.savefig("{}trust_{}_{}{}.{}".format(
+    fig.savefig("{0}trust_{1}_{2}{3}.{4}".format(
         prefix,
         s, "emph_{0!s}".format(metric) if metric else "even",
         "_{0!s}".format(keyword) if keyword else "",
@@ -153,9 +153,9 @@ def per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, weight_vector=Non
                                           two_pass=False):
     # TODO This is useless, refactor
     if weight_vector is not None:
-        print("Using {}".format(weight_vector.values))
+        print("Using {0}".format(weight_vector.values))
     if s is not None:
-        print("Trimming trust to {}".format(s))
+        print("Trimming trust to {0}".format(s))
         mal_trust = mal_trust.xs(scenario_map[s], level='var')
         gd_trust = gd_trust.xs(scenario_map[s], level='var')
     mal_tp = Trust.generate_node_trust_perspective(mal_trust, metric_weights=weight_vector)
@@ -170,7 +170,7 @@ def plot_scenario_pair(gd_tp, mal_tp, s, span=1, trust_type=None):
     if trust_type is None:
         trust_type = ""
     else:
-        trust_type = "{}_".format(trust_type)
+        trust_type = "{0}_".format(trust_type)
     tex_safe_s = scenario_map[s]
     df1 = pd.stats.moments.ewma(gd_tp.xs(tex_safe_s, level='var'), span=span).drop('n1', level='observer')
     df2 = pd.stats.moments.ewma(mal_tp.xs(tex_safe_s, level='var'), span=span).drop('n1', level='observer')
@@ -182,11 +182,11 @@ def plot_scenario_pair(gd_tp, mal_tp, s, span=1, trust_type=None):
     ax[0].set_ylim([0, 1])
     ax[0].axhline(0.5, linestyle="dashed")
     ax[1].axhline(0.5, linestyle="dashed")
-    ax[0].set_ylabel('{}Trust Assessment'.format(trust_type.replace("_", " ").title()))
-    ax[1].set_ylabel('{}Trust Assessment'.format(trust_type.replace("_", " ").title()))
+    ax[0].set_ylabel('{0}Trust Assessment'.format(trust_type.replace("_", " ").title()))
+    ax[1].set_ylabel('{0}Trust Assessment'.format(trust_type.replace("_", " ").title()))
 
     fig.tight_layout()
-    fig.savefig("img/{}trust_{}_joint.pdf".format(
+    fig.savefig("img/{0}trust_{1}_joint.pdf".format(
         trust_type, s), transparent=True
     )
 
@@ -249,17 +249,17 @@ def plot_mtfm_boxplot(filename, s=None, show_title=False, keyword=None, prefix="
                 scenarios = scenario_order
             for s in scenarios:
                 tex_safe_s = scenario_map[s]
-                title = "{}{}".format(keyword, tex_safe_s)
+                title = "{0}{1}".format(keyword, tex_safe_s)
                 try:
                     fig = trust_network_wrt_observers(tp_net.xs(tex_safe_s, level='var'),
                                                       tex_safe_s, title=title if show_title else False,
                                                       figsize=figsize, xlabel=xlabel, dropnet=dropnet)
                     fig.tight_layout(pad=0)
-                    fig.savefig("{}trust_{}{}.{}".format(
+                    fig.savefig("{0}trust_{1}{2}.{3}".format(
                         prefix,
                         s,
                         "_" + keyword if keyword is not None else "",
                         extension),
                         transparent=True)
                 except KeyError:
-                    warnings.warn("Scenario {} not in trust run, skipping".format(tex_safe_s))
+                    warnings.warn("Scenario {0} not in trust run, skipping".format(tex_safe_s))

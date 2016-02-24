@@ -101,7 +101,7 @@ class Node(Sim.Process):
             application = self.config['Application']['protocol']
             if isinstance(application, list):
                 if len(application) > 1:
-                    raise ConfigError("Have a multi-value list where it shouldn't be! {}".format(application))
+                    raise ConfigError("Have a multi-value list where it shouldn't be! {0}".format(application))
                 else:
                     application = application[0]
             app_mod = getattr(Applications, application)
@@ -155,7 +155,7 @@ class Node(Sim.Process):
             behave_mod = getattr(Behaviour, str(behaviour))
             assert issubclass(behave_mod, Behaviour.Behaviour), behave_mod
         except AttributeError:
-            raise ConfigError("Can't find Behaviour: {}, available behaviours are ({}) ".format(
+            raise ConfigError("Can't find Behaviour: {0}, available behaviours are ({1}) ".format(
                 behaviour, map(lambda c: c.__name__, itersubclasses(Behaviour.Behaviour)))
             )
 
@@ -200,13 +200,13 @@ class Node(Sim.Process):
 
             self.drift = getattr(Driftmodels, self.config['drift'])(
                 self, scales=drift_scales, noises=drift_noises)
-            self.logger.debug("Drift activated from config: {} with {}, {}".format(
+            self.logger.debug("Drift activated from config: {0} with {1}, {2}".format(
                 self.config['drift'], drift_scales, drift_noises))
             self.drifting = True
         elif 'drift' in kwargs:
             self.drift = kwargs.get('drift')(self)
             self.logger.debug(
-                "Drift activated from kwarg: {}".format(self.drift.__name__))
+                "Drift activated from kwarg: {0}".format(self.drift.__name__))
             self.drifting = True
 
         self.nodenum = None
@@ -297,7 +297,7 @@ class Node(Sim.Process):
             new_v = unit(velocity) * max(self.max_speed)
         else:
             self.logger.error(
-                "shouldn't really be here: {},{}".format(velocity, mag(velocity)))
+                "shouldn't really be here: {0},{1}".format(velocity, mag(velocity)))
         if DEBUG:
             self.logger.error("Cruise: From {0:f} against {1:f} and vel of {2:f}".format(
                 mag(velocity), cruisev, mag(new_v)))
@@ -353,7 +353,7 @@ class Node(Sim.Process):
                                                                              dt)
             except FloatingPointError:
                 err_type, value, traceback = sys.exc_info()
-                raise ValueError, ("Dt,t:{},{}".format(
+                raise ValueError, ("Dt,t:{0},{1}".format(
                     dt, Sim.now()), err_type, value), traceback
         else:
             self.position += self.velocity
@@ -368,7 +368,7 @@ class Node(Sim.Process):
             self.logger.critical("Moving by {0!s} at {1!s} * {2:f} from {3!s} to {4!s}".format(
                 self.velocity, mag(self.velocity), dt, old_pos, self.position))
             raise RuntimeError(
-                "{} Crashed out of the environment at {}".format(self.name, Sim.now()))
+                "{0} Crashed out of the environment at {1}".format(self.name, Sim.now()))
 
         assert not np.isnan(sum(self.pos_log[:, self._lastupdate]))
 
@@ -454,7 +454,7 @@ class Node(Sim.Process):
                         improved_d = np.linalg.norm(
                             true_positions[self.nodenum] - improved_positions[self.nodenum])
                         with np.errstate(divide='ignore', invalid='ignore'):
-                            self.logger.debug("{}:{}/{}({:2.2f})/{}({:2.2f}):{:2.2f}%".format(
+                            self.logger.debug("{0}:{1}/{2}({3:2.2f})/{4}({5:2.2f}):{6:2.2f}%".format(
                                 self.name, true_positions[self.nodenum],
                                 drifted_positions[self.nodenum], drift_d,
                                 improved_positions[
@@ -462,7 +462,7 @@ class Node(Sim.Process):
                             ))
                 else:
                     raise RuntimeError(
-                        "There's no way you should be in here...:{}".format(self.ecea))
+                        "There's no way you should be in here...:{0}".format(self.ecea))
 
             else:
                 # Pass for processing in between deltas

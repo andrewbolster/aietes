@@ -45,7 +45,7 @@ def sim_mask(args):
     while True:
         try:
             sim = Simulation(**kwargs)
-            logging.info("{} starting {}".format(current_process(), sim.title))
+            logging.info("{0} starting {1}".format(current_process(), sim.title))
             prep_stats = sim.prepare(sim_time=sim_time)
             sim_time = sim.simulate()
             return_dict = sim.postprocess(**pp_defaults)
@@ -69,7 +69,7 @@ def sim_mask(args):
                 raise
             else:
                 logging.critical(
-                    "{} died, restarting: {} lives remain".format(current_process(), lives))
+                    "{0} died, restarting: {1} lives remain".format(current_process(), lives))
                 del sim
         gc.collect()
 
@@ -98,7 +98,7 @@ def parallel_sim(arglist):
         raise
     except Exception as e:
         logging.critical(
-            "Caught Exception: results is {}".format(len(results)))
+            "Caught Exception: results is {0}".format(len(results)))
         raise
 
     return results
@@ -135,7 +135,7 @@ class QueueSim(object):
         Is execution complete? (Note, this may be different than when results are ready)
         :return: bool
         """
-        return all([r.ready() for r in self.pending_results])
+        return all( r.ready() for r in self.pending_results)
 
     def populate(self):
         """
@@ -150,7 +150,7 @@ class QueueSim(object):
                 _id, _data = p.get()
                 if _id != i:
                     raise AssertionError(
-                        "Results should have been queued and processed in the same order, instead I've got id {} when I'm expecting {}".format(
+                        "Results should have been queued and processed in the same order, instead I've got id {0} when I'm expecting {1}".format(
                             _id, i
                         ))
                 self.results[i] = _data

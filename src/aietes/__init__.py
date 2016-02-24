@@ -219,7 +219,7 @@ class Simulation(object):
             raise
         except RuntimeError as err:
             self.logger.critical(
-                "Expected Exception, Quitting gracefully: {}".format(err))
+                "Expected Exception, Quitting gracefully: {0}".format(err))
             raise
         return Sim.now()
 
@@ -302,7 +302,7 @@ class Simulation(object):
 
         # If any node is using waypoint bev, grab it.
 
-        if any([isinstance(node.behaviour, Behaviour.WaypointMixin) for node in self.nodes]):
+        if any( isinstance(node.behaviour, Behaviour.WaypointMixin) for node in self.nodes):
             waypointss = [
                 getattr(node.behaviour, "waypoints", None) for node in self.nodes]
             if all(w is None for w in waypointss):
@@ -318,7 +318,7 @@ class Simulation(object):
         #
         # THIS drift value is the original intended value, but to keep consistent naming for drift and
         # non drift simulations, it kinda makes sense.
-        if any([node.drifting for node in self.nodes]):
+        if any( node.drifting for node in self.nodes):
             drift_positions = []
             for node in self.nodes:
                 drift = node.pos_log[:, :Sim.now()]
@@ -326,7 +326,7 @@ class Simulation(object):
                 drift_positions.append(drift)
             state.update({'drift_positions': np.asarray(drift_positions)})
 
-        if any([node.ecea for node in self.nodes]):
+        if any( node.ecea for node in self.nodes):
             # ECEA does not operate at every time step, (delta),
             # therefore use the shared map data that tracks the error
             # information (hopefully)
@@ -426,7 +426,7 @@ class Simulation(object):
                 if app == "Null":
                     node_default_config_dict['app'] = appp
                 else:
-                    raise ConfigError("Conflicting app and Application.Protcols ({},{})".format(
+                    raise ConfigError("Conflicting app and Application.Protcols ({0},{1})".format(
                         app,
                         appp
                     ))
@@ -501,7 +501,7 @@ class Simulation(object):
                 if mac == MAC.DEFAULT_PROTO:
                     node_default_config_dict['mac'] = macp
                 else:
-                    raise ConfigError("Conflicting mac and MAC.Protcols ({},{})".format(
+                    raise ConfigError("Conflicting mac and MAC.Protcols ({0},{1})".format(
                         mac,
                         macp
                     ))
@@ -616,7 +616,7 @@ class Simulation(object):
                     "Gave node {0!s} a surface vector: {1!s}".format(node_name, vector))
             else:
                 raise ConfigError(
-                    "Invalid Position option: {}".format(gen_style))
+                    "Invalid Position option: {0}".format(gen_style))
         assert len(vector) == 3, "Incorrectly sized vector"
 
         return vector

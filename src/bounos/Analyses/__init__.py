@@ -62,7 +62,7 @@ def get_valid_metric(metric):
         metric_class = getattr(Metrics, metric_arg)
     else:
         raise ValueError(
-            "Invalid object give for metric, should be either subclass of bounos.Metrics.Metric or string: got type {} containing {}:{}".format(
+            "Invalid object give for metric, should be either subclass of bounos.Metrics.Metric or string: got type {0} containing {1}:{2}".format(
                 type(metric_arg), metric_arg, metric_arg.__bases__
             ))
     metric = metric_class()
@@ -129,7 +129,7 @@ def process_all_logstore_graphics(logstore, title, directory=None):
         try:
             process(logstore, title, directory)
         except:
-            log.exception("Failed on {}".format(process.__name__))
+            log.exception("Failed on {0}".format(process.__name__))
 
 
 def process_stats_logstore_graphics(logstore, title, directory=None):

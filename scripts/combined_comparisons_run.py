@@ -55,12 +55,11 @@ if __name__ == "__main__":
     logpath = "{path}/{title}.log".format(path=exp.exp_path, title=exp.title.replace(' ', '_'))
     exp.dump_analysis()
 
-    print("Saved detection stats to {}".format(logpath))
+    print("Saved detection stats to {0}".format(logpath))
     path = exp.exp_path
-    print("Saved detection stats to {}".format(exp.exp_path))
+    print("Saved detection stats to {0}".format(exp.exp_path))
     try:
         dump_trust_logs_and_stats_from_exp_paths([path], title=exp.title)
     except Exception as e:
-        print("Crashed in trust logging, moving on: {}".format(traceback.format_exc()))
-
+        print("Crashed in trust logging, moving on: {0}".format(traceback.format_exc()))
 
