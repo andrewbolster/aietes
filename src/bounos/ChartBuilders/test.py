@@ -31,7 +31,6 @@ from aietes.Tools import _results_dir as default_results_dir
 
 
 class ChartBuilders(unittest.TestCase):
-
     def setUp(self):
         """
         Load the most recent results file

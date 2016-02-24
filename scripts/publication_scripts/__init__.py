@@ -14,8 +14,8 @@ from mpl_toolkits.mplot3d import axes3d, Axes3D
 from scipy import interpolate as interpolate
 import matplotlib2tikz as mpl2tkz
 
-
 from aietes import Tools
+from bounos.Analyses import Trust
 from bounos.ChartBuilders import latexify, plot_nodes, format_axes
 
 in_results = functools.partial(os.path.join, Tools._results_dir)
@@ -237,20 +237,23 @@ def get_mobility_stats(mobility):
     sdf.reset_index(inplace=True)
     return sdf
 
+
 def app_rate_from_path(s):
     return float(".".join(s.split('-')[2].split('.')[0:-1]))
 
+
 result_h5s_by_latest = sorted(
-        filter(
-                lambda p: os.path.basename(p).endswith("h5"),
-                map(lambda p: os.path.abspath(os.path.join(Tools._results_dir, p)),
-                    os.listdir(Tools._results_dir))
-        ), key=lambda f: os.path.getmtime(f)
+    filter(
+        lambda p: os.path.basename(p).endswith("h5"),
+        map(lambda p: os.path.abspath(os.path.join(Tools._results_dir, p)),
+            os.listdir(Tools._results_dir))
+    ), key=lambda f: os.path.getmtime(f)
 )
 rate_and_ranges = filter(
-        lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest"),
-        result_h5s_by_latest
+    lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest"),
+    result_h5s_by_latest
 )
+
 
 def get_emmission_stats(df, separation=100):
     stats = df.swaplevel('rate', 'separation').xs(separation, level='separation')
@@ -264,6 +267,7 @@ def get_emmission_stats(df, separation=100):
                                          )
     return stats
 
+
 def get_separation_stats(df, emission=0.015):
     stats = df.xs(emission, level='rate')
     stats.index.names = ['var'] + stats.index.names[1:]
@@ -276,14 +280,16 @@ def get_separation_stats(df, emission=0.015):
                                          )
     return stats
 
-def interpolate_rate_sep(df, key, method='linear'):
-    X,Y,Z = df.rate, df.separation, df[key]
 
-    xi = np.linspace(X.min(),X.max(),16)
-    yi = np.linspace(Y.min(),Y.max(),16)
+def interpolate_rate_sep(df, key, method='linear'):
+    X, Y, Z = df.rate, df.separation, df[key]
+
+    xi = np.linspace(X.min(), X.max(), 16)
+    yi = np.linspace(Y.min(), Y.max(), 16)
     # VERY IMPORTANT, to tell matplotlib how is your data organized
-    zi = interpolate.griddata(points=(X, Y), values=Z, xi=(xi[None,:], yi[:,None]), method=method)
-    return xi,yi,zi, X, Y
+    zi = interpolate.griddata(points=(X, Y), values=Z, xi=(xi[None, :], yi[:, None]), method=method)
+    return xi, yi, zi, X, Y
+
 
 def savefig(fig, name, extn="pdf", tight=True, **kwargs):
     _kwargs = Tools.kwarger()
@@ -296,11 +302,11 @@ def savefig(fig, name, extn="pdf", tight=True, **kwargs):
     except:
         warnings.warn("Couldn't tkzify {}, skipping".format(name))
 
+
 def saveinput(text, name, extn='tex'):
     Tools.mkdir_p('input')
     with open("input/{}.{}".format(name, extn), 'w') as f:
-       f.write(text)
-
+        f.write(text)
 
 
 def generate_figure_contact_tex(fig_paths, target_path='.'):
@@ -311,7 +317,7 @@ def generate_figure_contact_tex(fig_paths, target_path='.'):
     :param target_path: destination directory
     :return:
     """
-    doc = pylatex.Document(default_filepath=os.path.join(target_path,'generated_figures'))
+    doc = pylatex.Document(default_filepath=os.path.join(target_path, 'generated_figures'))
 
     with doc.create(pylatex.Section('Generated Figures')):
         for image_path in sorted(fig_paths):
@@ -326,14 +332,15 @@ def generate_figure_contact_tex(fig_paths, target_path='.'):
 phys_keys = ['INDD', 'INHD', 'Speed']
 comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
 key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
-comm_keys_alt = ['ATXP', 'RXThroughput', 'TXThroughput', 'PLR','INDD']
-phys_keys_alt = ['ADelay','ARXP', 'INDD', 'INHD', 'Speed']
+comm_keys_alt = ['ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD']
+phys_keys_alt = ['ADelay', 'ARXP', 'INDD', 'INHD', 'Speed']
 observer = 'Bravo'
 target = 'Alfa'
 n_nodes = 6
 n_metrics = 9
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
 fig_basedir = "/home/bolster/src/thesis/Figures"
+
 
 def subset_renamer(s):
     """
@@ -370,20 +377,20 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, m
 
     if means is None:
         means = 'time'
-    if means not in ['time','instantaneous']:
+    if means not in ['time', 'instantaneous']:
         raise ValueError("Invalid `means` argument")
 
     if target is None:
         target = result.columns[0]
 
-    target_index=result.columns.get_loc(target)
+    target_index = result.columns.get_loc(target)
 
     dropna = lambda x: x[~np.isnan(x)]
 
     fig_size = latexify(columns=_texcol, factor=_texfac)
 
     fig = plt.figure(figsize=fig_size)
-    gs = gridspec.GridSpec(1,2,width_ratios=[4,1])
+    gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])
     ax = plt.subplot(gs[0])
     if spans is not None:
         plottable = pd.stats.moments.ewma(result, span=spans)
@@ -395,51 +402,52 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, m
         ax.axhline(mean + std, alpha=0.3, ls=':', color='green')
         ax.axhline(mean - std, alpha=0.3, ls=':', color='red')
 
-
     if means is 'time':
         # Plot all lines
-        _=plottable[target].plot(ax=ax, alpha=_target_alpha)
-        _=plottable[[c for c in plottable.columns if c != target]].plot(ax=ax, alpha=_default_alpha)
-        for k,v in result.mean().iteritems():
-            if k != target: # Everyone Else
+        _ = plottable[target].plot(ax=ax, alpha=_target_alpha)
+        _ = plottable[[c for c in plottable.columns if c != target]].plot(ax=ax, alpha=_default_alpha)
+        for k, v in result.mean().iteritems():
+            if k != target:  # Everyone Else
                 ax.axhline(v, alpha=0.3, ls='--', color='blue')
-            else: # Alfa
+            else:  # Alfa
                 ax.axhline(v, alpha=0.6, ls='-', color='blue')
     elif means is 'instantaneous':
         # Plot Target and the Average of the other nodes
-        _=plottable[target].plot(ax=ax, alpha=_target_alpha, style='-')
-        _=plottable[[c for c in plottable.columns if c != target]].mean(axis=1).plot(ax=ax, alpha=_default_alpha, style='--')
+        _ = plottable[target].plot(ax=ax, alpha=_target_alpha, style='-')
+        _ = plottable[[c for c in plottable.columns if c != target]].mean(axis=1).plot(ax=ax, alpha=_default_alpha,
+                                                                                       style='--')
     else:
         raise RuntimeError("There should have been no way to get here; this case was supposed to be caught on launch")
 
     if stds:
         map(pltstd, zip(result.mean(), result.std()))
     ax.set_xlabel("Simulated Time (mins)")
+    ax.set_xticks(np.arange(0, 61, 10))
+    ax.set_xticklabels(np.arange(0, 61, 10))
     ax.set_ylabel("Weighted Trust Value")
+    ax.set_ylim([0.0, 1.0])
     ax.legend().set_visible(False)
-    ax.set_xticks(np.arange(0,61,10))
-    ax.set_xticklabels(np.arange(0,61,10))
-
 
     if box is not None:
         meanlineprops = dict(linestyle='-', color='blue', alpha=0.8)
 
         axb = plt.subplot(gs[1])
         if box is 'summary':
-            axb.boxplot([dropna(plottable.iloc[:,0].values), plottable.iloc[:,1:].stack().values],
-                        labels=['Misbehaver', 'Other Nodes'], widths=0.8, showmeans=True, meanline=True, meanprops=meanlineprops)
+            axb.boxplot([dropna(plottable.iloc[:, 0].values), plottable.iloc[:, 1:].stack().values],
+                        labels=['Misbehaver', 'Other Nodes'], widths=0.8, showmeans=True, meanline=True,
+                        meanprops=meanlineprops)
         elif box is 'complete':
             plottable.boxplot(rot=90, ax=axb, showmeans=True, meanline=True, meanprops=meanlineprops)
         index_width = len(result.columns)
-        target_x = (0.5+target_index) / index_width
+        target_x = (0.5 + target_index) / index_width
         axb.annotate('', xy=(target_x, 0.95), xycoords='axes fraction', xytext=(target_x, 1.05),
-            arrowprops=dict(arrowstyle="->", color='r', linewidth=2))
+                     arrowprops=dict(arrowstyle="->", color='r', linewidth=2))
 
         plt.setp(axb.get_yticklabels(), visible=False)
 
     fig.tight_layout()
 
-    return fig,[ax, axb],result
+    return fig, [ax, axb], result
 
 
 def assess_result(result, target='Alfa'):
@@ -483,3 +491,62 @@ def format_features(feats):
         [[u'MPC', u'STS', u'Fair', u'Shadow', u'SlowCoach'], [u'MPC', u'STS', u'Fair', u'Shadow', u'SlowCoach']],
         inplace=True)
     return alt_feats
+
+
+def best_run_and_weight(f, trust_observations, par=True, tolerance=0.01):
+    f = pd.Series(f, index=trust_observations.keys())
+    f_val = f.values
+
+    @Tools.timeit()
+    def generate_weighted_trust_perspectives(_trust_observations, feat_weights, par=True):
+        weighted_trust_perspectives = []
+        for w in feat_weights:
+            weighted_trust_perspectives.append(
+                Trust.generate_node_trust_perspective(
+                    _trust_observations,
+                    metric_weights=pd.Series(w),
+                    par=par
+                ))
+        return weighted_trust_perspectives
+
+    def _assess(x):
+        return -np.subtract(*map(np.nanmean, np.split(x.values, [1], axis=1)))
+
+    def best_group_in_perspective(perspective):
+        group = perspective.groupby(level=['observer', 'run']) \
+            .apply(_assess)
+        best_group = group.argmax()
+        return best_group, group[best_group]
+
+    combinations = np.asarray([f_val * i for i in itertools.product([-1, 1], repeat=len(f))])
+    for i in f.values[np.abs(f_val) < tolerance]:
+        combinations[:, np.where(f_val == i)] = i
+    combinations = Tools.npuniq(combinations)
+
+    print("Have {} Combinations".format(len(combinations)))
+    perspectives = generate_weighted_trust_perspectives(trust_observations,
+                                                        combinations, par=par)
+    print("Got Perspectives")
+    group_keys, assessments = zip(*map(best_group_in_perspective, perspectives))
+    best_weight = combinations[np.argmax(assessments)]
+    best_run = group_keys[np.argmax(assessments)]
+    best_score = np.max(assessments)
+    print("Winner is {} with {}@{}".format(best_run, best_weight, best_score))
+    if np.all(best_weight == f):
+        print("Actually got it right first time for a change!")
+    return best_run, best_weight
+
+
+def best_of_all(feats, trust_observations):
+    best = defaultdict(dict)
+    for (base_str, target_str), feat in feats.to_dict().items():
+        if base_str != "Fair":
+            continue
+        print(base_str)
+
+        print("---" + target_str)
+        best[base_str][target_str] = \
+            best_run_and_weight(
+                feat,
+                trust_observations)
+    return best

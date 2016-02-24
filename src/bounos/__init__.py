@@ -56,7 +56,6 @@ _metrics = [Metrics.DeviationOfHeading,
 
 
 class BounosModel(DataPackage):
-
     """
     BounosModel acts as an interactive superclass of DataPackage, designed for interactive
         simulation/analysis
@@ -464,8 +463,8 @@ def detect_and_identify(d):
     :return:
     """
     metric_devs, windowed_devs = Analyses.Behaviour.combined_detection_rank(d,
-                                                                           _metrics,
-                                                                           stddev_frac=2)
+                                                                            _metrics,
+                                                                            stddev_frac=2)
     trust_values = Analyses.Trust.dev_to_trust(metric_devs)
     identification_dict = Analyses.Behaviour.behaviour_identification(metric_devs, windowed_devs,
                                                                       _metrics,

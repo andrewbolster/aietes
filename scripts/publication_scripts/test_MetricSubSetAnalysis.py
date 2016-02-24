@@ -42,5 +42,3 @@ n_metrics = 9
 fig_basedir = "/home/bolster/src/thesis/Figures/"
 
 shared_h5_path = '/dev/shm/shared_subset.h5'
-
-

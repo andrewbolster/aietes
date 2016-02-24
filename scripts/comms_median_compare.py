@@ -42,8 +42,8 @@ if __name__ == "__main__":
     base_scenarios = [
         'bella_static.conf',
         'bella_all_mobile.conf',
-        #'bella_single_mobile.conf',
-        #'bella_allbut1_mobile.conf',
+        # 'bella_single_mobile.conf',
+        # 'bella_allbut1_mobile.conf',
         'bella_static_median.conf',
         'bella_all_mobile_median.conf'
     ]

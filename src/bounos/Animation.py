@@ -23,7 +23,6 @@ from matplotlib import animation as mplanimation
 
 
 class AIETESAnimation(mplanimation.FuncAnimation):
-
     def save(self, filename, fps=5, codec='libx264', clear_temp=True,
              frame_prefix='_tmp', blit=False, *args, **kwargs):
         """

@@ -71,6 +71,7 @@ rate_and_ranges = filter(lambda p: os.path.basename(p).startswith("CommsRateAndR
                          result_h5s_by_latest)
 app_rates = map(app_rate_from_path, rate_and_ranges)
 
+
 class TrustCom(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

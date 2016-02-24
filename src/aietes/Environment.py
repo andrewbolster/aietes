@@ -29,7 +29,6 @@ Log = namedtuple('Log', ['name', 'object_id', 'time', 'position'])
 
 
 class Environment(object):
-
     """
     Environment Class representing the physical environment inc any objects
     / activities within that environment that are not controlled by the
@@ -162,7 +161,7 @@ class Environment(object):
         if t < self.simulation.duration_intervals:
             try:
                 assert self.map[
-                    object_id].position is not position, "Attempted direct obj=obj comparison"
+                           object_id].position is not position, "Attempted direct obj=obj comparison"
                 update_distance = distance(
                     self.map[object_id].position, position)
                 if DEBUG:

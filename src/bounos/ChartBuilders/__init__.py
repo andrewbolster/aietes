@@ -42,9 +42,10 @@ _boxplot_kwargs = {
 
 def unique_cm_dict_from_list(items):
     cm = plt.get_cmap('gist_rainbow')
-    cNorm  = mpl.colors.Normalize(vmin=0, vmax=len(items))
+    cNorm = mpl.colors.Normalize(vmin=0, vmax=len(items))
     scalarMap = mpl.cm.ScalarMappable(norm=cNorm, cmap=cm)
-    return dict(zip(items,[scalarMap.to_rgba(i) for i in range(len(items))]))
+    return dict(zip(items, [scalarMap.to_rgba(i) for i in range(len(items))]))
+
 
 def lost_packet_distribution(dp=None, tx=None, title=None):
     """
@@ -365,12 +366,12 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
         grp.rename(columns=rename_labels, inplace=True)
 
     if title is not False:
-        title="Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
+        title = "Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
 
     grp.index = grp.index.astype(np.float64)
 
     # TODO Fix the colour cycle on these
-    for k,v in grp.iteritems():
+    for k, v in grp.iteritems():
         ax.plot(v, label=k)
 
     # Can't remember what this does but it's broken anyway
@@ -472,10 +473,10 @@ def rts_ratio_across_variation(stats, title=None, var='Packet Rates', figsize=No
     if title is not False:
         ax.set_title("RTS / Data Ratio of Varying {},{}. "
                      "\n showing standard deviation of result, with a max of {}".format(
-                         var,
-                         (':' + title if title is not None else ""),
-                         np.around(np.max(r_std.values), decimals=2))
-                     )
+            var,
+            (':' + title if title is not None else ""),
+            np.around(np.max(r_std.values), decimals=2))
+        )
     return f
 
 
@@ -545,7 +546,6 @@ def trust_perspectives_wrt_observers(trust_frame, title=None, figsize=(16, 2)):
     return trust_perspectives_wrt_someone('observers')
 
 
-
 def trust_perspectives_wrt_targets(trust_frame):
     """
     Generates a 'matrix' of trust assessments of each nodes perspective from every other one, grouped by 'var'
@@ -553,6 +553,7 @@ def trust_perspectives_wrt_targets(trust_frame):
     :return:
     """
     return trust_perspectives_wrt_someone('targets')
+
 
 def trust_perspectives_wrt_someone(trust_frame, wrt='targets'):
     """
@@ -588,6 +589,7 @@ def trust_perspectives_wrt_someone(trust_frame, wrt='targets'):
         "Plots of Per-Node {} Trust Values".format(perspective.capitalize()),
         fontsize=24)
     return f
+
 
 def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), texify=True, xlabel=True,
                                 dropnet=False):
@@ -779,8 +781,8 @@ def plot_positions(d, bounds=None, show_title=False):
     avg_dist = avg_range(my_d)
     if show_title is not False:
         f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(
-                np.around(avg_dist),
-                np.around(area)
+            np.around(avg_dist),
+            np.around(area)
         ), fontsize=18)
     ax1.set_title("X-Y (Top)")
     ax1.set_aspect('equal', adjustable='datalim')
@@ -912,6 +914,7 @@ def avg_range(d):
     :return:
     """
     return np.average(squareform(pdist(np.asarray(d.values()))))
+
 
 def add_height_annotation(ax, start, end, txt_str, x_width=.5, txt_kwargs=None, arrow_kwargs=None):
     """

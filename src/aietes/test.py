@@ -38,7 +38,6 @@ datapackage_per_node_members = [
 
 
 class DefaultBehaviour(unittest.TestCase):
-
     def setUp(self):
         """Aietes should simulate fine with no input by pulling in from default values"""
         self.run_time = 100
@@ -109,7 +108,6 @@ class DefaultBehaviour(unittest.TestCase):
 
 
 class ConfigBehaviour(unittest.TestCase):
-
     @unittest.skip("Reminder for later")
     def testZeroFleetCreation(self):
         """Ensure failure on launching fleet with 0 nodes"""
@@ -119,7 +117,6 @@ class ConfigBehaviour(unittest.TestCase):
 
 @unittest.skip("Broken but should be revisited: Subprocess bug in matplotlib")
 class OutputBehaviour(unittest.TestCase):
-
     def testGifGeneration(self):
         """Ensure nothing goes too wrong with gif generation"""
         options = aietes.option_parser().defaults
@@ -141,7 +138,6 @@ class OutputBehaviour(unittest.TestCase):
 
 
 class Tools(unittest.TestCase):
-
     """Slow grow of tool testing"""
 
     def testGetConfigFile_Empty(self):

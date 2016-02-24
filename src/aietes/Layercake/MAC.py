@@ -36,7 +36,6 @@ from aietes.Layercake import RoutingLayer
 from aietes.Tools import broadcast_address, DEBUG, distance
 from aietes.Tools.FSM import FSM
 
-
 # DEBUG = True
 
 DEFAULT_PROTO = "ALOHA"
@@ -62,7 +61,6 @@ def setup_mac(node, config):
 class MAC(object):
     total_channel_access_attempts = 0
     channel_access_retries = 0
-
 
     def send_silence(self):
         """ Please be quiet!
@@ -97,8 +95,8 @@ class MAC(object):
             "Ignoring SIL coming from " + self.incoming_packet["through"])
         self.incoming_packet = None
 
-class ALOHA(MAC):
 
+class ALOHA(MAC):
     """ALOHA:  A very simple MAC Algorithm
     """
 
@@ -326,7 +324,7 @@ class ALOHA(MAC):
         self.level = self.outgoing_packet_queue[0]["level"]
         self.T = self.layercake.phy.level2delay(self.level)
         self.t_data = self.outgoing_packet_queue[0][
-            "length"] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                          "length"] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         self.timeout = 2 * self.T + 2 * self.t_data
 
         # Before transmitting, we check if the channel is idle
@@ -365,7 +363,6 @@ class ALOHA(MAC):
 
 
 class ALOHA4FBR(ALOHA):
-
     """ CS-ALOHA adapted for the FBR protocol.
     """
 
@@ -583,10 +580,10 @@ class ALOHA4FBR(ALOHA):
         The routing layer decides.
         """
         self.valid_candidates[self.incoming_packet["through"]] = (
-            Sim.now() - self.incoming_packet[
-                "time_stamp"]) / 2.0, self.incoming_packet[
-            "rx_energy"], self.incoming_packet[
-            "through_position"]
+                                                                     Sim.now() - self.incoming_packet[
+                                                                         "time_stamp"]) / 2.0, self.incoming_packet[
+                                                                     "rx_energy"], self.incoming_packet[
+                                                                     "through_position"]
         self.logger.debug("Appending CTS to " + self.incoming_packet[
             "source"] + " coming from " + self.incoming_packet["through"])
         self.layercake.net.add_node(
@@ -695,7 +692,6 @@ class ALOHA4FBR(ALOHA):
 
 
 class DACAP(MAC):
-
     """DACAP : Distance Aware Collision Avoidance Protocol coupled with power control
     """
 
@@ -735,7 +731,7 @@ class DACAP(MAC):
         self.Tw_min = config["twminper"]
 
         self.t_control = self.rts_packet_length / \
-            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                         (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
 
         self.deltaTData = config["deltatdata"]
         self.deltaD = config["deltadt"]
@@ -963,7 +959,7 @@ class DACAP(MAC):
         self.last_packet = self.incoming_packet
 
         self.t_data = self.incoming_packet[
-            'length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                          'length'] / (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         t = self.layercake.phy.level2delay(self.incoming_packet['level'])
 
         # If I am here, that means that I already was in the backoff state. I
@@ -1114,7 +1110,7 @@ class DACAP(MAC):
             p.interrupt(self.timer)
             self.fsm.process("accept")
         elif self.last_packet["type"] == "DATA" and self.last_packet["through"] == self.incoming_packet["source"] and \
-                self.last_packet["dest"] == self.incoming_packet["dest"]:
+                        self.last_packet["dest"] == self.incoming_packet["dest"]:
             # I was sleeping because one of my neighbors was receiving a packet
             # which I also overheard.
             p = Sim.Process()
@@ -1333,7 +1329,7 @@ class DACAP(MAC):
         """
         if self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
             if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
-                    "dest"] == self.outgoing_packet_queue[0]["dest"]:
+                "dest"] == self.outgoing_packet_queue[0]["dest"]:
                 # This is an implicit ACK
                 self.fsm.process("got_ACK")
         else:
@@ -1470,7 +1466,6 @@ class DACAP(MAC):
 
 
 class DACAP4FBR(DACAP):
-
     """DACAP for FBR: adaptation of DACAP with power control to couple it with FBR
     """
 
@@ -1598,10 +1593,10 @@ class DACAP4FBR(DACAP):
         The routing layer decides.
         """
         self.valid_candidates[self.incoming_packet["through"]] = (
-            Sim.now() - self.incoming_packet[
-                "time_stamp"]) / 2.0, self.incoming_packet[
-            "rx_energy"], self.incoming_packet[
-            "through_position"]
+                                                                     Sim.now() - self.incoming_packet[
+                                                                         "time_stamp"]) / 2.0, self.incoming_packet[
+                                                                     "rx_energy"], self.incoming_packet[
+                                                                     "through_position"]
         self.logger.debug("Appending CTS to " + self.incoming_packet[
             "source"] + " coming from " + self.incoming_packet["through"])
         self.layercake.net.add_node(
@@ -1688,12 +1683,12 @@ class DACAP4FBR(DACAP):
 
         elif self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
             if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
-                    "dest"] == self.outgoing_packet_queue[0]["dest"]:
+                "dest"] == self.outgoing_packet_queue[0]["dest"]:
                 # This is an implicit ACK
                 self.fsm.process("got_ACK")
 
         elif self.incoming_packet["type"] == "CTS" and self.fsm.current_state == "WAIT_DATA" and self.last_cts[
-                "dest"] == self.incoming_packet["dest"]:
+            "dest"] == self.incoming_packet["dest"]:
             # This is another candidate proposing himself as a good candidate
             self.fsm.process("got_CTS")
 
@@ -1783,7 +1778,6 @@ class DACAP4FBR(DACAP):
 
 
 class CSMA(MAC):
-
     """CSMA: Carrier Sensing Multiple Access - Something between ALOHA and DACAP
 
     This implementation is extremely close to MACA (Karn 1990)
@@ -1846,9 +1840,9 @@ class CSMA(MAC):
         # Timing parameters
         self.T = self.layercake.phy.level2delay(0)  # It will be adapted according to the transmission range
         self.t_data = self.data_packet_length / \
-            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                      (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         self.t_control = self.rts_packet_length / \
-            (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+                         (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         Sim.activate(self.timer, self.timer.lifecycle(self.TimerRequest))
 
     class InternalTimer(Sim.Process):
@@ -2179,7 +2173,7 @@ class CSMA(MAC):
             p.interrupt(self.timer)
             self.fsm.process("accept")
         elif self.last_packet["type"] == "DATA" and self.last_packet["through"] == self.incoming_packet["source"] and \
-                self.last_packet["dest"] == self.incoming_packet["dest"]:
+                        self.last_packet["dest"] == self.incoming_packet["dest"]:
             p = Sim.Process()
             p.interrupt(self.timer)
             self.fsm.process("accept")
@@ -2359,8 +2353,8 @@ class CSMA(MAC):
         """ Valuable information can be obtained from overhearing the channel.
         """
         if self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK" \
-            and self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
-                "dest"] == self.outgoing_packet_queue[0]["dest"]:
+                and self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
+            "dest"] == self.outgoing_packet_queue[0]["dest"]:
             # This is an implicit ACK
             self.fsm.process("got_ACK")
         else:
@@ -2545,7 +2539,6 @@ class CSMA(MAC):
 
 
 class FAMA(CSMA):
-
     """
     Floor Acquisition Multiple Access
 
@@ -2598,7 +2591,6 @@ class FAMA(CSMA):
 
 
 class CSMA4FBR(CSMA):
-
     """CSMA for FBR: adaptation of CSMA with power control to couple it with FBR
     """
 
@@ -2692,7 +2684,6 @@ class CSMA4FBR(CSMA):
                 # elif self.fsm.current_state == "BACKOFF":
                 # self.send_silence()
 
-
     def append_cts(self):
         """ More than one CTS is received when looking for the next best hop. We should consider all of them.
         The routing layer decides.
@@ -2776,7 +2767,7 @@ class CSMA4FBR(CSMA):
                     id=self.outgoing_packet_queue[0]['ID'],
                     dest=self.outgoing_packet_queue[0]['dest'],
                     dist=distance(self.outgoing_packet_queue[0][
-                        'dest_position'], self.layercake.get_current_position()),
+                                      'dest_position'], self.layercake.get_current_position()),
                 ))
             self.fsm.process("retransmit")
 
@@ -2823,14 +2814,14 @@ class CSMA4FBR(CSMA):
         """
         if self.incoming_packet["type"] == "DATA" and self.fsm.current_state == "WAIT_DATA":
             if self.incoming_packet["route"][-1][0] == self.last_cts_to and self.incoming_packet[
-                    "through"] == self.last_cts_from:
+                "through"] == self.last_cts_from:
                 # I have not been selected as the next hop. I read it from the
                 # data.
                 self.fsm.process("ignored")
 
         elif self.incoming_packet["type"] == "RTS" and self.fsm.current_state == "WAIT_ACK":
             if self.incoming_packet["source"] == self.outgoing_packet_queue[0]["through"] and self.incoming_packet[
-                    "dest"] == self.outgoing_packet_queue[0]["dest"]:
+                "dest"] == self.outgoing_packet_queue[0]["dest"]:
                 # This is an implicit ACK
                 self.fsm.process("got_ACK")
 

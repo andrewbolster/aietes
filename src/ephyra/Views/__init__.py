@@ -71,7 +71,6 @@ def callsuper(method):
 
 
 class MetricView(object):
-
     """
     This Class is a plotable view of the Metric class availiable from Bounos.
     It is instantiated with the representative Bounos.Metric base metric
@@ -150,7 +149,6 @@ class MetricView(object):
 
 
 class Arrow3D(FancyArrowPatch):
-
     def __init__(self, xs, ys, zs, *args, **kwargs):
         FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
@@ -167,7 +165,6 @@ class Arrow3D(FancyArrowPatch):
 
 
 class GenericFrame(wx.Frame):
-
     """
 
     :param controller:
@@ -195,7 +192,6 @@ from ephyra.Views.Simulator import Simulator
 
 
 class EphyraNotebook(wx.Frame):
-
     """
 
     :param controller:

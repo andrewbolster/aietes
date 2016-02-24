@@ -14,8 +14,10 @@ from bounos.Analyses.Trust import generate_node_trust_perspective
 from bounos.Analyses.Weight import summed_outliers_per_weight
 from bounos.ChartBuilders import latexify
 
-from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, n_metrics, results_path, \
-    fig_basedir
+from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, \
+    n_metrics, results_path, \
+    fig_basedir, best_of_all
+
 
 ##################
 #  HELPER FUNCS  #
@@ -56,29 +58,6 @@ latexify(columns=2, factor=0.55)
 # These were arrived at through visual interpretation of the complete metric relevancy graphs
 
 assert aietes.Tools.os.path.isdir(fig_basedir)
-
-
-def build_outlier_weights(h5_path, signed=False):
-    """Outliers should have keys of runs
-    :param h5_path:
-    """
-    with pd.get_store(h5_path) as store:
-        keys = store.keys()
-
-    target_weights_dict = {}
-    for runkey in filter(lambda s: s.startswith('/CombinedTrust'), keys):
-        with pd.get_store(h5_path) as store:
-            print runkey
-            target_weights_dict[runkey] = summed_outliers_per_weight(store.get(runkey),
-                                                                     observer, n_metrics,
-                                                                     target=target,
-                                                                     signed=False)
-
-    joined_target_weights = pd.concat(
-            target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names
-    ).reset_index('run', drop=True).sort()
-
-    return joined_target_weights
 
 
 class AaamasResultSelection(object):
@@ -122,8 +101,10 @@ class AaamasResultSelection(object):
         self.joined_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.joined_feats).T)
         self.comms_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.comms_only_feats).T)
         self.phys_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.phys_only_feats).T)
-        self.comms_alt_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.comms_alt_only_feats).T)
-        self.phys_alt_feat_weights = aietes.Tools.categorise_dataframe(aietes.Tools.non_zero_rows(self.phys_alt_only_feats).T)
+        self.comms_alt_feat_weights = aietes.Tools.categorise_dataframe(
+            aietes.Tools.non_zero_rows(self.comms_alt_only_feats).T)
+        self.phys_alt_feat_weights = aietes.Tools.categorise_dataframe(
+            aietes.Tools.non_zero_rows(self.phys_alt_only_feats).T)
 
         print("Got Everything I Need!")
         self.testGetBestFullRuns()
@@ -146,77 +127,20 @@ class AaamasResultSelection(object):
         """
         feat_d = {
             'full': (self.joined_feat_weights, key_order),
-            #'comms':(self.comms_feat_weights, comm_keys),
-            #'phys': (self.phys_feat_weights, phys_keys),
-            #'comms_alt': (self.comms_alt_feat_weights, comm_keys_alt),
-            #'phys_alt': (self.phys_alt_feat_weights, phys_keys_alt),
+            # 'comms':(self.comms_feat_weights, comm_keys),
+            # 'phys': (self.phys_feat_weights, phys_keys),
+            # 'comms_alt': (self.comms_alt_feat_weights, comm_keys_alt),
+            # 'phys_alt': (self.phys_alt_feat_weights, phys_keys_alt),
         }
         with pd.get_store(results_path + '.h5') as store:
             trust_observations = store.trust.dropna()
         for feat_str, (feats, keys) in feat_d.items():
             print(feat_str)
             if keys is not None:
-                best = self.best_of_all(feats, trust_observations[keys])
+                best = best_of_all(feats, trust_observations[keys])
             else:
-                best = self.best_of_all(feats, trust_observations)
+                best = best_of_all(feats, trust_observations)
             aietes.Tools.mkcpickle('best_{}_runs'.format(feat_str), dict(best))
-
-    def best_of_all(self, feats, trust_observations):
-        best = aietes.Tools.defaultdict(dict)
-        for (base_str, target_str), feat in feats.to_dict().items():
-            if base_str != "Fair":
-                continue
-            print(base_str)
-
-            print("---" + target_str)
-            best[base_str][target_str] = \
-                self.best_run_and_weight(
-                        feat,
-                        trust_observations)
-        return best
-
-    def best_run_and_weight(self, f, trust_observations, par=True, tolerance=0.01):
-        f = pd.Series(f, index=trust_observations.keys())
-        f_val = f.values
-
-        def _assess(x):
-            return -np.subtract(*map(np.nanmean, np.split(x.values, [1], axis=1)))
-
-        @aietes.Tools.timeit()
-        def generate_weighted_trust_perspectives(_trust_observations, feat_weights, par=True):
-            weighted_trust_perspectives = []
-            for w in feat_weights:
-                weighted_trust_perspectives.append(
-                        generate_node_trust_perspective(
-                                _trust_observations,
-                                metric_weights=pd.Series(w),
-                                par=par
-                        ))
-            return weighted_trust_perspectives
-
-        def best_group_in_perspective(perspective):
-            group = perspective.groupby(level=['observer', 'run']) \
-                .apply(_assess)
-            best_group = group.argmax()
-            return best_group, group[best_group]
-
-        combinations = np.asarray([f_val * i for i in itertools.product([-1, 1], repeat=len(f))])
-        for i in f.values[np.abs(f_val) < tolerance]:
-            combinations[:, np.where(f_val == i)] = i
-        combinations = aietes.Tools.npuniq(combinations)
-
-        print("Have {} Combinations".format(len(combinations)))
-        perspectives = generate_weighted_trust_perspectives(trust_observations,
-                                                            combinations, par=par)
-        print("Got Perspectives")
-        group_keys, assessments = zip(*map(best_group_in_perspective, perspectives))
-        best_weight = combinations[np.argmax(assessments)]
-        best_run = group_keys[np.argmax(assessments)]
-        best_score = np.max(assessments)
-        print("Winner is {} with {}@{}".format(best_run, best_weight, best_score))
-        if np.all(best_weight == f):
-            print("Actually got it right first time for a change!")
-        return best_run, best_weight
 
 
 if __name__ == "__main__":

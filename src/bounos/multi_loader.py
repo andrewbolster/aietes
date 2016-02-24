@@ -50,7 +50,7 @@ def hdfstore(filename, obj):
 
 
 def generate_inverted_logs_from_paths(paths):
-    logs = {} #TODO Update this to a defaultdict implementation.
+    logs = {}  # TODO Update this to a defaultdict implementation.
     # Transpose per-var-per-run statistics into Per 'log' stats (i.e. rx, tx, trust, stats, etc)
     for var, runs in scenarios_comms(paths):
         print("Var:{}".format(var))
@@ -90,51 +90,52 @@ def generate_dataframes_from_inverted_log(tup):
         if k not in ['stats', 'positions', 'trust']:
             # Var/Run/Node/(N/t) MultiIndex with forgiveness for variable-length inner arrays
             df = pd.concat([
-                pd.concat([
-                              pd.concat([pd.DataFrame(iiiv)
-                               for iiik, iiiv in iiv.iteritems()],
-                              keys=iiv.keys())
-                    for iik, iiv in _runs.iteritems()],
-                    keys=_runs.keys()
-                )
-                for _var, _runs in v.iteritems()],
-                keys=v.keys(),
-                names=['var', 'run', 'node', 't']
-            )
+                               pd.concat([
+                                             pd.concat([pd.DataFrame(iiiv)
+                                                        for iiik, iiiv in iiv.iteritems()],
+                                                       keys=iiv.keys())
+                                             for iik, iiv in _runs.iteritems()],
+                                         keys=_runs.keys()
+                                         )
+                               for _var, _runs in v.iteritems()],
+                           keys=v.keys(),
+                           names=['var', 'run', 'node', 't']
+                           )
         elif k in ['trust']:
             # Strict Var/Run/Node/t MultiIndex
             df = pd.concat([
-                pd.concat([
-                    pd.concat([pd.DataFrame(dict([ (_k,pd.Series(_v)) for _k,_v in iiiv.iteritems() ]))
-                               for iiik, iiiv in iiv.iteritems()],
-                              keys=iiv.keys())
-                    for iik, iiv in iv.iteritems()],
-                    keys=iv.keys()
-                )
-                for ik, iv in v.iteritems()],
-                keys=v.keys(),
-                names=['var', 'run', 'node', 't']
-            )
+                               pd.concat([
+                                             pd.concat([pd.DataFrame(
+                                                 dict([(_k, pd.Series(_v)) for _k, _v in iiiv.iteritems()]))
+                                                        for iiik, iiiv in iiv.iteritems()],
+                                                       keys=iiv.keys())
+                                             for iik, iiv in iv.iteritems()],
+                                         keys=iv.keys()
+                                         )
+                               for ik, iv in v.iteritems()],
+                           keys=v.keys(),
+                           names=['var', 'run', 'node', 't']
+                           )
         elif k == 'positions':
             # Var/Run/T/Node MultiIndex
             df = pd.concat([
-                pd.concat([iiv
-                           for iik, iiv in _runs.iteritems()],
-                          keys=_runs.keys())
-                for _var, _runs in v.iteritems()],
-                keys=v.keys(),
-                names=['var', 'run', 't', 'node']
-            )
+                               pd.concat([iiv
+                                          for iik, iiv in _runs.iteritems()],
+                                         keys=_runs.keys())
+                               for _var, _runs in v.iteritems()],
+                           keys=v.keys(),
+                           names=['var', 'run', 't', 'node']
+                           )
         else:
             # Var/Run MultiIndex
             df = pd.concat([
-                pd.concat([iiv
-                           for iik, iiv in _runs.iteritems()],
-                          keys=_runs.keys())
-                for _var, _runs in v.iteritems()],
-                keys=v.keys(),
-                names=['var', 'run', 'node']
-            )
+                               pd.concat([iiv
+                                          for iik, iiv in _runs.iteritems()],
+                                         keys=_runs.keys())
+                               for _var, _runs in v.iteritems()],
+                           keys=v.keys(),
+                           names=['var', 'run', 'node']
+                           )
 
         # Fixes for storage and sanity
         if k == 'stats':
@@ -152,11 +153,11 @@ def generate_dataframes_from_inverted_log(tup):
             var_is_float = False
 
         df.index = df.index.set_levels([
-            df.index.levels[0].astype(np.float64) if var_is_float else df.index.levels[
-                0],  # Var
-            df.index.levels[1].astype(np.int32)  # Run
-        ] + (df.index.levels[2:])
-        )
+                                           df.index.levels[0].astype(np.float64) if var_is_float else df.index.levels[
+                                               0],  # Var
+                                           df.index.levels[1].astype(np.int32)  # Run
+                                       ] + (df.index.levels[2:])
+                                       )
         df = df.reindex(sorted(df.index.levels[0]), level=0, copy=False)  # Var
         df = df.reindex(sorted(df.index.levels[1]), level=1, copy=False)  # Var
 
@@ -166,6 +167,7 @@ def generate_dataframes_from_inverted_log(tup):
         raise
 
     return k, df
+
 
 def trust_frames_from_logs(inverted_logs):
     return {k: v for k, v in map(generate_dataframes_from_inverted_log, inverted_logs.iteritems())}
@@ -181,7 +183,7 @@ def dump_trust_logs_and_stats_from_exp_paths(paths, title=None, dump=False):
         print("Dumping intermediates to intermediate_{}_*.npz".format(title))
     inverted_logs = generate_inverted_logs_from_paths(paths)
     if dump:
-        mkcpickle("intermediate_{}_inverted_logs".format(title),inverted_logs)
+        mkcpickle("intermediate_{}_inverted_logs".format(title), inverted_logs)
     log.info("First Cycle:{:8.2f}/{:8.2f} MiB".format(memory(), swapsize()))
     dfs = trust_frames_from_logs(inverted_logs)
     filename = '{}.h5'.format(title)
@@ -194,17 +196,19 @@ def dump_trust_logs_and_stats_from_exp_paths(paths, title=None, dump=False):
             v.to_hdf('{}.h5'.format(title), k, complevel=5, complib='zlib')
     log.info("Done!:{:8.2f}/{:8.2f} MiB".format(memory(), swapsize()))
 
+
 def results_path_parser(path):
     # Stretch and then compress the path to make sure we're in the right place
     abspath = os.path.abspath(path)
     assert os.path.isdir(path), "Expected a path! got {}".format(path)
-    s=os.path.basename(abspath)
+    s = os.path.basename(abspath)
     args = s.split('-')
     title = args[0]
     scenario = args[1]
     var = args[2]
-    #date = datetime(*map(int,args[3:]))
-    return title, scenario, var#, date
+    # date = datetime(*map(int,args[3:]))
+    return title, scenario, var  # , date
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load multiple scenarios or experiments into a single output hdfstore")

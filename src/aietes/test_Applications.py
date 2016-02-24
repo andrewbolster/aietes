@@ -7,7 +7,6 @@ from aietes import Applications
 
 
 class TestCommsTrust(TestCase):
-
     def test_get_metrics_from_empty_packet(self):
         self.assertRaises(KeyError, Applications.CommsTrust.get_metrics_from_received_packet, {})
 

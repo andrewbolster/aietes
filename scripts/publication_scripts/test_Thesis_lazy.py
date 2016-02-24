@@ -125,8 +125,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
         cb.latexify(columns=_texcol, factor=_texfac)
 
         base_config = aietes.Simulation.populate_config(
-                aietes.Tools.get_config('bella_static.conf'),
-                retain_default=True
+            aietes.Tools.get_config('bella_static.conf'),
+            retain_default=True
         )
         texify = lambda t: "${}_{}$".format(t[0], t[1])
         node_positions = {texify(k): np.asarray(v['initial_position'], dtype=float) for k, v in
@@ -168,8 +168,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
             ax.set_ylabel("Avg. Throughput (bps)")
             fig.tight_layout()
             fig.savefig("throughput_sep_lines_{}.{}".format(
-                    mobility,
-                    img_extn), transparent=True, facecolor='white')
+                mobility,
+                img_extn), transparent=True, facecolor='white')
             plt.close(fig)
 
         for f in required_files:
@@ -214,11 +214,10 @@ class ThesisLazyDiagrams(unittest.TestCase):
         # Packet Emissions Graphs for Single Runs
         def write_packet_stats_table(stats, var, prefix, suffix, include_ideal=False):
 
-            stats['error_rate'] = stats.rx_counts/stats.tx_counts
-            colmap={'error_rate':'Probability of Arrival','average_rx_delay':'Delay(s)'}
-            table = stats[['average_rx_delay','error_rate']].groupby(level='var').mean().rename(columns=colmap)
-            table.index.set_names(var,inplace=True)
-
+            stats['error_rate'] = stats.rx_counts / stats.tx_counts
+            colmap = {'error_rate': 'Probability of Arrival', 'average_rx_delay': 'Delay(s)'}
+            table = stats[['average_rx_delay', 'error_rate']].groupby(level='var').mean().rename(columns=colmap)
+            table.index.set_names(var, inplace=True)
 
             ratio = (stats.rts_counts / stats.rx_counts)
             r_mean = ratio.groupby(level='var').mean()
@@ -226,9 +225,9 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
             table.reset_index(inplace=True)
             if include_ideal:
-                table['Ideal Delivery Time(s)'] = table[var]/1400.0 + 9600.0/(10000.0)
+                table['Ideal Delivery Time(s)'] = table[var] / 1400.0 + 9600.0 / (10000.0)
 
-            tex=table.to_latex(float_format=lambda x:"%1.4f"%x, index=False, column_format="""
+            tex = table.to_latex(float_format=lambda x: "%1.4f" % x, index=False, column_format="""
             *{5}{@{\\hspace{1em}}p{0.15\\textwidth} @{\\hspace{1em}}}  """)
             saveinput(tex, "{}_packet_stats_{}".format(prefix, suffix))
             print tex
@@ -246,7 +245,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
                     # Reset Range for packet emission rate
                     stats.index = stats.index.set_levels([
                                                              np.int32((np.asarray(
-                                                                     stats.index.levels[0].astype(np.float64)) * 100)),
+                                                                 stats.index.levels[0].astype(np.float64)) * 100)),
                                                              # Var
                                                              stats.index.levels[1].astype(np.int32)  # Run
                                                          ] + (stats.index.levels[2:])
@@ -254,14 +253,15 @@ class ThesisLazyDiagrams(unittest.TestCase):
                     statsd[app_rate_from_path(store_path)] = stats.copy()
 
             df = pd.concat(statsd.values(), keys=statsd.keys(), names=['rate', 'separation'] + stats.index.names[1:])
-            base_df = df.reset_index().sort_values(by=['rate', 'separation']).set_index(['rate', 'separation', 'run', 'node'])
+            base_df = df.reset_index().sort_values(by=['rate', 'separation']).set_index(
+                ['rate', 'separation', 'run', 'node'])
 
             rename_labels = {"rx_counts": "Throughput",
                              "tx_counts": "Offered Load",
                              "enqueued": "Enqueued Packets",
                              "collisions": "Collisions"}
 
-            figsize = cb.latexify(columns=_texcol*2, factor=_texfac)
+            figsize = cb.latexify(columns=_texcol * 2, factor=_texfac)
 
             # Emission Stats
 
@@ -320,19 +320,19 @@ class ThesisLazyDiagrams(unittest.TestCase):
             for supra in supra_prefixes:
                 for prefix in required_file_prefixes:
                     Tools.remove("{}_{}_{}.{}".format(
-                            supra,
-                            prefix,
-                            scenario,
-                            img_extn
+                        supra,
+                        prefix,
+                        scenario,
+                        img_extn
                     ))
             plot_packet_stats_for_scenario_containing(scenario)
             for supra in supra_prefixes:
                 for prefix in required_file_prefixes:
                     f = "{}_{}_{}.{}".format(
-                                supra,
-                                prefix,
-                                scenario,
-                                img_extn
+                        supra,
+                        prefix,
+                        scenario,
+                        img_extn
                     )
                     self.assertTrue(os.path.isfile(f))
                     self.generated_files.append(f)
@@ -353,7 +353,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
                     # Reset Range for packet emission rate
                     stats.index = stats.index.set_levels([
                                                              np.int32((np.asarray(
-                                                                     stats.index.levels[0].astype(np.float64)) * 100)),
+                                                                 stats.index.levels[0].astype(np.float64)) * 100)),
                                                              # Var
                                                              stats.index.levels[1].astype(np.int32)  # Run
                                                          ] + (stats.index.levels[2:])
@@ -374,7 +374,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             df['tdivdel'] = (df.throughput / df.average_rx_delay)
             df.reset_index(inplace=True)
 
-            figsize = cb.latexify(columns=_texcol*2, factor=_texfac)
+            figsize = cb.latexify(columns=_texcol * 2, factor=_texfac)
 
             xt, yt, zt, Xt, Yt = interpolate_rate_sep(df.dropna(), "throughput")
             fig = plot_contour_2d(xt, yt, zt, Xt, Yt, "Throughput (bps)", figsize=figsize)
@@ -409,16 +409,16 @@ class ThesisLazyDiagrams(unittest.TestCase):
         for scenario in selected_scenarios:
             for prefix in required_file_prefixes:
                 Tools.remove("{}{}.{}".format(
-                        prefix,
-                        scenario,
-                        img_extn
+                    prefix,
+                    scenario,
+                    img_extn
                 ))
             rate_range_plots_per_scenario(scenario)
             for prefix in required_file_prefixes:
                 f = "{}{}.{}".format(
-                        prefix,
-                        scenario,
-                        img_extn
+                    prefix,
+                    scenario,
+                    img_extn
                 )
                 self.assertFileExists(f)
 
@@ -501,8 +501,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
             beta_t_confidence = lambda s, f: 1 - np.sqrt((12 * s * f) / ((s + f + 1) * (s + f) ** 2))
             beta_t = lambda s, f: s / (s + f)
             otmf_t = lambda s, f: 1 - np.sqrt(
-                    ((((beta_t(s, f) - 1) ** 2) / 2) + (((beta_t_confidence(s, f) - 1) ** 2) / 9))) / np.sqrt(
-                    (1 / 2) + (1 / 9))
+                ((((beta_t(s, f) - 1) ** 2) / 2) + (((beta_t_confidence(s, f) - 1) ** 2) / 9))) / np.sqrt(
+                (1 / 2) + (1 / 9))
             beta_vals = beta_trust.apply(lambda r: beta_t(r['+'], r['-']), axis=1)
             otmf_vals = beta_trust.apply(lambda r: otmf_t(r['+'], r['-']), axis=1)
             return beta_vals, otmf_vals
@@ -523,8 +523,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
             ax.yaxis.set_major_locator(loc_25)
             fig.tight_layout()
             fig.savefig("trust_beta_otmf{}.{}".format(
-                    "_" + key if key is not None else "",
-                    extension), transparent=True)
+                "_" + key if key is not None else "",
+                extension), transparent=True)
             plt.close(fig)
 
         gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file, [self.good, self.malicious, self.selfish])
@@ -584,8 +584,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
         with pd.get_store(Tools.in_results('outliers.h5')) as s:
             outliers = s.get('outliers')
             sum_by_weight = outliers.groupby(
-                    ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index(
-                    'bev')
+                ['bev', u'ADelay', u'ARXP', u'ATXP', u'RXThroughput', u'PLR', u'TXThroughput']).sum().reset_index(
+                'bev')
             dp = pd.DataFrame.from_dict({
                                             k: sum_by_weight[sum_by_weight.bev == k]['Delta']
                                             for k in pd.Series(sum_by_weight['bev'].values.ravel()).unique()
@@ -600,7 +600,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
         figsize = cb.latexify(columns=_texcol, factor=_texfac)
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(1, 1, 1)
-        _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(index=Tools.metric_rename_dict)
+        _df = pd.DataFrame.from_dict({"Fair/MPC": gm, "Fair/STS": gs, "MPC/STS": ms}).rename(
+            index=Tools.metric_rename_dict)
         ax = _df.plot(kind='bar', position=0.5, ax=ax, legend=False)
         bars = ax.patches
 

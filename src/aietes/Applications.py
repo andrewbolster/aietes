@@ -27,7 +27,6 @@ from scipy.spatial.distance import squareform, pdist
 
 from aietes.Tools import Sim, DEBUG, randomstr, broadcast_address, ConfigError
 
-
 DEBUG = True
 
 
@@ -279,8 +278,8 @@ class Application(Sim.Process):
                 "hops": self.stats['packets_hops'],
                 "dhops": self.stats['packets_dhops'],
                 "average_length": avg_length,
-                "throughput": throughput, #bps
-                "offeredload": offeredload, #bps
+                "throughput": throughput,  # bps
+                "offeredload": offeredload,  # bps
                 "enqueued": left_in_q
             }
             app_stats.update(self.layercake.phy.dump_stats())
@@ -548,18 +547,19 @@ class Trust(RoutingTest):
             trust_period = Sim.now() // self.trust_assessment_period
 
             tick_assessments = [tick() for tick in self.tick_assessors]
-            assert all([not isinstance(t, list) for t in tick_assessments]), "All Tick Assessors should return a 1-d list of values"
+            assert all([not isinstance(t, list) for t in
+                        tick_assessments]), "All Tick Assessors should return a 1-d list of values"
             tick_keys = set([
                                 i
                                 for t in tick_assessments
                                 for i in t.keys().tolist()
-                            ]
-            )
+                                ]
+                            )
             target_stats = {
                 node:
                     pd.concat([pd.Series(tick[node]) for tick in tick_assessments if node in tick])
                 for node in tick_keys
-            }
+                }
             for node, per_target_stats in target_stats.iteritems():
                 if node not in self.trust_assessments:
                     self.trust_assessments[node] = [pd.Series([]) for _ in range(trust_period)]
@@ -582,6 +582,7 @@ class Trust(RoutingTest):
         })
         return initial
 
+
 class BehaviourTrust(Trust):
     """
     Reimplementation of Physical Trust Analysis work.
@@ -596,6 +597,7 @@ class BehaviourTrust(Trust):
     Performs the same Routing Test behaviour as Comms Trust
 
     """
+
     def __init__(self, *args, **kwargs):
         super(BehaviourTrust, self).__init__(*args, **kwargs)
 
@@ -622,14 +624,15 @@ class BehaviourTrust(Trust):
             # Assume less magic: that we get position info from every packet received
             full_pos_log = np.asarray(self.pos_log)
             if full_pos_log:
-                pos_log = full_pos_log[:,:,self.last_accessed_rx_packet:]
+                pos_log = full_pos_log[:, :, self.last_accessed_rx_packet:]
             else:
                 pos_log = None
 
-        return BehaviourTrust.physical_metrics_from_position_log(pos_log, self.node.fleet.node_names(), single_value=True)
+        return BehaviourTrust.physical_metrics_from_position_log(pos_log, self.node.fleet.node_names(),
+                                                                 single_value=True)
 
     @classmethod
-    def physical_metrics_from_position_log(cls,pos_log, names=None, single_value=True):
+    def physical_metrics_from_position_log(cls, pos_log, names=None, single_value=True):
         """
         Assumes [n,3,t] ndarray of positions
 
@@ -665,8 +668,8 @@ class BehaviourTrust(Trust):
                     })
 
         else:
-            n,d,t = pos_log.shape
-            assert d==3, d
+            n, d, t = pos_log.shape
+            assert d == 3, d
 
             if names is None:
                 names = [str(i) for i in range(n)]
@@ -678,15 +681,14 @@ class BehaviourTrust(Trust):
             # v = np.asarray([data.deviation_from_at(data.average_heading(time), time) for time in range(int(data.tmax))])
             # c = np.average(v, axis=1)
             avg_vec = np.average(vec_log, axis=0)
-            assert avg_vec.shape == (3, t-1), avg_vec.shape
+            assert avg_vec.shape == (3, t - 1), avg_vec.shape
             inhd = np.linalg.norm(avg_vec - vec_log, axis=1)
-            assert inhd.shape == (n,t-1), inhd.shape
+            assert inhd.shape == (n, t - 1), inhd.shape
 
             # Per Node Speed
             # v = np.asarray([map(mag, data.heading_slice(time)) for time in range(int(data.tmax))])
             # c = np.average(v, axis=1)
             mag_log = np.linalg.norm(vec_log, axis=1)  # (n,t)
-
 
             # Per Node Internode Distance Deviation (INDD)
             # Deviation from me to the fleet centroid compared to the average inter node distance
@@ -696,10 +698,9 @@ class BehaviourTrust(Trust):
             avg_pos = np.average(pos_log, axis=0)
             avg_dist = np.linalg.norm(avg_pos - pos_log, axis=1)
             indd = np.average(inter_node_distance_matrices, axis=1)
-            assert indd.shape == (n,t), indd.shape
+            assert indd.shape == (n, t), indd.shape
 
-
-            for i,node in enumerate(names):
+            for i, node in enumerate(names):
                 phys_stats[node] = pd.Series({
                     "INDD": indd[i],
                     "Speed": mag_log[i],
@@ -709,8 +710,6 @@ class BehaviourTrust(Trust):
                     phys_stats[node] = phys_stats[node].apply(np.mean)
 
         return phys_stats
-
-
 
     def update_log_from_packet(self, packet):
         """
@@ -749,7 +748,6 @@ class CommsTrust(Trust):
              })
         self.tick_assessors.extend([self.rx_trust_metrics, self.tx_trust_metrics])
         self.packet_receivers.extend([self.update_counters])
-
 
         self.current_target = None
         self.forced_nodes = []
@@ -996,13 +994,16 @@ class CommsTrust(Trust):
 class CommsTrustRoundRobin(CommsTrust):
     test_stream_length = 1
 
+
 class CombinedTrust(BehaviourTrust, CommsTrustRoundRobin):
     """
     Fusion Class of Comms and Behaviour with some deconflicting functionality.
     In theory
     """
+
     def __init__(self, *args, **kwargs):
         super(CombinedTrust, self).__init__(*args, **kwargs)
+
 
 class SelfishTargetSelection(CommsTrustRoundRobin):
     def select_target(self):
@@ -1047,13 +1048,16 @@ class SelfishTargetSelection(CommsTrustRoundRobin):
 
         return drop_it
 
+
 class CombinedSelfishTargetSelection(BehaviourTrust, SelfishTargetSelection):
     """
     Fusion Class of Selfish and Behaviour Trust with some deconflicting functionality.
     In theory
     """
+
     def __init__(self, *args, **kwargs):
         super(CombinedSelfishTargetSelection, self).__init__(*args, **kwargs)
+
 
 class BadMouthingPowerControl(CommsTrustRoundRobin):
     """
@@ -1095,11 +1099,13 @@ class BadMouthingPowerControl(CommsTrustRoundRobin):
 
         return new_level
 
+
 class CombinedBadMouthingPowerControl(BehaviourTrust, BadMouthingPowerControl):
     """
     Fusion Class of Malicious and Behaviour trust with some deconflicting functionality.
     In theory
     """
+
     def __init__(self, *args, **kwargs):
         super(CombinedBadMouthingPowerControl, self).__init__(*args, **kwargs)
 

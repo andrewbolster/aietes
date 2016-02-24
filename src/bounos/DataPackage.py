@@ -24,7 +24,6 @@ import logging
 
 from scipy.spatial.distance import pdist, squareform
 
-
 # used to reconstitute config from NP object
 from ast import literal_eval
 
@@ -38,7 +37,6 @@ from configobj import ConfigObj
 
 # noinspection PyCallByClass
 class DataPackage(object):
-
     """
     Data Store for simulation results
     Replicates a Numpy Array as is directly accessible as an n-vector
@@ -441,7 +439,7 @@ class DataPackage(object):
                 self.deviation_from_at(self.average_heading(time), time)
             )
             for time in range(self.tmax)
-        ]
+            ]
         return deviations
 
     def average_position(self, time):

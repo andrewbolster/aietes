@@ -118,7 +118,8 @@ def generate_outlier_frame(good, trust_frame, w, par=False):
     return outlier
 
 
-def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min_emphasis=0, max_emphasis=3, extra=None,
+def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min_emphasis=0, max_emphasis=3,
+                                                          min_sum=1, max_sum=None, extra=None,
                                                           verbose=False, par=False):
     """
     For a given trust frame perform grey weight factor distribution analysis to
@@ -143,13 +144,18 @@ def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min
     if extra is None:
         extra = ""
 
-    combinations = filter(np.any,
-                          itertools.product(
-                              xrange(
-                                  min_emphasis, max_emphasis
-                              ), repeat=len(trust_metrics)
-                          )
-                          )
+    if max_sum is None:
+        max_sum = np.inf
+
+    combinations = itertools.ifilter(np.any,
+                                     itertools.product(
+                                         xrange(
+                                             min_emphasis, max_emphasis
+                                         ), repeat=len(trust_metrics)
+                                     )
+                                     )
+    combinations = itertools.ifilter(lambda v: min_sum <= np.sum(v) <= max_sum,
+                                     combinations)
     combinations = sorted(combinations, key=lambda l: sum(map(abs, l)))
     if par:
         outliers = _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose=True)
@@ -320,6 +326,7 @@ def feature_extractor(df, target, raw=False, n_estimators=128):
         result = pd.Series(dict(zip(data.keys(), reg.feature_importances_)))
     return result
 
+
 def target_weight_feature_extractor(target_weights, comparison=None, raw=False, n_estimators=128):
     if comparison is None:
         comparison = np.subtract
@@ -331,10 +338,13 @@ def target_weight_feature_extractor(target_weights, comparison=None, raw=False, 
         var_weights = target_weights.apply(lambda s: comparison(s, target_weights[basekey]), axis=0).dropna()
         # Ending up with [basekey,var] as "Baseline" and "target" behaviours
         if raw:
-            known_good_features_d[basekey] = [feature_extractor(s.reset_index(), var, raw=True, n_estimators=n_estimators) for var, s in var_weights.iteritems()]
+            known_good_features_d[basekey] = [
+                feature_extractor(s.reset_index(), var, raw=True, n_estimators=n_estimators) for var, s in
+                var_weights.iteritems()]
         else:
             known_good_features_d[basekey] = \
-                pd.concat([feature_extractor(s.reset_index(), var, n_estimators=n_estimators) for var, s in var_weights.iteritems()],
+                pd.concat([feature_extractor(s.reset_index(), var, n_estimators=n_estimators) for var, s in
+                           var_weights.iteritems()],
                           keys=var_weights.keys(), names=['var', 'metric'])
 
     return known_good_features_d

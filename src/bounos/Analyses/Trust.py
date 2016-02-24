@@ -29,7 +29,6 @@ from joblib import Parallel, delayed
 from aietes import Tools
 from bounos.Analyses import scenario_map
 
-
 # USUALLY CONSTANTS#
 _n_metrics = 6
 _trust_metrics = np.asarray("ADelay,ARXP,ATXP,RXThroughput,PLR,TXThroughput".split(','))
@@ -87,7 +86,7 @@ def outliers_from_trust_dict(trust_dict, good_key="good", s=None,
         k: perspective_from_trust(t, s=s, metric_weight=metric_weight,
                                   flip_metrics=flip_metrics, par=par)
         for k, t in trust_dict.iteritems()
-    }
+        }
     mtfms = mtfm_from_perspectives_dict(perspectives, mtfm_args)
     outlier = generate_outlier_frame(mtfms, good_key).reset_index()
     for k in metric_weight.keys():
@@ -95,6 +94,7 @@ def outliers_from_trust_dict(trust_dict, good_key="good", s=None,
     outlier.set_index(['bev', 't'], inplace=True)
     outlier.rename(columns={0: 'Delta'}, inplace=True)
     return outlier
+
 
 # TODO Grey stuff can probably be broken out at a separate file
 # THESE LAMBDAS PERFORM GRAY CLASSIFICATION BASED ON GUO
@@ -148,6 +148,7 @@ def t_kt(interval):
         return 1.0 / (
             1.0 + (sigma * sigma) / (theta * theta)
         )
+
 
 def weight_calculator(metric_index, ignore=None):
     """
@@ -205,8 +206,8 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
 
     if flip_metrics is None:
         flip_metrics = []
-    if metric_weights is not None and any(metric_weights.where(metric_weights<0).dropna()):
-        flip_metrics.extend(list(metric_weights.where(metric_weights<0).dropna().keys()))
+    if metric_weights is not None and any(metric_weights.where(metric_weights < 0).dropna()):
+        flip_metrics.extend(list(metric_weights.where(metric_weights < 0).dropna().keys()))
 
     if metric_weights is not None:
         valid_metric_weights = np.abs(metric_weights)
@@ -215,10 +216,10 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
 
     for ki, gi in gf.groupby(level='t'):
         if as_matrix:
-            t_val = [np.nan]*(len(gi.keys())-1)
-            gi=gi.values
-            gmn = np.nanmin(gi,axis=0)  # Generally the 'Good' sequence,
-            gmx = np.nanmax(gi,axis=0)
+            t_val = [np.nan] * (len(gi.keys()) - 1)
+            gi = gi.values
+            gmn = np.nanmin(gi, axis=0)  # Generally the 'Good' sequence,
+            gmx = np.nanmax(gi, axis=0)
         else:
             t_val = pd.Series(np.nan, index=gi.index.copy(), name='trust')
             gmn = gi.min(axis=0)  # Generally the 'Good' sequence,
@@ -232,7 +233,6 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
             g_grc = partial(_grc, comparison=gmn, width=width)
             b_grc = partial(_grc, comparison=gmx, width=width)
 
-
             # Where there are 'missing' values, this implies that there's no information
             # therefore we can assume regression to the mean
             # This means that low-successful-metric records don't get too washed out by the limited info
@@ -244,10 +244,10 @@ def generate_single_observer_trust_perspective(gf, metric_weights=None,
                 bad = np.apply_along_axis(b_grc, arr=gi.copy(), axis=1)
                 bad[np.isnan(bad)] = 0.5
 
-
                 if metric_weights is not None:
-                    for flipper in map(list(metric_weights.keys()).index, flip_metrics):  # NOTE flipper may have been removed if no variation
-                        good[:,flipper], bad[:,flipper] = bad[:,flipper].copy(), good[:,flipper].copy()
+                    for flipper in map(list(metric_weights.keys()).index,
+                                       flip_metrics):  # NOTE flipper may have been removed if no variation
+                        good[:, flipper], bad[:, flipper] = bad[:, flipper].copy(), good[:, flipper].copy()
 
                 interval = np.vstack((
                     np.apply_along_axis(np.average, arr=good, axis=1, weights=valid_metric_weights),
@@ -330,7 +330,8 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
 
         trusts = []
     except AttributeError:
-        assert isinstance(tf, pd.DataFrame), "Expected first argument (tf) to be a Pandas Dataframe, got {} instead".format(
+        assert isinstance(tf,
+                          pd.DataFrame), "Expected first argument (tf) to be a Pandas Dataframe, got {} instead".format(
             type(tf)
         )
         raise
@@ -346,14 +347,14 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
                                          (g, **exec_args) for k, g in tf.groupby(level=[var, 'run', 'observer'])
                                          )
             trusts = [pd.Series(np.concatenate(sublist), index=g.index.copy())
-                      for sublist, (_,g) in zip(trusts,tf.groupby(level=[var, 'run', 'observer']))]
+                      for sublist, (_, g) in zip(trusts, tf.groupby(level=[var, 'run', 'observer']))]
 
         else:
             with np.errstate(all='raise'):
                 for k, g in tf.groupby(level=[var, 'run', 'observer']):
                     trust_perspective = generate_single_observer_trust_perspective(g, **exec_args)
                     trust_con = np.concatenate(trust_perspective)
-                    trust_s = pd.Series(trust_con,index=g.index.copy())
+                    trust_s = pd.Series(trust_con, index=g.index.copy())
                     trusts.extend([trust_s])
 
         tf = pd.concat(trusts)
@@ -371,7 +372,8 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
     except FloatingPointError:
         if metric_weights is not None and not metric_weights.any():
             # Have been given zero weight
-            warnings.warn("Have been given a zero-weight, which is insane, so I'm returning None: {}".format(metric_weights))
+            warnings.warn(
+                "Have been given a zero-weight, which is insane, so I'm returning None: {}".format(metric_weights))
             tf = None
         else:
             raise
@@ -407,11 +409,11 @@ def generate_global_trust_values(trust_logs, metric_weights=None):
     trust_perspectives = {
         node: generate_node_trust_perspective(node_observations, metric_weights=metric_weights)
         for node, node_observations in trust_logs.iteritems()
-    }
+        }
     inverted_trust_perspectives = {
         node: invert_node_trust_perspective(node_perspective)
         for node, node_perspective in trust_perspectives.iteritems()
-    }
+        }
     return trust_perspectives, inverted_trust_perspectives
 
 

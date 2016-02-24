@@ -7,7 +7,6 @@
 
 
 class PriorityDictionary(dict):
-
     def __init__(self):
         """Initialize priorityDictionary by creating binary heap
 of pairs (value,key).  Note that changing or removing a dict entry will
@@ -27,7 +26,7 @@ until the heap is rebuilt."""
             while 1:
                 smallchild = 2 * insertionpoint + 1
                 if smallchild + 1 < len(heap) and \
-                        heap[smallchild] > heap[smallchild + 1]:
+                                heap[smallchild] > heap[smallchild + 1]:
                     smallchild += 1
                 if smallchild >= len(heap) or lastitem <= heap[smallchild]:
                     heap[insertionpoint] = lastitem
@@ -61,7 +60,7 @@ too large, to avoid memory leakage."""
             insertion_point = len(heap)
             heap.append(None)
             while insertion_point > 0 and \
-                    new_pair < heap[(insertion_point - 1) // 2]:
+                            new_pair < heap[(insertion_point - 1) // 2]:
                 heap[insertion_point] = heap[(insertion_point - 1) // 2]
                 insertion_point = (insertion_point - 1) // 2
             heap[insertion_point] = new_pair

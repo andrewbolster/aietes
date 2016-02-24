@@ -42,7 +42,6 @@ from shelve import DbfilenameShelf
 from tempfile import mkdtemp
 from time import time
 
-
 import notify2
 import numpy as np
 from SimPy import SimulationStep as Sim
@@ -64,7 +63,6 @@ _config_spec = '%s/configs/default.conf' % _ROOT
 _results_dir = '/home/bolster/src/aietes/results/'
 _config_dir = "%s/configs/" % _ROOT
 
-
 _proc_status = '/proc/%d/status' % os.getpid()
 
 _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
@@ -80,8 +78,8 @@ metric_rename_dict = {
     'ADelay': "$Delay$",
     'ARXP': "$P_{RX}$",
     'ATXP': "$P_{TX}$",
-    'RXThroughput': "$S$", # Throughput
-    'TXThroughput': "$G$", # Offered Load
+    'RXThroughput': "$S$",  # Throughput
+    'TXThroughput': "$G$",  # Offered Load
     'PLR': '$PLR$',
     'INDD': '$INDD$',
     'INHD': '$INHD$',
@@ -90,9 +88,11 @@ metric_rename_dict = {
 
 key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
 
+
 def metric_key_inverter(desired_keys):
-    drop_keys = sorted(list(set(key_order).difference(desired_keys)),key=lambda x: key_order.index(x))
+    drop_keys = sorted(list(set(key_order).difference(desired_keys)), key=lambda x: key_order.index(x))
     return drop_keys
+
 
 def _vmb(vmkey):
     """Private.
@@ -798,13 +798,15 @@ def update_dict(d, keys, value, safe=False):
         d = d.setdefault(key, {})
     d[keys[-1]] = value
 
+
 def invert_dict(d):
     """
     Return an inverted {v:k} dict
     :param d:
     :return: dict()
     """
-    return dict((v,k) for k, v in d.iteritems())
+    return dict((v, k) for k, v in d.iteritems())
+
 
 def list_functions(module):
     """
@@ -1058,13 +1060,15 @@ def try_forever(exceptions_to_catch, fn):
 
     return new_fn
 
+
 def npuniq(a):
     """
     http://stackoverflow.com/questions/16970982/find-unique-rows-in-numpy-array
     :param a:
     :return:
     """
-    return np.unique(a.view(np.dtype((np.void, a.dtype.itemsize*a.shape[1])))).view(a.dtype).reshape(-1, a.shape[1])
+    return np.unique(a.view(np.dtype((np.void, a.dtype.itemsize * a.shape[1])))).view(a.dtype).reshape(-1, a.shape[1])
+
 
 def timeit():
     """
@@ -1126,7 +1130,7 @@ def get_latest_aietes_datafile(base_dir=None):
     candidate_data_files = [
         f for f in candidate_data_files
         if is_valid_aietes_datafile(f)
-    ]
+        ]
     candidate_data_files.sort(key=os.path.getmtime, reverse=True)
     if len(candidate_data_files) == 0:
         raise ValueError(
@@ -1229,22 +1233,27 @@ class Capturing(list):
         self.extend(self._stringio.getvalue().splitlines())
         sys.stdout = self._stdout
 
-def remove(filename, no_exist_ok = True):
+
+def remove(filename, no_exist_ok=True):
     try:
         os.remove(filename)
-    except OSError as exc: # Python >2.5
+    except OSError as exc:  # Python >2.5
         # If it's not there and we don't care, don't raise
         if exc.errno == errno.ENOENT and no_exist_ok:
             pass
-        else: raise
+        else:
+            raise
+
 
 def mkdir_p(path):
     try:
         os.makedirs(path)
-    except OSError as exc: # Python >2.5
+    except OSError as exc:  # Python >2.5
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
-        else: raise
+        else:
+            raise
+
 
 def powerset(iterable):
     """
@@ -1254,4 +1263,4 @@ def powerset(iterable):
     """
     "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
     s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))

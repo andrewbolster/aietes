@@ -26,7 +26,6 @@ import polybos
 
 
 class ExperimentGeneration(unittest.TestCase):
-
     def testRatioExperimentGeneration(self):
         """Basic tests of polybos experiment generation"""
         count = 4

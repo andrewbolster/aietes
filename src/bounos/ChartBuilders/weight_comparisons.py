@@ -15,7 +15,6 @@ from bounos.ChartBuilders import format_axes, latexify, trust_network_wrt_observ
 import bounos.Analyses.Trust as Trust
 from bounos.Analyses import scenario_order, scenario_map
 
-
 # print(matplotlib.rcParams)
 _boxplot_kwargs = {
     'showmeans': True,
@@ -203,11 +202,10 @@ def weight_for_metric(m, emph=4):
 
 
 def norm_weight(base, metric_names=None):
-
     if isinstance(base, pd.Series):
         normed = pd.Series(base / base.abs().sum())
     else:
-        normed = pd.Series(base,index=metric_names)/ sum(map(abs,base))
+        normed = pd.Series(base, index=metric_names) / sum(map(abs, base))
 
     return normed
 

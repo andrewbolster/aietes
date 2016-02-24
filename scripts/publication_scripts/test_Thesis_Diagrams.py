@@ -16,7 +16,8 @@ from bounos.Analyses.Weight import target_weight_feature_extractor, \
     generate_weighted_trust_perspectives, build_outlier_weights, calc_correlations_from_weights, \
     drop_metrics_from_weights_by_key
 from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list
-from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, n_metrics, results_path, \
+from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, \
+    n_metrics, results_path, \
     fig_basedir, subset_renamer, plot_trust_line_graph, format_features
 
 ###########
@@ -28,7 +29,6 @@ use_temp_dir = False
 show_outputs = False
 recompute = False
 _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
-
 
 observer = 'Bravo'
 target = 'Alfa'
@@ -58,12 +58,6 @@ else:
     recompute = True
 
 assert os.path.isdir(fig_basedir)
-
-##################
-#  HELPER FUNCS  #
-##################
-
-
 
 
 class ThesisDiagrams(unittest.TestCase):
@@ -120,9 +114,8 @@ class ThesisDiagrams(unittest.TestCase):
         # Consistent Colouring for Metrics (Currently only applies to relevance charts)
         self.metric_colour_map = unique_cm_dict_from_list(self.joined_feats.keys().tolist())
         # Also need to handle latexified keys but use the same colour:
-        for k,v in self.metric_colour_map.items():
-            self.metric_colour_map[metric_rename_dict[k]]=v
-
+        for k, v in self.metric_colour_map.items():
+            self.metric_colour_map[metric_rename_dict[k]] = v
 
     @classmethod
     def recompute_features_in_shared(cls, signed=False):
@@ -140,13 +133,16 @@ class ThesisDiagrams(unittest.TestCase):
         print "Dumping Joined Target Weights"
         joined_target_weights.to_hdf(shared_h5_path, 'joined_target_weights' + dumping_suffix)
         joined_feats.to_hdf(shared_h5_path, 'joined_feats' + dumping_suffix)
-        _, _ = cls.metric_subset_weight_and_feature_extractor('comms',comm_keys, joined_target_weights, dumping_suffix)
-        _, _ = cls.metric_subset_weight_and_feature_extractor('phys',phys_keys, joined_target_weights, dumping_suffix)
-        _, _ = cls.metric_subset_weight_and_feature_extractor('comms_alt',comm_keys_alt, joined_target_weights, dumping_suffix)
-        _, _ = cls.metric_subset_weight_and_feature_extractor('phys_alt',phys_keys_alt, joined_target_weights, dumping_suffix)
+        _, _ = cls.metric_subset_weight_and_feature_extractor('comms', comm_keys, joined_target_weights, dumping_suffix)
+        _, _ = cls.metric_subset_weight_and_feature_extractor('phys', phys_keys, joined_target_weights, dumping_suffix)
+        _, _ = cls.metric_subset_weight_and_feature_extractor('comms_alt', comm_keys_alt, joined_target_weights,
+                                                              dumping_suffix)
+        _, _ = cls.metric_subset_weight_and_feature_extractor('phys_alt', phys_keys_alt, joined_target_weights,
+                                                              dumping_suffix)
 
     @classmethod
-    def metric_subset_weight_and_feature_extractor(cls, subset_str, desired_keys, complete_target_weights, dumping_suffix):
+    def metric_subset_weight_and_feature_extractor(cls, subset_str, desired_keys, complete_target_weights,
+                                                   dumping_suffix):
         print "Building {} Target Weights".format(subset_str)
         subset_only_weights = drop_metrics_from_weights_by_key(
             complete_target_weights,
@@ -158,8 +154,8 @@ class ThesisDiagrams(unittest.TestCase):
             )
         )
         print "Dumping {} Target Weights".format(subset_str)
-        subset_only_weights.to_hdf(shared_h5_path, "{}_only_weights{}".format(subset_str,dumping_suffix))
-        subset_only_feats.to_hdf(shared_h5_path, "{}_only_feats{}".format(subset_str,dumping_suffix))
+        subset_only_weights.to_hdf(shared_h5_path, "{}_only_weights{}".format(subset_str, dumping_suffix))
+        subset_only_feats.to_hdf(shared_h5_path, "{}_only_feats{}".format(subset_str, dumping_suffix))
 
         return subset_only_weights, subset_only_feats
 
@@ -202,17 +198,21 @@ class ThesisDiagrams(unittest.TestCase):
                 scenario_bars_d[_i // len(these_feature_colours)].append(bar)
             for _i, scenario_bars in scenario_bars_d.items():
                 if isinstance(annotate, int):
-                    for bar in  sorted(scenario_bars, key=lambda b: b.get_height(),reverse=True)[:annotate]:
-                        ax.text(bar.get_x() + bar.get_width()/2, 1.05*bar.get_height(), "{:.2}".format(bar.get_height()), ha='center', va='bottom')
+                    for bar in sorted(scenario_bars, key=lambda b: b.get_height(), reverse=True)[:annotate]:
+                        ax.text(bar.get_x() + bar.get_width() / 2, 1.05 * bar.get_height(),
+                                "{:.2}".format(bar.get_height()), ha='center', va='bottom')
                 elif isinstance(annotate, float):
-                    for bar in  filter(lambda b: b.get_height() > annotate, sorted(scenario_bars, key=lambda b: b.get_height(),reverse=True)):
-                        ax.text(bar.get_x() + bar.get_width()/2, 1.05*bar.get_height(), "{:.2}".format(bar.get_height()), ha='center', va='bottom')
+                    for bar in filter(lambda b: b.get_height() > annotate,
+                                      sorted(scenario_bars, key=lambda b: b.get_height(), reverse=True)):
+                        ax.text(bar.get_x() + bar.get_width() / 2, 1.05 * bar.get_height(),
+                                "{:.2}".format(bar.get_height()), ha='center', va='bottom')
                 else:
-                    raise NotImplementedError("Can't handle an annotation value of type {}; try float or int".format(type(annotate)))
+                    raise NotImplementedError(
+                        "Can't handle an annotation value of type {}; try float or int".format(type(annotate)))
 
         ax.legend(loc='best', ncol=1)
         format_axes(ax)
-        ax.xaxis.grid(False) # Disable vertical lines
+        ax.xaxis.grid(False)  # Disable vertical lines
         fig.tight_layout()
         fig.savefig(fig_filename, transparent=True)
         self.assertTrue(os.path.isfile(fig_filename + '.png'))
@@ -302,15 +302,14 @@ class ThesisDiagrams(unittest.TestCase):
 
         feats = self.comms_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
 
-        self.save_feature_plot(feats, fig_filename, annotate= 0.2)
-
+        self.save_feature_plot(feats, fig_filename, annotate=0.2)
 
     def testPhysMetricTrustRelevance(self):
         fig_filename = 'phys_metric_trust_relevance'
 
         feats = self.phys_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
 
-        self.save_feature_plot(feats, fig_filename, annotate = 1)
+        self.save_feature_plot(feats, fig_filename, annotate=1)
 
     def testFullMetricCorrs(self):
         input_filename = 'input/full_metric_correlations'
@@ -386,212 +385,168 @@ class ThesisDiagrams(unittest.TestCase):
                 _trust_observations = trust_observations
             else:
                 _trust_observations = trust_observations[key]
-            best_d = uncpickle(fig_basedir+'/best_{}_runs'.format(subset_str))['Fair']
+            best_d = uncpickle(fig_basedir + '/best_{}_runs'.format(subset_str))['Fair']
             for target_str, best in best_d.items():
                 trust_perspective = generate_node_trust_perspective(
                     _trust_observations.xs(target_str, level='var'),
                     metric_weights=pd.Series(best[1]))
-                weights[(subset_str,target_str)] = best[1].copy()
-                time_meaned_plots[(subset_str,target_str)] = plot_trust_line_graph(trust_perspective \
-                                                                                   .xs(best[0], level=['observer','run']) \
-                                                                                   .dropna(axis=1, how='all'),
-                                                                                   stds=False,
-                                                                                   spans=6,
-                                                                                   box='complete',
-                                                                                   means='time',
-                                                                                   _texcol=_texcol,
-                                                                                   _texfac=_texfac)
-                instantaneous_meaned_plots[(subset_str,target_str)] = plot_trust_line_graph(trust_perspective \
-                                                                                            .xs(best[0], level=['observer','run']) \
-                                                                                            .dropna(axis=1, how='all'),
-                                                                                            stds=False,
-                                                                                            spans=6,
-                                                                                            box='complete',
-                                                                                            means='instantaneous',
-                                                                                            _texcol=_texcol,
-                                                                                            _texfac=_texfac)
+                weights[(subset_str, target_str)] = best[1].copy()
+                time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
+                                                                                    .xs(best[0],
+                                                                                        level=['observer', 'run']) \
+                                                                                    .dropna(axis=1, how='all'),
+                                                                                    stds=False,
+                                                                                    spans=6,
+                                                                                    box='complete',
+                                                                                    means='time',
+                                                                                    _texcol=_texcol,
+                                                                                    _texfac=_texfac)
+                instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
+                                                                                             .xs(best[0],
+                                                                                                 level=['observer',
+                                                                                                        'run']) \
+                                                                                             .dropna(axis=1, how='all'),
+                                                                                             stds=False,
+                                                                                             spans=6,
+                                                                                             box='complete',
+                                                                                             means='instantaneous',
+                                                                                             _texcol=_texcol,
+                                                                                             _texfac=_texfac)
 
                 # Plotting using an alternate observer for completeness (presumably bravo)
-                #alt_target = 'Bravo' if 'Bravo' != target else 'Charlie'
+                # alt_target = 'Bravo' if 'Bravo' != target else 'Charlie'
                 if 'Bravo' != best[0][0]:
                     alt_target = 'Bravo'
                 else:
                     alt_target = 'Charlie'
-                alt_time_meaned_plots[(subset_str,target_str)] = plot_trust_line_graph(trust_perspective \
-                                                                                   .xs(best[0], level=['observer','run']) \
-                                                                                   .dropna(axis=1, how='all'),
-                                                                                   target=alt_target,
-                                                                                   stds=False,
-                                                                                   spans=6,
-                                                                                   box='complete',
-                                                                                   means='time',
-                                                                                   _texcol=_texcol,
-                                                                                   _texfac=_texfac)
-                alt_instantaneous_meaned_plots[(subset_str,target_str)] = plot_trust_line_graph(trust_perspective \
-                                                                                            .xs(best[0], level=['observer','run']) \
-                                                                                            .dropna(axis=1, how='all'),
-                                                                                            target=alt_target,
-                                                                                            stds=False,
-                                                                                            spans=6,
-                                                                                            box='complete',
-                                                                                            means='instantaneous',
-                                                                                            _texcol=_texcol,
-                                                                                            _texfac=_texfac)
+                alt_time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
+                                                                                        .xs(best[0],
+                                                                                            level=['observer', 'run']) \
+                                                                                        .dropna(axis=1, how='all'),
+                                                                                        target=alt_target,
+                                                                                        stds=False,
+                                                                                        spans=6,
+                                                                                        box='complete',
+                                                                                        means='time',
+                                                                                        _texcol=_texcol,
+                                                                                        _texfac=_texfac)
+                alt_instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
+                                                                                                 .xs(best[0],
+                                                                                                     level=['observer',
+                                                                                                            'run']) \
+                                                                                                 .dropna(axis=1,
+                                                                                                         how='all'),
+                                                                                                 target=alt_target,
+                                                                                                 stds=False,
+                                                                                                 spans=6,
+                                                                                                 box='complete',
+                                                                                                 means='instantaneous',
+                                                                                                 _texcol=_texcol,
+                                                                                                 _texfac=_texfac)
         inverted_results = defaultdict(list)
         # Time meaned plots and Result inversion
-        for (subset_str, target_str), (fig,ax,result) in time_meaned_plots.items():
+        for (subset_str, target_str), (fig, ax, result) in time_meaned_plots.items():
             fig_filename = "best_{}_run_time_{}".format(subset_str, target_str)
-            #ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+            # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
-            #))
+            # ))
             format_axes(ax)
             fig.savefig(fig_filename, transparent=True)
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str,target_str
-            inverted_results[subset_str].append((target_str,result))
+            print subset_str, target_str
+            inverted_results[subset_str].append((target_str, result))
 
         # instanteous plots
-        for (subset_str, target_str), (fig,ax,result) in instantaneous_meaned_plots.items():
+        for (subset_str, target_str), (fig, ax, result) in instantaneous_meaned_plots.items():
             fig_filename = "best_{}_run_instantaneous_{}".format(subset_str, target_str)
-            #ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+            # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
-            #))
+            # ))
             format_axes(ax)
             fig.savefig(fig_filename, transparent=True)
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str,target_str
+            print subset_str, target_str
 
         # ALTERNATE Time meaned plots and Result inversion
-        for (subset_str, target_str), (fig,ax,result) in alt_time_meaned_plots.items():
+        for (subset_str, target_str), (fig, ax, result) in alt_time_meaned_plots.items():
             fig_filename = "best_{}_run_alt_time_{}".format(subset_str, target_str)
-            #ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+            # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
-            #))
+            # ))
             format_axes(ax)
             fig.savefig(fig_filename, transparent=True)
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str,target_str
-            inverted_results[subset_str].append((target_str,result))
+            print subset_str, target_str
+            inverted_results[subset_str].append((target_str, result))
 
         # ALTERNATE instanteous plots
-        for (subset_str, target_str), (fig,ax,result) in alt_instantaneous_meaned_plots.items():
+        for (subset_str, target_str), (fig, ax, result) in alt_instantaneous_meaned_plots.items():
             fig_filename = "best_{}_run_alt_instantaneous_{}".format(subset_str, target_str)
-            #ax.set_title("Example {} Metric Weighted Assessment for {}".format(
+            # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
             #    subset_str.capitalize(),
             #    target_str
-            #))
+            # ))
             format_axes(ax)
             fig.savefig(fig_filename, transparent=True)
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str,target_str
-
+            print subset_str, target_str
 
         # Dump Best weights from best runs to a table
         w_df = pd.concat([pd.Series(weight, index=key_d[subset.lower()])
-                          for (subset,_), weight in weights.items()],
+                          for (subset, _), weight in weights.items()],
                          keys=weights.keys(),
-                         names=['subset','target','metric']).unstack(level='metric')
-
+                         names=['subset', 'target', 'metric']).unstack(level='metric')
 
         # TODO Guaranteed to break (or give really weird results) when new subsets added
         if len(w_df.index.levels[0]) == 3:
-            subset_reindex_keys = ['full','comms','phys']
+            subset_reindex_keys = ['full', 'comms', 'phys']
         elif len(w_df.index.levels[0]) == 5:
-            subset_reindex_keys = ['full','comms','phys','comms_alt','phys_alt']
+            subset_reindex_keys = ['full', 'comms', 'phys', 'comms_alt', 'phys_alt']
         else:
             raise ValueError("Incorrect number of subsets included; {}".format(w_df.index.levels[0]))
-        w_df = w_df.reindex(subset_reindex_keys,level='subset')[key_order].rename(columns=metric_rename_dict)
+        w_df = w_df.reindex(subset_reindex_keys, level='subset')[key_order].rename(columns=metric_rename_dict)
         w_df = w_df.unstack('target').rename(subset_renamer).stack('target')
-        tex = w_df.to_latex(float_format=lambda x:"%1.3f"%x, index=True, escape=False, column_format="|l|l|*{{{}}}{{c|}}".format(len(key_order)))\
-            .replace('nan','')\
+        tex = w_df.to_latex(float_format=lambda x: "%1.3f" % x, index=True, escape=False,
+                            column_format="|l|l|*{{{}}}{{c|}}".format(len(key_order))) \
+            .replace('nan', '') \
             .split('\n')
-        tex[2]='\multicolumn{2}{|c|}{\diagbox{Domain, Behaviour}{Metric}}'+tex[2].lstrip()[1:] # get rid of the pesky field separator
-        tex.pop(3) #second dimension header; overridden by the above replacement
+        tex[2] = '\multicolumn{2}{|c|}{\diagbox{Domain, Behaviour}{Metric}}' + tex[2].lstrip()[
+                                                                               1:]  # get rid of the pesky field separator
+        tex.pop(3)  # second dimension header; overridden by the above replacement
         # Add hlines between subsets
-        hlines=[]
+        hlines = []
         for i, line in enumerate(tex):
             begin = line.lstrip()
-            if begin and not begin.startswith('&') and not begin.startswith('\\'): # if I'm a subset header line
+            if begin and not begin.startswith('&') and not begin.startswith('\\'):  # if I'm a subset header line
                 hlines.append(i)
-        for i,j in enumerate(hlines):
-            if i: # first one already covered by midrule
-                tex.insert(i+j-1,'\midrule') # add a hline above the i found in prev loop
-        tex='\n'.join(tex)
-        with open('input/optimised_weights.tex','w') as f:
+        for i, j in enumerate(hlines):
+            if i:  # first one already covered by midrule
+                tex.insert(i + j - 1, '\midrule')  # add a hline above the i found in prev loop
+        tex = '\n'.join(tex)
+        with open('input/optimised_weights.tex', 'w') as f:
             f.write(tex)
         print tex
 
-        #mkcpickle("/dev/shm/weights", weights)
-
-        # Generate performance assessments for each weighted metric subset domain against tested behaviour
-        perfd = defaultdict()
-        for subset_str, results in inverted_results.items():
-            _rd = {k:v for k,v in results}
-            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev','var','t'])
-            df_mean = _df.groupby(level='bev').agg(np.nanmean)
-            # Take the mean of mean trust values from all other nodes and subtract suspicious node
-            perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
-
-
-        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset','bev'])\
-            .unstack('bev').reindex(subset_reindex_keys)
-        perf_df['Avg.']=perf_df.mean(axis=1)
-        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
-        perf_df = perf_df.rename(subset_renamer)
-
+        # mkcpickle("/dev/shm/weights", weights)
         mkcpickle("/dev/shm/inverted_results", inverted_results)
 
-        tex=perf_df.to_latex(float_format=lambda x:"%1.2f"%x, index=True, column_format="|l|*{4}{c}|r|")\
-            .replace('bev','\diagbox{Domain}{Behaviour}')\
-            .split('\n')
-        tex.pop(3) #second dimension header; overridden by the above replacement
-        tex.insert(-4, '\hline') # Hline before averages
-        tex='\n'.join(tex)
-        with open('input/domain_deltas.tex','w') as f:
-            f.write(tex)
-        print tex
+        # Generate performance assessments for each weighted metric subset domain against tested behaviour
+        self.true_positive_assessment_table(inverted_results, subset_reindex_keys)
 
         # Generate performance assessments for each weighted metric subset domain against tested behaviour
-        # ALTERNATIVE ASSESSMENT
-        perfd = defaultdict()
-        for subset_str, results in inverted_results.items():
-            _rd = {k:v for k,v in results}
-            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev','var','t'])
-            df_mean = _df.groupby(level='bev').agg(np.nanmean)
-            # Take the mean of mean trust values from all other nodes and subtract suspicious node
-            perfd[subset_str] = pd.DataFrame(
-                [df_mean.drop(x, axis=1).apply(np.nanmean, axis=1) - df_mean[x]
-                 for x in df_mean.columns
-                 if x != target])\
-                .mean(axis=0)
-
-
-        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset','bev'])\
-            .unstack('bev').reindex(subset_reindex_keys)
-        perf_df['Avg.']=perf_df.mean(axis=1)
-        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
-        perf_df = perf_df.rename(subset_renamer)
-
-        tex=perf_df.to_latex(float_format=lambda x:"%1.2f"%x, index=True, column_format="|l|*{4}{c}|r|")\
-            .replace('bev','\diagbox{Domain}{Behaviour}')\
-            .split('\n')
-        tex.pop(3) #second dimension header; overridden by the above replacement
-        tex.insert(-4, '\hline') # Hline before averages
-        tex='\n'.join(tex)
-        with open('input/domain_deltas_minus.tex','w') as f:
-            f.write(tex)
-        print tex
+        # FALSE POSITIVE ASSESSMENT (dT^-)
+        self.false_positive_assessment_table(inverted_results, subset_reindex_keys)
 
         for subset_str, results in inverted_results.items():
             fig_size = latexify(columns=_texcol, factor=_texfac)
@@ -600,7 +555,7 @@ class ThesisDiagrams(unittest.TestCase):
 
             #        _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
 
-            #results.boxplot(ax=ax)
+            # results.boxplot(ax=ax)
             fig_filename = "box_{}_run_{}".format(subset_str, target_str)
             ax.set_title("Example {} Metric Weighted Assessment for {}".format(
                 subset_renamer(subset_str),
@@ -611,7 +566,107 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str,target_str
+            print subset_str, target_str
+
+    def true_positive_assessment_table(self, inverted_results, subset_reindex_keys):
+        perfd = defaultdict()
+        for subset_str, results in inverted_results.items():
+            _rd = {k: v for k, v in results}
+            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev', 'var', 't'])
+            df_mean = _df.groupby(level='bev').agg(np.nanmean)
+            # Take the mean of mean trust values from all other nodes and subtract suspicious node
+            perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
+        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
+            .unstack('bev').reindex(subset_reindex_keys)
+        perf_df['Avg.'] = perf_df.mean(axis=1)
+        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
+        perf_df = perf_df.rename(subset_renamer)
+        tex = perf_df.to_latex(float_format=lambda x: "%1.2f" % x, index=True, column_format="|l|*{4}{c}|r|") \
+            .replace('bev', '\diagbox{Domain}{Behaviour}') \
+            .split('\n')
+        tex.pop(3)  # second dimension header; overridden by the above replacement
+        tex.insert(-4, '\hline')  # Hline before averages
+        tex = '\n'.join(tex)
+        with open('input/domain_deltas.tex', 'w') as f:
+            f.write(tex)
+        print tex
+
+    def false_positive_assessment_table(self, inverted_results, subset_reindex_keys):
+        perfd = defaultdict()
+        for subset_str, results in inverted_results.items():
+            _rd = {k: v for k, v in results}
+            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev', 'var', 't'])
+            df_mean = _df.groupby(level='bev').agg(np.nanmean)
+            # Take the mean of mean trust values from all other nodes and subtract suspicious node
+            perfd[subset_str] = pd.DataFrame(
+                [df_mean.drop(x, axis=1).apply(np.nanmean, axis=1) - df_mean[x]
+                 for x in df_mean.columns
+                 if x != target]) \
+                .mean(axis=0)
+        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
+            .unstack('bev').reindex(subset_reindex_keys)
+        perf_df['Avg.'] = perf_df.mean(axis=1)
+        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
+        perf_df = perf_df.rename(subset_renamer)
+        tex = perf_df.to_latex(float_format=lambda x: "%1.2f" % x, index=True, column_format="|l|*{4}{c}|r|") \
+            .replace('bev', '\diagbox{Domain}{Behaviour}') \
+            .split('\n')
+        tex.pop(3)  # second dimension header; overridden by the above replacement
+        tex.insert(-4, '\hline')  # Hline before averages
+        tex = '\n'.join(tex)
+        with open('input/domain_deltas_minus.tex', 'w') as f:
+            f.write(tex)
+        print tex
+
+    def true_positive_assessment_table_time_meaned(self, inverted_results, subset_reindex_keys):
+        perfd = defaultdict()
+        for subset_str, results in inverted_results.items():
+            _rd = {k: v for k, v in results}
+            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev', 'var', 't'])
+            df_mean = _df.groupby(level='bev').agg(np.nanmean)
+            # Take the mean of mean trust values from all other nodes and subtract suspicious node
+            perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
+        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
+            .unstack('bev').reindex(subset_reindex_keys)
+        perf_df['Avg.'] = perf_df.mean(axis=1)
+        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
+        perf_df = perf_df.rename(subset_renamer)
+        tex = perf_df.to_latex(float_format=lambda x: "%1.2f" % x, index=True, column_format="|l|*{4}{c}|r|") \
+            .replace('bev', '\diagbox{Domain}{Behaviour}') \
+            .split('\n')
+        tex.pop(3)  # second dimension header; overridden by the above replacement
+        tex.insert(-4, '\hline')  # Hline before averages
+        tex = '\n'.join(tex)
+        with open('input/domain_time_deltas.tex', 'w') as f:
+            f.write(tex)
+        print tex
+
+    def false_positive_assessment_table_time_meaned(self, inverted_results, subset_reindex_keys):
+        perfd = defaultdict()
+        for subset_str, results in inverted_results.items():
+            _rd = {k: v for k, v in results}
+            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev', 'var', 't'])
+            df_mean = _df.groupby(level='bev').agg(np.nanmean)
+            # Take the mean of mean trust values from all other nodes and subtract suspicious node
+            perfd[subset_str] = pd.DataFrame(
+                [df_mean.drop(x, axis=1).apply(np.nanmean, axis=1) - df_mean[x]
+                 for x in df_mean.columns
+                 if x != target]) \
+                .mean(axis=0)
+        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
+            .unstack('bev').reindex(subset_reindex_keys)
+        perf_df['Avg.'] = perf_df.mean(axis=1)
+        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
+        perf_df = perf_df.rename(subset_renamer)
+        tex = perf_df.to_latex(float_format=lambda x: "%1.2f" % x, index=True, column_format="|l|*{4}{c}|r|") \
+            .replace('bev', '\diagbox{Domain}{Behaviour}') \
+            .split('\n')
+        tex.pop(3)  # second dimension header; overridden by the above replacement
+        tex.insert(-4, '\hline')  # Hline before averages
+        tex = '\n'.join(tex)
+        with open('input/domain_time_deltas_minus.tex', 'w') as f:
+            f.write(tex)
+        print tex
 
     def test(self):
         input_filename = 'input/phys_metric_correlations'
@@ -626,7 +681,6 @@ class ThesisDiagrams(unittest.TestCase):
             trust_observations = store.trust.dropna()
         map_levels(trust_observations, var_rename_dict)
 
-
         plots = {}
         weights = {}
         for subset_str, key in key_d.items():
@@ -634,7 +688,7 @@ class ThesisDiagrams(unittest.TestCase):
                 _trust_observations = trust_observations
             else:
                 _trust_observations = trust_observations[key]
-            best_d = uncpickle(fig_basedir+'/best_{}_runs'.format(subset_str))['Fair']
+            best_d = uncpickle(fig_basedir + '/best_{}_runs'.format(subset_str))['Fair']
             for target_str, best in best_d.items():
                 test_weight = generate_node_trust_perspective(
                     _trust_observations.xs(target_str, level='var'),
@@ -643,7 +697,7 @@ class ThesisDiagrams(unittest.TestCase):
         fig_filename_prefix = 'boxplots_'
         fig_gen = []
 
-        for (subset_str, target_str), (fig,ax,result) in plots.items():
+        for (subset_str, target_str), (fig, ax, result) in plots.items():
             fig_filename = "img/box_{}_run_{}".format(subset_str, target_str)
             ax.set_title("Example {} Metric Weighted Assessment for {}".format(
                 subset_renamer(subset_str),
@@ -654,14 +708,12 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str,target_str
+            print subset_str, target_str
         for fig, ax in fig_gen:
             fig_filename = fig_filename_prefix + ax.get_title().lower().replace(' ', '_') + '.png'
             fig.savefig(fig_filename)
             self.assertTrue(os.path.isfile(fig_filename))
 
-
-
-#if __name__ == '__main__':
+# if __name__ == '__main__':
 #    Aaamas.recompute_features_in_shared(signed=True)
 #    Aaamas.recompute_features_in_shared(signed=False)

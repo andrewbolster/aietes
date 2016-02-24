@@ -65,7 +65,6 @@ Noah Spurrier 20020822
 
 
 class ExceptionFSM(Exception):
-
     """This is the FSM Exception class."""
 
     def __init__(self, value):
@@ -76,7 +75,6 @@ class ExceptionFSM(Exception):
 
 
 class FSM(object):
-
     """This is a Finite State Machine (FSM).
     """
 

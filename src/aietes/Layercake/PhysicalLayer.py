@@ -204,7 +204,6 @@ class PhysicalLayer(object):
 
 
 class Transducer(Sim.Resource):
-
     """Transducer:  Uses a SimPy Resource model.
     --Incoming packets (from the channel): can request the resource
     and are allowed to interfere with one another.
@@ -346,7 +345,6 @@ class Transducer(Sim.Resource):
 
 
 class IncomingPacket(Sim.Process):
-
     """IncomingPacket: A small class to represent a message being received
         by the transducer.  It keeps track of signal power as well as the
         maximum interference that occurs over its lifetime (worst case scenario).
@@ -423,7 +421,6 @@ class IncomingPacket(Sim.Process):
 
 
 class OutgoingPacket(Sim.Process):
-
     """OutgoingPacket: A small class to represent a message being transmitted
         by the transducer.  It establishes the packet duration according to
         the bandwidth.
@@ -493,7 +490,6 @@ class OutgoingPacket(Sim.Process):
 #####################################################################
 
 class AcousticEventListener(Sim.Process):
-
     """AcousticEventListener: No physical analog.
     Waits for another node to send something and then activates
     an Arrival Scheduler instance.
@@ -522,7 +518,6 @@ class AcousticEventListener(Sim.Process):
 #####################################################################
 
 class ArrivalScheduler(Sim.Process):
-
     """ArrivalScheduler class: simulates the transit time of a message
     """
 
@@ -537,7 +532,7 @@ class ArrivalScheduler(Sim.Process):
 
         if distance_to > 0.01:  # I should not receive my own transmissions
             receive_power = params["power"] - \
-                attenuation_db(params["frequency"], distance_to)
+                            attenuation_db(params["frequency"], distance_to)
             # Speed of sound in water = 1482.0 m/s
             travel_time = distance_to / transducer.physical_layer.medium_speed
 
@@ -616,7 +611,7 @@ def thorpe(f, heel=1):
     f2 = f ** 2
     if f > heel:
         absorption_coeff = 0.11 * \
-            (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
+                           (f2 / (1 + f2)) + 44.0 * (f2 / (4100 + f2)) + 0.000275 * f2 + 0.003
     else:
         absorption_coeff = 0.002 + 0.11 * (f2 / (1 + f2)) + 0.011 * f2
     return absorption_coeff  # dB/km

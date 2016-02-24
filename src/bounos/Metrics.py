@@ -23,7 +23,6 @@ from aietes.Tools import mag
 
 
 class Metric(object):
-
     """
     This superclass provides abstracted methods for generating, updating and presenting
         simulation data
@@ -93,7 +92,6 @@ class Metric(object):
 
 
 class StddevOfDistance(Metric):
-
     """
     Measures the level of variation (stddev) of the distance between each node and the centre of
         the fleet
@@ -105,7 +103,6 @@ class StddevOfDistance(Metric):
 
 
 class StddevOfHeading(Metric):
-
     """
     Measures the level of variation (stddev) of the mag of the heading distance from fleet
         average heading
@@ -116,7 +113,6 @@ class StddevOfHeading(Metric):
 
 
 class AvgMagOfHeading(Metric):
-
     """
     Measures the average node speed in the fleet across time
     """
@@ -126,7 +122,6 @@ class AvgMagOfHeading(Metric):
 
 
 class DeviationOfHeading(Metric):
-
     """
     Measured the per node deviation from the fleet path, therefore the 'average' is zero
     However, since INHD is unsigned, this isn're really the case, so take the avg of the vals

@@ -64,7 +64,6 @@ log = logging.getLogger(__name__)
 
 
 class Scenario(object):
-
     """ Scenario Object
 
     The Scenario Object deals with config management and passthrough, as well as some optional
@@ -219,8 +218,8 @@ class Scenario(object):
                 else:
                     self.datarun[run] = return_dict
                 logging.info("%s(%s):%f%%"
-                         % (run, return_dict['data_file'],
-                            100.0 * float(sim_time) / prep_stats['sim_time']))
+                             % (run, return_dict['data_file'],
+                                100.0 * float(sim_time) / prep_stats['sim_time']))
 
             except (KeyboardInterrupt, SystemExit):
                 raise
@@ -331,10 +330,12 @@ class Scenario(object):
         """
         if self.committed:
             raise (RuntimeError("Attempted to commit twice (or more)"))
-        logging.info("Scenario {} Committed with {} nodes configured and {} inherited from config file".format(self.title,
-                                                                                     len(self.nodes.keys(
-                                                                                     )),
-                                                                                     self.node_count))
+        logging.info(
+            "Scenario {} Committed with {} nodes configured and {} inherited from config file".format(self.title,
+                                                                                                      len(
+                                                                                                          self.nodes.keys(
+                                                                                                          )),
+                                                                                                      self.node_count))
         if self.node_count > len(self.nodes.keys()):
             self.add_default_node(count=self.node_count - len(self.nodes.keys()))
 
@@ -418,7 +419,7 @@ class Scenario(object):
                 RuntimeError("Attempted to modify scenario after committing"))
         if hasattr(self, "node_count"):
             logging.info("Updating nodecount from %d to %d" %
-                  (self.node_count, count))
+                         (self.node_count, count))
         self.node_count = count
 
     def set_duration(self, tmax):
@@ -537,13 +538,12 @@ class Scenario(object):
         if self.committed:
             raise RuntimeError(
                 "Attempting to update default node config after committing")
-        logging.info("Updating Default node: {}:{}".format(variable,value))
+        logging.info("Updating Default node: {}:{}".format(variable, value))
         self.update_node(self._default_node_config, variable, value)
         logging.info(self._default_node_config['MAC']['protocol'])
 
 
 class ExperimentManager(object):
-
     """
 
     :param node_count:
@@ -823,7 +823,6 @@ class ExperimentManager(object):
 
         self.update_node_counts(self.node_count)
 
-
     def add_minority_n_behaviour_suite(self, behaviour_list, n_minority=1, title="Behaviour"):
         """
         Generate scenarios based on a list of 'attacking' behaviours, i.e. minority behaviours
@@ -1059,9 +1058,9 @@ class ExperimentManager(object):
             for i, r in enumerate(stats):
                 analysis = behaviour_analysis_dict(s.datarun[i])
                 confident = analysis[
-                    'trust_stdev'] > 100  # TODO This needs to be dynamic, possibly based on n_metrics and t
+                                'trust_stdev'] > 100  # TODO This needs to be dynamic, possibly based on n_metrics and t
                 correct_detection = (not bool(suspects) and not confident) or analysis[
-                    'suspect_name'] in suspects
+                                                                                  'suspect_name'] in suspects
                 correctness_stats[t].append(
                     (correct_detection, confident))
                 if verbose:
@@ -1079,7 +1078,7 @@ class ExperimentManager(object):
                         analysis['suspect_confidence'],
                         str(analysis["trust_average"])
                     )
-                    )
+                          )
 
             print("AVG\t%.3fm (%.4f)\t%.2f, %.2f \t%d (%.0f%%)"
                   % (avg_of_dict(stats, ['motion', 'fleet_distance']),
@@ -1181,7 +1180,6 @@ class ExperimentManager(object):
 
 
 class RecoveredExperiment(ExperimentManager):
-
     """
     SubClass to recover a partially executed experiment from an experiment directory.
 

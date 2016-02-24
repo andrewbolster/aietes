@@ -38,7 +38,6 @@ _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 
 class EventLoggingApp(wx.PySimpleApp):
-
     @staticmethod
     def filter_event(evt, *args, **kwargs):
         logging.info(evt)

@@ -31,7 +31,6 @@ from aietes.Tools import _results_dir as default_results_dir
 
 
 class LookupMethods(unittest.TestCase):
-
     def setUp(self):
         """
         Populate the generated results dir with a basic simulation
@@ -72,7 +71,6 @@ class LookupMethods(unittest.TestCase):
 
 
 class DataPackageCreation(unittest.TestCase):
-
     def testSourceParsing(self):
         """ Ensure that DataPackage is correctly created by using a sourcefile: 
             does NOT test numerical validitity of anything
@@ -94,7 +92,7 @@ class DataPackageCreation(unittest.TestCase):
             names.append("testname")
 
         contributions = [
-            [None for _ in range(s_tmax)] for _ in range(s_n_nodes)],
+                            [None for _ in range(s_tmax)] for _ in range(s_n_nodes)],
         achievements = [[] for _ in range(s_n_nodes)]
         environment = np.empty(3, dtype=int),
         config = {'testconfig': True},

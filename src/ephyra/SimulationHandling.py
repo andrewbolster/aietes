@@ -22,11 +22,11 @@ from threading import *
 
 from ephyra import wx
 
+
 # Thread class that executes processing
 
 
 class WorkerThread(Thread):
-
     """Worker Thread Class."""
 
     def __init__(self, notify_window):
