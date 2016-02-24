@@ -120,7 +120,7 @@ class Environment(object):
                 valid = self.is_safe(candidate_pos, 50)
                 if DEBUG:
                     self.logger.debug(
-                        "Candidate position: %s:%s" % (candidate_pos, valid))
+                        "Candidate position: {0!s}:{1!s}".format(candidate_pos, valid))
         return tuple(candidate_pos)
 
     def is_outside(self, position, tolerance=10):
@@ -165,7 +165,7 @@ class Environment(object):
                 update_distance = distance(
                     self.map[object_id].position, position)
                 if DEBUG:
-                    self.logger.debug("Moving %s %f from %s to %s @ %d" % (object_name,
+                    self.logger.debug("Moving {0!s} {1:f} from {2!s} to {3!s} @ {4:d}".format(object_name,
                                                                            update_distance,
                                                                            self.map[
                                                                                object_id].position,
@@ -175,7 +175,7 @@ class Environment(object):
             except KeyError:
                 if DEBUG:
                     self.logger.debug(
-                        "Creating map entry for %s at %s @ %d" % (object_name, position, Sim.now()))
+                        "Creating map entry for {0!s} at {1!s} @ {2:d}".format(object_name, position, Sim.now()))
                 self.map[object_id] = MapEntry(
                     object_id, position, velocity, object_name)
             self.pos_log.append(Log(name=object_name,

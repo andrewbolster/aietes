@@ -36,7 +36,7 @@ def default():
     """Set the default attribute values"""
     for color in COLORS:
         setattr(MODULE, color, '')
-        setattr(MODULE, 'BG_%s' % color, '')
+        setattr(MODULE, 'BG_{0!s}'.format(color), '')
     for control in CONTROLS:
         setattr(MODULE, control, '')
     for value in VALUES:
@@ -54,12 +54,12 @@ def setup():
 
     for color in COLORS:
         # Get the color index from curses
-        color_index = getattr(curses, 'COLOR_%s' % color)
+        color_index = getattr(curses, 'COLOR_{0!s}'.format(color))
         # Set the color escape sequence after filling the template with index
         setattr(MODULE, color, curses.tparm(fg_color_seq, color_index))
         # Set background escape sequence
         setattr(
-            MODULE, 'BG_%s' % color, curses.tparm(bg_color_seq, color_index)
+            MODULE, 'BG_{0!s}'.format(color), curses.tparm(bg_color_seq, color_index)
         )
     for control in CONTROLS:
         # Set the control escape sequence
@@ -84,5 +84,5 @@ try:
     setup()
 except Exception, e:
     # There is a failure; set all attributes to default
-    print 'Warning: %s' % e
+    print 'Warning: {0!s}'.format(e)
     default()

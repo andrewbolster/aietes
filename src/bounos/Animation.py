@@ -69,7 +69,7 @@ class AIETESAnimation(mplanimation.FuncAnimation):
         for idx, data in enumerate(self.new_saved_frame_seq()):
             # TODO: Need to see if turning off blit is really necessary
             self._draw_next_frame(data, blit=blit)
-            fname = '%s%04d.png' % (frame_prefix, idx)
+            fname = '{0!s}{1:04d}.png'.format(frame_prefix, idx)
             fnames.append(fname)
             self._fig.savefig(fname)
 
@@ -93,9 +93,9 @@ class AIETESAnimation(mplanimation.FuncAnimation):
         # Returns the command line parameters for subprocess to use
         # ffmpeg to create a movie
         return ['ffmpeg', '-y', '-r', str(fps),
-                '-b', '1800k', '-i', '%s%%04d.png' % frame_prefix,
+                '-b', '1800k', '-i', '{0!s}%04d.png'.format(frame_prefix),
                 '-vcodec', codec, '-vpre', 'slow', '-vpre', 'baseline',
-                "%s.mp4" % fname]
+                "{0!s}.mp4".format(fname)]
 
     @staticmethod
     def mencoder_cmd(fname, fps, codec, frame_prefix):
@@ -105,9 +105,9 @@ class AIETESAnimation(mplanimation.FuncAnimation):
                 '-nosound',
                 '-quiet',
                 '-ovc', 'lavc',
-                '-lavcopts', "vcodec=%s" % codec,
-                '-o', "%s.mp4" % fname,
-                '-mf', 'type=png:fps=24', 'mf://%s%%04d.png' % frame_prefix]
+                '-lavcopts', "vcodec={0!s}".format(codec),
+                '-o', "{0!s}.mp4".format(fname),
+                '-mf', 'type=png:fps=24', 'mf://{0!s}%04d.png'.format(frame_prefix)]
 
     def _make_movie(self, fname, fps, codec, frame_prefix, cmd_gen=None):
         # Uses subprocess to call the program for assembling frames into a

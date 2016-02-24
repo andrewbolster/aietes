@@ -84,7 +84,7 @@ class MetricView(object):
         self.ndim = 0
         self.last_wanted = np.asarray([])
         if __debug__:
-            logging.debug("%s" % self)
+            logging.debug("{0!s}".format(self))
 
     def plot(self, wanted=None, time=None):
         """
@@ -99,7 +99,7 @@ class MetricView(object):
         if all(wanted is True) or self.ndim == 1:
             self.ax.plot(self.data, alpha=0.3)
         else:
-            logging.info("Printing %s with Wanted:%s" % (self, wanted))
+            logging.info("Printing {0!s} with Wanted:{1!s}".format(self, wanted))
             self.ax.plot(
                 np.ndarray(buffer=self.data, shape=self.data.shape)[:, wanted], alpha=0.3)
 
@@ -143,7 +143,7 @@ class MetricView(object):
             ymin -= margin
             ymax += margin
         except ValueError as e:
-            logging.critical("Data:%s, XLim:%s" % (data, xlim))
+            logging.critical("Data:{0!s}, XLim:{1!s}".format(data, xlim))
             raise e
         return ymin, ymax
 
@@ -225,7 +225,7 @@ class EphyraNotebook(wx.Frame):
             pages.remove(VisualNavigator)
 
         for page in pages:
-            self.log.debug("Adding Page: %s" % page.__name__)
+            self.log.debug("Adding Page: {0!s}".format(page.__name__))
             self.nb.AddPage(page(self.nb, self), page.__name__)
 
         self.status_bar = self.CreateStatusBar()
@@ -324,7 +324,7 @@ class EphyraNotebook(wx.Frame):
         :raise e:
         """
         plot_size = self.GetClientSize()
-        self.log.debug("plotsize:%s" % str(plot_size))
+        self.log.debug("plotsize:{0!s}".format(str(plot_size)))
 
         self.p.SetSize(plot_size)
         self.p.Layout()
@@ -392,4 +392,4 @@ class EphyraNotebook(wx.Frame):
         :param tmax:
         """
         self.status_bar.SetStatusText(
-            "%s:%d/%d" % ("SIM" if self.ctl.is_simulation() else "REC", t, tmax), number=2)
+            "{0!s}:{1:d}/{2:d}".format("SIM" if self.ctl.is_simulation() else "REC", t, tmax), number=2)

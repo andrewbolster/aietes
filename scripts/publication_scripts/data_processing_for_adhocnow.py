@@ -294,7 +294,7 @@ table.index.set_names('Separation(m)', inplace=True)
 table.reset_index(inplace=True)
 # table['Ideal Delivery Time(s)'] = table['Separation(m)']/1400.0 + 9600.0/(10000.0)
 
-tex = table.to_latex(float_format=lambda x: "%1.2f" % x, index=False, column_format="""
+tex = table.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=False, column_format="""
 *{2}{@{\\hspace{1em}}r@{\\hspace{1em}}}
 *{3}{@{\\hspace{1em}}p{0.1\\textwidth} @{\\hspace{1em}}}  """)
 os.mkdir('input')

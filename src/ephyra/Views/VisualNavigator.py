@@ -205,7 +205,7 @@ class VisualNavigator(wx.Panel):
         shape = self.ctl.get_extent()
         self.log.info(shape)
         self.plot_axes.set_title(
-            "Tracking overview of %s" % self.ctl.get_model_title())
+            "Tracking overview of {0!s}".format(self.ctl.get_model_title()))
         self.plot_axes.set_xlim3d((0, shape[0]))
         self.plot_axes.set_ylim3d((0, shape[1]))
         self.plot_axes.set_zlim3d((0, shape[2]))
@@ -216,7 +216,7 @@ class VisualNavigator(wx.Panel):
         # Initialise 3D Plot Lines
         (xs, ys, zs) = self.ctl.get_3d_trail()
         self.names = self.ctl.get_vector_names()
-        self.log.info("Got %s" % str(xs.shape))
+        self.log.info("Got {0!s}".format(str(xs.shape)))
 
         self.lines = [
             self.plot_axes.plot(x, y, z, label=self.names[i], alpha=self.trail_opacity)[0] for
@@ -232,15 +232,15 @@ class VisualNavigator(wx.Panel):
         metrics = self.ctl.get_metrics()
         if len(metrics) != len(self.metric_axes):
             self.log.info(
-                "Not enough height for selected metrics (%s) " % len(metrics))
+                "Not enough height for selected metrics ({0!s}) ".format(len(metrics)))
         for i, (axes, metric) in enumerate(zip(self.metric_axes, metrics)):
             self.metric_views[i] = MetricView(axes, metric)
 
         # Initialise Waypoints if present
         waypoints = self.ctl.get_waypoints()
         if waypoints is not None and waypoints.size > 0:
-            self.log.debug("Found [%s] waypoints" %
-                           str(getattr(waypoints, "shape", "No Shape")))
+            self.log.debug("Found [{0!s}] waypoints".format(
+                           str(getattr(waypoints, "shape", "No Shape"))))
             # Case where there is a single common waypoint set, set up spheres
             if waypoints.ndim == 2:
                 for (x, y, z), r in waypoints:
@@ -295,7 +295,7 @@ class VisualNavigator(wx.Panel):
                 label.set_position((xs[0], ys[0]))
                 label.set_3d_properties(zs[0])
             except TypeError as err:
-                self.log.error("x:%s,y:%s,z:%s" % (xs[0], ys[0], zs[0]))
+                self.log.error("x:{0!s},y:{1!s},z:{2!s}".format(xs[0], ys[0], zs[0]))
                 raise
             except IndexError:
                 # In the case of the 'first time'. This should probably be removed in the case
@@ -418,7 +418,7 @@ class VisualNavigator(wx.Panel):
         xs, ys, zs = self.sphere(x, y, z, r)
         colorval = self.plot_pos_stddev_norm(s)
         if self.frame.args.verbose:
-            self.log.debug("Average position: %s, Color: %s[%s], StdDev: %s" % (
+            self.log.debug("Average position: {0!s}, Color: {1!s}[{2!s}], StdDev: {3!s}".format(
                 str((x, y, z)), str(self.plot_sphere_cm(colorval)), str(colorval), str(s)))
 
         self._remove_sphere()
@@ -444,7 +444,7 @@ class VisualNavigator(wx.Panel):
             colorval = self.plot_head_mag_norm(magnitude)
             if self.frame.args.verbose:
                 self.log.debug(
-                    "Average heading: %s, Color: [%s], Speed: %s" % (
+                    "Average heading: {0!s}, Color: [{1!s}], Speed: {2!s}".format(
                         str(headings[node]), str(colorval), str(magnitude)))
 
             xs, ys, zs = zip(
@@ -518,8 +518,8 @@ class VisualNavigator(wx.Panel):
             try:
                 return self._contrib_colour_dict[contrib_key]
             except KeyError as ke:
-                logging.error("CDict:%s" % self._contrib_colour_dict)
-                raise ke("CDict:%s" % self._contrib_colour_dict)
+                logging.error("CDict:{0!s}".format(self._contrib_colour_dict))
+                raise ke("CDict:{0!s}".format(self._contrib_colour_dict))
 
     def _remove_sphere(self):
         if isinstance(self.sphere_line_collection, Line3DCollection) \
@@ -600,7 +600,7 @@ class VisualNavigator(wx.Panel):
         :param event:
         """
         self.d_t = int(min(max(2, self.d_t * 1.1), self.tmax / 20))
-        self.log.debug("Setting time step to: %s" % self.d_t)
+        self.log.debug("Setting time step to: {0!s}".format(self.d_t))
 
     def on_slower_btn(self, event):
         """
@@ -608,7 +608,7 @@ class VisualNavigator(wx.Panel):
         :param event:
         """
         self.d_t = int(min(max(2, self.d_t * 0.9), self.tmax / 20))
-        self.log.debug("Setting time step to: %s" % self.d_t)
+        self.log.debug("Setting time step to: {0!s}".format(self.d_t))
 
     def on_time_slider(self, event):
         """
@@ -616,7 +616,7 @@ class VisualNavigator(wx.Panel):
         :param event:
         """
         t = self.time_slider.GetValue()
-        self.log.debug("Slider: Setting time to %d" % t)
+        self.log.debug("Slider: Setting time to {0:d}".format(t))
         wx.CallAfter(self.redraw_page, t=t)
 
     ###
@@ -679,7 +679,7 @@ class VisualNavigator(wx.Panel):
         norm_trail = self.trail_slider.GetValue()
         self.trail_length = int(
             norm_trail * (self.ctl.get_final_tmax() / 100.0))
-        self.log.debug("Slider: Setting trail to %d" % self.trail_length)
+        self.log.debug("Slider: Setting trail to {0:d}".format(self.trail_length))
         wx.CallAfter(self.redraw_page)
 
     def on_metric_zoom_chk(self, event):
@@ -767,13 +767,13 @@ class VisualNavigator(wx.Panel):
         :param event:
         """
         plot_size = self.panel_sizer.GetChildren()[0].GetSize()
-        self.log.info("plotsize:%s" % str(plot_size))
+        self.log.info("plotsize:{0!s}".format(str(plot_size)))
 
         self.plot_pnl.SetSize(plot_size)
         self.canvas.SetSize(plot_size)
         canvas_inches = (float(
             plot_size[0]) / self.fig.get_dpi(), float(plot_size[1]) / self.fig.get_dpi())
-        self.log.debug("canvas_inch:%s" % str(canvas_inches))
+        self.log.debug("canvas_inch:{0!s}".format(str(canvas_inches)))
         self.fig.set_size_inches(canvas_inches)
         wx.CallAfter(self.redraw_page)
 
@@ -810,7 +810,7 @@ class DriftingNavigator(VisualNavigator):
                 label.set_position((xs[0], ys[0]))
                 label.set_3d_properties(zs[0])
             except TypeError as err:
-                self.log.error("x:%s,y:%s,z:%s" % (xs[0], ys[0], zs[0]))
+                self.log.error("x:{0!s},y:{1!s},z:{2!s}".format(xs[0], ys[0], zs[0]))
                 raise
             except IndexError:
                 # In the case of the 'first time'. This should probably be removed in the case
@@ -852,7 +852,7 @@ class ECEANavigator(DriftingNavigator):
                 label.set_position((xs[0], ys[0]))
                 label.set_3d_properties(zs[0])
             except TypeError as err:
-                self.log.error("x:%s,y:%s,z:%s" % (xs[0], ys[0], zs[0]))
+                self.log.error("x:{0!s},y:{1!s},z:{2!s}".format(xs[0], ys[0], zs[0]))
                 raise
             except IndexError:
                 # In the case of the 'first time'. This should probably be removed in the case

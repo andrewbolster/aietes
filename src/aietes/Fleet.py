@@ -47,7 +47,7 @@ class Fleet(Sim.Process):
     def __init__(self, nodes, simulation, *args, **kwargs):
         self.logger = kwargs.get(
             "logger", simulation.logger.getChild(__name__))
-        self.logger.info("creating Fleet instance with %d nodes" % len(nodes))
+        self.logger.info("creating Fleet instance with {0:d} nodes".format(len(nodes)))
         Sim.Process.__init__(self, name="Fleet")
         self.nodes = nodes
         self.environment = simulation.environment
@@ -85,7 +85,7 @@ class Fleet(Sim.Process):
             except TypeError as exp:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 self.logger.critical(
-                    "Tried to start progress bar but failed with %s" % traceback.format_exc())
+                    "Tried to start progress bar but failed with {0!s}".format(traceback.format_exc()))
                 progress_bar = None
             except:
                 raise
@@ -119,11 +119,10 @@ class Fleet(Sim.Process):
                 percent_now = (
                     (100 * Sim.now()) / self.simulation.duration_intervals)
                 if DEBUG and percent_now % 5 == 0:
-                    self.logger.info("Fleet  %d%%: %s" %
-                                     (percent_now, self.current_stats()))
+                    self.logger.info("Fleet  {0:d}%: {1!s}".format(percent_now, self.current_stats()))
                 if not DEBUG and percent_now % 1 == 0 and progress_bar is not None:
                     progress_bar.render(int(percent_now),
-                                        'step %s Processing %s...' % (percent_now, self.simulation.title))
+                                        'step {0!s} Processing {1!s}...'.format(percent_now, self.simulation.title))
 
             # Yield for anything the simulation should wait on (i.e. GUI)
             if DEBUG:
@@ -379,7 +378,7 @@ class Fleet(Sim.Process):
                 # array.
                 maxdeviation = avgheading
 
-        return "V:%s,C:%s,D:%s,A:%s" % (avgheading, fleetcenter, maxdistance, maxdeviation)
+        return "V:{0!s},C:{1!s},D:{2!s},A:{3!s}".format(avgheading, fleetcenter, maxdistance, maxdeviation)
 
     def plot_axes_views(self, res=120):
         """

@@ -43,7 +43,7 @@ class PhysicalLayer(object):
     def __init__(self, layercake, config, channel_event):
         self.config = config
         self.layercake = layercake
-        self.logger = layercake.logger.getChild("%s" % self.__class__.__name__)
+        self.logger = layercake.logger.getChild("{0!s}".format(self.__class__.__name__))
 
         # Parameters initialization
 

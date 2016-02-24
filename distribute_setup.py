@@ -45,7 +45,7 @@ except ImportError:
         if sys.platform == 'win32':
             def quote(arg):
                 if ' ' in arg:
-                    return '"%s"' % arg
+                    return '"{0!s}"'.format(arg)
                 return arg
 
             args = [quote(arg) for arg in args]
@@ -58,14 +58,14 @@ SETUPTOOLS_FAKED_VERSION = "0.6c11"
 SETUPTOOLS_PKG_INFO = """\
 Metadata-Version: 1.0
 Name: setuptools
-Version: %s
+Version: {0!s}
 Summary: xxxx
 Home-page: xxx
 Author: xxx
 Author-email: xxx
 License: xxx
 Description: xxx
-""" % SETUPTOOLS_FAKED_VERSION
+""".format(SETUPTOOLS_FAKED_VERSION)
 
 
 def _install(tarball, install_args=()):
@@ -126,8 +126,7 @@ def _build_egg(egg, tarball, to_dir):
 
 
 def _do_download(version, download_base, to_dir, download_delay):
-    egg = os.path.join(to_dir, 'distribute-%s-py%d.%d.egg'
-                       % (version, sys.version_info[0], sys.version_info[1]))
+    egg = os.path.join(to_dir, 'distribute-{0!s}-py{1:d}.{2:d}.egg'.format(version, sys.version_info[0], sys.version_info[1]))
     if not os.path.exists(egg):
         tarball = download_setuptools(version, download_base,
                                       to_dir, download_delay)
@@ -195,7 +194,7 @@ def download_setuptools(version=DEFAULT_VERSION, download_base=DEFAULT_URL,
         from urllib.request import urlopen
     except ImportError:
         from urllib2 import urlopen
-    tgz_name = "distribute-%s.tar.gz" % version
+    tgz_name = "distribute-{0!s}.tar.gz".format(version)
     url = download_base + tgz_name
     saveto = os.path.join(to_dir, tgz_name)
     src = dst = None
@@ -273,7 +272,7 @@ def _same_content(path, content):
 
 
 def _rename_path(path):
-    new_name = path + '.OLD.%s' % time.time()
+    new_name = path + '.OLD.{0!s}'.format(time.time())
     log.warn('Renaming %s to %s', path, new_name)
     os.rename(path, new_name)
     return new_name
@@ -326,9 +325,8 @@ def _create_fake_setuptools_pkg_info(placeholder):
     if not placeholder or not os.path.exists(placeholder):
         log.warn('Could not find the install location')
         return
-    pyver = '%s.%s' % (sys.version_info[0], sys.version_info[1])
-    setuptools_file = 'setuptools-%s-py%s.egg-info' % \
-                      (SETUPTOOLS_FAKED_VERSION, pyver)
+    pyver = '{0!s}.{1!s}'.format(sys.version_info[0], sys.version_info[1])
+    setuptools_file = 'setuptools-{0!s}-py{1!s}.egg-info'.format(SETUPTOOLS_FAKED_VERSION, pyver)
     pkg_info = os.path.join(placeholder, setuptools_file)
     if os.path.exists(pkg_info):
         log.warn('%s already exists', pkg_info)
@@ -392,7 +390,7 @@ def _under_prefix(location):
     args = sys.argv[sys.argv.index('install') + 1:]
     for index, arg in enumerate(args):
         for option in ('--root', '--prefix'):
-            if arg.startswith('%s=' % option):
+            if arg.startswith('{0!s}='.format(option)):
                 top_dir = arg.split('root=')[-1]
                 return location.startswith(top_dir)
             elif arg == option:
@@ -517,7 +515,7 @@ def _extractall(self, path=".", members=None):
             if self.errorlevel > 1:
                 raise
             else:
-                self._dbg(1, "tarfile: %s" % e)
+                self._dbg(1, "tarfile: {0!s}".format(e))
 
 
 def _build_install_args(options):

@@ -525,7 +525,7 @@ def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
         """
         for rect in rects:
             height = rect.get_height()
-            ax.text(rect.get_x() + rect.get_width() / 2., 1.05 * height, '%d' % int(height),
+            ax.text(rect.get_x() + rect.get_width() / 2., 1.05 * height, '{0:d}'.format(int(height)),
                     ha='center', va='bottom')
 
     autolabel(rects1)

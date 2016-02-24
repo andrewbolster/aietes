@@ -60,7 +60,7 @@ class Behaviour(object):
         self.debug = DEBUG and self.node.debug
         self._start_log(self.node)
         if self.debug:
-            self.logger.debug('from bev_config: %s' % self.bev_config)
+            self.logger.debug('from bev_config: {0!s}'.format(self.bev_config))
             # self.logger.setLevel(logging.DEBUG)
         self.update_rate = 1
         self.memory = {}
@@ -81,7 +81,7 @@ class Behaviour(object):
 
     def _start_log(self, parent):
         self.logger = parent.logger.getChild(
-            "Bev:%s" % self.__class__.__name__)
+            "Bev:{0!s}".format(self.__class__.__name__))
 
         self.logger.debug("Launched Behaviour")
 
@@ -132,7 +132,7 @@ class Behaviour(object):
                     self.node.position, self.node.velocity)
             except Exception as exp:
                 self.logger.error(
-                    "%s(%s,%s)" % (behaviour.__name__, self.node.position, self.node.velocity))
+                    "{0!s}({1!s},{2!s})".format(behaviour.__name__, self.node.position, self.node.velocity))
                 raise
 
         force_vector += sum(contributions.values())
@@ -140,13 +140,13 @@ class Behaviour(object):
         # TODO Under Drift, it's probably better to do wall-detection twice: once on node and once on environment
         # force_vector = self.avoid_wall(self.node.get_pos(), self.node.velocity, force_vector)
         if self.debug and DEBUG:
-            self.logger.debug("Response:%s" % force_vector)
+            self.logger.debug("Response:{0!s}".format(force_vector))
         if self.debug and DEBUG:
             total = sum(map(mag, contributions.values()))
             if total > 0:
-                self.logger.debug("contributions: %s of %3f" % (
+                self.logger.debug("contributions: {0!s} of {1:3f}".format(
                     [
-                        "%s:%.f%%" % (func, 100 * mag(value) / total)
+                        "{0!s}:{1:f}%".format(func, 100 * mag(value) / total)
                         for func, value in contributions.iteritems()
                         ], total)
                                   )
@@ -156,7 +156,7 @@ class Behaviour(object):
             total = sum(map(mag, contributions.values()))
             for func, value in contributions.iteritems():
                 self.logger.debug(
-                    "%s:%.2f:%s" % (func, 100 * mag(value) / total, sixvec(value)))
+                    "{0!s}:{1:.2f}:{2!s}".format(func, 100 * mag(value) / total, sixvec(value)))
         force_vector = fudge_normal(force_vector, 0.012)  # Random factor
         self.node.push(force_vector, contributions=contributions)
         return
@@ -203,8 +203,7 @@ class Behaviour(object):
                        d_limit / float(min(distance_val, self.neighbourhood_max_rad))
 
         if distance_val < 1:
-            raise RuntimeError("Too close to %s (%s) moving at %s; I was at %s moving at %s" %
-                               (self.get_nearest_neighbours(repulsive_position)[0].name,
+            raise RuntimeError("Too close to {0!s} ({1!s}) moving at {2!s}; I was at {3!s} moving at {4!s}".format(self.get_nearest_neighbours(repulsive_position)[0].name,
                                 self.get_nearest_neighbours(
                                     repulsive_position)[0].position,
                                 sixvec(
@@ -214,7 +213,7 @@ class Behaviour(object):
                                 ))
         if self.debug:
             self.logger.debug(
-                "Repulsion from %s: %s, at range of %s" % (force_vector, repulsive_position, distance_val))
+                "Repulsion from {0!s}: {1!s}, at range of {2!s}".format(force_vector, repulsive_position, distance_val))
         return force_vector
 
     def attract_to_position(self, position, attractive_position, d_limit=1):
@@ -231,7 +230,7 @@ class Behaviour(object):
                        (min(distance_val, self.neighbourhood_max_rad) / float(d_limit))
         if self.debug:
             self.logger.debug(
-                "Attraction to %s: %s, at range of %s" % (force_vector, attractive_position, distance_val))
+                "Attraction to {0!s}: {1!s}, at range of {2!s}".format(force_vector, attractive_position, distance_val))
         return force_vector
 
     def avoid_wall(self, position, velocity):
@@ -247,7 +246,7 @@ class Behaviour(object):
         if np.any((np.zeros(3) + min_dist) > position):
             if self.debug:
                 self.logger.debug(
-                    "Too Close to the Origin-surfaces: %s" % position)
+                    "Too Close to the Origin-surfaces: {0!s}".format(position))
             offending_dim = position.argmin()
             avoiding_position[offending_dim] = float(0.0)
             avoid = True
@@ -255,7 +254,7 @@ class Behaviour(object):
         if np.any(position > (self.env_shape - min_dist)):
             if self.debug:
                 self.logger.debug(
-                    "Too Close to the Upper-surfaces: %s" % position)
+                    "Too Close to the Upper-surfaces: {0!s}".format(position))
             offending_dim = position.argmax()
             avoiding_position[offending_dim] = float(
                 self.env_shape[offending_dim])
@@ -280,7 +279,7 @@ class Behaviour(object):
                     "Crashed out of environment with given position:{}, wall position:{}".format(position,
                                                                                                  avoiding_position))
                 # response = (avoiding_position-position)
-            self.logger.debug("Wall Avoidance:%s" % response)
+            self.logger.debug("Wall Avoidance:{0!s}".format(response))
             if hasattr(self, 'my_direction') and not hasattr(self, 'time_travelled'):
                 # Something planned to go this way, lets stop that and hope it chooses a better direction
                 self.my_direction = unit(response)
@@ -435,7 +434,7 @@ class Flock(Behaviour):
             # node
             self.neighbourhood_com = vector / len(self.nearest_neighbours)
             if self.debug:
-                self.logger.debug("Cluster Centre,position,factor,neighbours: %s,%s,%s,%s" % (
+                self.logger.debug("Cluster Centre,position,factor,neighbours: {0!s},{1!s},{2!s},{3!s}".format(
                     self.neighbourhood_com, vector, self.clumping_factor, len(self.nearest_neighbours)))
                 # Return the fudged, relative vector to the centre of the
                 # cluster
@@ -445,11 +444,11 @@ class Flock(Behaviour):
             self.logger.error("Zero Division Error: Returning zero vector")
             force_vector = position - position
         except FloatingPointError:
-            self.logger.error("FPE: vector=%s" % str(vector))
+            self.logger.error("FPE: vector={0!s}".format(str(vector)))
             raise
 
         if self.debug:
-            self.logger.debug("Clump:%s" % force_vector)
+            self.logger.debug("Clump:{0!s}".format(force_vector))
         return self.normalize_behaviour(force_vector) * self.clumping_factor
 
     def repulsive_vector(self, position, velocity):
@@ -468,13 +467,13 @@ class Flock(Behaviour):
                     position, neighbour.position, self.collision_avoidance_d)
                 if self.debug:
                     self.logger.debug(
-                        "Avoiding %s:%f:%s" % (
+                        "Avoiding {0!s}:{1:f}:{2!s}".format(
                             neighbour.name, distance(position, neighbour.position), sixvec(part_vector)))
                 force_vector += part_vector
 
                 # Return an inverse vector to the obstacles
         if self.debug and not mag(force_vector) > 0.0:
-            self.logger.debug("Repulse:%s" % force_vector)
+            self.logger.debug("Repulse:{0!s}".format(force_vector))
         return self.normalize_behaviour(force_vector) * self.repulsive_factor
 
     def local_heading(self, position, velocity):
@@ -489,9 +488,9 @@ class Flock(Behaviour):
                                    max(abs(unit(neighbour.velocity))) / 3)
         force_vector = (vector / (len(self.nearest_neighbours)))
         if self.debug:
-            self.logger.debug("Schooling:%s" % force_vector)
+            self.logger.debug("Schooling:{0!s}".format(force_vector))
         if self.debug:
-            self.logger.debug("V:%s,F:%s, %f" % (
+            self.logger.debug("V:{0!s},F:{1!s}, {2:f}".format(
                 unit(velocity), unit(force_vector), spherical_distance(unit(velocity), unit(force_vector))))
         d = spherical_distance(unit(velocity), unit(force_vector))
         return self.normalize_behaviour(force_vector) * self.schooling_factor
@@ -535,7 +534,7 @@ class AlternativeFlockMixin(object):
             nforce_vector = f * v
             if self.debug:
                 self.logger.debug(
-                    "PotentialV: %s, for D:%s, F:%s, V:%s" % (nforce_vector, d, f, v))
+                    "PotentialV: {0!s}, for D:{1!s}, F:{2!s}, V:{3!s}".format(nforce_vector, d, f, v))
             force_vector += nforce_vector
         return force_vector * self.clumping_factor
 
@@ -574,12 +573,12 @@ class WaypointMixin(object):
         """
         if not hasattr(self, str(self.bev_config['waypoint_style'])):
             raise ConfigError(
-                "Cannot generate using waypoint definition:%s" % self.bev_config['waypoint_style'])
+                "Cannot generate using waypoint definition:{0!s}".format(self.bev_config['waypoint_style']))
         else:
             generator = attrgetter(str(self.bev_config['waypoint_style']))
             g = generator(self)
             if self.debug:
-                self.logger.debug("Generating waypoints: %s" % g.__name__)
+                self.logger.debug("Generating waypoints: {0!s}".format(g.__name__))
             g()
 
     def patrol_cube(self):
@@ -776,13 +775,13 @@ class FleetLawnmower(Flock, WaypointMixin):
                 part_vector = unit(-velocity) * mag(part_vector)
                 if self.debug:
                     self.logger.debug(
-                        "Avoiding %s:%f:%s" % (
+                        "Avoiding {0!s}:{1:f}:{2!s}".format(
                             neighbour.name, distance(position, neighbour.position), sixvec(part_vector)))
                 force_vector += part_vector
 
                 # Return an inverse vector to the obstacles
         if self.debug and not mag(force_vector) > 0.0:
-            self.logger.debug("Repulse:%s" % force_vector)
+            self.logger.debug("Repulse:{0!s}".format(force_vector))
         return self.normalize_behaviour(force_vector) * self.repulsive_factor
 
     @staticmethod
@@ -803,14 +802,14 @@ class FleetLawnmower(Flock, WaypointMixin):
             right = max(environment[not bool(base_axis)])
             if altitude is None and len(environment) != 3:
                 raise ConfigError(
-                    "altitude makes no sense for environment %s" % environment)
+                    "altitude makes no sense for environment {0!s}".format(environment))
             elif altitude is None:
                 altitude = np.diff(environment[-1])
 
             inc = np.sign(front - back)
             swath = inc * swath
         except Exception:
-            logging.error("Error on per node lawnmower %s" % str(environment))
+            logging.error("Error on per node lawnmower {0!s}".format(str(environment)))
             raise
 
         step = 0  # on a plateau going left or right (Odd-Rightward (max))
@@ -968,7 +967,7 @@ class Tail(Flock):
         force_vector = np.array([0, 0, 0], dtype=np.float)
         force_vector = -(clumping_vector + local_heading_vector)
         if self.debug:
-            self.logger.debug("Tail:%s" % force_vector)
+            self.logger.debug("Tail:{0!s}".format(force_vector))
         return self.normalize_behaviour(force_vector) * self.clumping_factor
 
 
@@ -993,7 +992,7 @@ class SlowCoach(Flock):
         force_vector = np.array([0, 0, 0], dtype=np.float)
         force_vector = -velocity
         if self.debug:
-            self.logger.debug("SlowCoach:%s" % force_vector)
+            self.logger.debug("SlowCoach:{0!s}".format(force_vector))
         return self.normalize_behaviour(force_vector) * self.clumping_factor
 
 

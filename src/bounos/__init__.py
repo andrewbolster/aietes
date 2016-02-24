@@ -86,7 +86,7 @@ class BounosModel(DataPackage):
         :param environment:
         :param now:
         """
-        self.log.debug("Updating data from simulator at %d" % now)
+        self.log.debug("Updating data from simulator at {0:d}".format(now))
         self.update(p=p, v=v, names=names, environment=environment)
 
 
@@ -370,7 +370,7 @@ def main():
                 run_metric_comparison(data, args)
             else:
                 raise ValueError(
-                    "You're trying to do something stupid: %s" % args)
+                    "You're trying to do something stupid: {0!s}".format(args))
         elif args.fusion:
             run_detection_fusion(data, args)
         else:
@@ -420,8 +420,7 @@ def plot_detections(ax, metric, orig_data,
     if good_behaviour:
         for bev, nodelist in orig_data.get_behaviour_dict().iteritems():
             if str(good_behaviour) != str(bev):  # Bloody String Comparison...
-                print("Adding %s to nodelist because \"%s\" is not \"%s\""
-                      % (nodelist, bev, good_behaviour))
+                print("Adding {0!s} to nodelist because \"{1!s}\" is not \"{2!s}\"".format(nodelist, bev, good_behaviour))
                 [real_culprits.append(orig_data.names.index(node))
                  for node in nodelist]
 
@@ -438,8 +437,7 @@ def plot_detections(ax, metric, orig_data,
                     # Positive or Unsigned: Scan from Bottom
                     _y1 = np.asarray([0] * len(_x))
                 _y2 = metric.data[min_detected:max_detected, culprit]
-                print("%s:%s:%s" %
-                      (orig_data.names[culprit], str((min_detected, max_detected)), str(max_detected - min_detected)))
+                print("{0!s}:{1!s}:{2!s}".format(orig_data.names[culprit], str((min_detected, max_detected)), str(max_detected - min_detected)))
                 if real_culprits is not []:
                     ax.fill_between(_x, _y1, _y2, alpha=0.1,
                                     facecolor='red' if culprit not in real_culprits else 'green')
@@ -617,7 +615,7 @@ def run_detection_fusion(data, args=None):
     global_adjust(fig, axes)
 
     if args is not None and args.output is not None:
-        savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
+        savefig("{0!s}.{1!s}".format(args.title, args.output), bbox_inches=0)
     else:
         show()
 
@@ -759,7 +757,7 @@ def run_metric_comparison(data, args=None):
     global_adjust(fig, axes)
 
     if args is not None and args.output is not None:
-        savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
+        savefig("{0!s}.{1!s}".format(args.title, args.output), bbox_inches=0)
     else:
         show()
 
@@ -802,7 +800,7 @@ def run_overlay(data, args=None):
             detections = results['detections']
         elif args.attempt_detection:
             raise NotImplementedError(
-                "Tried to do detection on a metric that doesn't support it:%s" % args.analysis)
+                "Tried to do detection on a metric that doesn't support it:{0!s}".format(args.analysis))
         else:
             pass
 
@@ -819,9 +817,9 @@ def run_overlay(data, args=None):
                                 data[source].data, metrics + data[source].data,
                                 alpha=0.2, facecolor='red')
         except ValueError as exp:
-            print("Metrics:%s" % str(metrics.shape))
-            print("Data:%s" % str(data[source]))
-            print("Detections:%s" % str(detections.shape))
+            print("Metrics:{0!s}".format(str(metrics.shape)))
+            print("Data:{0!s}".format(str(data[source])))
+            print("Detections:{0!s}".format(str(detections.shape)))
             raise exp
 
     ax.legend(loc="upper right", prop={'size': 12})
@@ -832,7 +830,7 @@ def run_overlay(data, args=None):
     global_adjust(fig, ax)
 
     if args.output is not None:
-        pl.savefig("%s.%s" % (args.title, args.output), bbox_inches=0)
+        pl.savefig("{0!s}.{1!s}".format(args.title, args.output), bbox_inches=0)
     else:
         pl.show()
 
@@ -861,7 +859,7 @@ def global_adjust(figure, axes, scale=2):
         :param pos:
         :return:
         """
-        return "$%s$" % x
+        return "${0!s}$".format(x)
 
     for axe in axes:
         for ax in axe:

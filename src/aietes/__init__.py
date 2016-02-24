@@ -104,7 +104,7 @@ class Simulation(object):
                 logging.Formatter('[%(asctime)s] %(name)s-%(levelname)s-%(message)s'))
             hdlr.setLevel(logging.DEBUG)
             self.logger.addHandler(hdlr)
-            self.logger.info("Launched File Logger (%s)" % logtofile)
+            self.logger.info("Launched File Logger ({0!s})".format(logtofile))
 
         self.config_file = kwargs.get("config_file", None)
         self.config = kwargs.get("config", None)
@@ -123,8 +123,8 @@ class Simulation(object):
         # Otherwise the config is (hopefully) in a given file
         else:
             if os.path.isfile(self.config_file):
-                self.logger.info("creating instance from %s" %
-                                 self.config_file)
+                self.logger.info("creating instance from {0!s}".format(
+                                 self.config_file))
                 self.config = validate_config(self.config_file)
                 self.config = self.populate_config(self.config)
             else:
@@ -158,7 +158,7 @@ class Simulation(object):
                 LOGLEVELS.get(self.config.get("log_level", "notset").lower(), logging.NOTSET))
         except ConfigError as err:
             self.logger.error(
-                "Error in configuration, cannot continue: %s" % err)
+                "Error in configuration, cannot continue: {0!s}".format(err))
             raise SystemExit(1)
 
         # Initialise simulation environment and configure a global channel
@@ -202,18 +202,18 @@ class Simulation(object):
         Returns:
             Simulation Duration in ticks (generally seconds)
         """
-        self.logger.info("Initialising Simulation %s, to run for %s steps" % (
+        self.logger.info("Initialising Simulation {0!s}, to run for {1!s} steps".format(
             self.title, self.duration_intervals))
 
         starttime = time()
         for fleet in self.fleets:
             fleet.activate()
         if callback is not None:
-            self.logger.info("Running with Callback: %s" % str(callback))
+            self.logger.info("Running with Callback: {0!s}".format(str(callback)))
             Sim.startStepping()
         try:
             Sim.simulate(until=self.duration_intervals, callback=callback)
-            self.logger.info("Finished Simulation at %s(%s) after %s" % (
+            self.logger.info("Finished Simulation at {0!s}({1!s}) after {2!s}".format(
                 Sim.now(), seconds_to_str(Sim.now()), seconds_to_str(time() - starttime)))
         except (KeyboardInterrupt, SystemExit):
             raise
@@ -230,8 +230,7 @@ class Simulation(object):
         joined = self.move_flag.n == 0 and self.process_flag.n == len(
             self.nodes)
         if joined and DEBUG:
-            self.logger.debug("Joined: %s,%s" %
-                              (self.move_flag.n, self.process_flag.n))
+            self.logger.debug("Joined: {0!s},{1!s}".format(self.move_flag.n, self.process_flag.n))
         return joined
 
     def outer_join(self):
@@ -241,8 +240,7 @@ class Simulation(object):
         joined = self.move_flag.n == len(
             self.nodes) and self.process_flag.n == 0
         if joined and DEBUG:
-            self.logger.debug("Joined: %s,%s" %
-                              (self.move_flag.n, self.process_flag.n))
+            self.logger.debug("Joined: {0!s},{1!s}".format(self.move_flag.n, self.process_flag.n))
         return joined
 
     def reverse_node_lookup(self, uuid):
@@ -410,7 +408,7 @@ class Simulation(object):
             #
             # There Are Detailed Config Instances
             preconfigured_nodes_count = len(config_dict['Node']['Nodes'])
-            cls.logger.info("Have %d nodes from config: %s" % (
+            cls.logger.info("Have {0:d} nodes from config: {1!s}".format(
                 preconfigured_nodes_count,
                 nodes_config)
                             )
@@ -436,8 +434,8 @@ class Simulation(object):
             dist = node_default_config_dict['Application']['distribution']
             nodes_count = config_dict['Node']['count']
         except AttributeError as e:
-            cls.logger.error("Error:%s" % e)
-            cls.logger.info("%s" % pformat(node_default_config_dict))
+            cls.logger.error("Error:{0!s}".format(e))
+            cls.logger.info("{0!s}".format(pformat(node_default_config_dict)))
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
@@ -450,7 +448,7 @@ class Simulation(object):
                                 for a, n in zip(appp, dist)
                                 for _ in range(int(n))
                                 ]
-                cls.logger.debug("Distributed Applications:%s" % applications)
+                cls.logger.debug("Distributed Applications:{0!s}".format(applications))
             else:
                 raise ConfigError(
                     "Application / Distribution mismatch"
@@ -468,8 +466,8 @@ class Simulation(object):
             dist = node_default_config_dict['Behaviour']['distribution']
             nodes_count = config_dict['Node']['count']
         except AttributeError as e:
-            cls.logger.error("Error:%s" % e)
-            cls.logger.info("%s" % pformat(node_default_config_dict))
+            cls.logger.error("Error:{0!s}".format(e))
+            cls.logger.info("{0!s}".format(pformat(node_default_config_dict)))
             raise ConfigError("Something is badly wrong")
 
         # Boundary checks:
@@ -481,7 +479,7 @@ class Simulation(object):
                               for a, n in zip(bev, dist)
                               for i in range(int(n))
                               ]
-                cls.logger.debug("Distributed behaviours:%s" % behaviours)
+                cls.logger.debug("Distributed behaviours:{0!s}".format(behaviours))
             else:
                 raise ConfigError(
                     "Application / Distribution mismatch"
@@ -508,8 +506,8 @@ class Simulation(object):
                         macp
                     ))
         except AttributeError as e:
-            cls.logger.error("Error:%s" % e)
-            cls.logger.info("%s" % pformat(node_default_config_dict))
+            cls.logger.error("Error:{0!s}".format(e))
+            cls.logger.info("{0!s}".format(pformat(node_default_config_dict)))
             raise ConfigError("Something is badly wrong")
 
         # Generate Names for any remaining auto-config nodes
@@ -546,7 +544,7 @@ class Simulation(object):
         config_dict['Node']['Nodes'].update(ConfigObj(nodes_config))
         if retain_default:
             config_dict['Node']['Nodes']['__default__'] = ConfigObj(node_default_config_dict)
-        cls.logger.debug("Built Config: %s" % pformat(config))
+        cls.logger.debug("Built Config: {0!s}".format(pformat(config)))
         return Dotdict(config_dict)
 
     def configure_environment(self, env_config):
@@ -584,7 +582,7 @@ class Simulation(object):
             return node_list
         else:
             raise ConfigError(
-                "Node Generation failed: Zero nodes with config %s" % str(self.config))
+                "Node Generation failed: Zero nodes with config {0!s}".format(str(self.config)))
 
     def generate_a_node(self, node_name, node_config):
         """
@@ -596,26 +594,26 @@ class Simulation(object):
         try:  # If there is an entry, use it
             vector = node_config['initial_position']
             self.logger.info(
-                "Gave node %s a configured initial position: %s" % (node_name, str(vector)))
+                "Gave node {0!s} a configured initial position: {1!s}".format(node_name, str(vector)))
         except KeyError:
             gen_style = node_config['position_generation']
             if gen_style == "random":
                 vector = self.environment.random_position()
                 self.logger.debug(
-                    "Gave node %s a random vector: %s" % (node_name, vector))
+                    "Gave node {0!s} a random vector: {1!s}".format(node_name, vector))
 
             elif gen_style == "randomPlane":
                 vector = self.environment.random_position(on_a_plane=True)
                 self.logger.debug(
-                    "Gave node %s a random vector on a plane: %s" % (node_name, vector))
+                    "Gave node {0!s} a random vector on a plane: {1!s}".format(node_name, vector))
             elif gen_style == "center":
                 vector = self.environment.position_around()
                 self.logger.debug(
-                    "Gave node %s a center vector: %s" % (node_name, vector))
+                    "Gave node {0!s} a center vector: {1!s}".format(node_name, vector))
             elif gen_style == "surface":
                 vector = self.environment.position_around(position="surface")
                 self.logger.debug(
-                    "Gave node %s a surface vector: %s" % (node_name, vector))
+                    "Gave node {0!s} a surface vector: {1!s}".format(node_name, vector))
             else:
                 raise ConfigError(
                     "Invalid Position option: {}".format(gen_style))
@@ -657,7 +655,7 @@ class Simulation(object):
         dp = DataPackage(**(self.current_state()))
 
         filename = output_file if output_file is not None else dp.title
-        filename = "%s.aietes" % get_results_path(filename, results_dir=output_path)
+        filename = "{0!s}.aietes".format(get_results_path(filename, results_dir=output_path))
         return_dict = {}
 
         if movie_file or plot or gif:
@@ -729,7 +727,7 @@ def go(options, args=None):
                 print("Will try to postprocess anyway")
 
     if options.movie or options.data or options.gif:
-        print("Storing output in %s" % sim.title)
+        print("Storing output in {0!s}".format(sim.title))
         sim.postprocess(input_file=options.input, output_file=sim.title, data_file=options.data,
                         movie_file=options.movie, gif=options.gif, fps=options.fps)
 
@@ -798,7 +796,7 @@ def main():
             # During multiple runs, append _x to the run title
             basetitle = options.title
             for i in range(options.runs):
-                options.title = "%s_%d" % (basetitle, i)
+                options.title = "{0!s}_{1:d}".format(basetitle, i)
                 exit_code = go(options, args)
         else:
             if options.profile:
