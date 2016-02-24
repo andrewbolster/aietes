@@ -55,13 +55,13 @@ if __name__ == "__main__":
     logpath = "{path}/{title}.log".format(path=exp.exp_path, title=exp.title.replace(' ', '_'))
     exp.dump_analysis()
 
-    print("Saved detection stats to {}".format(logpath))
+    print("Saved detection stats to {0}".format(logpath))
     path = exp.exp_path
-    print("Saved detection stats to {}".format(exp.exp_path))
+    print("Saved detection stats to {0}".format(exp.exp_path))
     try:
         dump_trust_logs_and_stats_from_exp_paths([path], title=exp.title)
     except Exception as e:
-        print("Crashed in trust logging, moving on: {}".format(traceback.format_exc()))
+        print("Crashed in trust logging, moving on: {0}".format(traceback.format_exc()))
 
     for run in range(4):
         with pd.get_store(exp.exp_path + '.h5') as store:
@@ -74,4 +74,4 @@ if __name__ == "__main__":
         outliers = rwc.perform_weight_factor_outlier_analysis_on_trust_frame(sub_frame, "CombinedTrust", extra=run,
                                                                              min_emphasis=0,
                                                                              max_emphasis=1, max_sum=1, par=True)
-        outliers.to_hdf(os.path.join(exp.exp_path, "outliers.h5"), "CombinedTrust_{}_4".format(run))
+        outliers.to_hdf(os.path.join(exp.exp_path, "outliers.h5"), "CombinedTrust_{0}_4".format(run))

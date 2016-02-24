@@ -53,9 +53,9 @@ if __name__ == "__main__":
     with open(logpath, 'r') as fin:
         print fin.read()
 
-    print("Saved detection stats to {}".format(logpath))
+    print("Saved detection stats to {0}".format(logpath))
     path = exp.exp_path
-    print("Saved detection stats to {}".format(exp.exp_path))
+    print("Saved detection stats to {0}".format(exp.exp_path))
     try:
         dump_trust_logs_and_stats_from_exp_paths([path], title=exp.title)
     except:

@@ -1279,7 +1279,7 @@ class DACAP(MAC):
         :param packet_origin:
         """
         if DEBUG:
-            self.logger.debug("ACK to {}".format(packet_origin[0]))
+            self.logger.debug("ACK to {0}".format(packet_origin[0]))
 
         ack_packet = {"type": "ACK",
                       "source": self.layercake.hostname, "source_position": self.layercake.get_current_position(),
@@ -2083,7 +2083,7 @@ class CSMA(MAC):
             if self.incoming_packet["source"] == self.pending_ack_packet_from \
                     or self.pending_ack_packet_from[0:3] == "ANY":
                 self.logger.error(
-                    "Rescued Pending ACK from {}: {}-{}".format(
+                    "Rescued Pending ACK from {0}: {1}-{2}".format(
                         self.pending_ack_packet_from,
                         self.incoming_packet["source"],
                         self.incoming_packet["ID"])
@@ -2104,7 +2104,7 @@ class CSMA(MAC):
         try:
             self.T = self.layercake.phy.level2delay(self.level)
         except:
-            self.logger.error("Died trying to get delay for packet {}".format(
+            self.logger.error("Died trying to get delay for packet {0}".format(
                 self.outgoing_packet_queue[0]
             ))
             raise
@@ -2289,7 +2289,7 @@ class CSMA(MAC):
         :param packet_origin:
         """
         if DEBUG:
-            self.logger.info("ACK to {} in response to {}".format(
+            self.logger.info("ACK to {0} in response to {1}".format(
                 packet_origin, self.incoming_packet["ID"])
             )
 
@@ -2382,7 +2382,7 @@ class CSMA(MAC):
                     self.outgoing_packet_queue) != 0:
                 self.send_ack(packet_origin)
         except KeyError:
-            self.logger.error("Fucked up on {}, net had {}".format(
+            self.logger.error("Fucked up on {0}, net had {1}".format(
                 self.incoming_packet, self.layercake.net.items()))
             raise
 
@@ -2420,7 +2420,7 @@ class CSMA(MAC):
         """ All the transmission attempts have been completed. It's impossible to reach the node.
         """
         self.layercake.signal_lost_tx(self.outgoing_packet_queue[0]['ID'])
-        self.logger.warn("Failed to transmit to {}".format(
+        self.logger.warn("Failed to transmit to {0}".format(
             self.outgoing_packet_queue[0]["dest"]
         ))
         self.post_success_or_fail()
@@ -2456,7 +2456,7 @@ class CSMA(MAC):
         """ The timeout has expired and NO DATA has been received.
         """
         self.logger.debug(
-            "Timed Out!, No Data Received for {}".format(self.last_cts_to))
+            "Timed Out!, No Data Received for {0}".format(self.last_cts_to))
 
         if len(self.outgoing_packet_queue) > 0:
             random_delay = random.random() * self.max_wait_to_retransmit
@@ -2470,7 +2470,7 @@ class CSMA(MAC):
         """
         self.transmission_attempts += 1
         if DEBUG:
-            self.logger.debug("CTS timeout waiting on {}: Attempt {}".format(
+            self.logger.debug("CTS timeout waiting on {0}: Attempt {1}".format(
                 self.outgoing_packet_queue[0]['ID'],
                 self.transmission_attempts)
             )
@@ -2478,7 +2478,7 @@ class CSMA(MAC):
             self.logger.debug("It seems that there has been a collision.")
 
         if self.transmission_attempts > self.max_transmission_attempts:
-            self.logger.warn("CTS timeout limit waiting on {} after {}".format(
+            self.logger.warn("CTS timeout limit waiting on {0} after {1}".format(
                 self.outgoing_packet_queue[0]['ID'],
                 self.transmission_attempts)
             )
@@ -2517,7 +2517,7 @@ class CSMA(MAC):
         timeout = self.get_timeout("ACK", self.T)
 
         if DEBUG:
-            self.logger.debug("DATA/ACK Timeout for {}:{} to {} for {}".format(
+            self.logger.debug("DATA/ACK Timeout for {0}:{1} to {2} for {3}".format(
                 self.outgoing_packet_queue[0]['type'],
                 self.outgoing_packet_queue[0]['ID'],
                 self.outgoing_packet_queue[0]['dest'],
@@ -2530,7 +2530,7 @@ class CSMA(MAC):
 
         """
         if DEBUG:
-            self.logger.info("Queuing Data to {}:{} as we are currently {}".format(
+            self.logger.info("Queuing Data to {0}:{1} as we are currently {2}".format(
                 self.outgoing_packet_queue[0]['dest'],
                 self.outgoing_packet_queue[0]['ID'],
                 self.fsm.current_state
@@ -2650,7 +2650,7 @@ class CSMA4FBR(CSMA):
 
 
         """
-        assert self.incoming_packet['type'] == "SIL", "Ignoring a non-SIL packet: {}".format(
+        assert self.incoming_packet['type'] == "SIL", "Ignoring a non-SIL packet: {0}".format(
             self.incoming_packet
         )
         if DEBUG:
@@ -2786,7 +2786,7 @@ class CSMA4FBR(CSMA):
             )
         except IndexError:
             self.logger.error(
-                "Problem with the queue on trying to transmit: {}".format(self.outgoing_packet_queue))
+                "Problem with the queue on trying to transmit: {0}".format(self.outgoing_packet_queue))
             raise
         CSMA.transmitnotimer(self)
 

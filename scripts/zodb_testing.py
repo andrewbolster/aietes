@@ -41,7 +41,7 @@ def scenarios_comms(paths):
     for i, subdir in enumerate(natsorted(subdirs)):
         title = os.path.basename(subdir)
         sources = npz_in_dir(subdir)
-        log.info("{:%}:{}:{}/{}".format(float(i) / float(len(subdirs)), title, memory(), swapsize()))
+        log.info("{0:%}:{1}:{2}/{3}".format(float(i) / float(len(subdirs)), title, memory(), swapsize()))
         yield (subdir, generate_sources(sources, comms_only=True))
 
 
@@ -86,7 +86,7 @@ def dump_trust_logs_and_stats_from_exp_paths(paths):
         transaction.commit()
         del runlist
         gc.collect()
-        log.info("VAR:{}:{}/{} MiB".format(variable, memory(), swapsize()))
+        log.info("VAR:{0}:{1}/{2} MiB".format(variable, memory(), swapsize()))
 
     gc.collect()
 

@@ -13,7 +13,7 @@ def categorise_dataframe(df):
         try:
             df[obj_key] = df[obj_key].astype('category')
         except TypeError:
-            print("Couldn't categorise {}".format(obj_key))
+            print("Couldn't categorise {0}".format(obj_key))
             pass
     return df
 

@@ -22,7 +22,7 @@ def redirected(stdout):
 
 
 def exec_comms_range(scenario, title):
-    e = ExpMan(title="{}-{}".format(title, re.split('\.|/', scenario)[-2]),
+    e = ExpMan(title="{0}-{1}".format(title, re.split('\.|/', scenario)[-2]),
                parallel=True,
                base_config_file=scenario
                )
@@ -54,9 +54,9 @@ if __name__ == "__main__":
             log.exception("Crashed in simulation, moving on")
             continue
         path = exp.exp_path
-        print("Saved detection stats to {}".format(exp.exp_path))
+        print("Saved detection stats to {0}".format(exp.exp_path))
         base_name = re.split('\.|/', base_scenario)[-2]
         try:
-            dump_trust_logs_and_stats_from_exp_paths([path], title="{}-{}".format(base_title, base_name))
+            dump_trust_logs_and_stats_from_exp_paths([path], title="{0}-{1}".format(base_title, base_name))
         except:
             log.exception("Crashed in trust logging, moving on")

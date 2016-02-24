@@ -16,15 +16,15 @@ for test in test_cases:
     exp = test.set_exp()
     exp.update_duration(28800)
     try:
-        exp.run(title="ECEA_Datarun_{}".format(date), no_time=True, runcount=32)
+        exp.run(title="ECEA_Datarun_{0}".format(date), no_time=True, runcount=32)
         exp.dump_dataruns()
     except RuntimeError as err:
         import traceback
 
-        print("Experiment {} went horribly wrong, carrying on regardless and leaving a note: {}".format(test.__name__,
+        print("Experiment {0} went horribly wrong, carrying on regardless and leaving a note: {1}".format(test.__name__,
                                                                                                         err))
         traceback.print_exc(file=open(
-            os.path.join(os.path.abspath(exp.exp_path), "FAILED.{}.log".format(test.__name__)),
+            os.path.join(os.path.abspath(exp.exp_path), "FAILED.{0}.log".format(test.__name__)),
             'w+'
         )
         )

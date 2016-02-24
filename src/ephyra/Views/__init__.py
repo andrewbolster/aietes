@@ -51,7 +51,7 @@ def callsuper(method):
 
     def callsuper_wrapper(self, *args, **kwargs):
         try:
-            print("{}:{}".format(args, kwargs))
+            print("{0}:{1}".format(args, kwargs))
             return method(self, *args, **kwargs)
         except CallSuper, exc:
             supermethod, name = None, method.__name__

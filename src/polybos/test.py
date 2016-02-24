@@ -49,7 +49,7 @@ class ExperimentGeneration(unittest.TestCase):
               retain_data=True)
         for k, v in e.scenarios.items():
             self.assertEqual(v.datarun[0].tmax, runtime,
-                             "Simulation time ({}) should match requested time ({})".format(
+                             "Simulation time ({0}) should match requested time ({1})".format(
                                  v.datarun[0].tmax, runtime))
 
     def testRuntimeModificationParallel(self):
@@ -65,7 +65,7 @@ class ExperimentGeneration(unittest.TestCase):
               retain_data=True)
         for k, v in e.scenarios.items():
             self.assertEqual(v.datarun[0].tmax, runtime,
-                             "Simulation time ({}) should match requested time ({})".format(
+                             "Simulation time ({0}) should match requested time ({1})".format(
                                  v.datarun[0].tmax, runtime))
 
     # @unittest.skipIf(os.name == 'nt', "Skipping MultiCore test as it appears to be broken under Windows...")
@@ -81,17 +81,17 @@ class ExperimentGeneration(unittest.TestCase):
               runtime=runtime)
         multistats = e.generate_simulation_stats()
         self.assertEqual(len(e.scenarios), count + 1,
-                         "Scenarios count for behaviour ratio should be node_count ({}) + 1, is {}".format(
+                         "Scenarios count for behaviour ratio should be node_count ({0}) + 1, is {1}".format(
                              count, len(e.scenarios)))
         self.assertIsInstance(multistats, dict,
-                              "MultiStats should be a Dict, is type {}".format(
+                              "MultiStats should be a Dict, is type {0}".format(
                                   type(multistats)))
         self.assertEqual(len(multistats), len(e.scenarios),
-                         "Multistats({}) should be same length as scenarios({})".format(
+                         "Multistats({0}) should be same length as scenarios({1})".format(
                              len(multistats), len(e.scenarios)))
         for runname, stats in multistats.iteritems():
             self.assertEqual(len(stats), runcount,
-                             "N of stats for {} ({}) should match runcount ({})".format(
+                             "N of stats for {0} ({1}) should match runcount ({2})".format(
                                  runname, len(stats), runcount))
 
     def testSimulationStatsQuery(self):

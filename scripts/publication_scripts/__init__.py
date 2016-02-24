@@ -164,34 +164,34 @@ def plot_all_funky_stuff(sdf, mobility):
     xt, yt, zt, x, y = interpolate_rate_sep(sdf.dropna(), "throughput")
     fig = plot_contour_2d(xt, yt, zt, x, y, "Per Node Avg. Throughput (bps)")
     fig.tight_layout(pad=0.1)
-    fig.savefig("img/throughput_2d_{}.pdf".format(mobility))
+    fig.savefig("img/throughput_2d_{0}.pdf".format(mobility))
 
     xd, yd, zd, x, y = interpolate_rate_sep(sdf.dropna(), "average_rx_delay")
     fig = plot_contour_2d(xd, yd, zd, x, y, "Average Delay (s)")
     fig.tight_layout(pad=0.1)
-    fig.savefig("img/delay_2d_{}.pdf".format(mobility))
+    fig.savefig("img/delay_2d_{0}.pdf".format(mobility))
 
     xd, yd, zd, x, y = interpolate_rate_sep(sdf, "tdivdel")
     fig = plot_contour_2d(xd, yd, zd, x, y, "Throughput Delay Ratio")
     fig.tight_layout(pad=0.1)
-    fig.savefig("img/2d_ratio_{}.pdf".format(mobility))
+    fig.savefig("img/2d_ratio_{0}.pdf".format(mobility))
 
     fig = plot_contour_3d(xd, yd, zd, rot=45, labels={'x': 'pps', 'y': 'm', 'z': ''})
     fig.tight_layout(pad=0.1)
-    fig.savefig("img/3d_ratio_{}.pdf".format(mobility), transparent=True, facecolor='white')
+    fig.savefig("img/3d_ratio_{0}.pdf".format(mobility), transparent=True, facecolor='white')
 
     xd, yd, zd, x, y = interpolate_rate_sep(sdf, "co_norm")
     fig = plot_contour_2d(xd, yd, zd, x, y, "Normalised Throughput Delay Product", norm=True)
     fig.tight_layout(pad=0.1)
-    fig.savefig("img/2d_normed_product_{}.pdf".format(mobility))
+    fig.savefig("img/2d_normed_product_{0}.pdf".format(mobility))
 
     fig = plot_contour_3d(xd, yd, zd, rot=45, labels={'x': 'pps', 'y': 'm', 'z': ''})
     fig.tight_layout(pad=0.1)
-    fig.savefig("img/3d_normed_product_{}.pdf".format(mobility), transparent=True, facecolor='white')
+    fig.savefig("img/3d_normed_product_{0}.pdf".format(mobility), transparent=True, facecolor='white')
 
     fig = plot_lines_of_throughput(sdf)
     fig.tight_layout(pad=0.1)
-    fig.savefig("img/throughput_sep_lines_{}.pdf".format(mobility), transparent=True, facecolor='white')
+    fig.savefig("img/throughput_sep_lines_{0}.pdf".format(mobility), transparent=True, facecolor='white')
 
 
 def get_mobility_stats(mobility):
@@ -199,10 +199,10 @@ def get_mobility_stats(mobility):
     trustd = OrderedDict()
     norm = lambda df: (df - np.nanmin(df)) / (np.nanmax(df) - np.nanmin(df))
     rate_and_ranges = filter(
-        lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest-bella_{}".format(mobility)),
+        lambda p: os.path.basename(p).startswith("CommsRateAndRangeTest-bella_{0}".format(mobility)),
         result_h5s_by_latest)
     if not rate_and_ranges:
-        raise ValueError("No Entries with mobility {}".format(mobility))
+        raise ValueError("No Entries with mobility {0}".format(mobility))
     for store_path in sorted(rate_and_ranges):
         with pd.get_store(store_path) as s:
             stats = s.get('stats')
@@ -296,16 +296,16 @@ def savefig(fig, name, extn="pdf", tight=True, **kwargs):
     _kwargs.update(kwargs)
     if tight:
         fig.tight_layout(pad=0.1)
-    fig.savefig("{}.{}".format(name, extn), **_kwargs)
+    fig.savefig("{0}.{1}".format(name, extn), **_kwargs)
     try:
-        mpl2tkz.save("{}.tex".format(name), fig)
+        mpl2tkz.save("{0}.tex".format(name), fig)
     except:
-        warnings.warn("Couldn't tkzify {}, skipping".format(name))
+        warnings.warn("Couldn't tkzify {0}, skipping".format(name))
 
 
 def saveinput(text, name, extn='tex'):
     Tools.mkdir_p('input')
-    with open("input/{}.{}".format(name, extn), 'w') as f:
+    with open("input/{0}.{1}".format(name, extn), 'w') as f:
         f.write(text)
 
 
@@ -462,7 +462,7 @@ def assess_results(perspectives_d, base_key='Fair'):
     for bev_key in keys:
         for run_i, run in perspectives_d[(base_key, bev_key)].xs(bev_key, level='var').groupby(level='run'):
             results[bev_key][run_i] = assess_result(run)
-            plot_trust_line_graph(run, title="{}{}".format(bev_key, run_i))
+            plot_trust_line_graph(run, title="{0}{1}".format(bev_key, run_i))
     return results
 
 
@@ -478,7 +478,7 @@ def feature_validation_plots(weighted_trust_perspectives, feat_weights, title='W
         fig = plt.figure(figsize=fig_size)
         ax = fig.add_subplot(1, 1, 1)
         _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
-        this_title = "{} {}".format(title, '-'.join(key))
+        this_title = "{0} {1}".format(title, '-'.join(key))
         ax.set_title(this_title)
         format_axes(ax)
         fig.tight_layout()
@@ -523,7 +523,7 @@ def best_run_and_weight(f, trust_observations, par=True, tolerance=0.01):
         combinations[:, np.where(f_val == i)] = i
     combinations = Tools.npuniq(combinations)
 
-    print("Have {} Combinations".format(len(combinations)))
+    print("Have {0} Combinations".format(len(combinations)))
     perspectives = generate_weighted_trust_perspectives(trust_observations,
                                                         combinations, par=par)
     print("Got Perspectives")
@@ -531,7 +531,7 @@ def best_run_and_weight(f, trust_observations, par=True, tolerance=0.01):
     best_weight = combinations[np.argmax(assessments)]
     best_run = group_keys[np.argmax(assessments)]
     best_score = np.max(assessments)
-    print("Winner is {} with {}@{}".format(best_run, best_weight, best_score))
+    print("Winner is {0} with {1}@{2}".format(best_run, best_weight, best_score))
     if np.all(best_weight == f):
         print("Actually got it right first time for a change!")
     return best_run, best_weight

@@ -119,7 +119,7 @@ class DataPackage(object):
         try:
             if source is not None:
                 if isinstance(source, list):
-                    raise ValueError("Source file shoult be singular, not a list {}".format(source))
+                    raise ValueError("Source file shoult be singular, not a list {0}".format(source))
                 else:
                     kwargs.update(**np.load(source))
 
@@ -131,7 +131,7 @@ class DataPackage(object):
                     self._handle_mapping_exceptions_(
                         sink_attrib, source_attrib, "kwargs", exp)
         except (AttributeError, KeyError) as exp:
-            raise ValueError("Inappropriate / incomplete source of type {} : {} missing".format(
+            raise ValueError("Inappropriate / incomplete source of type {0} : {1} missing".format(
                 type(source),
                 str([attr for attr in self._attrib_map.keys()
                      if attr not in kwargs])
@@ -142,7 +142,7 @@ class DataPackage(object):
         self.n = len(self.p)
 
         if self.tmax > self.p.shape[2]:
-            logging.warn("Missized datapackage({} vs {}): hopefully a mission success: resetting tmax".format(
+            logging.warn("Missized datapackage({0} vs {1}): hopefully a mission success: resetting tmax".format(
                 self.tmax, self.p.shape))
             self.tmax = self.p.shape[2]
 
@@ -220,11 +220,11 @@ class DataPackage(object):
         """
         full_path = get_results_path(filename, results_dir=results_dir, make=True)
 
-        logging.info("Writing datafile to {}.npz".format(full_path))
+        logging.info("Writing datafile to {0}.npz".format(full_path))
 
         data = {i: self.__dict__[
             i] for i in self._attrib_map.keys() if i in self.__dict__}
-        data['filename'] = "{}.npz".format(full_path)
+        data['filename'] = "{0}.npz".format(full_path)
 
         np.savez(filename,
                  **data
@@ -567,7 +567,7 @@ class DataPackage(object):
             elif source == "intent":
                 return np.linalg.norm(self.ecea_positions - self.p, axis=1)
             else:
-                raise ValueError("Invalid Drift Source: {}".format(source))
+                raise ValueError("Invalid Drift Source: {0}".format(source))
         else:
             raise ValueError("Not Drifting")
 
@@ -619,7 +619,7 @@ class DataPackage(object):
 
         if filename is None:
             filename = self.title
-        path = "{}.track".format(filename)
+        path = "{0}.track".format(filename)
         data = {
             'true_positions': self.p,
         }
@@ -737,7 +737,7 @@ class DataPackage(object):
         import matplotlib.pyplot as plt
 
         f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-        f.suptitle("Node Layout and mobility for {}".format(self.title))
+        f.suptitle("Node Layout and mobility for {0}".format(self.title))
         for n, node_p in enumerate(self.p):
             x, y, z = node_p[:, 0]
 
@@ -785,7 +785,7 @@ class DataPackage(object):
         """
         valid_types = ['rx', 'tx']
         if pkt_type not in valid_types:
-            raise ValueError("No such packet classification {}, valid choices are {}".format(pkt_type, valid_types))
+            raise ValueError("No such packet classification {0}, valid choices are {1}".format(pkt_type, valid_types))
 
         packets = []
         _ = [packets.extend(nlog[pkt_type]) for nlog in self.comms['logs'].values()]

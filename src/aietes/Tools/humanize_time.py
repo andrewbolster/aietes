@@ -57,7 +57,7 @@ def humanize_time(amount, units=None):
 
 def seconds_to_str(s):
     humanified = humanize_time(s, "seconds")
-    return ' '.join(["{} {}".format(tup[0], tup[1]) for tup in humanified])
+    return ' '.join(["{0} {1}".format(tup[0], tup[1]) for tup in humanified])
 
 
 if __name__ == "__main__":

@@ -219,7 +219,7 @@ class Simulation(object):
             raise
         except RuntimeError as err:
             self.logger.critical(
-                "Expected Exception, Quitting gracefully: {}".format(err))
+                "Expected Exception, Quitting gracefully: {0}".format(err))
             raise
         return Sim.now()
 
@@ -426,7 +426,7 @@ class Simulation(object):
                 if app == "Null":
                     node_default_config_dict['app'] = appp
                 else:
-                    raise ConfigError("Conflicting app and Application.Protcols ({},{})".format(
+                    raise ConfigError("Conflicting app and Application.Protcols ({0},{1})".format(
                         app,
                         appp
                     ))
@@ -501,7 +501,7 @@ class Simulation(object):
                 if mac == MAC.DEFAULT_PROTO:
                     node_default_config_dict['mac'] = macp
                 else:
-                    raise ConfigError("Conflicting mac and MAC.Protcols ({},{})".format(
+                    raise ConfigError("Conflicting mac and MAC.Protcols ({0},{1})".format(
                         mac,
                         macp
                     ))
@@ -616,7 +616,7 @@ class Simulation(object):
                     "Gave node {0!s} a surface vector: {1!s}".format(node_name, vector))
             else:
                 raise ConfigError(
-                    "Invalid Position option: {}".format(gen_style))
+                    "Invalid Position option: {0}".format(gen_style))
         assert len(vector) == 3, "Incorrectly sized vector"
 
         return vector

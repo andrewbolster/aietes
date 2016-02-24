@@ -331,7 +331,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
         trusts = []
     except AttributeError:
         assert isinstance(tf,
-                          pd.DataFrame), "Expected first argument (tf) to be a Pandas Dataframe, got {} instead".format(
+                          pd.DataFrame), "Expected first argument (tf) to be a Pandas Dataframe, got {0} instead".format(
             type(tf)
         )
         raise
@@ -373,7 +373,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
         if metric_weights is not None and not metric_weights.any():
             # Have been given zero weight
             warnings.warn(
-                "Have been given a zero-weight, which is insane, so I'm returning None: {}".format(metric_weights))
+                "Have been given a zero-weight, which is insane, so I'm returning None: {0}".format(metric_weights))
             tf = None
         else:
             raise

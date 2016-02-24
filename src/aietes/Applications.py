@@ -40,7 +40,7 @@ class Application(Sim.Process):
 
     def __init__(self, node, config, layercake):
         self._start_log(node)
-        Sim.Process.__init__(self, name="{}({})".format(
+        Sim.Process.__init__(self, name="{0}({1})".format(
             self.__class__.__name__,
             node.name)
                              )
@@ -77,7 +77,7 @@ class Application(Sim.Process):
                     self.logger.debug(
                         "Taking Packet_Count from config: {0!s}".format(self.packet_rate))
             else:
-                raise ConfigError("Packet Rate/Count doesn't make sense! {}/{}".format(
+                raise ConfigError("Packet Rate/Count doesn't make sense! {0}/{1}".format(
                     packet_rate,
                     packet_count
                 ))
@@ -107,12 +107,12 @@ class Application(Sim.Process):
             if sent['ID'] == packetid:
                 if DEBUG:
                     if sent['source'] is self.layercake.hostname:
-                        self.logger.info("Confirmed TX of {} to {} at {} after {}".format(
+                        self.logger.info("Confirmed TX of {0} to {1} at {2} after {3}".format(
                             sent['ID'], sent['dest'],
                             Sim.now(), Sim.now() - sent['time_stamp']
                         ))
                     else:
-                        self.logger.info("Confirmed FWD for {} of {} to {} at {} after {}".format(
+                        self.logger.info("Confirmed FWD for {0} of {1} to {2} at {3} after {4}".format(
                             sent['source'], sent['ID'], sent['dest'],
                             Sim.now(), Sim.now() - sent['time_stamp']
                         ))
@@ -120,7 +120,7 @@ class Application(Sim.Process):
                 sent['acknowledged'] = Sim.now()
                 acked = True
         if not acked:
-            self.logger.error("Have been told that a packet {} I can't remember sending has succeeded".format(
+            self.logger.error("Have been told that a packet {0} I can't remember sending has succeeded".format(
                 packetid)
             )
 
@@ -129,12 +129,12 @@ class Application(Sim.Process):
         for sent in self.sent_log:
             if sent['ID'] == packetid:
                 if sent['source'] is self.layercake.hostname:
-                    self.logger.error("Failed TX of {} to {} at {} after {}".format(
+                    self.logger.error("Failed TX of {0} to {1} at {2} after {3}".format(
                         sent['ID'], sent['dest'],
                         Sim.now(), Sim.now() - sent['time_stamp']
                     ))
                 else:
-                    self.logger.error("Failed FWD for {} of {} to {} at {} after {}".format(
+                    self.logger.error("Failed FWD for {0} of {1} to {2} at {3} after {4}".format(
                         sent['source'], sent['ID'], sent['dest'],
                         Sim.now(), Sim.now() - sent['time_stamp']
                     ))
@@ -142,7 +142,7 @@ class Application(Sim.Process):
                 sent['acknowledged'] = Sim.now()
                 acked = True
         if not acked:
-            self.logger.error("Have been told that a packet {} I can't remember sending has succeeded".format(
+            self.logger.error("Have been told that a packet {0} I can't remember sending has succeeded".format(
                 packetid)
             )
 
@@ -258,7 +258,7 @@ class Application(Sim.Process):
                     avg_length = 0
                     average_rx_delay = np.inf
                 else:
-                    raise RuntimeError("Got a zero in a weird place: {}/{}".format(
+                    raise RuntimeError("Got a zero in a weird place: {0}/{1}".format(
                         total_bits_in,
                         self.stats['packets_received']
                     ))
@@ -386,7 +386,7 @@ class RoutingTest(Application):
         indirect_nodes = filter(
             lambda n: n not in self.total_counter.keys(), self.layercake.net.keys())
         if indirect_nodes:
-            self.logger.debug("Inferred new nodes: {}".format(indirect_nodes))
+            self.logger.debug("Inferred new nodes: {0}".format(indirect_nodes))
             for node in indirect_nodes:
                 self.total_counter[node] = 0
 
@@ -398,13 +398,13 @@ class RoutingTest(Application):
             destination = np.random.choice(
                 [n for n, c in most_common if c == least_count])
             self.sent_counter[destination] += 1
-            self.logger.info("Sending to {} with count {}({})".format(
+            self.logger.info("Sending to {0} with count {1}({2})".format(
                 destination, least_count, most_common))
         elif len(self.total_counter) == 1:
             destination = self.total_counter.keys()[0]
             self.sent_counter[destination] += 1
             self.logger.info(
-                "Sending to {} as it's the only one we know".format(destination))
+                "Sending to {0} as it's the only one we know".format(destination))
         else:
             self.logger.warn(
                 "No Packet Count List set up yet; fudging it with an broadcast first")
@@ -451,7 +451,7 @@ class RoutingTest(Application):
             self.total_counter[n] = self.sent_counter[
                                         n] + self.received_counter[n]
         if not_in_rx or not_in_tx or not_in_tot:
-            self.logger.info("Synchronising counters: {} not in rx and {} not in tx, {} not in total".format(
+            self.logger.info("Synchronising counters: {0} not in rx and {1} not in tx, {2} not in total".format(
                 not_in_rx, not_in_tx, not_in_tot))
 
     def dump_stats(self):
@@ -807,7 +807,7 @@ class CommsTrust(Trust):
                 s['RXThroughput'] = throughput
                 return s
             except:
-                self.logger.exception("PKTS:{},TP:{},NANMEAN:{}".format(
+                self.logger.exception("PKTS:{0},TP:{1},NANMEAN:{2}".format(
                     nodepktstats, throughput, np.nanmean(nodepktstats, axis=0)
                 ))
                 raise
@@ -916,7 +916,7 @@ class CommsTrust(Trust):
         indirect_nodes = filter(
             lambda n: n not in self.total_counter.keys(), self.layercake.net.keys())
         if len(indirect_nodes):
-            self.logger.debug("Inferred new nodes: {}".format(indirect_nodes))
+            self.logger.debug("Inferred new nodes: {0}".format(indirect_nodes))
             for node in indirect_nodes:
                 self.total_counter[node] = 0
 
@@ -945,7 +945,7 @@ class CommsTrust(Trust):
             # Finished Stream
             period = poisson(float(self.period))
             if DEBUG:
-                self.logger.info("Finished Stream {} for {}, sleeping for {}".format(
+                self.logger.info("Finished Stream {0} for {1}, sleeping for {2}".format(
                     self.test_packet_counter[destination] / self.test_stream_length,
                     destination,
                     period
@@ -1008,7 +1008,7 @@ class SelfishTargetSelection(CommsTrustRoundRobin):
 
         norm_distances = inv_sq_distances / sum(inv_sq_distances)
         new_target = np.random.choice(names, p=norm_distances)
-        self.logger.warn("Selected {}".format(new_target))
+        self.logger.warn("Selected {0}".format(new_target))
         return new_target
 
     def activate(self):
@@ -1036,7 +1036,7 @@ class SelfishTargetSelection(CommsTrustRoundRobin):
                 drop_it = False
 
             else:
-                self.logger.warn("Dropping Packet to {} as they're not a neighbour".format(packet["dest"]))
+                self.logger.warn("Dropping Packet to {0} as they're not a neighbour".format(packet["dest"]))
                 if self.layercake.hostname == 'n1' and DEBUG:
                     self.layercake.host.fleet.plot_axes_views().savefig('/dev/shm/test.png')
                 drop_it = True
@@ -1081,11 +1081,11 @@ class BadMouthingPowerControl(CommsTrustRoundRobin):
             try:
                 new_level = str(max(0, min(int(packet['level']) + 1, int(self.layercake.phy.max_level))))
             except:
-                self.logger.error("Something is very very wrong with {}".format(
+                self.logger.error("Something is very very wrong with {0}".format(
                     packet
                 ))
                 raise
-            self.logger.warn("Adjusted {}->{} from {} to {}".format(
+            self.logger.warn("Adjusted {0}->{1} from {2} to {3}".format(
                 packet['source'], packet['dest'],
                 packet['level'], new_level
             ))

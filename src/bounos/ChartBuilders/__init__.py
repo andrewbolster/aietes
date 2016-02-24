@@ -56,7 +56,7 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
     """
     # Fancy XOR - http://stackoverflow.com/questions/432842/how-do-you-get-the-logical-xor-of-two-variables-in-python
     if (dp is None) == (tx is None):
-        raise ValueError("Need either dp={} or rx={}, not both".format(
+        raise ValueError("Need either dp={0} or rx={1}, not both".format(
             type(bounos.DataPackage),
             type(pd.DataFrame)
         ))
@@ -80,7 +80,7 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
 
         f, ax = plt.subplots(figsize=(13, 7))
         ax.set_title(
-            "Distribution of lost packets over time for {} model: total={:.2%} of {}".format(title,
+            "Distribution of lost packets over time for {0} model: total={1:.2%} of {2}".format(title,
                                                                                              died / float(all_pkts),
                                                                                              all_pkts))
         ax.set_ylabel("Count (n)")
@@ -105,7 +105,7 @@ def end_to_end_delay_distribution(dp):
     f, ax = plt.subplots(figsize=(13, 7))
     nsources = len(df.source.unique())
     c = sns.color_palette("Set1", nsources)
-    ax.set_title("End-To-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title, float(
+    ax.set_title("End-To-End Delay Received Distribution for {0} model: average={1:.2f}s".format(dp.title, float(
         df[["delay"]].mean())))
 
     for i, source in enumerate(sorted(df.source.unique())):
@@ -128,7 +128,7 @@ def source_and_dest_delay_violin_plot(dp):
     sns.violinplot(df.delay, df.source, color="Paired", ax=ax_l)
     sns.violinplot(df.delay, df.dest, color="Paired", ax=ax_r)
 
-    f.suptitle("Per-Node End-to-End Delay Received Distribution for {} model: average={:.2f}s".format(dp.title, float(
+    f.suptitle("Per-Node End-to-End Delay Received Distribution for {0} model: average={1:.2f}s".format(dp.title, float(
         df[["delay"]].mean())))
 
     ax_l.set_xlabel("Source Node")
@@ -149,7 +149,7 @@ def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12, 4)
     """
     # Fancy XOR - http://stackoverflow.com/questions/432842/how-do-you-get-the-logical-xor-of-two-variables-in-python
     if (dp is None) == (rx is None):
-        raise ValueError("Need either dp={} or rx={}, not both".format(
+        raise ValueError("Need either dp={0} or rx={1}, not both".format(
             type(bounos.DataPackage),
             type(pd.DataFrame)
         ))
@@ -167,7 +167,7 @@ def source_and_dest_delay_cdf_plot(dp=None, rx=None, title=None, figsize=(12, 4)
         raise ValueError("I've got no idea how you got here...")
 
     f, (ax_l, ax_r) = plt.subplots(1, 2, sharey=True, sharex=True, figsize=figsize)
-    f.suptitle("Per-Node End-to-End Delay Cumulative Distribution for {} model: average={:.2f}s".format(title, float(
+    f.suptitle("Per-Node End-to-End Delay Cumulative Distribution for {0} model: average={1:.2f}s".format(title, float(
         df[["delay"]].mean())))
 
     # Delays groups by source
@@ -226,7 +226,7 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
 
     # Fancy XOR - http://stackoverflow.com/questions/432842/how-do-you-get-the-logical-xor-of-two-variables-in-python
     if (dp is None) == (rx is None):
-        raise ValueError("Need either dp={} or rx={}, not both".format(
+        raise ValueError("Need either dp={0} or rx={1}, not both".format(
             type(bounos.DataPackage),
             type(pd.DataFrame)
         ))
@@ -245,7 +245,7 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
 
     if 'var' in df.index.names and len(df.groupby(level='var')) > 1:
         raise ValueError(
-            "It's really not a good idea for multiple var's to go into this; groupby-apply this instead {}".format(
+            "It's really not a good idea for multiple var's to go into this; groupby-apply this instead {0}".format(
                 len(df.index.levels[df.index.names.index('var')])
             ))
 
@@ -254,12 +254,12 @@ def channel_occupancy_distribution(dp=None, rx=None, title=None, figsize=(13, 7)
     else:
         channel_occupancy = _channel_occupancy_calc(df).p  # should work fine for a single run
     f, ax = plt.subplots(figsize=figsize)
-    ax.set_title("In-The-Air packets for {} model: Channel Use={:.2%}".format(
+    ax.set_title("In-The-Air packets for {0} model: Channel Use={1:.2%}".format(
         title, sum(channel_occupancy > 0) / float(channel_occupancy.size)))
     ax.set_ylabel("Percentage of Runtime (%)")
     ax.set_xlabel("Number of packets in the medium (n)")
     channel_occupancy.hist()
-    formatter = lambda f, p: "{:.0%}".format(f / float(tmax))
+    formatter = lambda f, p: "{0:.0%}".format(f / float(tmax))
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
 
     return f
@@ -284,7 +284,7 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
 
     # Fancy XOR - http://stackoverflow.com/questions/432842/how-do-you-get-the-logical-xor-of-two-variables-in-python
     if (dp is None) == (trust_log is None or pos_log is None):
-        raise ValueError("Need either dp={} or trust_log={} and pos_log={}, not both".format(
+        raise ValueError("Need either dp={0} or trust_log={1} and pos_log={2}, not both".format(
             type(bounos.DataPackage),
             type(pd.DataFrame),
             type(pd.DataFrame)
@@ -311,19 +311,19 @@ def combined_trust_observation_summary(dp=None, trust_log=None, pos_log=None, ta
     f, ax = plt.subplots(len(names), 3, sharex=False, figsize=(16, 16))
     lines = []
 
-    f.suptitle("Trust overview for target {} (highlighted) in {} model".format(target, dp.title))
+    f.suptitle("Trust overview for target {0} (highlighted) in {1} model".format(target, dp.title))
     for i, i_node in enumerate(names):
         map(lambda (k, v): lines.append(ax[i][0].plot(v, label=k, alpha=0.5 if k != target else 0.9)),
             trust[i_node].items())
         ax[i][0].legend(loc="lower center", mode="expand", ncol=6)
-        ax[i][0].set_title("Trust Perspective: {}".format(i_node))
+        ax[i][0].set_title("Trust Perspective: {0}".format(i_node))
         ax[i][0].set_ylim(0, 1)
 
-        ax[i][1].set_title("Distance to {}: {}".format(target, i_node))
+        ax[i][1].set_title("Distance to {0}: {1}".format(target, i_node))
         ax[i][1].plot(np.linalg.norm(dp.p[i, :, ::600] - dp.p[dp.names.index(target), :, ::600], axis=0))
         ax[i][1].set_ylim(0, 300)
 
-        ax[i][2].set_title("Distribution of raw trust values from {}".format(i_node))
+        ax[i][2].set_title("Distribution of raw trust values from {0}".format(i_node))
         with np.errstate(invalid='ignore'):
             sns.boxplot(
                 pd.DataFrame.from_dict({key: pd.Series(vals) for key, vals in trust[i_node].items()}),
@@ -365,7 +365,7 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
         grp.rename(columns=rename_labels, inplace=True)
 
     if title is not False:
-        title = "Performance Comparison of Varying {},{}".format(var, (':' + title if title is not None else ""))
+        title = "Performance Comparison of Varying {0},{1}".format(var, (':' + title if title is not None else ""))
 
     grp.index = grp.index.astype(np.float64)
 
@@ -388,9 +388,9 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
         diffmax = differential.argmax()
         maxmax = maxes.argmax()
         ax.axvline(diffmax, alpha=0.2, linestyle=':')
-        ax.text(diffmax, maxes.mean() / 2, 'd(RX) Heel @ {:.4f}'.format(diffmax), rotation=90)
+        ax.text(diffmax, maxes.mean() / 2, 'd(RX) Heel @ {0:.4f}'.format(diffmax), rotation=90)
         ax.axvline(maxmax, alpha=0.2, linestyle=':')
-        ax.text(maxmax, maxes.mean() / 2, 'RX Max @ {:.4f}'.format(maxmax), rotation=90)
+        ax.text(maxmax, maxes.mean() / 2, 'RX Max @ {0:.4f}'.format(maxmax), rotation=90)
     return f
 
 
@@ -413,7 +413,7 @@ def probability_of_timely_arrival(stats, title=None, var='Packet Rates', figsize
 
     if title is not False:
         ax.set_title(
-            "Probability of Timely Arrival of Varying {},{}".format(var, (':' + title if title is not None else "")))
+            "Probability of Timely Arrival of Varying {0},{1}".format(var, (':' + title if title is not None else "")))
     return f
 
 
@@ -441,7 +441,7 @@ def average_delays_across_variation(stats, title=None, var='Packet Rates', figsi
 
     if title is not False:
         ax.set_title(
-            "Average End to End Delay for Varying {},{}. \n showing standard deviation of result, with a max of {}".format(
+            "Average End to End Delay for Varying {0},{1}. \n showing standard deviation of result, with a max of {2}".format(
                 var, (':' + title if title is not None else ""), np.around(np.max(packet_delays_std), decimals=2)))
     return f
 
@@ -512,7 +512,7 @@ def lost_packets_by_sender_reciever(tx, figsize=(16, 13)):
     ax.set_xticks(ind + width)
     ax.set_xticklabels((failed_senders.keys()))
 
-    formatter = lambda f, p: "{:.4%}".format(f / float(total_not_queued))
+    formatter = lambda f, p: "{0:.4%}".format(f / float(total_not_queued))
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(formatter))
 
     ax.legend((rects1[0], rects2[0]), ('Source', 'Destination'))
@@ -583,9 +583,9 @@ def trust_perspectives_wrt_someone(trust_frame, wrt='targets'):
         map(lambda a: a.set_xlabel(""), ax[i])
         if i + 1 < len(groups):
             ax[i][0].set_xlabel(base.capitalize())
-        ax[i][0].set_ylabel("{:.4f}".format(float(var)))
+        ax[i][0].set_ylabel("{0:.4f}".format(float(var)))
     f.suptitle(
-        "Plots of Per-Node {} Trust Values".format(perspective.capitalize()),
+        "Plots of Per-Node {0} Trust Values".format(perspective.capitalize()),
         fontsize=24)
     return f
 
@@ -635,7 +635,7 @@ def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), 
 
     f.tight_layout(pad=0.1)
     if title is not False:
-        ax.set_title("{}".format(
+        ax.set_title("{0}".format(
             var if title is None else ": " + title
         ))
     return f
@@ -650,7 +650,7 @@ def plot_axes_views_from_packet_frames(df, title=None, figsize=None):
     :return:
     """
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
-    f.suptitle("Node Layout and mobility {}".format("for " + title if title is not None else ""))
+    f.suptitle("Node Layout and mobility {0}".format("for " + title if title is not None else ""))
     for n, (name, node_p) in enumerate(df.groupby('source')):
         node_p = pd.DataFrame.from_records(node_p.source_position.values)
         x, y, z = initial = node_p.iloc[0]
@@ -697,7 +697,7 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
     """
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
     if title is not False:
-        f.suptitle("Node Layout and mobility {}".format("for " + title if title is not None else ""))
+        f.suptitle("Node Layout and mobility {0}".format("for " + title if title is not None else ""))
     for n, (name, node_p) in enumerate(df.groupby(level='node')):
         x, y, z = initial = node_p.iloc[0]
 
@@ -779,7 +779,7 @@ def plot_positions(d, bounds=None, show_title=False):
     area = area_of_centroid(my_d)
     avg_dist = avg_range(my_d)
     if show_title is not False:
-        f.suptitle('All units in (m), Average Range:{:.2e}, Area:{:.2e}'.format(
+        f.suptitle('All units in (m), Average Range:{0:.2e}, Area:{1:.2e}'.format(
             np.around(avg_dist),
             np.around(area)
         ), fontsize=18)

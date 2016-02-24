@@ -77,7 +77,7 @@ class EphyraController(object):
         :param file_path:
         """
         self.model.import_datafile(file_path)
-        logging.debug("Loaded Datafile from {}".format(file_path))
+        logging.debug("Loaded Datafile from {0}".format(file_path))
         self.update_metrics()
 
     def model_is_ready(self):
@@ -104,13 +104,13 @@ class EphyraController(object):
             for drift_metric in [m for m in self._metrics_availiable
                                  if getattr(m, 'drift_enabled', False) and m not in self._metrics_enabled]:
                 logging.info(
-                    "Adding {} to metrics as data is Drift-Enabled".format(drift_metric))
+                    "Adding {0} to metrics as data is Drift-Enabled".format(drift_metric))
                 self._metrics_enabled.append(drift_metric)
         if self.ecea():
             for ecea_metric in [m for m in self._metrics_availiable
                                 if getattr(m, 'ecea_enabled', False) and m not in self._metrics_enabled]:
                 logging.info(
-                    "Adding {} to metrics as data is ECEA-Enabled".format(ecea_metric))
+                    "Adding {0} to metrics as data is ECEA-Enabled".format(ecea_metric))
                 self._metrics_enabled.append(ecea_metric)
         if not len(getattr(self, "metrics", [])) == len(self._metrics_enabled):
             self.rebuild_metrics()
@@ -127,7 +127,7 @@ class EphyraController(object):
     def rebuild_metrics(self):
         # in the case of metrics_enabled being changed, this requires a
         # complete rebuild
-        logging.info("Rebuilding Metrics:{}".format(self._metrics_enabled))
+        logging.info("Rebuilding Metrics:{0}".format(self._metrics_enabled))
         self.metrics = map(lambda m: m(), self._metrics_enabled)
         return self.metrics
 
