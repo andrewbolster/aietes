@@ -63,15 +63,4 @@ if __name__ == "__main__":
     except Exception as e:
         print("Crashed in trust logging, moving on: {}".format(traceback.format_exc()))
 
-    for run in range(4):
-        with pd.get_store(exp.exp_path + '.h5') as store:
-            sub_frame = pd.concat([
-                store.trust.xs('Alfa', level='observer', drop_level=False),
-                store.trust.xs('Bravo', level='observer', drop_level=False),
-                store.trust.xs('Charlie', level='observer', drop_level=False)
-            ]).xs(run, level='run', drop_level=False)
 
-        outliers = rwc.perform_weight_factor_outlier_analysis_on_trust_frame(sub_frame, "CombinedTrust", extra=run,
-                                                                             min_emphasis=0,
-                                                                             max_emphasis=1, max_sum=1, par=True)
-        outliers.to_hdf(os.path.join(exp.exp_path, "outliers.h5"), "CombinedTrust_{}_4".format(run))
