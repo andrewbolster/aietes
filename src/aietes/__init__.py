@@ -21,6 +21,7 @@ __email__ = "me@andrewbolster.info"
 import collections
 import logging
 import os
+import sys
 import traceback
 import optparse
 import cProfile
@@ -48,6 +49,7 @@ from Tools import (
     Dotdict,
     ConfigError,
     LOGLEVELS,
+    DEBUG,
     Sim,
     are_equal_waypoints,  # Probably Shouldn't be in Tools
 )

@@ -138,6 +138,9 @@ def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min
     """
     # Extract trust metric names from frame
     trust_metrics = list(trust_frame.keys())
+    if verbose:
+        print("Using {0} Trust Metrics".format(trust_metrics))
+
     if max_emphasis - min_emphasis < 2:
         raise RuntimeError("Setting Max Emphasis <2 is pointless; Runs all Zeros")
 
@@ -157,6 +160,9 @@ def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min
     combinations = itertools.ifilter(lambda v: min_sum <= np.sum(v) <= max_sum,
                                      combinations)
     combinations = sorted(combinations, key=lambda l: sum(map(abs, l)))
+    if verbose:
+        print("Using {0} combinations:".format(len(combinations)))
+        print(combinations)
     if par:
         outliers = _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose=True)
     else:
@@ -170,8 +176,9 @@ def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min
 def _outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, verbose):
     outliers = []
     for i, w in enumerate(combinations):
-        if verbose: print(strftime("%Y-%m-%d %H:%M:%S", gmtime()), i, w)
-        outlier = generate_outlier_frame(good, trust_frame, norm_weight(w, trust_metrics), par=True)
+        _w = norm_weight(w, trust_metrics)
+        if verbose: print(strftime("%Y-%m-%d %H:%M:%S", gmtime()), i, _w)
+        outlier = generate_outlier_frame(good, trust_frame, _w, par=True)
         outliers.append(outlier)
     return outliers
 
@@ -289,7 +296,7 @@ def summed_outliers_per_weight(weight_df, observer, n_metrics, target=None, sign
     weight_df.set_index(metric_keys + ['var', 't'], inplace=True)
 
     # REMEMBER TO CHECK THIS WHEN DOING MULTIPLE RUNS (although technically it shouldn't matter....)
-    weight_df.drop(['observer', 'run'], axis=1, inplace=True)
+    weight_df = weight_df.drop(['observer', 'run'], axis=1)
 
     # TODO: Assert abs(signed) = unsigned
     # Sum for each run (i.e. group by everything but time)
@@ -399,9 +406,12 @@ def build_outlier_weights(h5_path, observer, target, n_metrics, signed=False):
                                                                      target=target,
                                                                      signed=False)
 
-    joined_target_weights = pd.concat(
-        target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names
-    ).reset_index('run', drop=True).sort()
+    if runkey:
+        joined_target_weights = pd.concat(
+            target_weights_dict, names=['run'] + target_weights_dict[runkey].index.names
+        ).reset_index('run', drop=True).sort_index()
+    else:
+        raise ValueError("Doesn't look like there's any CombinedTrust records in that h5_path... {0}".format(h5_path))
 
     return joined_target_weights
 

@@ -42,7 +42,6 @@ from shelve import DbfilenameShelf
 from tempfile import mkdtemp
 from time import time
 
-import notify2
 import numpy as np
 from SimPy import SimulationStep as Sim
 from colorlog import ColoredFormatter
@@ -176,10 +175,11 @@ def notify_desktop(message):
     :return:
     """
     try:
+        import notify2
         if not notify2.is_initted():
             notify2.init("AIETES Simulation")
         notify2.Notification.new("AIETES Simulation", message, "dialog-information").show()
-    except:
+    except ImportError:
         pass
 
 

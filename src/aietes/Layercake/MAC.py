@@ -25,6 +25,7 @@
 ###########################################################################
 
 import random
+from copy import deepcopy
 
 random.seed(123456789)
 
@@ -1825,6 +1826,8 @@ class CSMA(MAC):
         self.t_data = None
         self.t_control = None
 
+        self.logger.info("Initialised")
+
     def activate(self):
         """
 
@@ -1844,6 +1847,8 @@ class CSMA(MAC):
         self.t_control = self.rts_packet_length / \
                          (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         Sim.activate(self.timer, self.timer.lifecycle(self.TimerRequest))
+
+        self.logger.info("Activated")
 
     class InternalTimer(Sim.Process):
 
@@ -2622,7 +2627,7 @@ class CSMA4FBR(CSMA):
 
         self.fsm.add_transition("timeout", "WAIT_CTS", self.select_cts, "WAIT_CTS")
         self.fsm.add_transition("transmit", "WAIT_CTS", self.transmit, "WAIT_ACK")
-        self.fsm.add_transition("retransmit", "WAIT_CTS", self.send_rts, "WAIT_CTS")
+        self.fsm.add_transition("retransmit", "WAIT_CTS", self.retransmit, "WAIT_CTS")
         self.fsm.add_transition("abort", "WAIT_CTS", self.on_transmit_fail, "READY_WAIT")
         self.fsm.add_transition("defer", "WAIT_CTS", self.x_overheard, "BACKOFF")
         self.fsm.add_transition("got_DATA", "WAIT_CTS", self.check_pending_data(), "READY_WAIT")
@@ -2876,6 +2881,29 @@ class CSMA4FBR(CSMA):
                     self.packet_signal[self.incoming_packet["type"]])
         else:
             self.overhearing()
+
+    def retransmit(self):
+        """
+        Retransmission interception shim
+        :return:
+        """
+        failed_log_packet = deepcopy(self.outgoing_packet_queue[0])
+        if len(failed_log_packet['ID'].split('_'))>1:
+            raise ValueError("Packet ID's shouldn't have underscores unless their retransmissions and retransmissions shouldn't be retransmitted! (i.e. should still be retransmitting the original packet id")
+        previous_attempts = []
+        for p in self.layercake.host.app.sent_log:
+            if p['ID'].startswith(failed_log_packet['ID']):
+                previous_attempts.append(p['ID'])
+        try:
+            last_highest_attempt = max(map(lambda x :int(x.split('_')[-1]), filter(lambda x: '_' in x, previous_attempts)))
+        except ValueError: #Probably the first retransmission so the above is empty
+            last_highest_attempt = -1
+        failed_log_packet['ID'] = "{0}_{1}".format(failed_log_packet['ID'], last_highest_attempt+1)
+        failed_log_packet['acknowledged'] = Sim.now()
+        self.layercake.host.app.log_sent_packet(failed_log_packet)
+        self.logger.warn("Retransmitting {0}".format(failed_log_packet))
+
+        self.send_rts()
 
     def send_rts(self):
         """ The RTS sent is the normal one, but we should initialize the list of replies.

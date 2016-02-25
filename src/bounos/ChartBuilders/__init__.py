@@ -74,7 +74,7 @@ def lost_packet_distribution(dp=None, tx=None, title=None):
     else:
         raise ValueError("I've got no idea how you got here...")
 
-    died = df[not df.delivered].count().max()
+    died = df[~df.delivered.astype(bool)].count().max()
     if died > 1:
         all_pkts = df.count().max()
 
@@ -125,8 +125,8 @@ def source_and_dest_delay_violin_plot(dp):
     assert isinstance(dp, bounos.DataPackage)
     df = dp.get_global_packet_logs(pkt_type='rx')
     f, (ax_l, ax_r) = plt.subplots(1, 2, sharey=True, sharex=True, figsize=(12, 4))
-    sns.violinplot(df.delay, df.source, color="Paired", ax=ax_l)
-    sns.violinplot(df.delay, df.dest, color="Paired", ax=ax_r)
+    sns.violinplot(df.delay, df.source, ax=ax_l)
+    sns.violinplot(df.delay, df.dest, ax=ax_r)
 
     f.suptitle("Per-Node End-to-End Delay Received Distribution for {0} model: average={1:.2f}s".format(dp.title, float(
         df[["delay"]].mean())))

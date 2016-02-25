@@ -14,7 +14,7 @@ import numpy as np
 
 from bounos import npz_in_dir, load_sources, generate_sources
 from bounos.Analyses import Trust
-from aietes.Tools import memory, swapsize, map_paths, mkcpickle
+from aietes.Tools import memory, swapsize, map_paths, mkcpickle, tree
 
 FORMAT = "%(asctime)-10s %(message)s"
 logging.basicConfig(format=FORMAT,
@@ -50,10 +50,10 @@ def hdfstore(filename, obj):
 
 
 def generate_inverted_logs_from_paths(paths):
-    logs = {}  # TODO Update this to a defaultdict implementation.
+    logs = tree()
     # Transpose per-var-per-run statistics into Per 'log' stats (i.e. rx, tx, trust, stats, etc)
-    for var, runs in scenarios_comms(paths):
-        print("Var:{0}".format(var))
+    for _var, runs in scenarios_comms(paths):
+        print("Var:{0}".format(_var))
         for run, data in runs:
             print("---{0}".format(run))
             nodes = dict(data['logs'].items() + [('stats', data['stats']), ('positions', data['positions'])])
@@ -64,20 +64,10 @@ def generate_inverted_logs_from_paths(paths):
                 memory(), swapsize()))
             for node, inner_logs in nodes.iteritems():
                 if node in ['stats', 'positions']:
-                    if node not in logs:
-                        logs[node] = {}
-                    if var not in logs[node]:
-                        logs[node][var] = {}
-                    logs[node][var][run] = inner_logs
+                    logs[node][_var][run] = inner_logs
                 else:
                     for k, v in inner_logs.iteritems():
-                        if k not in logs:
-                            logs[k] = {}
-                        if var not in logs[k]:
-                            logs[k][var] = {}
-                        if run not in logs[k][var]:
-                            logs[k][var][run] = {}
-                        logs[k][var][run][node] = v
+                        logs[k][_var][run][node] = v
 
     return logs
 

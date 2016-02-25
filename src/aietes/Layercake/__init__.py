@@ -100,10 +100,12 @@ class Layercake(object):
         :param rx_handler: func: callback function to handle received packets
         :param monitor_mode: bool: enable notification of routed packets as well
         """
+        self.logger.info("Activating")
         self.app_rx_handler = rx_handler
         self.mac.activate()
         self.monitor_mode = monitor_mode
         self.packet_length = self.mac.data_packet_length
+        self.logger.info("Activated")
 
     def send(self, payload):
         """

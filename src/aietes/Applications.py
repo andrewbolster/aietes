@@ -142,7 +142,7 @@ class Application(Sim.Process):
                 sent['acknowledged'] = Sim.now()
                 acked = True
         if not acked:
-            self.logger.error("Have been told that a packet {0} I can't remember sending has succeeded".format(
+            self.logger.error("Have been told that a packet {0} I can't remember sending has failed".format(
                 packetid)
             )
 
@@ -690,8 +690,8 @@ class BehaviourTrust(Trust):
             # v = np.asarray([data.distances_from_average_at(time) for time in range(int(data.tmax))])
             # c = np.asarray([data.inter_distance_average(time) for time in range(int(data.tmax))])
             inter_node_distance_matrices = np.asarray([squareform(pdist(_pt)) for _pt in np.rollaxis(pos_log, 2)]).T
-            avg_pos = np.average(pos_log, axis=0)
-            avg_dist = np.linalg.norm(avg_pos - pos_log, axis=1)
+            #avg_pos = np.average(pos_log, axis=0)
+            #avg_dist = np.linalg.norm(avg_pos - pos_log, axis=1)
             indd = np.average(inter_node_distance_matrices, axis=1)
             assert indd.shape == (n, t), indd.shape
 
@@ -864,10 +864,10 @@ class CommsTrust(Trust):
             # PLR is the average amount of packets we are sure have been lost in the last time frame
             # Including pkts that have been acked since last time.
             plr = map(
-                lambda p: float(not p['delivered']),
+                lambda p: float(p['delivered'] is not True),
                 filter(
                     # We know the fate of all acked packets
-                    lambda p: p['dest'] == node,
+                    lambda p: node in [p['dest'], p['through']],
                     relevant_acked_packets)
             )
             if plr and tx_throughput > 0.0:
@@ -902,6 +902,7 @@ class CommsTrust(Trust):
         is addressed to it with a particular stream length.
         The counter counts the 'actual' number of packets while the packet.data
         carries the zero-indexed 'packet id'
+
         :param period:
         :param destination:
         :param data:

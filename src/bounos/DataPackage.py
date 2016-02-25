@@ -789,9 +789,9 @@ class DataPackage(object):
 
         packets = []
         _ = [packets.extend(nlog[pkt_type]) for nlog in self.comms['logs'].values()]
-        if sorted is not None and sorted:
-            rx_packet = sorted(packets, key=lambda k: k['time_stamp'])
-        pf = pd.DataFrame(rx_packet)
+        if sort is not None and sort:
+            packets = sorted(packets, key=lambda k: k['time_stamp'])
+        pf = pd.DataFrame(packets)
         return pf
 
     def get_global_trust_logs(self):

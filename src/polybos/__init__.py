@@ -223,7 +223,7 @@ class Scenario(object):
                 raise
             except Exception:
                 raise
-        logging.info("done {0:d} runs for {1:d} each".format(runcount, sim_time))
+        logging.info("done {0:f} runs for {1:f} each".format(runcount, sim_time))
 
     def run_parallel(self, runcount=None, runtime=None, queueing_pool=False, **kwargs):
         """

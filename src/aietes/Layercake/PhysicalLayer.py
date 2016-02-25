@@ -320,7 +320,7 @@ class Transducer(Sim.Resource):
 
         else:
             # This should never appear, and in fact, it doesn't, but just to
-            # detect bugs (we cannot have a negative SIR in lineal scale).
+            # detect bugs (we cannot have a negative SIR in linear scale).
             raise RuntimeError(
                 "This really shouldn't happen: Negative min_sir from type {0} from {1} to {2} through {3} detected by {4}".format(
                     new_packet["type"], new_packet["source"], new_packet["dest"], new_packet["through"],
