@@ -22,7 +22,6 @@ if __name__ == "__main__":
     with pd.get_store(results_path + '.h5') as store:
         trust = store.trust.xs('Bravo', level='observer', drop_level=False).dropna()
 
-    outliers = perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust, "CombinedTrust",
-                                                                                 min_emphasis=-1, max_emphasis=2,
+    outliers = perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust, min_emphasis=-1, max_emphasis=2,
                                                                                  par=True)
     outliers.to_hdf(os.path.join(results_path, "outliers.h5"), "mean_T_deltaSigned")

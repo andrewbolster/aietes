@@ -61,10 +61,26 @@ def generate_outliers(path, runs=4):
             sub_frame = store.trust
             sub_frame = sub_frame.xs(run, level='run', drop_level=False)
 
-        outliers = Weight.perform_weight_factor_outlier_analysis_on_trust_frame(sub_frame, "CombinedTrust", extra=run,
-                                                                                min_emphasis=0, max_emphasis=2,
-                                                                                max_sum=1, verbose=False, par=True)
-        outliers.to_hdf(os.path.join(path, "outliers.h5"), "CombinedTrust_{}_4".format(run))
+        outliers = Weight.perform_weight_factor_run_comparative_outlier_analysis_on_trust_frame(sub_frame, "CombinedTrust", extra=run,
+                                                                                                min_emphasis=0, max_emphasis=2,
+                                                                                                max_sum=1, verbose=False, par=True)
+        outliers.to_hdf(os.path.join(path, "outliers.h5"), "CombinedTrust_{}_{}".format(run, runs))
+
+def generate_mean_delta_t(path):
+    with pd.get_store(path + '.h5') as store:
+        #sub_frame = pd.concat([
+        #    store.trust.xs('Alfa', level='observer', drop_level=False),
+        #    store.trust.xs('Bravo', level='observer', drop_level=False),
+        #    store.trust.xs('Charlie', level='observer', drop_level=False)
+        #])
+        sub_frame = store.trust
+        sub_frame = sub_frame.xs(run, level='run', drop_level=False)
+
+    outliers = Weight.perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(sub_frame, min_emphasis=0,
+                                                                                        max_emphasis=2, extra=run,
+                                                                                        verbose=False, par=True)
+    outliers.to_hdf(os.path.join(path, "outliers.h5"),
+                "{0}".format("meandelta"))
 
 if __name__ == "__main__":
     exp = setup_exp()

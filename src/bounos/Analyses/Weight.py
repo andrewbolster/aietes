@@ -72,8 +72,11 @@ def generate_trust_metric_weights(trust_metric_names, exclude=None, max_emphasis
     return trust_metric_weights
 
 
-def generate_outlier_tp(tf, sigma=None, good='good', good_lvl='bev'):
+def generate_run_comparative_outlier_tp(tf, sigma=None, good='good', good_lvl='bev'):
     """
+    Looking across behaviours of a given run-observer set, use the >1std area beyond the all-time mean
+    to assess "outlierishness".
+
     This must be applied on a per-observation basis (i.e. single run, single observer)
     :param tf:
     :param sigma:
@@ -97,7 +100,19 @@ def generate_outlier_tp(tf, sigma=None, good='good', good_lvl='bev'):
     return outliers
 
 
-def generate_outlier_frame(good, trust_frame, w, par=False):
+def generate_run_comparative_outlier_frame(good, trust_frame, w, par=False):
+    """
+    Generates the weighted trust perspective
+    Then for each observation run (i.e. each simulated nodes perspective), generate the
+     comparative outlier trust assessment *across known behaviours*
+
+
+    :param good:
+    :param trust_frame:
+    :param w:
+    :param par:
+    :return:
+    """
     try:
         _ = trust_frame.xs(good, level='var').mean()
     except KeyError:
@@ -110,7 +125,7 @@ def generate_outlier_frame(good, trust_frame, w, par=False):
                                                                         par=par)
     l_outliers = []
     for i, tf in weighted_trust_perspectives.groupby(level=['run', 'observer']):
-        l_outliers.append(generate_outlier_tp(tf, good=good, good_lvl='var'))
+        l_outliers.append(generate_run_comparative_outlier_tp(tf, good=good, good_lvl='var'))
     outlier = pd.concat(l_outliers).sort_index().dropna(how='all').reset_index()
     for k in w.keys():
         outlier[k] = w[k]
@@ -118,9 +133,9 @@ def generate_outlier_frame(good, trust_frame, w, par=False):
     return outlier
 
 
-def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min_emphasis=0, max_emphasis=3,
-                                                          min_sum=1, max_sum=None, extra=None,
-                                                          verbose=False, par=False):
+def perform_weight_factor_run_comparative_outlier_analysis_on_trust_frame(trust_frame, good, min_emphasis=0, max_emphasis=3,
+                                                                          min_sum=1, max_sum=None, extra=None,
+                                                                          verbose=False, par=False):
     """
     For a given trust frame perform grey weight factor distribution analysis to
     generate a frame with metrics/metric weights as a multiindex with columns for each comparison between behaviours
@@ -164,50 +179,69 @@ def perform_weight_factor_outlier_analysis_on_trust_frame(trust_frame, good, min
         print("Using {0} combinations:".format(len(combinations)))
         print(combinations)
     if par:
-        outliers = _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose=True)
+        outliers = _run_comparative_outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose=True)
     else:
-        outliers = _outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, verbose=True)
+        outliers = _run_comparative_outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, verbose=True)
 
     sums = pd.concat(outliers).reset_index()
     sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{0}{1}_{2}".format(good, extra, max_emphasis))
     return sums
 
 
-def _outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, verbose):
+def _run_comparative_outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, verbose):
     outliers = []
     for i, w in enumerate(combinations):
         _w = norm_weight(w, trust_metrics)
         if verbose: print(strftime("%Y-%m-%d %H:%M:%S", gmtime()), i, _w)
-        outlier = generate_outlier_frame(good, trust_frame, _w, par=True)
+        outlier = generate_run_comparative_outlier_frame(good, trust_frame, _w, par=True)
         outliers.append(outlier)
     return outliers
 
 
-def _outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose):
-    outliers = Parallel(n_jobs=-1, verbose=int(verbose) * 50)(delayed(generate_outlier_frame)
+def _run_comparative_outlier_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, verbose):
+    outliers = Parallel(n_jobs=-1, verbose=int(verbose) * 50)(delayed(generate_run_comparative_outlier_frame)
                                                               (good, trust_frame, norm_weight(w, trust_metrics), False)
                                                               for w in combinations)
     return outliers
 
 
-def mean_t_delta(result, target='Alfa'):
-    return -np.subtract(*map(np.nanmean, np.split(result.values, [1], axis=1)))
+def mean_t_delta(result, target_col=0):
+    """
+    Mean Delta T
+    :param result:
+    :param target_col: int: column index of targeted node
+    :return:
+    """
+    target = result.values[:,target_col]
+    cohort = np.delete(result.values, target_col, axis=1)
+    #This is geometrically equivalant to doing a time-series mean but is 3 times faster
+    # (i.e. (np.mean(cohort, axis=1)-target).mean())
+
+    # NOTE You changed nanmean to mean here for a performance boost of 20%
+    return np.subtract(np.mean(cohort),target).mean()
 
 
-def generate_mean_t_delta_frame(good, trust_frame, w, target, par=False):
-    try:
-        _ = trust_frame.xs(good, level='var').mean()
-    except KeyError:
-        raise ValueError("Need to set a good behaviour that exists in the trust_frame")
+def generate_mean_t_delta_frame(trust_frame, w, target, par=False):
+    """
+
+    :param trust_frame:
+    :param w:
+    :param target:
+    :param par:
+    :return:
+    """
 
     # TODO experiment with wether it's better to parallelise the inner or outer version of this.... (i.e. par/w vs par/single
     weighted_trust_perspectives = Trust.generate_node_trust_perspective(trust_frame,
                                                                         flip_metrics=[],
                                                                         metric_weights=w,
                                                                         par=par)
+    target_col = weighted_trust_perspectives.columns.tolist().index(target)
+
     l_outliers = []
     for i, tf in weighted_trust_perspectives.groupby(level=['var', 'run', 'observer']):
-        l_outliers.append((i, mean_t_delta(tf, target)))
+        tf=tf.drop(i[-1], axis=1) #Drop observer from MDT calc
+        l_outliers.append((i, mean_t_delta(tf, target_col=target_col)))
     outlier = pd.Series(dict(l_outliers))
     outlier.index.names = ['var', 'run', 'observer']
     outlier = outlier.sort_index().dropna(how='all').reset_index()
@@ -217,10 +251,10 @@ def generate_mean_t_delta_frame(good, trust_frame, w, target, par=False):
     return outlier
 
 
-def perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust_frame, good,
-                                                                      min_emphasis=0, max_emphasis=3, extra=None,
-                                                                      verbose=False, par=False, target='Alfa',
-                                                                      excluded=[]):
+def perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust_frame, min_emphasis=0, max_emphasis=3,
+                                                                      min_sum = 1, max_sum = None,
+                                                                      extra=None, verbose=False, par=False,
+                                                                      target='Alfa', excluded=[]):
     """
     For a given trust frame perform grey weight factor distribution analysis to
     generate a frame with metrics/metric weights as a multiindex with columns for each comparison between behaviours
@@ -233,7 +267,6 @@ def perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust_fram
     :param target:
     :param excluded:
     :param trust_frame:
-    :param good: the baseline behaviour to assess against
     :param: max_metrics:
     :param: max_emphasis:
     :param: target:
@@ -247,40 +280,47 @@ def perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust_fram
     if extra is None:
         extra = ""
 
-    combinations = ifilter(np.any,
-                           itertools.product(
-                               xrange(
-                                   min_emphasis, max_emphasis
-                               ), repeat=len(trust_metrics)
-                           )
-                           )
-    combinations = ifilter(lambda c: c not in excluded, combinations)
-    # combinations = sorted(combinations, key= lambda l: sum(map(abs,l)))
+    if max_sum is None:
+        max_sum = np.inf
+
+    combinations = itertools.ifilter(np.any,
+                                     itertools.product(
+                                         xrange(
+                                             min_emphasis, max_emphasis
+                                         ), repeat=len(trust_metrics)
+                                     )
+                                     )
+    combinations = itertools.ifilter(lambda v: min_sum <= np.sum(v) <= max_sum,
+                                     combinations)
+    combinations = sorted(combinations, key=lambda l: sum(map(abs, l)))
+    if verbose:
+        print("Using {0} combinations:".format(len(combinations)))
+        print(combinations)
     if par:
-        outliers = _target_mean_t_delta_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, target,
+        outliers = _target_mean_t_delta_par_inner_single_thread(combinations, trust_frame, trust_metrics, target,
                                                                 verbose=True)
     else:
-        outliers = _target_mean_t_delta_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, target,
+        outliers = _target_mean_t_delta_single_thread_inner_par(combinations, trust_frame, trust_metrics, target,
                                                                 verbose=True)
 
     sums = pd.concat(outliers).reset_index()
     sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5',
-                "{0}{1}{2}_{3}".format("meandelta", good, extra, max_emphasis))
+                "{0}{1}_{2}".format("meandelta", extra, max_emphasis))
     return sums
 
 
-def _target_mean_t_delta_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, target, verbose):
+def _target_mean_t_delta_single_thread_inner_par(combinations, trust_frame, trust_metrics, target, verbose):
     outliers = []
     for i, w in enumerate(combinations):
         if verbose: print(strftime("%Y-%m-%d %H:%M:%S", gmtime()), i, w)
-        outlier = generate_mean_t_delta_frame(good, trust_frame, norm_weight(w, trust_metrics), target, par=True)
+        outlier = generate_mean_t_delta_frame(trust_frame, norm_weight(w, trust_metrics), target, par=True)
         outliers.append(outlier)
     return outliers
 
 
-def _target_mean_t_delta_par_inner_single_thread(combinations, good, trust_frame, trust_metrics, target, verbose):
+def _target_mean_t_delta_par_inner_single_thread(combinations, trust_frame, trust_metrics, target, verbose):
     outliers = Parallel(n_jobs=-1, verbose=int(verbose) * 50)(delayed(generate_mean_t_delta_frame)
-                                                              (good, trust_frame, norm_weight(w, trust_metrics), target,
+                                                              (trust_frame, norm_weight(w, trust_metrics), target,
                                                                False)
                                                               for w in combinations)
     return outliers
