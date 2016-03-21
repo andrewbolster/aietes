@@ -154,7 +154,7 @@ class Simulation(object):
             :param args:
             :param kwargs:
         """
-        # Attempt Validation and construct the simulation from that config.
+        # Make sure noones messed up the log_level settings, as that's generally a bad sign
         try:
             self.logger.setLevel(
                 LOGLEVELS.get(self.config.get("log_level", "notset").lower(), logging.NOTSET))

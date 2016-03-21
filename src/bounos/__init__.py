@@ -40,7 +40,7 @@ import pandas as pd
 import Metrics
 import Analyses.Behaviour
 import Analyses.Trust
-from DataPackage import DataPackage
+import DataPackage
 from aietes.Tools import list_functions, mkpickle
 
 font = {'family': 'normal',
@@ -55,7 +55,7 @@ _metrics = [Metrics.DeviationOfHeading,
             Metrics.PernodeInternodeDistanceAvg]
 
 
-class BounosModel(DataPackage):
+class BounosModel(DataPackage.DataPackage):
     """
     BounosModel acts as an interactive superclass of DataPackage, designed for interactive
         simulation/analysis
@@ -110,7 +110,7 @@ def load_sources(sources, comms_only=False):
     datasets = []
     for source in sources:
         try:
-            datasets.append(DataPackage(source))
+            datasets.append(DataPackage.DataPackage(source))
         except:
             pass
     if comms_only:
@@ -136,7 +136,7 @@ def generate_sources(sources, comms_only=False):
     # slower than just a regular boring map
     for source in sources:
         try:
-            d = DataPackage(source)
+            d = DataPackage.DataPackage(source)
         except:
             continue
         yield (d.title.tostring(), d.comms if comms_only else d)
@@ -211,7 +211,7 @@ def multirun(args, basedir=os.curdir):
         name = os.path.split(sourcedir)[-1]
         data = load_sources(npz_in_dir(sourcedir))
         execute_generator = lambda d: detect_and_identify(d)
-        result_generator = (execute_generator(d) for d in data.itervalues())
+        result_generator = [execute_generator(d) for d in data.itervalues()]
         # TODO This is amazingly wasteful
         _, _, _, identification_list = zip(*result_generator)
 
@@ -458,9 +458,9 @@ def detect_and_identify(d):
     :param d:
     :return:
     """
-    metric_devs, windowed_devs = Analyses.Behaviour.combined_detection_rank(d,
-                                                                            _metrics,
-                                                                            stddev_frac=2)
+    metric_devs, windowed_devs = Analyses.Behaviour.deviance_assessor(d,
+                                                                      _metrics,
+                                                                      stddev_frac=2)
     trust_values = Analyses.Trust.dev_to_trust(metric_devs)
     identification_dict = Analyses.Behaviour.behaviour_identification(metric_devs, windowed_devs,
                                                                       _metrics,
@@ -776,8 +776,6 @@ def run_overlay(data, args=None):
     import pylab as pl
     from ast import literal_eval
 
-    pl.rc('font', **font)
-
     analysis = getattr(Analyses.Behaviour, args.analysis[0])
     try:
         analysis_args = literal_eval(args.analysis_args)
@@ -880,7 +878,7 @@ def behaviour_analysis_dict(d):
     :param d:
     :return:
     """
-    deviation, trust = Analyses.Behaviour.combined_detection_rank(
+    deviation, trust = Analyses.Behaviour.deviance_assessor(
         d, _metrics, stddev_frac=2)
     result_dict = Analyses.Behaviour.behaviour_identification(
         deviation, trust, _metrics, names=d.names)

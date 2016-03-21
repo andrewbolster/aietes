@@ -1846,6 +1846,8 @@ class CSMA(MAC):
                       (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
         self.t_control = self.rts_packet_length / \
                          (self.layercake.phy.bandwidth * 1e3 * self.layercake.phy.band2bit)
+        if self.t_control is None:
+            raise ValueError("Invalid Timing Configuration, probably bad MAC config")
         Sim.activate(self.timer, self.timer.lifecycle(self.TimerRequest))
 
         self.logger.info("Activated")

@@ -43,7 +43,7 @@ import signal
 from aietes import Simulation
 import aietes.Threaded
 from aietes.Tools import _results_dir, generate_names, update_dict, kwarger, get_config, ConfigError, try_x_times, \
-    seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf
+    seconds_to_str, Dotdict, notify_desktop, AutoSyncShelf, LOGLEVELS
 from bounos import DataPackage, behaviour_analysis_dict, load_sources, npz_in_dir
 
 try:
@@ -95,7 +95,7 @@ class Scenario(object):
     }
 
     def __init__(self, default_config=None, default_config_file=None,
-                 runcount=1, title=None, *args, **kwargs):
+                 runcount=1, title=None, log_level=None, *args, **kwargs):
         """
         Builds an initial config and divides it up for convenience later
             Can take default_config = <ConfigObj> or default_config_file = <path>
@@ -106,6 +106,18 @@ class Scenario(object):
                 overridden in the run method
             title(str)
         """
+        root_level_name = logging.getLevelName(logging.getLogger().getEffectiveLevel())
+        if log_level is not None:
+            logging.info("Switching from {} to {} based on argument".format(root_level_name, logging.getLevelName(log_level)))
+            self._default_log_level = log_level
+        elif 'log_level' in default_config:
+            new_log_level_name = default_config['log_level']
+            logging.info("Switching from {} to {} based on default config".format(root_level_name, new_log_level_name))
+            self._default_log_level = LOGLEVELS[new_log_level_name.lower()]
+        else:
+            new_log_level = logging.ERROR
+            logging.info("Falling back from {} to {}".format(root_level_name, logging.getLevelName(new_log_level)))
+            self._default_log_level = new_log_level
 
         if default_config_file is None and default_config is None:
             logging.info("No Config provided: Assume that the user wants a generic default")
@@ -197,7 +209,7 @@ class Scenario(object):
                                  title=title,
                                  logtofile=os.path.join(
                                      self.mypath, "{0!s}.log".format(title)),
-                                 logtoconsole=logging.ERROR,
+                                 logtoconsole=self._default_log_level,
                                  progress_display=progress_display
                                  )
                 prep_stats = sim.prepare(sim_time=runtime)
@@ -267,7 +279,7 @@ class Scenario(object):
                                 title=title,
                                 logtofile=os.path.join(
                                     self.mypath, "{0!s}.log".format(title)),
-                                logtoconsole=logging.ERROR,
+                                logtoconsole=self._default_log_level,
                                 progress_display=progress_display,
                                 sim_time=runtime),
                         deepcopy(pp_defaults),
@@ -349,7 +361,8 @@ class Scenario(object):
                   'Environment': self.environment,
                   'Node': {'Nodes': self.nodes,
                            'count': len([name for name in self.nodes.keys() if name != "__default__"])
-                           }
+                           },
+                  'log_level': logging.getLevelName(self._default_log_level)
                   }
         return config
 
@@ -553,7 +566,8 @@ class ExperimentManager(object):
                  node_count=None,
                  title=None, parallel=False,
                  base_config_file=None,
-                 base_exp_path=None, *args, **kwargs
+                 base_exp_path=None, log_level=None,
+                 *args, **kwargs
                  ):
         """
         The Experiment Manager Object deals with multiple scenarios build around a single or
@@ -566,8 +580,14 @@ class ExperimentManager(object):
             :param base_config_file (str->FQPath): aietes config file to base the default scenario off of.
 
         """
+        if log_level is None:
+            self._default_log_level = logging.ERROR
+        else:
+            self._default_log_level = log_level
+
         self._default_scenario = Scenario(title="__default__",
-                                          default_config_file=base_config_file)
+                                          default_config_file=base_config_file,
+                                          log_level=self._default_log_level)
         self._base_config_file = base_config_file
 
         if title is None:
@@ -987,27 +1007,6 @@ class ExperimentManager(object):
         :param experiment:
         :param verbose:
         """
-
-        if isinstance(experiment, ExperimentManager):
-            # Running as proper experiment Manager instance, no modification
-            # required
-            if hasattr(experiment, 'scenarios'):
-                scenario_dict = experiment.scenarios
-            elif hasattr(experiment, 'scenarios_file'):
-                scenario_dict = AutoSyncShelf(experiment.scenarios_file)
-        elif isinstance(experiment, list) \
-                and all( isinstance(entry, Scenario) for entry in experiment):
-            # Have been given list of Scenarios entities in a single
-            # 'scenario', treat as normalo
-            scenario_dict = {s.title: s for s in experiment}
-        elif isinstance(experiment, list) \
-                and all( isinstance(entry, DataPackage) for entry in experiment):
-            # Have been given list of DataPackage entities in a single
-            # 'scenario', treat as single virtual scenario
-            scenario_dict = {dp.title: PseudoScenario(dp.title, dp) for dp in experiment}
-        else:
-            raise RuntimeWarning("Cannot validate experiment structure")
-
         def avg_of_dict(dict_list, keys):
             """
             Find the average of a key value across a list of dicts
@@ -1029,13 +1028,33 @@ class ExperimentManager(object):
                 val_sum += d[keys[-1]]
             return float(val_sum) / count
 
+
+        if isinstance(experiment, ExperimentManager):
+            # Running as proper experiment Manager instance, no modification
+            # required
+            if hasattr(experiment, 'scenarios'):
+                scenario_dict = experiment.scenarios
+            elif hasattr(experiment, 'scenarios_file'):
+                scenario_dict = AutoSyncShelf(experiment.scenarios_file)
+        elif isinstance(experiment, list) \
+                and all( isinstance(entry, Scenario) for entry in experiment):
+            # Have been given list of Scenarios entities in a single
+            # 'scenario', treat as normal
+            scenario_dict = {s.title: s for s in experiment}
+        elif isinstance(experiment, list) \
+                and all( isinstance(entry, DataPackage) for entry in experiment):
+            # Have been given list of DataPackage entities in a single
+            # 'scenario', treat as single virtual scenario
+            scenario_dict = {dp.title: PseudoScenario(dp.title, dp) for dp in experiment}
+        else:
+            raise RuntimeWarning("Cannot validate experiment structure")
+
         correctness_stats = {}
         print(
             "Run\tFleet D, Efficiency\tstd(INDA,INDD)\tAch., Completion Rate\tCorrect/Confident\tSuspect ")
         for t, s in scenario_dict.items():
             correctness_stats[t] = []
             stats = [d.package_statistics() for d in s.datarun]
-            # stats = temp_pool.map(lambda d: d.package_statistics(),s.datarun)
             suspects = []
             if isinstance(s, Scenario):
                 # Running on a real scenario so use information we shouldn't
@@ -1050,38 +1069,41 @@ class ExperimentManager(object):
 
             for i, r in enumerate(stats):
                 analysis = behaviour_analysis_dict(s.datarun[i])
-                confident = analysis[
-                                'trust_stdev'] > 100  # TODO This needs to be dynamic, possibly based on n_metrics and t
-                correct_detection = (not bool(suspects) and not confident) or analysis[
-                                                                                  'suspect_name'] in suspects
+                # TODO This needs to be dynamic, possibly based on n_metrics and t
+                confident = analysis['trust_stdev'] > 100
+                correct_detection = (not bool(suspects) and not confident) or analysis['suspect_name'] in suspects
                 correctness_stats[t].append(
                     (correct_detection, confident))
                 if verbose:
-                    print("{0:d}\t{1:.3f}m ({2:.4f})\t{3:.2f}, {4:.2f} \t{5:d} ({6:.0f}%) {7!s}, {8!s}, {9:.2f}, {10:.2f}, {11!s}".format(
-                        i,
-                        r['motion']['fleet_distance'], r[
-                            'motion']['fleet_efficiency'],
-                        r['motion']['std_of_INDA'], r['motion']['std_of_INDD'],
-                        r['achievements']['max_ach'], r[
-                            'achievements']['avg_completion'] * 100.0,
-                        "{0!s}({1:.2f})".format(
-                            str((correct_detection, confident)), analysis['trust_stdev']),
-                        analysis['suspect_name'] + " {0:d}".format(analysis["suspect"]),
-                        analysis['suspect_distrust'],
-                        analysis['suspect_confidence'],
-                        str(analysis["trust_average"])
+                    print("{run:d}\t{dist:.3f}m ({eff:.4f})\t{inda:.2f},{indd:.2f}\t{ach:d} ({comp:.0f}%) "
+                          "{corr!s}, {susp!s}, {susD:.2f}, {susC:.2f}, {Tmean!s}".format(
+                        run=i,
+                        dist=r['motion']['fleet_distance'],
+                        eff=r['motion']['fleet_efficiency'],
+                        inda=r['motion']['std_of_INDA'],
+                        indd=r['motion']['std_of_INDD'],
+                        ach=r['achievements']['max_ach'],
+                        comp=r['achievements']['avg_completion'] * 100.0,
+                        corr="{0!s}({1:.2f})".format(str((correct_detection, confident)), analysis['trust_stdev']),
+                        susp=analysis['suspect_name'] + "(n{0:d})".format(analysis["suspect"]),
+                        susD=analysis['suspect_distrust'],
+                        susC=analysis['suspect_confidence'],
+                        Tmean=str(analysis["trust_average"])
+                        )
                     )
-                          )
 
-            print("AVG\t{0:.3f}m ({1:.4f})\t{2:.2f}, {3:.2f} \t{4:d} ({5:.0f}%)".format(avg_of_dict(stats, ['motion', 'fleet_distance']),
-                     avg_of_dict(stats, ['motion', 'fleet_efficiency']),
-                     avg_of_dict(stats, ['motion', 'std_of_INDA']),
-                     avg_of_dict(stats, ['motion', 'std_of_INDD']),
-                     avg_of_dict(stats, ['achievements', 'max_ach']),
-                     avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0))
+            print("AVG\t{0:.3f}m ({1:.4f})\t{2:.2f}, {3:.2f} \t{4:.0f} ({5:.0f}%)".format(
+                avg_of_dict(stats, ['motion', 'fleet_distance']),
+                avg_of_dict(stats, ['motion', 'fleet_efficiency']),
+                avg_of_dict(stats, ['motion', 'std_of_INDA']),
+                avg_of_dict(stats, ['motion', 'std_of_INDD']),
+                avg_of_dict(stats, ['achievements', 'max_ach']),
+                avg_of_dict(stats, ['achievements', 'avg_completion']) * 100.0)
+            )
 
         # Print out Correctness stats per scenario
-        print("Scenario\t\t++\t+-\t-+\t--\t\t (Correct,Confident)")
+        max_len = max(map(len,correctness_stats.keys()))
+        print("Scenario{0!s}\t++\t+-\t-+\t--\t\t (Correct,Confident)".format(' '*(max_len-8)))
         cct = cnt = nct = nnt = 0
         for run, stats in sorted(correctness_stats.items()):
             cc = sum([correct and confident for (correct, confident) in stats])
@@ -1091,14 +1113,17 @@ class ExperimentManager(object):
                 [not correct and confident for (correct, confident) in stats])
             nn = sum(
                 [not correct and not confident for (correct, confident) in stats])
-            print("{0!s}\t\t{1:d}\t{2:d}\t{3:d}\t{4:d}".format(run, cc, cn, nc, nn))
+            padded_run = run + (' '*(max_len-len(run)))
+            print("{0!s}\t{1:d}\t{2:d}\t{3:d}\t{4:d}".format(padded_run, cc, cn, nc, nn))
             cct += cc
             cnt += cn
             nct += nc
             nnt += nn
 
-        print("Subtot\t\t\t{0:d}\t{1:d}\t{2:d}\t{3:d}".format(cct, cnt, nct, nnt))
-        print("Total\t\t\t{0:d}\t\t\t{1:d}".format(cct + cnt, nct + nnt))
+        pad = ' '*(max_len-6)
+        print("Subtot{0}\t{1:d}\t{2:d}\t{3:d}\t{4:d}".format(pad, cct, cnt, nct, nnt))
+        pad = ' '*(max_len-5)
+        print("Total{0}\t{1:d}\t\t\t{2:d}".format(pad, cct + cnt, nct + nnt))
 
         correct = cct + cnt
         confident = cct + nct
@@ -1164,8 +1189,7 @@ class ExperimentManager(object):
             s_path = os.path.abspath(
                 os.path.join(self.exp_path, s.title + ".anl"))
             print("Writing analysis {0!s} to {1!s}".format(s.title, s_path))
-            stats = [dict(
-                behaviour_analysis_dict(d).items() + d.package_statistics().items()) for d in s.datarun]
+            stats = [dict(behaviour_analysis_dict(d).items() + d.package_statistics().items()) for d in s.datarun]
 
             pickle.dump(stats, open(s_path, "wb"))
             print("Done in {0:f} seconds".format((time.clock() - start)))

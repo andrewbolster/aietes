@@ -560,3 +560,58 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     assert any(_d > 1), "All Resultantant Trust Values should be less than 1"
     assert any(0 > _d), "All Resultantant Trust Values should be greater than 0"
     return _d
+
+
+## Nasty hacks to keep bounos happy
+def grc_factory(rho=0.5):
+    """
+    Factory function for generating Grey Relational Coeffiecient functions
+        based on the distringuishing coefficient (rho)
+    :param rho: float, distinguishing coefficient (rho)
+    :return grc: function
+    """
+    def grc(delta):
+        """
+        GRC Inner function
+        Includes remapping of GRC to 0<x<1 rather than 1/3<x<1
+        :param delta:
+        :param rho:
+        :return:
+        """
+        delta = abs(delta)
+        upper = np.min(delta, axis=0) + (rho * np.max(delta, axis=0))
+        lower = (delta) + (rho * np.max(delta, axis=0))
+        with np.errstate(invalid='ignore', ):
+            parterval = np.divide(upper, lower)
+        return 1.5*parterval-0.5
+
+    return grc
+
+def GRG_t(c_intervals, weights=None):
+    """
+    Grey Relational Grade
+
+    Weighted sum given input structure
+
+        [node,metric,[interval]]
+
+    returns
+        [node, [interval]]
+    :param grcs:
+    :return:
+    """
+    return np.average(c_intervals, axis=1, weights=weights)
+
+
+def dev_to_trust(per_metric_deviations):
+    # rotate pmdev to node-primary ([node,metric])
+    per_node_deviations = np.rollaxis(per_metric_deviations, 0, 3)
+    GRC_t = grc_factory()
+    grcs = map(GRC_t, per_node_deviations)
+    grgs = map(GRG_t, grcs)
+    trust_values = np.asarray([
+        np.asarray([
+            t_kt(interval) for interval in node
+        ]) for node in grgs
+    ])
+    return trust_values

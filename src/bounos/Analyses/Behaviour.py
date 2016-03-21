@@ -177,7 +177,8 @@ def deviation_from_metric(data, *args, **kwargs):
             'metrics': metric.data}
 
 
-def combined_detection_rank(data, metrics, suspects_only=False, *args, **kwargs):
+def deviance_assessor(data, metrics, suspects_only=False, stddev_frac=2, override = False, window=600,
+                      tmax = None, **kwargs):
     # Combine multiple metrics detections into a general trust rating per node
     # over time.
     """
@@ -192,10 +193,8 @@ def combined_detection_rank(data, metrics, suspects_only=False, *args, **kwargs)
     if not isinstance(metrics, list):
         raise ValueError("metrics should be passed a list of analyses")
     if not isinstance(data, DataPackage.DataPackage):
-        raise ValueError("data should be a DataPackage")
-    tmax = kwargs.get("tmax", data.tmax)
-    window = kwargs.get("window", 600)
-    override_detection = kwargs.get("override", False)
+        raise ValueError("data should be a DataPackage, got {}".format(type(data)))
+    tmax = data.tmax if tmax is None else tmax
     n_met = len(metrics)
     n_nodes = data.n
     deviance_accumulator = np.zeros((n_met, tmax, n_nodes), dtype=np.float64)
@@ -204,13 +203,13 @@ def combined_detection_rank(data, metrics, suspects_only=False, *args, **kwargs)
     for m, metric in enumerate(metrics):
         # Get Detections, Stddevs, Misbehavors, Deviance from
         # Detect_MisBehaviour
-        if override_detection:
+        if override:
             results = deviation_from_metric(data, metric=metric)
             print("No misbehavors given, assuming everything")
             misbehavors = {suspect: range(data.tmax)
                            for suspect in range(data.n)}
         else:
-            results = detect_misbehaviour(data, metric=metric)
+            results = detect_misbehaviour(data, metric=metric, stddev_frac=stddev_frac)
             misbehavors = results['suspicions']
 
         stddev, deviance = results['detection_envelope'], results['deviance']
@@ -225,47 +224,50 @@ def combined_detection_rank(data, metrics, suspects_only=False, *args, **kwargs)
                 )
         else:
             for culprit in xrange(n_nodes):
+                # for each target node, the deviance_acc value for time t is the
+                # absolute value of the devience over the
                 deviance_accumulator[m, :, culprit] = (
                     np.abs(
                         np.divide(deviance[:, culprit], stddev.clip(min=np.finfo(np.float64).eps)))
                 )
 
-    windowed_trust_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
-    deviance_lag_lead_accumulator = np.zeros((tmax, n_nodes), dtype=np.float64)
+    windowed_deviance = np.zeros((tmax, n_nodes), dtype=np.float64)
+    lag_lead_deviance = np.zeros((tmax, n_nodes), dtype=np.float64)
 
     # Prod-Sum smooth individual metrics based on a window
     for t in range(tmax):
         head = max(0, t - window)
-        deviance_lag_lead_accumulator[t] = np.sum(
+        lag_lead_deviance[t] = np.sum(
             np.prod(deviance_accumulator[:, head:t, :], axis=0),
             axis=0)
-        windowed_trust_accumulator[
-            t] = deviance_lag_lead_accumulator[t] - (t - head)
+        windowed_deviance[
+            t] = lag_lead_deviance[t] - (t - head)
 
-    return deviance_accumulator, windowed_trust_accumulator
+    return deviance_accumulator, windowed_deviance
 
 
-def behaviour_identification(deviance, trust, metrics, names=None, verbose=False):
+def behaviour_identification(deviance, windowed_deviance, metrics, names=None, verbose=False):
     """
     #TODO THIS DOES NOT IDENTIFY BEHAVIOUR
     Attempts to detect and guess malicious/'broken' node
     Deviance is unitless, in a shape [metrics,t,nodes]
     :param deviance:
-    :param trust:
+    :param windowed_deviance:
     :param metrics:
     :param names:
     :param verbose:
     """
     detection_sums = np.sum(
-        deviance, axis=1) - deviance.shape[1]  # Removes the 1.0 initial bias
+        deviance, axis=1) - deviance.shape[1]                   # Removes the 1.0 initial bias (i.e. N nodes)
     detection_totals = np.sum(detection_sums, axis=1)
     detection_subtot = np.argmax(detection_sums, axis=1)
     detection_max = np.argmax(np.sum(detection_sums, axis=0))
-    trust_average = np.average(trust, axis=0)
+    trust_average = np.average(windowed_deviance, axis=0)       # Per Node
     trust_stdev = np.std(trust_average)
     prime_distrusted_node = np.argmax(trust_average)
-    mkpickle("trust", trust)
-    if trust_stdev > 100:
+    #mkpickle("trust", windowed_deviance)
+    # In reality, the below is basically run on everyone
+    if trust_stdev > 100: # This is arbitrary; should be dependant on N, T, etc.
         if verbose:
             print("Untrustworthy behaviour detected")
             if names is None:

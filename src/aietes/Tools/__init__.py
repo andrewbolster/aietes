@@ -51,6 +51,33 @@ from aietes.Tools.humanize_time import seconds_to_str
 
 np.seterr(**{'divide': 'ignore', 'invalid': 'ignore', 'over': 'ignore', 'under': 'ignore'})
 
+
+class SimTimeFilter(logging.Filter):
+    """
+    Brings Sim.now() into usefulness
+    """
+
+    def filter(self, record):
+        record.simtime = Sim.now()
+        return True
+
+
+log_fmt = ColoredFormatter(
+    "%(log_color)s%(simtime)-8.2f %(levelname)-6s %(name)s:%(message)s (%(lineno)d)",
+    datefmt=None,
+    reset=True,
+    log_colors={
+        'DEBUG': 'cyan',
+        'INFO': 'green',
+        'WARNING': 'yellow',
+        'ERROR': 'red',
+        'CRITICAL': 'red',
+    }
+)
+log_hdl = logging.StreamHandler()
+log_hdl.setFormatter(log_fmt)
+log_hdl.addFilter(SimTimeFilter())
+
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
 DEBUG = False
@@ -141,31 +168,7 @@ def stacksize(since=0.0):
     return _vmb('VmStk:') - since
 
 
-class SimTimeFilter(logging.Filter):
-    """
-    Brings Sim.now() into usefulness
-    """
 
-    def filter(self, record):
-        record.simtime = Sim.now()
-        return True
-
-
-log_fmt = ColoredFormatter(
-    "%(log_color)s%(simtime)-8.2f %(levelname)-6s %(name)s:%(message)s (%(lineno)d)",
-    datefmt=None,
-    reset=True,
-    log_colors={
-        'DEBUG': 'cyan',
-        'INFO': 'green',
-        'WARNING': 'yellow',
-        'ERROR': 'red',
-        'CRITICAL': 'red',
-    }
-)
-log_hdl = logging.StreamHandler()
-log_hdl.setFormatter(log_fmt)
-log_hdl.addFilter(SimTimeFilter())
 
 
 def notify_desktop(message):

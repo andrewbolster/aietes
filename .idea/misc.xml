@@ -4,6 +4,9 @@
     <option name="URL" value="https://localhost:8888/notebooks/AIETES/AIETES/Comparing%20Joint%20Behaviour%20Weights.ipynb" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 2.7.11 (~/anaconda2/envs/py2/bin/python2)" project-jdk-type="Python SDK" />
+  <component name="PythonCompatibilityInspectionAdvertiser">
+    <option name="version" value="1" />
+  </component>
   <component name="SvnBranchConfigurationManager">
     <option name="mySupportsUserInfoFilter" value="true" />
   </component>

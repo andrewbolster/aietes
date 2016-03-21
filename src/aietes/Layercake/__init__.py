@@ -21,6 +21,8 @@ import PhysicalLayer as Phy
 import MAC
 import RoutingLayer as Net
 
+class ActivationException(Exception):
+    pass
 
 class Layercake(object):
     """
@@ -91,6 +93,18 @@ class Layercake(object):
             self.net = net_mod(self, config['Network'])
         except AttributeError as e:
             raise
+        ##############################
+        # Activation Flag
+        ##############################
+        self.activated = False
+
+    def _needs_activation(f):
+        def d_f(self, *args, **kwargs):
+            if not self.activated:
+                raise ActivationException("Layercake.{} Used Before Activation: {}{}".format(f.func_name, args, kwargs))
+            else:
+                return f(self,*args, **kwargs)
+        return d_f
 
     def activate(self, rx_handler, monitor_mode=False):
         """
@@ -106,7 +120,9 @@ class Layercake(object):
         self.monitor_mode = monitor_mode
         self.packet_length = self.mac.data_packet_length
         self.logger.info("Activated")
+        self.activated = True
 
+    @_needs_activation
     def send(self, payload):
         """
         Initialise payload transmission down the stack
@@ -114,6 +130,7 @@ class Layercake(object):
         """
         self.net.send_packet(payload)
 
+    @_needs_activation
     def recv(self, payload):
         """
         Trigger reception action from below

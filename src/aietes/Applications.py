@@ -98,6 +98,8 @@ class Application(Sim.Process):
             self.layercake.app_rx_handler = self.packet_recv
             if self.MONITOR_MODE:
                 self.layercake.activate(self.recv, monitor_mode=self.fwd)
+            else:
+                self.layercake.activate(self.recv)
 
         Sim.activate(self, self.lifecycle())
 

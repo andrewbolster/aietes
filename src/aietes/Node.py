@@ -140,8 +140,7 @@ class Node(Sim.Process):
 
         if len(self.config['max_speed']) == 1:
             # Max Turn Rate is independent of orientation
-            self.max_turn = [
-                self.config['max_turn'], self.config['max_turn'], self.config['max_turn']]
+            self.max_turn = [self.config['max_turn'], self.config['max_turn'], self.config['max_turn']]
         else:
             self.max_turn = self.config['max_turn']
         assert len(self.max_turn) == 3

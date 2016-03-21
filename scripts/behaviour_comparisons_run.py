@@ -4,8 +4,7 @@ __author__ = 'andrewbolster'
 
 from contextlib import contextmanager
 import sys
-import os
-from subprocess import call
+import logging as log
 from polybos import ExperimentManager as ExpMan
 from bounos.multi_loader import dump_trust_logs_and_stats_from_exp_paths
 
@@ -22,16 +21,17 @@ def setup_exp():
     e = ExpMan(node_count=6,
                title="Malicious Behaviour Trust Comparison",
                parallel=True,
-               base_config_file="behave.conf"
+               base_config_file="behave.conf",
+               # log_level=log.INFO
                )
     e.add_minority_n_behaviour_suite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
     return e
 
 
 def run(e):
-    e.run(title="8-bev-mal",
-          runcount=8,
-          runtime=1800,
+    e.run(title="4-bev-mal",
+          runcount=4,
+          runtime=36000,
           retain_data=True,
           queue=True)
     return e
@@ -45,15 +45,17 @@ if __name__ == "__main__":
     exp = setup_exp()
     exp = run(exp)
     logpath = "{path}/{title}.log".format(path=exp.exp_path, title=exp.title.replace(' ', '_'))
-    exp.dump_analysis()
+    try:
+        exp.dump_analysis()
+        with redirected(stdout=logpath):
+            ExpMan.print_stats(exp, verbose=True)
+        with open(logpath, 'r') as fin:
+            print fin.read()
+        print("Saved detection stats to {0}".format(logpath))
+    except MemoryError:
+        log.exception("MemErrd in dump_analysis, moving on")
 
-    with redirected(stdout=logpath):
-        ExpMan.print_stats(exp, verbose=True)
 
-    with open(logpath, 'r') as fin:
-        print fin.read()
-
-    print("Saved detection stats to {0}".format(logpath))
     path = exp.exp_path
     print("Saved detection stats to {0}".format(exp.exp_path))
     try:
