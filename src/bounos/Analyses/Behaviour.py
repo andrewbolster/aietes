@@ -219,8 +219,8 @@ def deviance_assessor(data, metrics, suspects_only=False, stddev_frac=2, overrid
         if suspects_only:
             for culprit, times in misbehavors.iteritems():
                 deviance_accumulator[m, np.array(times), culprit] = (
-                    np.abs(np.divide(deviance[np.array(times), culprit], stddev[
-                        np.array(times)].clip(min=np.finfo(np.float64).eps)))
+                    np.abs(np.divide(deviance[np.array(times), culprit],
+                                     stddev[np.array(times)].clip(min=np.finfo(np.float64).eps)))
                 )
         else:
             for culprit in xrange(n_nodes):
@@ -228,7 +228,9 @@ def deviance_assessor(data, metrics, suspects_only=False, stddev_frac=2, overrid
                 # absolute value of the devience over the
                 deviance_accumulator[m, :, culprit] = (
                     np.abs(
-                        np.divide(deviance[:, culprit], stddev.clip(min=np.finfo(np.float64).eps)))
+                        np.divide(deviance[:, culprit],
+                                  stddev.clip(min=np.finfo(np.float64).eps))
+                    )
                 )
 
     windowed_deviance = np.zeros((tmax, n_nodes), dtype=np.float64)

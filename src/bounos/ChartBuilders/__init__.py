@@ -698,6 +698,7 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
     f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
     if title is not False:
         f.suptitle("Node Layout and mobility {0}".format("for " + title if title is not None else ""))
+
     for n, (name, node_p) in enumerate(df.groupby(level='node')):
         x, y, z = initial = node_p.iloc[0]
 
@@ -713,11 +714,12 @@ def plot_axes_views_from_positions_frame(df, title=None, figsize=None):
         xs = node_p.x
         ys = node_p.y
         zs = node_p.z
+        dtrace = node_p.apply(np.linalg.norm, axis=1) - np.linalg.norm(node_p.iloc[0])
         ax1.plot(xs, ys, alpha=0.6)
         ax2.plot(ys, zs, alpha=0.6)
         ax3.plot(xs, zs, alpha=0.6)
         ax4.plot(
-            np.abs(node_p.apply(np.linalg.norm, axis=1) - np.linalg.norm(initial)),
+            dtrace.abs().values,
             label=name,
             alpha=0.6
         )

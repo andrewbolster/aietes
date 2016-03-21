@@ -20,6 +20,8 @@ __email__ = "me@andrewbolster.info"
 from collections import Counter
 from copy import deepcopy
 
+from sys import maxsize as MAXINT
+
 import numpy as np
 import pandas as pd
 from numpy.random import poisson
@@ -487,8 +489,6 @@ class Trust(RoutingTest):
         `update_accessories`()
 
     """
-    trust_assessment_period = 600
-
     def __init__(self, *args, **kwargs):
         super(Trust, self).__init__(*args, **kwargs)
         # List of methods called per tick.
@@ -497,9 +497,11 @@ class Trust(RoutingTest):
         self.packet_receivers = []
         # While it's tempting to preallocate this as a DataFrame, it is over 10 times slower than dict ops
         self.trust_assessments = {}  # My generated trust metrics, [node][t][observation Series]
+        self.trust_assessment_period = self.config['trust_assessment_period'] # interval between trust assessments
         # Extra information that might be interesting in the longer term.
         self.trust_accessories = {}
         self.last_trust_assessment = None
+
 
     def activate(self):
         """
@@ -594,7 +596,6 @@ class BehaviourTrust(Trust):
     Performs the same Routing Test behaviour as Comms Trust
 
     """
-
     def __init__(self, *args, **kwargs):
         super(BehaviourTrust, self).__init__(*args, **kwargs)
 
@@ -714,6 +715,11 @@ class BehaviourTrust(Trust):
         :param packet:
         """
         self.pos_log.append(self.node.fleet.node_positions())
+
+    def update_accessories(self):
+        """
+        In behaviour trust we are interested in when "Achievements" are met, i.e. passing a waypoint
+        """
 
 
 class CommsTrust(Trust):

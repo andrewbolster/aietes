@@ -541,8 +541,7 @@ def run_detection_fusion(data, args=None):
             if j == 0:
                 ax.set_title("{title}\n$\sigma${confidence:.3f}/M-{distrust:.3f}".format(
                     title=str(d.title).replace("_", " "),
-                    confidence=identification_dict[
-                        'suspect_confidence'],
+                    confidence=identification_dict['suspect_confidence'],
                     distrust=identification_dict['suspect_distrust'],
                 )
                 )

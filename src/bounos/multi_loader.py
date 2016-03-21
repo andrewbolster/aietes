@@ -27,7 +27,7 @@ logging.getLogger('').addHandler(console)
 log = logging.getLogger(__name__)
 
 
-def scenarios_comms(paths, generator=True):
+def scenarios_comms(paths, generator=True, comms_only=True):
     subdirs = natsorted(map_paths(paths))
     for i, subdir in enumerate(natsorted(subdirs)):
         title = os.path.basename(subdir)
@@ -38,9 +38,9 @@ def scenarios_comms(paths, generator=True):
             title, subtitle,
             memory(), swapsize()))
         if generator:
-            yield (subtitle, generate_sources(sources, comms_only=True))
+            yield (subtitle, generate_sources(sources, comms_only=comms_only))
         else:
-            yield (subtitle, load_sources(sources, comms_only=True))
+            yield (subtitle, load_sources(sources, comms_only=comms_only))
 
 
 def hdfstore(filename, obj):
@@ -132,19 +132,20 @@ def generate_dataframes_from_inverted_log(tup):
             df.drop(['total_counts', u'sent_counts', 'received_counts'],
                     axis=1, inplace=True, errors='ignore')
 
-        if k == 'trust':
+        if k == 'trust' and not df.empty:
             df = Trust.explode_metrics_from_trust_log(df)
 
         # Ensure Index Types and Orders
         try:
             map(float, df.index.levels[0])
             var_is_float = True
-        except:
+        except ValueError:
             var_is_float = False
 
         df.index = df.index.set_levels([
-                                           df.index.levels[0].astype(np.float64) if var_is_float else df.index.levels[
-                                               0],  # Var
+                                           df.index.levels[0].astype(np.float64)
+                                            if var_is_float
+                                            else df.index.levels[0],  # Var
                                            df.index.levels[1].astype(np.int32)  # Run
                                        ] + (df.index.levels[2:])
                                        )

@@ -447,12 +447,12 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
     :param df:
     :return tf:
     """
-    tf = pd.DataFrame.from_dict({k: pd.Series(v) for k, v in df.stack().iterkv()}, orient='index')
+    tf = pd.DataFrame.from_dict({k: pd.Series(v) for k, v in df.stack().iteritems()}, orient='index')
     tf.index = pd.MultiIndex.from_tuples(tf.index, names=['var', 'run', 'observer', 't', 'target'])
     try:
         map(float, df.index.levels[0])
         var_is_float = True
-    except:
+    except ValueError:
         var_is_float = False
 
     tf.index = tf.index.set_levels([
@@ -462,7 +462,7 @@ def explode_metrics_from_trust_log(df, metrics_string=None):
         tf.index.levels[3].astype(np.int32),  # t
         tf.index.levels[4]  # target
     ])
-    tf.sort(inplace=True)
+    tf.sort_index(inplace=True)
     return tf
 
 

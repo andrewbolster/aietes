@@ -92,6 +92,7 @@ class Scenario(object):
         'app': ['Application', 'protocol'],
         'app_rate': ['Application', 'packet_rate'],
         'app_length': ['Application', 'packet_length'],
+        'trust_period': ['Application', 'trust_assessment_period']
     }
 
     def __init__(self, default_config=None, default_config_file=None,

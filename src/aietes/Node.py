@@ -319,13 +319,9 @@ class Node(Sim.Process):
         # dv/dt = F(v,t)/m
         # dv/dt->(v(t+e)-v(t))/dt;
         # v(t+e) = v(t)+(F*dt)/m
-        if np.all(self.acceleration_force == 0.0):
-            # Braking as there's no acceleration vector
-            # FIXME This should be -0.2*self.velocity or something
-            new_velocity = np.zeros(3)
-        else:
-            new_velocity = self.velocity + \
-                           ((self.acceleration_force * dt) / self.mass)
+        drag_force = (old_vec**2 * 3.0 * 2.8)/2 # F_d = (density * velocity^2 * drag coeff * area)/2
+        new_velocity = drag_force + self.velocity + \
+                       ((self.acceleration_force * dt) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruise_control(new_velocity, self.velocity)
             if DEBUG:

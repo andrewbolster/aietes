@@ -24,14 +24,15 @@ def setup_exp():
                base_config_file="behave.conf",
                # log_level=log.INFO
                )
-    e.add_minority_n_behaviour_suite(["Waypoint", "Shadow", "SlowCoach"], n_minority=1)
+    e.update_default_node({'trust_period': 10})
+    e.add_minority_n_behaviour_suite(["Waypoint", "Shadow", "SlowCoach", "Tail"], n_minority=1)
     return e
 
 
 def run(e):
     e.run(title="4-bev-mal",
-          runcount=4,
-          runtime=36000,
+          runcount=1,
+          runtime=28800,
           retain_data=True,
           queue=True)
     return e
@@ -45,15 +46,15 @@ if __name__ == "__main__":
     exp = setup_exp()
     exp = run(exp)
     logpath = "{path}/{title}.log".format(path=exp.exp_path, title=exp.title.replace(' ', '_'))
-    try:
-        exp.dump_analysis()
-        with redirected(stdout=logpath):
-            ExpMan.print_stats(exp, verbose=True)
-        with open(logpath, 'r') as fin:
-            print fin.read()
-        print("Saved detection stats to {0}".format(logpath))
-    except MemoryError:
-        log.exception("MemErrd in dump_analysis, moving on")
+    # try:
+    #     exp.dump_analysis()
+    #     with redirected(stdout=logpath):
+    #         ExpMan.print_stats(exp, verbose=True)
+    #     with open(logpath, 'r') as fin:
+    #         print fin.read()
+    #     print("Saved detection stats to {0}".format(logpath))
+    # except MemoryError:
+    #     log.exception("MemErrd in dump_analysis, moving on")
 
 
     path = exp.exp_path
