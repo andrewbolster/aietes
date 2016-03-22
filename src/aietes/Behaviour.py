@@ -78,6 +78,8 @@ class Behaviour(object):
         self.positional_accuracy = listfix(
             float, self.bev_config['positional_accuracy'])
         self.horizon = 200
+        # Getting lazy towards the end...
+        self.wallCheckDisabled = True
 
     def _start_log(self, parent):
         self.logger = parent.logger.getChild(
@@ -157,7 +159,7 @@ class Behaviour(object):
             for func, value in contributions.iteritems():
                 self.logger.debug(
                     "{0!s}:{1:.2f}:{2!s}".format(func, 100 * mag(value) / total, sixvec(value)))
-        force_vector = fudge_normal(force_vector, 0.012)  # Random factor
+        #force_vector = fudge_normal(force_vector, 0.012)  # Random factor
         self.node.push(force_vector, contributions=contributions)
         return
 

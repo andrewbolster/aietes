@@ -21,7 +21,7 @@ def setup_exp():
     e = ExpMan(node_count=6,
                title="Malicious Behaviour Trust Comparison",
                parallel=True,
-               base_config_file="behave.conf",
+               base_config_file="physical_behaviour_in_cube_waypoint.conf",
                log_level=log.WARN
                )
     e.update_default_node({'trust_period': 10})
@@ -32,7 +32,7 @@ def setup_exp():
 def run(e):
     e.run(title="4-bev-mal",
           runcount=1,
-          runtime=1800,
+          runtime=3600,
           retain_data=True,
           queue=True)
     return e

@@ -517,9 +517,13 @@ def run_detection_fusion(data, args=None):
             topsuspect = identification_dict['suspect_name']
 
         print("{i}:{title} - {suspect}:{confidence:.2f} - Top={toptitle} - {topsuspect}:{topconfidence:.2f}".format(
-            i=i, title=d.title, suspect=identification_dict[
-                'suspect_name'], confidence=identification_dict['suspect_confidence'],
-            toptitle=toptitle, topsuspect=topsuspect, topconfidence=topconfidence)
+            i=i,
+            title=d.title,
+            suspect=identification_dict['suspect_name'],
+            confidence=identification_dict['suspect_confidence'],
+            toptitle=toptitle,
+            topsuspect=topsuspect,
+            topconfidence=topconfidence)
         )
 
         if args.noplot:

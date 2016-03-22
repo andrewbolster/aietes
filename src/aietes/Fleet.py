@@ -50,6 +50,7 @@ class Fleet(Sim.Process):
         self.logger.info("creating Fleet instance with {0:d} nodes".format(len(nodes)))
         Sim.Process.__init__(self, name="Fleet")
         self.nodes = nodes
+        # Unless using ECEA, these are equivalent
         self.environment = simulation.environment
         self.shared_map = Environment(simulation,
                                       shape=self.environment.shape,

@@ -1162,7 +1162,7 @@ class DACAP(MAC):
         else:
             backoff = None  # This will raise issues if something messes up
 
-        self.logger.warning("Backoff for {backoff} for {type} packet based on t{t},Tw{TW},Td{TD}".format(
+        self.logger.debug("Backoff for {backoff} for {type} packet based on t{t},Tw{TW},Td{TD}".format(
             backoff=backoff,
             type=packet_type,
             T=t,
@@ -2076,7 +2076,7 @@ class CSMA(MAC):
                 self.on_data_reception()
                 self.pending_data_packet_from = None
         else:
-            self.logger.warn("I think I have pending data from {pending} but I got something from {src}".format(
+            self.logger.debug("I think I have pending data from {pending} but I got something from {src}".format(
                 pending=self.pending_data_packet_from,
                 src=self.incoming_packet)
             )
@@ -2903,7 +2903,7 @@ class CSMA4FBR(CSMA):
         failed_log_packet['ID'] = "{0}_{1}".format(failed_log_packet['ID'], last_highest_attempt+1)
         failed_log_packet['acknowledged'] = Sim.now()
         self.layercake.host.app.log_sent_packet(failed_log_packet)
-        self.logger.warn("Retransmitting {0}".format(failed_log_packet))
+        self.logger.info("Retransmitting {0}".format(failed_log_packet))
 
         self.send_rts()
 

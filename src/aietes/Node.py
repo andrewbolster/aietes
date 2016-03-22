@@ -286,17 +286,15 @@ class Node(Sim.Process):
                 y=1/exp(-cruise+x) << fucking insane...
                 y=((2.1*(1/2+x)-1)/(1/2+x)) Too slow after x>cruise (also not easily variable)
                 y=2.3*erfc(-(x-(1.4+0.09))/sqrt(1.4/2.3))/2 for x in [1..2]  The 0.09 is a fudge factor and I know it.
-
+                y=unit(x)* (cruise + ((max - cruise)*1-exp(-(x-cruise))))) NEARLY but not numerically stable for arbitrary v-limits
         """
         cruisev = max(self.cruising_speed)
         maxv = max(self.max_speed)
-        if cruisev < mag(velocity) < maxv:
-            new_v = unit(velocity) * (cruisev + (mag(velocity) - cruisev) ** 2)
-        elif maxv < mag(velocity):
-            new_v = unit(velocity) * max(self.max_speed)
+        if cruisev < mag(velocity):
+            new_v = unit(velocity) * (cruisev + ((maxv-cruisev)*(1-np.exp(-(mag(velocity)-cruisev)))))
+            self.logger.debug("Cruising with {0!s} originally, M{1:f}, now taking {2!s}, M{3!s}".format(velocity, mag(velocity), new_v, mag(new_v)))
         else:
-            self.logger.error(
-                "shouldn't really be here: {0},{1}".format(velocity, mag(velocity)))
+            new_v = velocity
         if DEBUG:
             self.logger.error("Cruise: From {0:f} against {1:f} and vel of {2:f}".format(
                 mag(velocity), cruisev, mag(new_v)))
@@ -319,21 +317,21 @@ class Node(Sim.Process):
         # dv/dt = F(v,t)/m
         # dv/dt->(v(t+e)-v(t))/dt;
         # v(t+e) = v(t)+(F*dt)/m
-        drag_force = (old_vec**2 * 3.0 * 2.8)/2 # F_d = (density * velocity^2 * drag coeff * area)/2
-        new_velocity = drag_force + self.velocity + \
-                       ((self.acceleration_force * dt) / self.mass)
+        drag_force = -(old_vec**2 * 3.0 * 0.13)/2.0 # F_d = (density * velocity^2 * drag coeff * area)/2
+        new_velocity = self.velocity + ((self.acceleration_force * dt) / self.mass)
         if mag(new_velocity) > max(self.cruising_speed):
             self.velocity = self.cruise_control(new_velocity, self.velocity)
             if DEBUG:
                 self.logger.debug(
-                    "Normalized Velocity: {0!s}, clipped: {1!s}".format(new_velocity, self.velocity))
+                    "Normalized Velocity: {0!s}, clipped: {1!s}, drag: {2!s}".format(new_velocity, self.velocity, drag_force))
         else:
             if DEBUG:
                 self.logger.debug("Velocity: {0!s}".format(new_velocity))
             self.velocity = new_velocity
 
-        assert mag(self.velocity) < max(self.max_speed), "Breaking the speed limit: {0!s}, {1!s}".format(
-            mag(self.velocity), self.cruising_speed
+        real_max = max(self.max_speed*1.01) # Dealing with floating point comparisons
+        assert mag(self.velocity) <= real_max, "Breaking the speed limit: {0:f}, {1:f}".format(
+            mag(self.velocity), real_max
         )
 
         self._lastupdate = Sim.now()
