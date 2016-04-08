@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="IpnbSettings">
-    <option name="URL" value="https://localhost:8888/notebooks/AIETES/AIETES/Comparing%20Joint%20Behaviour%20Weights.ipynb" />
+    <option name="URL" value="https://localhost:8888/notebooks/AIETES" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 2.7.11 (~/anaconda2/envs/py2/bin/python2)" project-jdk-type="Python SDK" />
   <component name="PythonCompatibilityInspectionAdvertiser">
@@ -9,5 +9,8 @@
   </component>
   <component name="SvnBranchConfigurationManager">
     <option name="mySupportsUserInfoFilter" value="true" />
+  </component>
+  <component name="TaskProjectConfiguration">
+    <server type="GitHub" url="https://github.com" />
   </component>
 </project>

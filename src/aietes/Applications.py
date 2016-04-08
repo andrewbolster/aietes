@@ -111,12 +111,12 @@ class Application(Sim.Process):
             if sent['ID'] == packetid:
                 if DEBUG:
                     if sent['source'] is self.layercake.hostname:
-                        self.logger.info("Confirmed TX of {0} to {1} at {2} after {3}".format(
+                        self.logger.debug("Confirmed TX of {0} to {1} at {2} after {3}".format(
                             sent['ID'], sent['dest'],
                             Sim.now(), Sim.now() - sent['time_stamp']
                         ))
                     else:
-                        self.logger.info("Confirmed FWD for {0} of {1} to {2} at {3} after {4}".format(
+                        self.logger.debug("Confirmed FWD for {0} of {1} to {2} at {3} after {4}".format(
                             sent['source'], sent['ID'], sent['dest'],
                             Sim.now(), Sim.now() - sent['time_stamp']
                         ))
