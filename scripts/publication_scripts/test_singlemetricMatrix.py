@@ -12,8 +12,6 @@ exp = EXPShadow()
 print exp.exp_path
 
 
-    print os.path.join(path, "outliers.h5")
-
 if __name__ == '__main__':
     generate_outliers(exp.exp_path, runs=4)
     observer = 'Bravo'

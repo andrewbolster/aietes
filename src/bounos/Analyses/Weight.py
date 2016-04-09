@@ -135,7 +135,8 @@ def generate_run_comparative_outlier_frame(good, trust_frame, w, par=False):
 
 def perform_weight_factor_run_comparative_outlier_analysis_on_trust_frame(trust_frame, good, min_emphasis=0, max_emphasis=3,
                                                                           min_sum=1, max_sum=None, extra=None,
-                                                                          verbose=False, par=False):
+                                                                          verbose=False, par=False,
+                                                                          take_outlier_backup=False):
     """
     For a given trust frame perform grey weight factor distribution analysis to
     generate a frame with metrics/metric weights as a multiindex with columns for each comparison between behaviours
@@ -184,7 +185,8 @@ def perform_weight_factor_run_comparative_outlier_analysis_on_trust_frame(trust_
         outliers = _run_comparative_outlier_single_thread_inner_par(combinations, good, trust_frame, trust_metrics, verbose=True)
 
     sums = pd.concat(outliers).reset_index()
-    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{0}{1}_{2}".format(good, extra, max_emphasis))
+    if take_outlier_backup:
+        sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5', "{0}{1}_{2}".format(good, extra, max_emphasis))
     return sums
 
 
@@ -254,7 +256,8 @@ def generate_mean_t_delta_frame(trust_frame, w, target, par=False):
 def perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust_frame, min_emphasis=0, max_emphasis=3,
                                                                       min_sum = 1, max_sum = None,
                                                                       extra=None, verbose=False, par=False,
-                                                                      target='Alfa', excluded=[]):
+                                                                      target='Alfa', excluded=[],
+                                                                      take_outlier_backup=False):
     """
     For a given trust frame perform grey weight factor distribution analysis to
     generate a frame with metrics/metric weights as a multiindex with columns for each comparison between behaviours
@@ -304,8 +307,9 @@ def perform_weight_factor_target_mean_t_delta_analysis_on_trust_frame(trust_fram
                                                                 verbose=True)
 
     sums = pd.concat(outliers).reset_index()
-    sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5',
-                "{0}{1}_{2}".format("meandelta", extra, max_emphasis))
+    if take_outlier_backup:
+        sums.to_hdf('/home/bolster/src/aietes/results/outlier_backup.h5',
+                    "{0}{1}_{2}".format("meandelta", extra, max_emphasis))
     return sums
 
 
