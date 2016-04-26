@@ -66,7 +66,6 @@ def run_all_analysis_generation(results_path):
             except:
                 print("Failed on {}".format(subset_d['dataset']))
                 raise
-            break
 
     return best_weight_valences_and_runs_for_metric_subset
 
