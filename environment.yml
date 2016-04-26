@@ -1,0 +1,139 @@
+name: py2
+dependencies:
+- accelerate=2.0.2=np110py27_p0
+- accelerate_cudalib=2.0=0
+- basemap=1.0.7=np110py27_0
+- cairo=1.12.18=6
+- cudatoolkit=7.0=1
+- cycler=0.10.0=py27_0
+- cython=0.23.4=py27_0
+- enum34=1.1.2=py27_0
+- fontconfig=2.11.1=5
+- freetype=2.5.5=0
+- funcsigs=0.4=py27_0
+- geos=3.3.3=0
+- jpeg=8d=0
+- libgfortran=3.0=0
+- libpng=1.6.17=0
+- libxml2=2.9.2=0
+- llvmlite=0.8.0=py27_0
+- matplotlib=1.5.1=np110py27_0
+- mkl=11.3.1=0
+- mkl-rt=11.1=p0
+- mkl-service=1.1.2=py27_0
+- numba=0.23.1=np110py27_0
+- numbapro=0.23.1=py27_p0
+- numpy=1.10.4=py27_1
+- opencv=2.4.10=np110py27_1
+- openssl=1.0.2g=0
+- pip=8.1.1=py27_1
+- pixman=0.32.6=0
+- pycairo=1.10.0=py27_0
+- pyparsing=2.1.1=py27_0
+- pyqt=4.11.4=py27_1
+- python=2.7.11=0
+- python-dateutil=2.5.2=py27_0
+- pytz=2016.3=py27_0
+- qt=4.8.7=1
+- readline=6.2=2
+- scikit-learn=0.17.1=np110py27_0
+- scipy=0.17.0=np110py27_2
+- setuptools=20.7.0=py27_0
+- singledispatch=3.4.0.3=py27_0
+- sip=4.16.9=py27_0
+- six=1.10.0=py27_0
+- sqlite=3.9.2=0
+- tk=8.5.18=0
+- wheel=0.29.0=py27_0
+- wxpython=3.0.0.0=py27_2
+- zlib=1.2.8=0
+- pip:
+  - aietes (/home/bolster/src/aietes/src)==0.1
+  - alembic==0.8.6
+  - arrow==0.7.0
+  - backports-abc==0.4
+  - backports.ssl-match-hostname==3.5.0.1
+  - btrees==4.2.0
+  - certifi==2015.11.20.1
+  - click==6.3
+  - colorlog==2.6.1
+  - configobj==5.0.6
+  - coverage==4.0.3
+  - cv2==1.0
+  - dataset==0.6.4
+  - decorator==4.0.9
+  - functools32==3.2.3.post2
+  - future==0.15.2
+  - futures==3.0.5
+  - ipykernel==4.2.2
+  - ipython==4.1.1
+  - ipython-genutils==0.1.0
+  - ipywidgets==4.1.1
+  - jinja2==2.8
+  - joblib==0.9.4
+  - jsonschema==2.5.1
+  - jupyter==1.0.0
+  - jupyter-client==4.1.1
+  - jupyter-console==4.1.1
+  - jupyter-core==4.0.6
+  - mako==1.0.4
+  - markupsafe==0.23
+  - matplotlib2tikz==0.5.4
+  - mistune==0.7.1
+  - monkeylearn==0.2.4
+  - natsort==4.0.4
+  - nbconvert==4.1.0
+  - nbformat==4.0.1
+  - networkx==1.11
+  - normality==0.2.4
+  - nose==1.3.7
+  - nose-exclude==0.4.1
+  - nosexcover==1.0.10
+  - notebook==4.1.0
+  - notify2==0.3
+  - numexpr==2.5
+  - oct2py==3.5.0
+  - openpyxl==1.8.6
+  - ordered-set==2.0.0
+  - pandas==0.17.1
+  - path.py==8.1.2
+  - persistent==4.1.1
+  - pexpect==4.0.1
+  - pickleshare==0.6
+  - pillow==3.1.1
+  - ptyprocess==0.5.1
+  - pubsub==0.1.2
+  - pydot==1.0.2
+  - pygments==2.1.1
+  - pykalman==0.9.5
+  - pylab==0.1.3
+  - pylatex==1.0.0
+  - python-editor==1.0
+  - pyyaml==3.11
+  - pyzmq==15.2.0
+  - qtconsole==4.2.0
+  - quantities==0+unknown
+  - requests==2.9.1
+  - scikit-image==0.11.3
+  - seaborn==0.7.0
+  - simplegeneric==0.8.1
+  - simpy==2.3.1
+  - sklearn==0.0
+  - sqlalchemy==1.0.12
+  - sympy==0.7.6.1
+  - tables==3.2.2
+  - tabulate==0.7.5
+  - terminado==0.6
+  - tornado==4.3
+  - tqdm==4.5.0
+  - traitlets==4.1.0
+  - transaction==1.4.4
+  - vincent==0.4.4
+  - wxpython-common==3.0.0.0
+  - zc.lockfile==1.1.0
+  - zconfig==3.1.0
+  - zdaemon==4.1.0
+  - zodb==4.2.0
+  - zodbpickle==0.6.0
+  - zope.interface==4.1.3
+
