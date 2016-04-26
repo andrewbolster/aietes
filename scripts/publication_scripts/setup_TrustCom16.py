@@ -4,13 +4,12 @@ import matplotlib.pylab as plt
 import pandas as pd
 from tqdm import *
 from joblib import Parallel, delayed
-
+from helpers import best_of_all
 
 import sklearn.ensemble as ske
 from scipy.stats.stats import pearsonr
 
 from aietes.Tools import *
-from scripts.publication_scripts import best_of_all
 
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
 fig_basedir = "/home/bolster/src/thesis/Figures/"
