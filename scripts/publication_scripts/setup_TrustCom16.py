@@ -29,7 +29,7 @@ def run_all_analysis_generation(results_path):
         return ({
             'metrics': metrics,
             'type': t,
-            'dataset': powerset_string,
+            'dataset': powerset_string[1:],
             'signed': signed
         })
 
@@ -48,6 +48,8 @@ def run_all_analysis_generation(results_path):
             if os.path.isfile(best_output_file):
                 print("Skipping: File already exists, consider deleting it {}".format(best_output_file))
             try:
+                with open(best_output_file) as f:
+                    f.write("")
                 feat_weights = categorise_dataframe(non_zero_rows(subset_d['data']).T)
                 if subset_d['metrics'] is not None:
                     best = best_of_all(feat_weights, trust_observations[subset_d['metrics']], par=par)
