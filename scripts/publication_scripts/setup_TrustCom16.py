@@ -56,11 +56,12 @@ def run_all_analysis_generation(results_path):
                 best_weight_valences_and_runs_for_metric_subset[subset_d['dataset']] = best
 
 
-                with open(best_output_file) as f:
+                with open(best_output_file, 'w') as f:
                     json.dump(best, cls=NumpyAwareJSONEncoder)
             except:
                 print("Failed on {}".format(subset_d['dataset']))
                 raise
+            break
 
     return best_weight_valences_and_runs_for_metric_subset
 
