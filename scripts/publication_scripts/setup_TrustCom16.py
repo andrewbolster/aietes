@@ -37,7 +37,8 @@ def run_all_analysis_generation(results_path):
 
     shared_big_h5_path = "/home/bolster/src/aietes/results/powerset_shared.h5"
     with pd.get_store(shared_big_h5_path) as store:
-        result = map(power_set_map, store.keys())
+        shuffledkeys = random.sample(store.keys(), len(store.keys()))
+        result = map(power_set_map, shuffledkeys)
         powerset_list = filter(lambda t: t['type'] == 'feats', result)
         random.shuffle(powerset_list)
         for d in powerset_list:
