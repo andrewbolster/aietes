@@ -537,7 +537,7 @@ def best_run_and_weight(f, trust_observations, par=True, tolerance=0.01):
     return best_run, best_weight
 
 
-def best_of_all(feats, trust_observations):
+def best_of_all(feats, trust_observations, par=True):
     best = defaultdict(dict)
     for (base_str, target_str), feat in feats.to_dict().items():
         if base_str != "Fair":
@@ -548,5 +548,6 @@ def best_of_all(feats, trust_observations):
         best[base_str][target_str] = \
             best_run_and_weight(
                 feat,
-                trust_observations)
+                trust_observations,
+                par=par)
     return best

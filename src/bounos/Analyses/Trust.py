@@ -21,6 +21,7 @@ import itertools
 from collections import OrderedDict
 from functools import partial
 import warnings
+import types
 
 import numpy as np
 import pandas as pd
@@ -343,9 +344,14 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
                      'rho': rho,
                      'as_matrix': as_matrix}
         if par:
-            trusts = Parallel(n_jobs=-1)(delayed(generate_single_observer_trust_perspective)
-                                         (g, **exec_args) for k, g in tf.groupby(level=[var, 'run', 'observer'])
-                                         )
+            tasklist = (delayed(generate_single_observer_trust_perspective)
+                        (g, **exec_args) for k, g in tf.groupby(level=[var, 'run', 'observer'])
+                        )
+            if not isinstance(par, Parallel): # Assume make a new context manager if there isn't one
+                with Parallel(n_jobs=-1) as par:
+                    trusts = par(tasklist)
+            else:
+                trusts = par(tasklist)
             trusts = [pd.Series(np.concatenate(sublist), index=g.index.copy())
                       for sublist, (_, g) in zip(trusts, tf.groupby(level=[var, 'run', 'observer']))]
 

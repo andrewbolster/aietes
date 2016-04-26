@@ -32,6 +32,7 @@ import subprocess
 import traceback
 import validate
 import warnings
+import json
 from ast import literal_eval
 from configobj import ConfigObj
 from functools import partial
@@ -1265,3 +1266,9 @@ def powerset(iterable):
     "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+
+class NumpyAwareJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray) and obj.ndim == 1:
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)

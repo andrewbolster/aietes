@@ -1,6 +1,6 @@
 # coding=utf-8
 
-from __future__ import division
+from __future__ import division, print_function
 
 import tempfile
 import unittest
@@ -62,7 +62,8 @@ assert os.path.isdir(fig_basedir)
 
 class ThesisDiagrams(unittest.TestCase):
     signed = True
-    runtime_computed = False
+    runtime_computed = True #CHANGE ME BACK
+    complete_subsets = True
 
     @classmethod
     def setUpClass(self):
@@ -86,9 +87,11 @@ class ThesisDiagrams(unittest.TestCase):
             'widths': 0.2,
             'linewidth': 2
         }
-        if recompute and self.runtime_computed is not True:
+        if recompute or self.runtime_computed:
             self.recompute_features_in_shared(signed=self.signed)
             self.runtime_computed = True
+        else:
+            print("Apparently we don't need to recompute! Great!")
 
         dumping_suffix = "_signed" if self.signed else "_unsigned"
         with pd.get_store(shared_h5_path) as store:
@@ -119,20 +122,26 @@ class ThesisDiagrams(unittest.TestCase):
 
     @classmethod
     def recompute_features_in_shared(cls, signed=False):
+        dumping_suffix = "_signed" if signed else "_unsigned"
         # All Metrics
-        print "Building Joined {0} Target Weights".format("Signed" if signed else "Unsigned")
+        print("Building Joined {0} Target Weights".format("Signed" if signed else "Unsigned"))
         joined_target_weights = build_outlier_weights(results_path + "/outliers.bkup.h5",
                                                       observer=observer, target=target,
                                                       n_metrics=n_metrics, signed=signed)
+        if cls.complete_subsets:
+            print("Generating Complete Metric Powerset assessments, this might take a while")
+            cls.compute_complete_metric_subsets(joined_target_weights, dumping_suffix)
+            #TODO Automatically remap the complete and subsets below to take from the above if we're doing big work
         joined_feats = format_features(
             target_weight_feature_extractor(
                 joined_target_weights
             )
         )[key_order]
-        dumping_suffix = "_signed" if signed else "_unsigned"
-        print "Dumping Joined Target Weights"
+        print("Dumping Joined Target Weights")
         joined_target_weights.to_hdf(shared_h5_path, 'joined_target_weights' + dumping_suffix)
         joined_feats.to_hdf(shared_h5_path, 'joined_feats' + dumping_suffix)
+
+
         _, _ = cls.metric_subset_weight_and_feature_extractor('comms', comm_keys, joined_target_weights, dumping_suffix)
         _, _ = cls.metric_subset_weight_and_feature_extractor('phys', phys_keys, joined_target_weights, dumping_suffix)
         _, _ = cls.metric_subset_weight_and_feature_extractor('comms_alt', comm_keys_alt, joined_target_weights,
@@ -143,21 +152,41 @@ class ThesisDiagrams(unittest.TestCase):
     @classmethod
     def metric_subset_weight_and_feature_extractor(cls, subset_str, desired_keys, complete_target_weights,
                                                    dumping_suffix):
-        print "Building {0} Target Weights".format(subset_str)
+        print("Building {0} Target Weights".format(subset_str))
         subset_only_weights = drop_metrics_from_weights_by_key(
             complete_target_weights,
             metric_key_inverter(desired_keys)
         )
-        subset_only_feats = format_features(
-            target_weight_feature_extractor(
-                subset_only_weights
+        try:
+            subset_only_feats = format_features(
+                target_weight_feature_extractor(
+                    subset_only_weights
+                )
             )
-        )
-        print "Dumping {0} Target Weights".format(subset_str)
-        subset_only_weights.to_hdf(shared_h5_path, "{0}_only_weights{1}".format(subset_str, dumping_suffix))
-        subset_only_feats.to_hdf(shared_h5_path, "{0}_only_feats{1}".format(subset_str, dumping_suffix))
+            print("Dumping {0} Target Weights".format(subset_str))
+            subset_only_weights.to_hdf(shared_h5_path, "{0}_only_weights{1}".format(subset_str, dumping_suffix))
+            subset_only_feats.to_hdf(shared_h5_path, "{0}_only_feats{1}".format(subset_str, dumping_suffix))
+        except ValueError:
+            # TODO this is a "monkeypatch"
+            #ValueError: Found array with 0 sample(s) (shape=(0, 1)) while a minimum of 1 is required.
+            print("Subset appears to have no interesting features")
 
         return subset_only_weights, subset_only_feats
+
+    @classmethod
+    def compute_complete_metric_subsets(cls, complete_target_weights, dumping_suffix):
+        """
+        Generate Every Optimisation Combination of Metrics with a minimum subset length of 3
+        #TODO this is lazily parallelisable
+        :param complete_target_weights:
+        :param dumping_suffix:
+        :return:
+        """
+        for i,subset in enumerate(powerset(complete_target_weights.index.names)):
+            if len(subset)>3:
+                subset_str = '_'.join(subset)
+                print("S:{},".format(i), end="")
+                _, _ = cls.metric_subset_weight_and_feature_extractor(subset_str, subset, complete_target_weights, dumping_suffix)
 
     def save_feature_plot(self, feats, fig_filename, hatches=False, annotate=None):
         """
@@ -223,7 +252,6 @@ class ThesisDiagrams(unittest.TestCase):
         fig_filename = 'threat_surface_sum'
         fig_size = latexify(columns=_texcol, factor=_texfac)
         fig_size = (fig_size[0], fig_size[1] / 2)
-        print fig_size
 
         fig, axes = plt.subplots(nrows=1, ncols=4, figsize=fig_size,
                                  sharex='none', sharey='none',
@@ -363,7 +391,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         for reg in [etr, rtr, linr]:
             scores = cross_validation.cross_val_score(reg, data, labels, scoring='mean_squared_error', n_jobs=4)
-            print scores, sp.stats.describe(scores)
+            print(scores, sp.stats.describe(scores))
 
     def test0ValidationBestPlots(self):
         """
@@ -385,6 +413,7 @@ class ThesisDiagrams(unittest.TestCase):
                 _trust_observations = trust_observations
             else:
                 _trust_observations = trust_observations[key]
+            # Get the best results for graph generation (from pubscripts.__init__.best_of_all)
             best_d = uncpickle(fig_basedir + '/best_{0}_runs'.format(subset_str))['Fair']
             for target_str, best in best_d.items():
                 trust_perspective = generate_node_trust_perspective(
@@ -456,7 +485,6 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str, target_str
             inverted_results[subset_str].append((target_str, result))
 
         # instanteous plots
@@ -471,7 +499,6 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str, target_str
 
         # ALTERNATE Time meaned plots and Result inversion
         for (subset_str, target_str), (fig, ax, result) in alt_time_meaned_plots.items():
@@ -485,7 +512,6 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str, target_str
             inverted_results[subset_str].append((target_str, result))
 
         # ALTERNATE instanteous plots
@@ -500,7 +526,6 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str, target_str
 
         # Dump Best weights from best runs to a table
         w_df = pd.concat([pd.Series(weight, index=key_d[subset.lower()])
@@ -536,7 +561,6 @@ class ThesisDiagrams(unittest.TestCase):
         tex = '\n'.join(tex)
         with open('input/optimised_weights.tex', 'w') as f:
             f.write(tex)
-        print tex
 
         # mkcpickle("/dev/shm/weights", weights)
         mkcpickle("/dev/shm/inverted_results", inverted_results)
@@ -566,7 +590,6 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str, target_str
 
     def true_positive_assessment_table(self, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
@@ -589,7 +612,6 @@ class ThesisDiagrams(unittest.TestCase):
         tex = '\n'.join(tex)
         with open('input/domain_deltas.tex', 'w') as f:
             f.write(tex)
-        print tex
 
     def false_positive_assessment_table(self, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
@@ -616,7 +638,6 @@ class ThesisDiagrams(unittest.TestCase):
         tex = '\n'.join(tex)
         with open('input/domain_deltas_minus.tex', 'w') as f:
             f.write(tex)
-        print tex
 
     def true_positive_assessment_table_time_meaned(self, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
@@ -639,7 +660,6 @@ class ThesisDiagrams(unittest.TestCase):
         tex = '\n'.join(tex)
         with open('input/domain_time_deltas.tex', 'w') as f:
             f.write(tex)
-        print tex
 
     def false_positive_assessment_table_time_meaned(self, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
@@ -666,7 +686,6 @@ class ThesisDiagrams(unittest.TestCase):
         tex = '\n'.join(tex)
         with open('input/domain_time_deltas_minus.tex', 'w') as f:
             f.write(tex)
-        print tex
 
     def test(self):
         input_filename = 'input/phys_metric_correlations'
@@ -708,7 +727,6 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
-            print subset_str, target_str
         for fig, ax in fig_gen:
             fig_filename = fig_filename_prefix + ax.get_title().lower().replace(' ', '_') + '.png'
             fig.savefig(fig_filename)
