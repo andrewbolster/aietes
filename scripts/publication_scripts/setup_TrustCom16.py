@@ -55,6 +55,7 @@ def run_all_analysis_generation(results_path):
                 visited[subset_d['dataset']]='exists'
             else:
                 print"Preparing {}".format(subset_d['dataset'])
+                open(best_output_file, 'a').close()
 
             if subset_d['dataset'] in visited:
                 continue
@@ -72,6 +73,7 @@ def run_all_analysis_generation(results_path):
                 copy(best_output_file, results_path)
             except:
                 print("Failed on {}".format(subset_d['dataset']))
+                os.remove(best_output_file)
 
     return best_weight_valences_and_runs_for_metric_subset
 
