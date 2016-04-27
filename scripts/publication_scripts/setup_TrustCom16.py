@@ -37,20 +37,26 @@ def run_all_analysis_generation(results_path):
 
     shared_big_h5_path = "/home/bolster/src/aietes/results/powerset_shared.h5"
     with pd.get_store(shared_big_h5_path) as store:
-        shuffledkeys = random.sample(store.keys(), len(store.keys()))
-        result = map(power_set_map, shuffledkeys)
+        keys = store.keys()
+        random.shuffle(keys)
+        result = map(power_set_map, keys)
         powerset_list = filter(lambda t: t['type'] == 'feats', result)
-        random.shuffle(powerset_list)
         for d in powerset_list:
             d['data'] = store[d['dataset']]
 
     best_weight_valences_and_runs_for_metric_subset = {}
+    visited = {}
     with Parallel(n_jobs=-1) as par:
         for subset_d in tqdm(powerset_list): # This maps to a single powerset_shared.h5 dataset (comms_alt, etc)
             best_output_file = '{}.json'.format(os.path.join(json_path,subset_d['dataset']))
 
             if os.path.isfile(best_output_file):
-                print("Skipping: File already exists, consider deleting it {}".format(best_output_file))
+                print("Skipping: File already exists, consider deleting it {}".format(subset_d['dataset']))
+                visited[subset_d['dataset']]='exists'
+            else:
+                print"Preparing {}".format(subset_d['dataset'])
+
+            if subset_d['dataset'] in visited:
                 continue
             try:
                 feat_weights = categorise_dataframe(non_zero_rows(subset_d['data']).T)
@@ -66,7 +72,6 @@ def run_all_analysis_generation(results_path):
                 copy(best_output_file, results_path)
             except:
                 print("Failed on {}".format(subset_d['dataset']))
-                raise
 
     return best_weight_valences_and_runs_for_metric_subset
 
