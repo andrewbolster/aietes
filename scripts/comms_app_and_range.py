@@ -12,7 +12,6 @@ from bounos.multi_loader import dump_trust_logs_and_stats_from_exp_paths
 
 logging.basicConfig()
 
-
 @contextmanager
 def redirected(stdout):
     saved_stdout = sys.stdout
@@ -24,9 +23,10 @@ def redirected(stdout):
 def exec_comms_range(scenario, title, app_rate):
     e = ExpMan(title="{0}-{1}-{2}".format(title, re.split('\.|/', scenario)[-2], app_rate),
                parallel=True,
-               base_config_file=scenario
+               base_config_file=scenario,
+               log_level=logging.WARN
                )
-    e.add_position_scaling_range(np.linspace(1, 8, 15), basis_node_name="n1")
+    e.add_position_scaling_range(np.linspace(1, 16, 32), basis_node_name="n1")
     e.update_all_nodes({"app_rate": app_rate})
     e.run(
         runcount=8,

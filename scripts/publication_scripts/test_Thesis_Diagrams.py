@@ -18,7 +18,7 @@ from bounos.Analyses.Weight import target_weight_feature_extractor, \
 from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list
 from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, \
     n_metrics, results_path, \
-    fig_basedir, subset_renamer, plot_trust_line_graph, format_features
+    fig_basedir, subset_renamer, metric_subset_analysis, format_features
 
 ###########
 # OPTIONS #
@@ -44,13 +44,14 @@ key_d = {
 
 results_path = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2015-07-20-17-47-53"
 fig_basedir = "/home/bolster/src/thesis/Figures/"
+json_path = "/home/bolster/Dropbox/aietes_json_results"
 
 shared_h5_path = '/dev/shm/shared.h5'
 if os.path.exists(shared_h5_path):
     try:
         with pd.get_store(shared_h5_path) as store:
             store.get('joined_target_weights' + "_signed")
-    except AttributeError:
+    except (AttributeError, KeyError):
         print("Forcing recompute as the thing I expected to be there, well, isn't")
         recompute = True
 else:
@@ -62,7 +63,7 @@ assert os.path.isdir(fig_basedir)
 
 class ThesisDiagrams(unittest.TestCase):
     signed = True
-    runtime_computed = True #CHANGE ME BACK
+    runtime_computed = False #CHANGE ME BACK
     complete_subsets = True
 
     @classmethod
@@ -401,77 +402,67 @@ class ThesisDiagrams(unittest.TestCase):
             trust_observations = store.trust.dropna()
         map_levels(trust_observations, var_rename_dict)
 
-        # alt_ indicates using a (presumably) non malicious node as the target of trust assessment.
+        def power_set_map(powerset_string):
+            strings = powerset_string.split('_')
+            metrics = strings[:-3]
+            t = strings[-2]
+            signed = strings[-1]
+            return ({
+                'metrics': metrics,
+                'type': t,
+                'dataset': powerset_string[1:],
+                'signed': signed
+            })
+
+        results = {}
+        if self.complete_subsets:
+            try:
+                best_d = {}
+
+                valid_json_files = filter(
+                    lambda f: os.stat(os.path.join(json_path, f)).st_size,
+                    os.listdir(json_path)
+                )
+                for f in valid_json_files:
+                    subset_str = f.split('.')[-2]
+                    best_d[subset_str]=power_set_map(subset_str)
+                    with open(os.path.join(json_path, f), 'rb') as fp:
+                        best_d[subset_str]['best'] = json.load(fp)
+
+                _key_d = {}
+                _weight_d = {}
+                for k,v in best_d.items():
+                    _key_d[k]=v['metrics']
+                    _weight_d[k]=v['best']
+
+            except:
+                print("Failed building powerset best dict, falling back to static key_d")
+                #_key_d = key_d
+                # _weight_d = None
+                raise
+
+        else:
+            _key_d = key_d
+            _weight_d = None
+
+        weights = {}
         time_meaned_plots = {}
         alt_time_meaned_plots = {}
         instantaneous_meaned_plots = {}
         alt_instantaneous_meaned_plots = {}
 
-        weights = {}
-        for subset_str, key in key_d.items():
-            if key is None:
-                _trust_observations = trust_observations
-            else:
-                _trust_observations = trust_observations[key]
-            # Get the best results for graph generation (from pubscripts.__init__.best_of_all)
-            best_d = uncpickle(fig_basedir + '/best_{0}_runs'.format(subset_str))['Fair']
-            for target_str, best in best_d.items():
-                trust_perspective = generate_node_trust_perspective(
-                    _trust_observations.xs(target_str, level='var'),
-                    metric_weights=pd.Series(best[1]))
-                weights[(subset_str, target_str)] = best[1].copy()
-                time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
-                                                                                    .xs(best[0],
-                                                                                        level=['observer', 'run']) \
-                                                                                    .dropna(axis=1, how='all'),
-                                                                                    stds=False,
-                                                                                    spans=6,
-                                                                                    box='complete',
-                                                                                    means='time',
-                                                                                    _texcol=_texcol,
-                                                                                    _texfac=_texfac)
-                instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
-                                                                                             .xs(best[0],
-                                                                                                 level=['observer',
-                                                                                                        'run']) \
-                                                                                             .dropna(axis=1, how='all'),
-                                                                                             stds=False,
-                                                                                             spans=6,
-                                                                                             box='complete',
-                                                                                             means='instantaneous',
-                                                                                             _texcol=_texcol,
-                                                                                             _texfac=_texfac)
+        for subset_str, key in _key_d.items():
 
-                # Plotting using an alternate observer for completeness (presumably bravo)
-                # alt_target = 'Bravo' if 'Bravo' != target else 'Charlie'
-                if 'Bravo' != best[0][0]:
-                    alt_target = 'Bravo'
-                else:
-                    alt_target = 'Charlie'
-                alt_time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
-                                                                                        .xs(best[0],
-                                                                                            level=['observer', 'run']) \
-                                                                                        .dropna(axis=1, how='all'),
-                                                                                        target=alt_target,
-                                                                                        stds=False,
-                                                                                        spans=6,
-                                                                                        box='complete',
-                                                                                        means='time',
-                                                                                        _texcol=_texcol,
-                                                                                        _texfac=_texfac)
-                alt_instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
-                                                                                                 .xs(best[0],
-                                                                                                     level=['observer',
-                                                                                                            'run']) \
-                                                                                                 .dropna(axis=1,
-                                                                                                         how='all'),
-                                                                                                 target=alt_target,
-                                                                                                 stds=False,
-                                                                                                 spans=6,
-                                                                                                 box='complete',
-                                                                                                 means='instantaneous',
-                                                                                                 _texcol=_texcol,
-                                                                                                 _texfac=_texfac)
+            result = metric_subset_analysis(trust_observations, key, subset_str, weights_d=_weight_d)
+
+            if result is not None:
+                time_meaned_plots.update(result['time_meaned_plots'])
+                alt_time_meaned_plots.update(result['alt_time_meaned_plots'])
+                instantaneous_meaned_plots.update(result['instantaneous_meaned_plots'])
+                alt_instantaneous_meaned_plots.update(result['alt_instantaneous_meaned_plots'])
+                weights.update(result['weights'])
+
+
         inverted_results = defaultdict(list)
         # Time meaned plots and Result inversion
         for (subset_str, target_str), (fig, ax, result) in time_meaned_plots.items():
@@ -539,6 +530,7 @@ class ThesisDiagrams(unittest.TestCase):
         elif len(w_df.index.levels[0]) == 5:
             subset_reindex_keys = ['full', 'comms', 'phys', 'comms_alt', 'phys_alt']
         else:
+            w_df.to_hdf(os.path.join(results_path,'w_df.h5'),'weights')
             raise ValueError("Incorrect number of subsets included; {0}".format(w_df.index.levels[0]))
         w_df = w_df.reindex(subset_reindex_keys, level='subset')[key_order].rename(columns=metric_rename_dict)
         w_df = w_df.unstack('target').rename(subset_renamer).stack('target')
@@ -590,6 +582,8 @@ class ThesisDiagrams(unittest.TestCase):
             self.assertTrue(os.path.isfile(fig_filename + '.png'))
             if show_outputs:
                 try_to_open(fig_filename + '.png')
+
+
 
     def true_positive_assessment_table(self, inverted_results, subset_reindex_keys):
         perfd = defaultdict()

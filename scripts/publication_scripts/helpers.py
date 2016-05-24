@@ -551,3 +551,93 @@ def best_of_all(feats, trust_observations, par=True):
                 trust_observations,
                 par=par)
     return best
+
+
+def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
+    # alt_ indicates using a (presumably) non malicious node as the target of trust assessment.
+    weights = {}
+    time_meaned_plots = {}
+    alt_time_meaned_plots = {}
+    instantaneous_meaned_plots = {}
+    alt_instantaneous_meaned_plots = {}
+
+    if key is None:
+        _trust_observations = trust_observations
+    else:
+        _trust_observations = trust_observations[key]
+    # Get the best results for graph generation (from pubscripts.__init__.best_of_all)
+    if weights_d is None:
+        best_d = Tools.uncpickle(fig_basedir + '/best_{0}_runs'.format(subset_str))['Fair']
+    else:
+        try:
+            best_d = weights_d[subset_str]['Fair']
+        except:
+            print("No Fair Weight in {}, skipping".format(subset_str))
+            return None
+
+    for target_str, best in best_d.items():
+        trust_perspective = Trust.generate_node_trust_perspective(
+            _trust_observations.xs(target_str, level='var'),
+            metric_weights=pd.Series(best[1], dtype=np.float64))
+
+        weights[(subset_str, target_str)] = np.asarray(best[1])
+        time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
+                                                                            .xs(best[0],
+                                                                                level=['observer', 'run']) \
+                                                                            .dropna(axis=1, how='all'),
+                                                                            stds=False,
+                                                                            spans=6,
+                                                                            box='complete',
+                                                                            means='time',
+                                                                            _texcol=_texcol,
+                                                                            _texfac=_texfac)
+        instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
+                                                                                     .xs(best[0],
+                                                                                         level=['observer',
+                                                                                                'run']) \
+                                                                                     .dropna(axis=1, how='all'),
+                                                                                     stds=False,
+                                                                                     spans=6,
+                                                                                     box='complete',
+                                                                                     means='instantaneous',
+                                                                                     _texcol=_texcol,
+                                                                                     _texfac=_texfac)
+
+        # Plotting using an alternate observer for completeness (presumably bravo)
+        # alt_target = 'Bravo' if 'Bravo' != target else 'Charlie'
+        if 'Bravo' != best[0][0]:
+            alt_target = 'Bravo'
+        else:
+            alt_target = 'Charlie'
+        alt_time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
+                                                                                .xs(best[0],
+                                                                                    level=['observer', 'run']) \
+                                                                                .dropna(axis=1, how='all'),
+                                                                                target=alt_target,
+                                                                                stds=False,
+                                                                                spans=6,
+                                                                                box='complete',
+                                                                                means='time',
+                                                                                _texcol=_texcol,
+                                                                                _texfac=_texfac)
+        alt_instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
+                                                                                         .xs(best[0],
+                                                                                             level=['observer',
+                                                                                                    'run']) \
+                                                                                         .dropna(axis=1,
+                                                                                                 how='all'),
+                                                                                         target=alt_target,
+                                                                                         stds=False,
+                                                                                         spans=6,
+                                                                                         box='complete',
+                                                                                         means='instantaneous',
+                                                                                         _texcol=_texcol,
+                                                                                         _texfac=_texfac)
+    return dict(
+        time_meaned_plots=time_meaned_plots,
+        alt_time_meaned_plots=alt_time_meaned_plots,
+        instantaneous_meaned_plots=instantaneous_meaned_plots,
+        alt_instantaneous_meaned_plots=alt_instantaneous_meaned_plots,
+        target_str=target_str,
+        weights=weights
+    )

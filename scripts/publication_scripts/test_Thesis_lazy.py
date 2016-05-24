@@ -55,12 +55,14 @@ _texfac = 1.0
 hatching = False
 img_extn = 'pdf'
 
-selected_scenarios = [
-    'bella_single_mobile',
-    'bella_allbut1_mobile',
-    'bella_all_mobile',
-    'bella_static',
+mobilities = [
+    'static',
+    'single_mobile',
+    'allbut1_mobile',
+    'all_mobile'
 ]
+
+selected_scenarios = map(lambda s: 'bella_'+s, mobilities)
 
 
 class ThesisLazyDiagrams(unittest.TestCase):
@@ -145,6 +147,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
     def test_ThroughputLines(self):
         # # Plot Throughput Lines
+
         required_files = [
             "throughput_sep_lines_static." + img_extn,
             "throughput_sep_lines_all_mobile." + img_extn
@@ -157,7 +160,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
         cb.latexify(columns=_texcol, factor=_texfac)
 
-        for mobility in ['static', 'all_mobile']:
+        for mobility in mobilities:
             df = get_mobility_stats(mobility)
             fig = plt.figure(facecolor='white')
             ax = fig.add_subplot(1, 1, 1)
