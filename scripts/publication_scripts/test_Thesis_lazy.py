@@ -50,6 +50,7 @@ from bounos.ChartBuilders import weight_comparisons, radar, format_axes
 use_temp_dir = False
 
 _texcol = 0.5
+_texcolhalf = 1.0
 _texfac = 1.0
 
 hatching = False
@@ -264,7 +265,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
                              "enqueued": "Enqueued Packets",
                              "collisions": "Collisions"}
 
-            figsize = cb.latexify(columns=_texcol * 2, factor=_texfac)
+            figsize = cb.latexify(columns=_texcolhalf, factor=_texfac)
 
             # Emission Stats
 
@@ -513,7 +514,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
         def plot_beta_mtmf_comparison(beta_trust, mtfm, key, extension="pdf"):
 
             beta, otmf = beta_calcs(beta_trust)
-            fig, ax = plt.subplots(1, 1, sharey=True)
+            figsize = cb.latexify(columns=_texcolhalf, factor=_texfac)
+            fig, ax = plt.subplots(1, 1, sharey=True, figsize=figsize)
             ax.plot(beta.xs('n0', level='observer')['n1'].values, label="Hermes", linestyle='--')
             ax.plot(otmf.xs('n0', level='observer')['n1'].values, label="OTMF", linestyle=':')
             ax.plot(mtfm.values, label="MTFM")

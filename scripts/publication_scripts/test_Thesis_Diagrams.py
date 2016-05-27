@@ -9,6 +9,25 @@ import matplotlib.pylab as plt
 import pandas as pd
 import sklearn.ensemble as ske
 from scipy.stats.stats import pearsonr
+import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
+import cartopy.feature as cfeature
+
+
+import matplotlib.pyplot as plt
+from oceans.colormaps import cm
+import iris.plot as iplt
+
+from oceans.ff_tools import wrap_lon180
+
+from oceans.datasets import woa_subset, woa_profile
+import os
+from cartopy.mpl.gridliner import (LONGITUDE_FORMATTER,
+                                   LATITUDE_FORMATTER)
+
+LAND = cfeature.NaturalEarthFeature('physical', 'land', '50m',
+                                    edgecolor='face',
+                                    facecolor=cfeature.COLORS['land'])
 
 from aietes.Tools import *
 from bounos.Analyses.Trust import generate_node_trust_perspective
@@ -16,6 +35,8 @@ from bounos.Analyses.Weight import target_weight_feature_extractor, \
     generate_weighted_trust_perspectives, build_outlier_weights, calc_correlations_from_weights, \
     drop_metrics_from_weights_by_key
 from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list
+from bounos.ChartBuilders.ssp import UUV_time_delay, ssp_function, SSPS
+
 from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, \
     n_metrics, results_path, \
     fig_basedir, subset_renamer, metric_subset_analysis, format_features
@@ -60,6 +81,162 @@ else:
 
 assert os.path.isdir(fig_basedir)
 
+class ThesisOneShotDiagrams(unittest.TestCase):
+    def tearDown(self):
+        plt.close("all")
+
+    def testSSPPlots(self):
+        depth = 100
+        for ssp in SSPS:
+            r=UUV_time_delay(SSP=ssp, graph=1, depth=depth, dist_calc=False,
+                             pdf_plot={'filepath':os.path.join(fig_basedir,"ssp_{}".format(ssp))})
+
+    def testTempSalGlobes(self):
+        resolution = '0.25'
+        def make_map(cube, projection=ccrs.InterruptedGoodeHomolosine(), figsize=(12, 10),
+                     cmap=cm.avhrr, label='temperature'):
+            fig, ax = plt.subplots(figsize=figsize,
+                                   subplot_kw=dict(projection=projection))
+            ax.add_feature(cfeature.LAND, facecolor='0.75')
+            cs = iplt.pcolormesh(cube, cmap=cmap)
+            ax.coastlines()
+            if isinstance(projection, ccrs.PlateCarree) or isinstance(projection, ccrs.Mercator):
+                gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True, linewidth=1.5,
+                                  color='gray', alpha=0.5, linestyle='--')
+                gl.xlabels_top = gl.ylabels_right = False
+                gl.xformatter = LONGITUDE_FORMATTER
+                gl.yformatter = LATITUDE_FORMATTER
+            cbar = dict(extend='both', shrink=0.5, pad=0.02,
+                        orientation='horizontal', fraction=0.1)
+            cb = fig.colorbar(cs, **cbar)
+            if label == 'temperature':
+                cb.ax.set_xlabel(r"$^{\circ}$ C")
+            elif label == 'salinity':
+                cb.ax.set_xlabel(r"Salinity $(ppt)$")
+            else:
+                cb.ax.set_xlabel(label)
+            return fig, ax
+
+        bbox = [2.5, 357.5, -87.5, 87.5]
+        # Temperature
+        kw = dict(bbox=bbox, variable='temperature', clim_type='00',
+                  resolution=resolution, full=True)#
+        cubes = woa_subset(**kw)
+        cube = cubes[4]
+        c = cube[0, 0, ...]
+        fig, ax = make_map(c)
+        fig.savefig(os.path.join(fig_basedir, 'temp_globe.pdf'), bbox_inches='tight')
+        # Salinity
+        kw = dict(bbox=bbox, variable='salinity', clim_type='00',
+                  resolution=resolution, full=True)#
+        cubes = woa_subset(**kw)
+        cube = cubes[5]
+        c = cube[0, 0, ...]
+        fig, ax = make_map(c, label='salinity')
+        fig.savefig(os.path.join(fig_basedir, 'sal_globe.pdf'), bbox_inches='tight')
+
+    def testTempSalProfiles(self):
+
+        def plot_profile(ax,cube, label):
+            z = cube.coord(axis='Z').points
+            l = ax.plot(cube[0, :].data, z, label=label, linewidth=2)
+
+        fig, (axT, axS) = plt.subplots(1,2,sharey=True,figsize=(5, 6))
+        kw = dict(variable='temperature', clim_type='00', resolution='1.00', full=False)
+        polar = woa_profile(-25.5, -70.5, **kw)
+        tempe = woa_profile(-25.5, -50.0, **kw)
+        equat = woa_profile(-25.5, 0, **kw)
+        plot_profile(axT,polar, label='Polar')
+        plot_profile(axT,tempe, label='Temperate')
+        plot_profile(axT,equat, label='Equatorial')
+        axT.invert_yaxis()
+        axT.set_xlabel(r"$^{\circ}$ C")
+        axT.set_ylabel(r"Depth $(m)$")
+        _ = axT.set_ylim(200,0)
+
+
+        kw = dict(variable='salinity', clim_type='00', resolution='1.00', full=False)
+        polar = woa_profile(-25.5, -70.5, **kw)
+        tempe = woa_profile(-25.5, -50.0, **kw)
+        equat = woa_profile(-25.5, 0, **kw)
+        plot_profile(axS,polar, label='Polar')
+        plot_profile(axS,tempe, label='Temperate')
+        plot_profile(axS,equat, label='Equatorial')
+        axS.invert_yaxis()
+        axS.set_xlabel(r"Salinity $(ppt)$")
+        _ = axS.set_ylim(200,0)
+        fig.savefig(os.path.join(fig_basedir, 'temp_sal_profile.pdf'))
+
+
+    def testThreatSurfacePlot(self):
+        fig_filename = os.path.join(fig_basedir,'threat_surface_sum')
+        fig_size = latexify(columns=_texcol, factor=_texfac)
+        fig_size = (fig_size[0], fig_size[1] / 2)
+
+        fig, axes = plt.subplots(nrows=1, ncols=4, figsize=fig_size,
+                                 sharex='none', sharey='none',
+                                 subplot_kw={'axisbg': (1, 0.9, 0.9), 'alpha': 0.1})
+        for ax in axes:
+            ax.set_aspect('equal')
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+
+        ys = np.linspace(0.15, 0.85, 4)
+
+        # Single
+        ax = axes[0]
+        ax.set_title("Single Metric")
+        ax.add_patch(plt.Circle((0.1, ys[0]), radius=0.075, color='g', alpha=0.9))
+        ax.annotate('single metric\nobservation', xy=(0.15, 0.2), xycoords='data',
+                    xytext=(-5, 25), textcoords='offset points',
+
+                    arrowprops=dict(arrowstyle="->",
+                                    connectionstyle="arc,angleA=0180,armA=30,rad=10"),
+                    )
+
+        # Vector
+        ax = axes[1]
+        ax.set_title("Single Vector")
+        ax.add_patch(plt.Rectangle((0.0, ys[0] - 0.1), 0.99, 0.2, alpha=0.2))
+        for x in np.linspace(0.1, 0.9, 5):
+            ax.add_patch(plt.Circle((x, ys[0]), radius=0.075, color='g', alpha=0.9))
+        ax.annotate('single domain\nobservation', xy=(0.5, 0.3), xycoords='data',
+                    xytext=(-30, 30), textcoords='offset points',
+                    arrowprops=dict(arrowstyle="->",
+                                    connectionstyle="arc,angleA=0180,armA=30,rad=10"),
+                    )
+
+        # Multi
+        ax = axes[2]
+        ax.set_title("Multi Domain")
+        ax.text(1, 0.3, r"$\}$", fontsize=52)
+        ax.text(1.3, 0.42, "Combination of\nmultiple vectors,\neach containing\nmultiple metrics",
+                verticalalignment='center')
+
+        ax.add_patch(plt.Rectangle((0.0, ys[0] - 0.1), 0.99, 0.2, alpha=0.2))
+        for x in np.linspace(0.1, 0.9, 5):
+            ax.add_patch(plt.Circle((x, ys[0]), radius=0.075, color='g', alpha=0.9))
+
+        ax.add_patch(plt.Rectangle((0.0, ys[1] - 0.1), 0.99, 0.2, alpha=0.2))
+        for x in np.linspace(0.2, 0.8, 3):
+            ax.add_patch(plt.Circle((x, ys[1]), radius=0.075, color='y', alpha=0.9))
+
+        ax.add_patch(plt.Rectangle((0.0, ys[2] - 0.1), 1.0, 0.2, alpha=0.2))
+        for x in np.linspace(0.1, 0.9, 6):
+            ax.add_patch(plt.Circle((x, ys[2]), radius=0.075, color='b', alpha=0.9))
+
+        ax.add_patch(plt.Rectangle((0.0, ys[3] - 0.1), 1.0, 0.2, alpha=0.2))
+        for x in np.linspace(0, 1, 10):
+            ax.add_patch(plt.Circle((x, ys[3]), radius=0.075, color='r', alpha=0.9))
+
+        axes = map(format_axes, axes)
+        fig.delaxes(axes[3])
+        fig.savefig(fig_filename +'.pdf', transparent=False, type='pdf')
+
+        self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
+
+        if show_outputs:
+            try_to_open(fig_filename + '.pdf')
 
 class ThesisDiagrams(unittest.TestCase):
     signed = True
@@ -249,75 +426,7 @@ class ThesisDiagrams(unittest.TestCase):
         if show_outputs:
             try_to_open(fig_filename + '.png')
 
-    def testThreatSurfacePlot(self):
-        fig_filename = 'threat_surface_sum'
-        fig_size = latexify(columns=_texcol, factor=_texfac)
-        fig_size = (fig_size[0], fig_size[1] / 2)
 
-        fig, axes = plt.subplots(nrows=1, ncols=4, figsize=fig_size,
-                                 sharex='none', sharey='none',
-                                 subplot_kw={'axisbg': (1, 0.9, 0.9), 'alpha': 0.1})
-        for ax in axes:
-            ax.set_aspect('equal')
-            ax.xaxis.set_visible(False)
-            ax.yaxis.set_visible(False)
-
-        ys = np.linspace(0.15, 0.85, 4)
-
-        # Single
-        ax = axes[0]
-        ax.set_title("Single Metric")
-        ax.add_patch(plt.Circle((0.1, ys[0]), radius=0.075, color='g', alpha=0.9))
-        ax.annotate('single metric\nobservation', xy=(0.15, 0.2), xycoords='data',
-                    xytext=(-5, 25), textcoords='offset points',
-
-                    arrowprops=dict(arrowstyle="->",
-                                    connectionstyle="arc,angleA=0180,armA=30,rad=10"),
-                    )
-
-        # Vector
-        ax = axes[1]
-        ax.set_title("Single Vector")
-        ax.add_patch(plt.Rectangle((0.0, ys[0] - 0.1), 0.99, 0.2, alpha=0.2))
-        for x in np.linspace(0.1, 0.9, 5):
-            ax.add_patch(plt.Circle((x, ys[0]), radius=0.075, color='g', alpha=0.9))
-        ax.annotate('single domain\nobservation', xy=(0.5, 0.3), xycoords='data',
-                    xytext=(-30, 30), textcoords='offset points',
-                    arrowprops=dict(arrowstyle="->",
-                                    connectionstyle="arc,angleA=0180,armA=30,rad=10"),
-                    )
-
-        # Multi
-        ax = axes[2]
-        ax.set_title("Multi Domain")
-        ax.text(1, 0.3, r"$\}$", fontsize=52)
-        ax.text(1.3, 0.42, "Combination of\nmultiple vectors,\neach containing\nmultiple metrics",
-                verticalalignment='center')
-
-        ax.add_patch(plt.Rectangle((0.0, ys[0] - 0.1), 0.99, 0.2, alpha=0.2))
-        for x in np.linspace(0.1, 0.9, 5):
-            ax.add_patch(plt.Circle((x, ys[0]), radius=0.075, color='g', alpha=0.9))
-
-        ax.add_patch(plt.Rectangle((0.0, ys[1] - 0.1), 0.99, 0.2, alpha=0.2))
-        for x in np.linspace(0.2, 0.8, 3):
-            ax.add_patch(plt.Circle((x, ys[1]), radius=0.075, color='y', alpha=0.9))
-
-        ax.add_patch(plt.Rectangle((0.0, ys[2] - 0.1), 1.0, 0.2, alpha=0.2))
-        for x in np.linspace(0.1, 0.9, 6):
-            ax.add_patch(plt.Circle((x, ys[2]), radius=0.075, color='b', alpha=0.9))
-
-        ax.add_patch(plt.Rectangle((0.0, ys[3] - 0.1), 1.0, 0.2, alpha=0.2))
-        for x in np.linspace(0, 1, 10):
-            ax.add_patch(plt.Circle((x, ys[3]), radius=0.075, color='r', alpha=0.9))
-
-        axes = map(format_axes, axes)
-        fig.delaxes(axes[3])
-        fig.savefig(fig_filename, transparent=False)
-
-        self.assertTrue(os.path.isfile(fig_filename + '.png'))
-
-        if show_outputs:
-            try_to_open(fig_filename + '.png')
 
     def testFullMetricTrustRelevance(self):
         fig_filename = 'full_metric_trust_relevance'

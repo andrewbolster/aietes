@@ -23,6 +23,7 @@ import unittest
 
 import matplotlib
 from matplotlib.figure import Figure
+import numpy as np
 
 import aietes
 import bounos
@@ -113,3 +114,25 @@ class ChartBuilders(unittest.TestCase):
 
         test_figure = bounos.ChartBuilders.combined_trust_observation_summary(self.dp, target=self.dp.names[1])
         self.assertIsInstance(test_figure, Figure)
+
+
+class TestTimeDelay(unittest.TestCase):
+    def setUp(self):
+        self.depth = 100.0
+
+    def test_known_good(self):
+        known_good = (
+            0.36811931061091618, 545.64182391015447, 548.49777281026513, 548.03762367200147, 547.58667751650307)
+        np.testing.assert_almost_equal(bounos.ChartBuilders.ssp.UUV_time_delay(graph=2, dist_calc=True), known_good, decimal=5)
+
+    def test_basic(self):
+        positions = np.asarray([[100, 100, 150], [250, 500, 20]])
+        bounos.ChartBuilders.ssp.UUV_time_delay(positions[0], positions[1], graph=0)
+        matplotlib.pyplot.close("all")
+
+    def test_graph_equality(self):
+        np.testing.assert_almost_equal(
+            bounos.ChartBuilders.ssp.UUV_time_delay(graph=0),
+            bounos.ChartBuilders.ssp.UUV_time_delay(graph=2)
+        )
+        matplotlib.pyplot.close("all")

@@ -42,3 +42,18 @@ n_metrics = 9
 fig_basedir = "/home/bolster/src/thesis/Figures/"
 
 shared_h5_path = '/dev/shm/shared_subset.h5'
+
+"""GO TO Chapter 7 Notebook """
+
+from aietes.Tools import uncpickle, key_order
+
+phys_keys = ['INDD', 'INHD', 'Speed']
+comm_keys = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR']
+
+comm_keys_alt = ['ATXP', 'RXThroughput', 'TXThroughput', 'PLR','INDD']
+phys_keys_alt = ['ADelay','ARXP', 'INDD', 'INHD', 'Speed']
+
+d_subsets_feats = uncpickle("d_subsets_feat.pkl")
+d_subsets_feats = dict(d_subsets_feats)
+del d_subsets_feats[('ADelay',)]
+
