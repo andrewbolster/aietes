@@ -4,6 +4,8 @@ from __future__ import division, print_function
 
 import tempfile
 import unittest
+from tqdm import tqdm
+from joblib import Parallel, delayed
 
 import matplotlib.pylab as plt
 import pandas as pd
@@ -329,39 +331,63 @@ class ThesisDiagrams(unittest.TestCase):
 
     @classmethod
     def metric_subset_weight_and_feature_extractor(cls, subset_str, desired_keys, complete_target_weights,
-                                                   dumping_suffix):
-        print("Building {0} Target Weights".format(subset_str))
-        subset_only_weights = drop_metrics_from_weights_by_key(
-            complete_target_weights,
-            metric_key_inverter(desired_keys)
-        )
-        try:
-            subset_only_feats = format_features(
-                target_weight_feature_extractor(
-                    subset_only_weights
-                )
+                                                   dumping_suffix, restart=True):
+        """
+
+        :param subset_str: Set of string metric indices to power-set over
+        :param desired_keys: argument to metric key inversion
+        :param complete_target_weights:
+        :param dumping_suffix:
+        :param restart: attempt to recover from a broken restart by inspecting the shared store for this subset
+        :return:
+        """
+        subset_only_weights = None
+        subset_only_feats = None
+
+        dump_weight_str = "{0}_only_weights{1}".format(subset_str, dumping_suffix)
+        dump_feat_str = "{0}_only_feats{1}".format(subset_str, dumping_suffix)
+
+        if restart:
+            with pd.get_store(shared_h5_path) as s:
+                if dump_weight_str in s and dump_feat_str in s:
+                    print("Recalling {0} Weight and Feats from shared store".format(subset_str))
+                    subset_only_weights = s.get(dump_weight_str)
+                    subset_only_feats = s.get(dump_feat_str)
+
+        if subset_only_weights is None or subset_only_feats is None:
+            print("Building {0} Target Weights".format(subset_str))
+            subset_only_weights = drop_metrics_from_weights_by_key(
+                complete_target_weights,
+                metric_key_inverter(desired_keys)
             )
-            print("Dumping {0} Target Weights".format(subset_str))
-            subset_only_weights.to_hdf(shared_h5_path, "{0}_only_weights{1}".format(subset_str, dumping_suffix))
-            subset_only_feats.to_hdf(shared_h5_path, "{0}_only_feats{1}".format(subset_str, dumping_suffix))
-        except ValueError:
-            # TODO this is a "monkeypatch"
-            #ValueError: Found array with 0 sample(s) (shape=(0, 1)) while a minimum of 1 is required.
-            print("Subset appears to have no interesting features")
+            try:
+                subset_only_feats = format_features(
+                    target_weight_feature_extractor(
+                        subset_only_weights
+                    )
+                )
+                print("Dumping {0} Target Weights".format(subset_str))
+                subset_only_weights.to_hdf(shared_h5_path, "{0}_only_weights{1}".format(subset_str, dumping_suffix))
+                subset_only_feats.to_hdf(shared_h5_path, "{0}_only_feats{1}".format(subset_str, dumping_suffix))
+            except ValueError:
+                # TODO this is a "monkeypatch"
+                #ValueError: Found array with 0 sample(s) (shape=(0, 1)) while a minimum of 1 is required.
+                print("Subset appears to have no interesting features")
 
         return subset_only_weights, subset_only_feats
 
     @classmethod
-    def compute_complete_metric_subsets(cls, complete_target_weights, dumping_suffix):
+    def compute_complete_metric_subsets(cls, complete_target_weights, dumping_suffix, min_subset=4):
         """
-        Generate Every Optimisation Combination of Metrics with a minimum subset length of 3
+        Generate Every Optimisation Combination of Metrics with a minimum subset length of min_subset
         #TODO this is lazily parallelisable
         :param complete_target_weights:
         :param dumping_suffix:
+        :param min_subset:
         :return:
         """
-        for i,subset in enumerate(powerset(complete_target_weights.index.names)):
-            if len(subset)>3:
+        for i,subset in tqdm(enumerate(powerset(complete_target_weights.index.names))):
+            if len(subset)>min_subset:
                 subset_str = '_'.join(subset)
                 print("S:{},".format(i), end="")
                 _, _ = cls.metric_subset_weight_and_feature_extractor(subset_str, subset, complete_target_weights, dumping_suffix)
@@ -527,7 +553,7 @@ class ThesisDiagrams(unittest.TestCase):
         if self.complete_subsets:
             try:
                 best_d = {}
-
+                # TODO replace the below sequence with a static fileset as no longer doing massively distributed system
                 valid_json_files = filter(
                     lambda f: os.stat(os.path.join(json_path, f)).st_size,
                     os.listdir(json_path)
@@ -560,9 +586,10 @@ class ThesisDiagrams(unittest.TestCase):
         instantaneous_meaned_plots = {}
         alt_instantaneous_meaned_plots = {}
 
+
         for subset_str, key in _key_d.items():
 
-            result = metric_subset_analysis(trust_observations, key, subset_str, weights_d=_weight_d)
+            result = metric_subset_analysis(trust_observations, key, subset_str, weights_d=_weight_d, fig_path=fig_basedir)
 
             if result is not None:
                 time_meaned_plots.update(result['time_meaned_plots'])
@@ -573,6 +600,8 @@ class ThesisDiagrams(unittest.TestCase):
 
 
         inverted_results = defaultdict(list)
+
+
         # Time meaned plots and Result inversion
         for (subset_str, target_str), (fig, ax, result) in time_meaned_plots.items():
             fig_filename = "best_{0}_run_time_{1}".format(subset_str, target_str)

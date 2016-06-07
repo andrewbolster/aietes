@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 import warnings
 
 import functools
+from joblib import Parallel, delayed
 
 import numpy as np
 import pandas as pd
@@ -296,6 +297,8 @@ def savefig(fig, name, extn="pdf", tight=True, **kwargs):
     _kwargs.update(kwargs)
     if tight:
         fig.tight_layout(pad=0.1)
+    if kwargs.get('ax', False):
+        format_axes(kwargs.get('ax'))
     fig.savefig("{0}.{1}".format(name, extn), **_kwargs)
     try:
         mpl2tkz.save("{0}.tex".format(name), fig)
@@ -581,6 +584,7 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
             metric_weights=pd.Series(best[1], dtype=np.float64))
 
         weights[(subset_str, target_str)] = np.asarray(best[1])
+        labels = ('run_time', 'run_instantaneous', 'run_alt_time', 'run_alt_instantaneous']
         time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
                                                                             .xs(best[0],
                                                                                 level=['observer', 'run']) \
@@ -591,6 +595,7 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
                                                                             means='time',
                                                                             _texcol=_texcol,
                                                                             _texfac=_texfac)
+
         instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
                                                                                      .xs(best[0],
                                                                                          level=['observer',
@@ -602,7 +607,6 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
                                                                                      means='instantaneous',
                                                                                      _texcol=_texcol,
                                                                                      _texfac=_texfac)
-
         # Plotting using an alternate observer for completeness (presumably bravo)
         # alt_target = 'Bravo' if 'Bravo' != target else 'Charlie'
         if 'Bravo' != best[0][0]:
@@ -633,11 +637,12 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
                                                                                          means='instantaneous',
                                                                                          _texcol=_texcol,
                                                                                          _texfac=_texfac)
+
+        plt.close('all')
     return dict(
         time_meaned_plots=time_meaned_plots,
         alt_time_meaned_plots=alt_time_meaned_plots,
         instantaneous_meaned_plots=instantaneous_meaned_plots,
         alt_instantaneous_meaned_plots=alt_instantaneous_meaned_plots,
-        target_str=target_str,
         weights=weights
     )
