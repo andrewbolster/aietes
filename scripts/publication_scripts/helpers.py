@@ -584,7 +584,7 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
             metric_weights=pd.Series(best[1], dtype=np.float64))
 
         weights[(subset_str, target_str)] = np.asarray(best[1])
-        labels = ('run_time', 'run_instantaneous', 'run_alt_time', 'run_alt_instantaneous']
+        labels = ('run_time', 'run_instantaneous', 'run_alt_time', 'run_alt_instantaneous')
         time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
                                                                             .xs(best[0],
                                                                                 level=['observer', 'run']) \

@@ -589,7 +589,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         for subset_str, key in _key_d.items():
 
-            result = metric_subset_analysis(trust_observations, key, subset_str, weights_d=_weight_d, fig_path=fig_basedir)
+            result = metric_subset_analysis(trust_observations, key, subset_str, weights_d=_weight_d)
 
             if result is not None:
                 time_meaned_plots.update(result['time_meaned_plots'])
