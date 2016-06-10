@@ -39,8 +39,8 @@ _boxplot_kwargs = {
 }
 
 
-def unique_cm_dict_from_list(items):
-    cm = plt.get_cmap('gist_rainbow')
+def unique_cm_dict_from_list(items, cmap='gist_rainbow'):
+    cm = plt.get_cmap(cmap)
     cnorm = mpl.colors.Normalize(vmin=0, vmax=len(items))
     scalarmap = mpl.cm.ScalarMappable(norm=cnorm, cmap=cm)
     return dict(zip(items, [scalarmap.to_rgba(i) for i in range(len(items))]))

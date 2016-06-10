@@ -84,6 +84,3 @@ def generate_subsets_features(keyorder=None, min_length=5, outlier_weights=None,
     # Process identical to metric subset_weight_and_feature_extractor in Thesis_diagrams
 
 
-class testMetricSubSets(unittest.TestCase):
-    def test_
-

@@ -9,10 +9,13 @@ from joblib import Parallel, delayed
 
 import matplotlib.pylab as plt
 import pandas as pd
+import palettable.colorbrewer.qualitative as cmap_qual
 import sklearn.ensemble as ske
 from scipy.stats.stats import pearsonr
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
+
 import cartopy.feature as cfeature
 
 
@@ -138,19 +141,38 @@ class ThesisOneShotDiagrams(unittest.TestCase):
         fig.savefig(os.path.join(fig_basedir, 'sal_globe.pdf'), bbox_inches='tight')
 
     def testTempSalProfiles(self):
+        def _cube_decomposer(cube):
+            return cube[0, :].data, cube.coord(axis='Z').points
 
         def plot_profile(ax,cube, label):
-            z = cube.coord(axis='Z').points
-            l = ax.plot(cube[0, :].data, z, label=label, linewidth=2)
+            x,z = _cube_decomposer(cube)
+            l = ax.plot(x, z, label=label, linewidth=2)
 
-        fig, (axT, axS) = plt.subplots(1,2,sharey=True,figsize=(5, 6))
+        def ssp_decuber(S, T):
+            s, zs = _cube_decomposer(S)
+            t, zt = _cube_decomposer(T)
+            return ssp(s, t, zs)
+
+        def ssp(t,s,d):
+            v=1448.96+\
+              4.591*t-\
+              (5.304*10**-2)*(np.power(t,2))+\
+              (2.374*10**-4)*(np.power(t,3))+\
+              (1.34*(s-35))+\
+              (1.63*10**-2)*d+\
+              (1.675*10**-7)*(np.power(d,2))-\
+              (1.025*10**-2)*(t*(s-25))-\
+              (7.139*10**-13)*(t*np.power(d,3))
+            return v
+
+        fig, (axT, axS, axV) = plt.subplots(1,3,sharey=True,figsize=(5, 6))
         kw = dict(variable='temperature', clim_type='00', resolution='1.00', full=False)
-        polar = woa_profile(-25.5, -70.5, **kw)
-        tempe = woa_profile(-25.5, -50.0, **kw)
-        equat = woa_profile(-25.5, 0, **kw)
-        plot_profile(axT,polar, label='Polar')
-        plot_profile(axT,tempe, label='Temperate')
-        plot_profile(axT,equat, label='Equatorial')
+        polar_t = woa_profile(-25.5, -70.5, **kw)
+        tempe_t = woa_profile(-25.5, -50.0, **kw)
+        equat_t = woa_profile(-25.5, 0, **kw)
+        plot_profile(axT,polar_t, label='Polar')
+        plot_profile(axT,tempe_t, label='Temperate')
+        plot_profile(axT,equat_t, label='Equatorial')
         axT.invert_yaxis()
         axT.set_xlabel(r"$^{\circ}$ C")
         axT.set_ylabel(r"Depth $(m)$")
@@ -158,15 +180,34 @@ class ThesisOneShotDiagrams(unittest.TestCase):
 
 
         kw = dict(variable='salinity', clim_type='00', resolution='1.00', full=False)
-        polar = woa_profile(-25.5, -70.5, **kw)
-        tempe = woa_profile(-25.5, -50.0, **kw)
-        equat = woa_profile(-25.5, 0, **kw)
-        plot_profile(axS,polar, label='Polar')
-        plot_profile(axS,tempe, label='Temperate')
-        plot_profile(axS,equat, label='Equatorial')
+        polar_s = woa_profile(-25.5, -70.5, **kw)
+        tempe_s = woa_profile(-25.5, -50.0, **kw)
+        equat_s = woa_profile(-25.5, 0, **kw)
+        plot_profile(axS,polar_s, label='Polar')
+        plot_profile(axS,tempe_s, label='Temperate')
+        plot_profile(axS,equat_s, label='Equatorial')
         axS.invert_yaxis()
+        axS.legend()
         axS.set_xlabel(r"Salinity $(ppt)$")
         _ = axS.set_ylim(200,0)
+        axS.xaxis.set_major_locator(mtick.MaxNLocator(5))
+
+        _, z = _cube_decomposer(polar_s)
+        polar_v = ssp_decuber(polar_s, polar_t)
+        tempe_v = ssp_decuber(tempe_s, tempe_t)
+        equat_v = ssp_decuber(equat_s, equat_t)
+        axV.plot(polar_v, z, label='Polar', linewidth=2)
+        axV.plot(tempe_v, z, label='Temperate', linewidth=2)
+        axV.plot(equat_v, z, label='Equatorial', linewidth=2)
+        axV.invert_yaxis()
+        axV.set_xlabel(r"SSP $(ms^{-1})$")
+        _ = axV.set_ylim(200, 0)
+        _ = axV.set_xlim(1500, 1550)
+        axV.xaxis.set_major_locator(mtick.MaxNLocator(3))
+
+        axS.legend(loc='upper center', bbox_to_anchor=(0.5, 1.5),
+                   ncol=3)
+
         fig.savefig(os.path.join(fig_basedir, 'temp_sal_profile.pdf'))
 
 
@@ -299,6 +340,15 @@ class ThesisDiagrams(unittest.TestCase):
         # Also need to handle latexified keys but use the same colour:
         for k, v in self.metric_colour_map.items():
             self.metric_colour_map[metric_rename_dict[k]] = v
+        # Same for nodes
+        with pd.get_store(results_path + '.h5') as store:
+            trust_observations = store.trust.dropna()
+            v = list(trust_observations.index.levels[2])
+            if hasattr(cmap_qual, "Dark2_{}".format(len(v))):
+                _cmap = getattr(cmap_qual, "Dark2_{}".format(len(v))).mpl_colormap
+            else:
+                _cmap = 'nipy_spectral'
+            self.node_colour_map = unique_cm_dict_from_list(v, cmap=_cmap)
 
     @classmethod
     def recompute_features_in_shared(cls, signed=False):
@@ -567,8 +617,8 @@ class ThesisDiagrams(unittest.TestCase):
                 _key_d = {}
                 _weight_d = {}
                 for k,v in best_d.items():
-                    _key_d[k]=v['metrics']
-                    _weight_d[k]=v['best']
+                    _key_d[k.lower()]=v['metrics']
+                    _weight_d[k.lower()]=v['best']
 
             except:
                 print("Failed building powerset best dict, falling back to static key_d")
@@ -581,83 +631,72 @@ class ThesisDiagrams(unittest.TestCase):
             _weight_d = None
 
         weights = {}
+        perspectives = {}
         time_meaned_plots = {}
         alt_time_meaned_plots = {}
         instantaneous_meaned_plots = {}
         alt_instantaneous_meaned_plots = {}
 
+        results = uncpickle("/home/bolster/src/aietes/results/subset_analysis_raw.pkl")
+        if len(results) >= 385 and False:
+            print("Successfully recovered from pickle")
+        else:
+            with Parallel(n_jobs=-1, verbose=10) as par_ctx:
+                results = par_ctx(delayed(metric_subset_analysis)
+                                                          (trust_observations, key, subset_str, weights_d=_weight_d,
+                                                            plot_internal=True, node_palette=self.node_colour_map
+                                                           )
+                                                          for subset_str, key in _key_d.items()
+                                                          )
 
-        for subset_str, key in _key_d.items():
+            mkcpickle("/home/bolster/src/aietes/results/subset_analysis_raw.pkl", results)
+        mkcpickle("/dev/shm/_key_d", _key_d)
 
-            result = metric_subset_analysis(trust_observations, key, subset_str, weights_d=_weight_d)
-
+        for result in results:
+            #time_meaned_plots.update(result['time_meaned_plots'])
+            #alt_time_meaned_plots.update(result['alt_time_meaned_plots'])
+            #instantaneous_meaned_plots.update(result['instantaneous_meaned_plots'])
+            #alt_instantaneous_meaned_plots.update(result['alt_instantaneous_meaned_plots'])
             if result is not None:
-                time_meaned_plots.update(result['time_meaned_plots'])
-                alt_time_meaned_plots.update(result['alt_time_meaned_plots'])
-                instantaneous_meaned_plots.update(result['instantaneous_meaned_plots'])
-                alt_instantaneous_meaned_plots.update(result['alt_instantaneous_meaned_plots'])
+                perspectives.update(result['trust_perspective'])
                 weights.update(result['weights'])
-
 
         inverted_results = defaultdict(list)
 
-
-        # Time meaned plots and Result inversion
-        for (subset_str, target_str), (fig, ax, result) in time_meaned_plots.items():
-            fig_filename = "best_{0}_run_time_{1}".format(subset_str, target_str)
-            # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
-            #    subset_str.capitalize(),
-            #    target_str
-            # ))
-            format_axes(ax)
-            fig.savefig(fig_filename, transparent=True)
-            self.assertTrue(os.path.isfile(fig_filename + '.png'))
-            if show_outputs:
-                try_to_open(fig_filename + '.png')
+        for (subset_str, target_str), (result) in perspectives.items():
             inverted_results[subset_str].append((target_str, result))
 
-        # instanteous plots
-        for (subset_str, target_str), (fig, ax, result) in instantaneous_meaned_plots.items():
-            fig_filename = "best_{0}_run_instantaneous_{1}".format(subset_str, target_str)
-            # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
-            #    subset_str.capitalize(),
-            #    target_str
-            # ))
-            format_axes(ax)
-            fig.savefig(fig_filename, transparent=True)
-            self.assertTrue(os.path.isfile(fig_filename + '.png'))
+        # Time meaned plots and Result inversion
+        for (subset_str, target_str), (_, _, result) in time_meaned_plots.items():
+            fig_filename = "best_{0}_run_time_{1}".format(subset_str, target_str)
+            self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
             if show_outputs:
-                try_to_open(fig_filename + '.png')
+                try_to_open(fig_filename + '.pdf')
+
+        # instanteous plots
+        for (subset_str, target_str), (_, _, result) in instantaneous_meaned_plots.items():
+            fig_filename = "best_{0}_run_instantaneous_{1}".format(subset_str, target_str)
+            self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
+            if show_outputs:
+                try_to_open(fig_filename + '.pdf')
 
         # ALTERNATE Time meaned plots and Result inversion
-        for (subset_str, target_str), (fig, ax, result) in alt_time_meaned_plots.items():
+        for (subset_str, target_str), (_, _, result) in alt_time_meaned_plots.items():
             fig_filename = "best_{0}_run_alt_time_{1}".format(subset_str, target_str)
-            # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
-            #    subset_str.capitalize(),
-            #    target_str
-            # ))
-            format_axes(ax)
-            fig.savefig(fig_filename, transparent=True)
-            self.assertTrue(os.path.isfile(fig_filename + '.png'))
+            self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
             if show_outputs:
-                try_to_open(fig_filename + '.png')
+                try_to_open(fig_filename + '.pdf')
             inverted_results[subset_str].append((target_str, result))
 
         # ALTERNATE instanteous plots
-        for (subset_str, target_str), (fig, ax, result) in alt_instantaneous_meaned_plots.items():
+        for (subset_str, target_str), (_, _, result) in alt_instantaneous_meaned_plots.items():
             fig_filename = "best_{0}_run_alt_instantaneous_{1}".format(subset_str, target_str)
-            # ax.set_title("Example {} Metric Weighted Assessment for {}".format(
-            #    subset_str.capitalize(),
-            #    target_str
-            # ))
-            format_axes(ax)
-            fig.savefig(fig_filename, transparent=True)
-            self.assertTrue(os.path.isfile(fig_filename + '.png'))
+            self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
             if show_outputs:
-                try_to_open(fig_filename + '.png')
+                try_to_open(fig_filename + '.pdf')
 
         # Dump Best weights from best runs to a table
-        w_df = pd.concat([pd.Series(weight, index=key_d[subset.lower()])
+        w_df = pd.concat([pd.Series(weight, index=_key_d[subset.lower()])
                           for (subset, _), weight in weights.items()],
                          keys=weights.keys(),
                          names=['subset', 'target', 'metric']).unstack(level='metric')
@@ -668,10 +707,17 @@ class ThesisDiagrams(unittest.TestCase):
         elif len(w_df.index.levels[0]) == 5:
             subset_reindex_keys = ['full', 'comms', 'phys', 'comms_alt', 'phys_alt']
         else:
-            w_df.to_hdf(os.path.join(results_path,'w_df.h5'),'weights')
-            raise ValueError("Incorrect number of subsets included; {0}".format(w_df.index.levels[0]))
-        w_df = w_df.reindex(subset_reindex_keys, level='subset')[key_order].rename(columns=metric_rename_dict)
+            subset_reindex_keys = []
+            #raise ValueError("Incorrect number of subsets included; {0}".format(w_df.index.levels[0]))
+
+        if subset_reindex_keys:
+            w_df = w_df.reindex(subset_reindex_keys, level='subset')
+
+        w_df = w_df[key_order].rename(columns=metric_rename_dict)
         w_df = w_df.unstack('target').rename(subset_renamer).stack('target')
+
+        w_df.to_hdf(os.path.join(results_path,'w_df.h5'), 'weights')
+
         tex = w_df.to_latex(float_format=lambda x: "{0:1.3f}".format(x), index=True, escape=False,
                             column_format="|l|l|*{{{0}}}{{c|}}".format(len(key_order))) \
             .replace('nan', '') \
@@ -689,7 +735,7 @@ class ThesisDiagrams(unittest.TestCase):
             if i:  # first one already covered by midrule
                 tex.insert(i + j - 1, '\midrule')  # add a hline above the i found in prev loop
         tex = '\n'.join(tex)
-        with open('input/optimised_weights.tex', 'w') as f:
+        with open('input/optimised_weights_{}.tex'.format(len(w_df.index.levels[0])), 'w') as f:
             f.write(tex)
 
         # mkcpickle("/dev/shm/weights", weights)

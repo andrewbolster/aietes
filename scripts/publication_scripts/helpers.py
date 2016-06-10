@@ -17,7 +17,7 @@ import matplotlib2tikz as mpl2tkz
 
 from aietes import Tools
 from bounos.Analyses import Trust
-from bounos.ChartBuilders import latexify, plot_nodes, format_axes
+from bounos.ChartBuilders import latexify, plot_nodes, format_axes, unique_cm_dict_from_list
 
 in_results = functools.partial(os.path.join, Tools._results_dir)
 print Tools._results_dir
@@ -292,16 +292,19 @@ def interpolate_rate_sep(df, key, method='linear'):
     return xi, yi, zi, X, Y
 
 
-def savefig(fig, name, extn="pdf", tight=True, **kwargs):
+def savefig(fig, name, extn="pdf", tight=True, ax=None, **kwargs):
     _kwargs = Tools.kwarger()
     _kwargs.update(kwargs)
     if tight:
         fig.tight_layout(pad=0.1)
-    if kwargs.get('ax', False):
-        format_axes(kwargs.get('ax'))
+    if ax is not None:
+        if isinstance(ax, list):
+            map(format_axes, ax)
+        else:
+            format_axes(ax)
     fig.savefig("{0}.{1}".format(name, extn), **_kwargs)
     try:
-        mpl2tkz.save("{0}.tex".format(name), fig)
+        mpl2tkz.save("{0}.tex".format(name), fig, show_info=False)
     except:
         warnings.warn("Couldn't tkzify {0}, skipping".format(name))
 
@@ -351,13 +354,14 @@ def subset_renamer(s):
     :param s:
     :return: string
     """
+
+    s = s.replace("_alt", " Alt.").replace("signed", "").replace("only_feats", "_").replace("_"," ")
     s = str.capitalize(s)
-    s = s.replace("_alt", " Alt.")
     return s
 
 
 def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, means=None, target=None,
-                          _texcol=_texcol, _texfac=_texfac):
+                          _texcol=_texcol, _texfac=_texfac, plot_filename=None, palette=None):
     """
     Plot weighted trust result line graph (i.e. T vs t)
     Optionally ewma smooth the results with `spans`>0
@@ -372,11 +376,12 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, m
     :param box:
     :param means: ['time','instantaneous']
     :param target: column name in results that maps to the "target" or "suspect" node. if none given, assumes first column
+    :param plot_filename: if given, only return the intermediate results and plot using the given filename
     :return:
     """
 
-    _target_alpha = 0.8
-    _default_alpha = 0.4
+    _target_alpha = 1.0
+    _default_alpha = 0.6
 
     if means is None:
         means = 'time'
@@ -395,6 +400,7 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, m
     fig = plt.figure(figsize=fig_size)
     gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])
     ax = plt.subplot(gs[0])
+    axb = None
     if spans is not None:
         plottable = pd.stats.moments.ewma(result, span=spans)
     else:
@@ -405,15 +411,22 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, m
         ax.axhline(mean + std, alpha=0.3, ls=':', color='green')
         ax.axhline(mean - std, alpha=0.3, ls=':', color='red')
 
+    lines = {}
+    if palette is None:
+        palette = unique_cm_dict_from_list(plottable.columns.tolist())
     if means is 'time':
         # Plot all lines
-        _ = plottable[target].plot(ax=ax, alpha=_target_alpha)
-        _ = plottable[[c for c in plottable.columns if c != target]].plot(ax=ax, alpha=_default_alpha)
-        for k, v in result.mean().iteritems():
-            if k != target:  # Everyone Else
-                ax.axhline(v, alpha=0.3, ls='--', color='blue')
-            else:  # Alfa
-                ax.axhline(v, alpha=0.6, ls='-', color='blue')
+        for c in plottable.columns:
+            if c == target:
+                lines[target] = plottable[target].plot(ax=ax, alpha=_target_alpha, lw=1, color=palette[c])
+            else:
+                lines[c] = plottable[c].plot(ax=ax, alpha=_default_alpha, lw=1, color=palette[c])
+        if box is None:
+            for k, v in result.mean().iteritems():
+                if k != target:  # Everyone Else
+                    ax.axhline(v, alpha=_default_alpha, ls='--', color='blue')
+                else:  # Alfa
+                    ax.axhline(v, alpha=_target_alpha, ls='-', color='blue')
     elif means is 'instantaneous':
         # Plot Target and the Average of the other nodes
         _ = plottable[target].plot(ax=ax, alpha=_target_alpha, style='-')
@@ -436,19 +449,28 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, m
 
         axb = plt.subplot(gs[1])
         if box is 'summary':
-            axb.boxplot([dropna(plottable.iloc[:, 0].values), plottable.iloc[:, 1:].stack().values],
+            bp = axb.boxplot([dropna(plottable.iloc[:, 0].values), plottable.iloc[:, 1:].stack().values],
                         labels=['Misbehaver', 'Other Nodes'], widths=0.8, showmeans=True, meanline=True,
-                        meanprops=meanlineprops)
+                        meanprops=meanlineprops, return_type='dict')
         elif box is 'complete':
-            plottable.boxplot(rot=90, ax=axb, showmeans=True, meanline=True, meanprops=meanlineprops)
+            bp = plottable.boxplot(rot=90, ax=axb, showmeans=True, meanline=True,
+                                   meanprops=meanlineprops, return_type='dict')
+            for i,c in enumerate(plottable.columns):
+                plt.setp(bp['boxes'][i], color=palette[c])
+
         index_width = len(result.columns)
         target_x = (0.5 + target_index) / index_width
         axb.annotate('', xy=(target_x, 0.95), xycoords='axes fraction', xytext=(target_x, 1.05),
                      arrowprops=dict(arrowstyle="->", color='r', linewidth=2))
 
         plt.setp(axb.get_yticklabels(), visible=False)
+        axb.grid(b=False)
 
     fig.tight_layout()
+
+    if plot_filename is not None:
+        savefig(fig, name=plot_filename, ax=[ax,axb], transparent=True)
+        plt.close(fig)
 
     return fig, [ax, axb], result
 
@@ -556,7 +578,8 @@ def best_of_all(feats, trust_observations, par=True):
     return best
 
 
-def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
+def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None,
+                           plot_internal=False, par_ctx=None, node_palette=None):
     # alt_ indicates using a (presumably) non malicious node as the target of trust assessment.
     weights = {}
     time_meaned_plots = {}
@@ -581,10 +604,11 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
     for target_str, best in best_d.items():
         trust_perspective = Trust.generate_node_trust_perspective(
             _trust_observations.xs(target_str, level='var'),
-            metric_weights=pd.Series(best[1], dtype=np.float64))
+            metric_weights=pd.Series(best[1], dtype=np.float64),
+            par=False)
 
         weights[(subset_str, target_str)] = np.asarray(best[1])
-        labels = ('run_time', 'run_instantaneous', 'run_alt_time', 'run_alt_instantaneous')
+        fig_filename = "best_{0}_run_time_{1}".format(subset_str, target_str) if plot_internal else None
         time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
                                                                             .xs(best[0],
                                                                                 level=['observer', 'run']) \
@@ -594,8 +618,12 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
                                                                             box='complete',
                                                                             means='time',
                                                                             _texcol=_texcol,
-                                                                            _texfac=_texfac)
+                                                                            _texfac=_texfac,
+                                                                            plot_filename=fig_filename,
+                                                                            palette=node_palette
+                                                                            )
 
+        fig_filename = "best_{0}_run_instantaneous_{1}".format(subset_str, target_str) if plot_internal else None
         instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
                                                                                      .xs(best[0],
                                                                                          level=['observer',
@@ -606,13 +634,17 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
                                                                                      box='complete',
                                                                                      means='instantaneous',
                                                                                      _texcol=_texcol,
-                                                                                     _texfac=_texfac)
+                                                                                     _texfac=_texfac,
+                                                                                     plot_filename=fig_filename,
+                                                                                     palette=node_palette
+                                                                                     )
         # Plotting using an alternate observer for completeness (presumably bravo)
         # alt_target = 'Bravo' if 'Bravo' != target else 'Charlie'
         if 'Bravo' != best[0][0]:
             alt_target = 'Bravo'
         else:
             alt_target = 'Charlie'
+        fig_filename = "best_{0}_run_alt_time_{1}".format(subset_str, target_str) if plot_internal else None
         alt_time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
                                                                                 .xs(best[0],
                                                                                     level=['observer', 'run']) \
@@ -623,7 +655,11 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
                                                                                 box='complete',
                                                                                 means='time',
                                                                                 _texcol=_texcol,
-                                                                                _texfac=_texfac)
+                                                                                _texfac=_texfac,
+                                                                                palette=node_palette
+                                                                                )
+
+        fig_filename = "best_{0}_run_alt_instantaneous_{1}".format(subset_str, target_str) if plot_internal else None
         alt_instantaneous_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
                                                                                          .xs(best[0],
                                                                                              level=['observer',
@@ -636,13 +672,22 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None):
                                                                                          box='complete',
                                                                                          means='instantaneous',
                                                                                          _texcol=_texcol,
-                                                                                         _texfac=_texfac)
+                                                                                         _texfac=_texfac,
+                                                                                         palette=node_palette
+                                                                                         )
 
         plt.close('all')
-    return dict(
-        time_meaned_plots=time_meaned_plots,
-        alt_time_meaned_plots=alt_time_meaned_plots,
-        instantaneous_meaned_plots=instantaneous_meaned_plots,
-        alt_instantaneous_meaned_plots=alt_instantaneous_meaned_plots,
-        weights=weights
-    )
+
+    if plot_internal:
+        return dict(weights=weights,
+                    trust_perspective=trust_perspective
+        )
+    else:
+        return dict(
+            trust_perspective=trust_perspective,
+            time_meaned_plots=time_meaned_plots,
+            alt_time_meaned_plots=alt_time_meaned_plots,
+            instantaneous_meaned_plots=instantaneous_meaned_plots,
+            alt_instantaneous_meaned_plots=alt_instantaneous_meaned_plots,
+            weights=weights
+        )

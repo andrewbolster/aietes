@@ -13,6 +13,7 @@
  * Contributors:
  *     Andrew Bolster, Queen's University Belfast (-Aug 2013), University of Liverpool (Sept 2014-)
 """
+from __future__ import print_function
 from collections import defaultdict
 
 __author__ = "Andrew Bolster"
@@ -857,6 +858,9 @@ def mkcpickle(filename, thing):
     :param thing:
     :return: stringbuffer: closed
     """
+    if not os.path.isdir(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        print("Creating dirs for {}".format(filename), file=sys.stderr)
     with open(filename, 'wb') as f:
         data = cPickle.dump(thing, f)
     return f
@@ -1030,7 +1034,7 @@ def try_x_times(x, exceptions_to_catch, exception_to_raise, fn):
             try:
                 return fn(*args, **kwargs)
             except exceptions_to_catch as e:
-                print "Failed {0:d}/{1:d}: {2!s}".format(i, x, e)
+                print("Failed {0:d}/{1:d}: {2!s}".format(i, x, e))
         raise exception_to_raise
 
     return new_fn
@@ -1058,7 +1062,7 @@ def try_forever(exceptions_to_catch, fn):
                 return fn(*args, **kwargs)
             except exceptions_to_catch as e:
                 count += 1
-                print "Failed {0:d}: {1!s}".format(count, e)
+                print("Failed {0:d}: {1!s}".format(count, e))
 
     return new_fn
 
@@ -1162,7 +1166,7 @@ def literal_eval_walk(node, tabs=0):
             try:
                 literal_eval(str(item))
             except:
-                print '*' * tabs, key
+                print('*' * tabs, key)
                 tabs += 1
                 literal_eval_walk(item, tabs)
                 tabs -= 1
@@ -1171,7 +1175,7 @@ def literal_eval_walk(node, tabs=0):
                 literal_eval(str(item))
 
             except:
-                print '*' * tabs, key, "EOL FAIL"
+                print('*' * tabs, key, "EOL FAIL")
 
 
 def map_paths(paths):
