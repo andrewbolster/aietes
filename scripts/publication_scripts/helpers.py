@@ -17,7 +17,7 @@ import matplotlib2tikz as mpl2tkz
 
 from aietes import Tools
 from bounos.Analyses import Trust
-from bounos.ChartBuilders import latexify, plot_nodes, format_axes, unique_cm_dict_from_list
+from bounos.ChartBuilders import latexify, plot_nodes, format_axes, unique_cm_dict_from_list, _texcol, _texcolhalf, _texcolthird, _texfac
 
 in_results = functools.partial(os.path.join, Tools._results_dir)
 print Tools._results_dir
@@ -30,8 +30,6 @@ scenario_order = list(reversed([u'bella_all_mobile', u'bella_allbut1_mobile', u'
 
 golden_mean = (np.sqrt(5) - 1.0) / 2.0  # because it looks good
 w = 6
-_texcol = 0.5
-_texfac = 0.9
 
 latexify(columns=_texcol, factor=_texfac)
 
@@ -437,7 +435,7 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, m
 
     if stds:
         map(pltstd, zip(result.mean(), result.std()))
-    ax.set_xlabel("Simulated Time (mins)")
+    ax.set_xlabel("Mission Time (mins)")
     ax.set_xticks(np.arange(0, 61, 10))
     ax.set_xticklabels(np.arange(0, 61, 10))
     ax.set_ylabel("Weighted Trust Value")
@@ -445,23 +443,32 @@ def plot_trust_line_graph(result, title=None, stds=True, spans=None, box=None, m
     ax.legend().set_visible(False)
 
     if box is not None:
-        meanlineprops = dict(linestyle='-', color='blue', alpha=0.8)
+
+        _boxplot_kwargs = dict(
+            widths=0.8,
+            showmeans=True,
+            meanline=True,
+            meanprops=dict(linestyle='-', linewidth=0.5, alpha=0.5),
+            boxprops=dict(linewidth=0.5),
+            whiskerprops=dict(linewidth=0.5, color='black', alpha=0.5),
+            return_type='dict'
+        )
 
         axb = plt.subplot(gs[1])
         if box is 'summary':
             bp = axb.boxplot([dropna(plottable.iloc[:, 0].values), plottable.iloc[:, 1:].stack().values],
-                        labels=['Misbehaver', 'Other Nodes'], widths=0.8, showmeans=True, meanline=True,
-                        meanprops=meanlineprops, return_type='dict')
+                        labels=['Misbehaver', 'Other Nodes'], **_boxplot_kwargs)
         elif box is 'complete':
-            bp = plottable.boxplot(rot=90, ax=axb, showmeans=True, meanline=True,
-                                   meanprops=meanlineprops, return_type='dict')
+            bp = plottable.boxplot(rot=90, ax=axb, **_boxplot_kwargs)
             for i,c in enumerate(plottable.columns):
                 plt.setp(bp['boxes'][i], color=palette[c])
+                plt.setp(bp['means'][i], color=palette[c])
+                plt.setp(bp['medians'][i], color=palette[c])
 
         index_width = len(result.columns)
         target_x = (0.5 + target_index) / index_width
         axb.annotate('', xy=(target_x, 0.95), xycoords='axes fraction', xytext=(target_x, 1.05),
-                     arrowprops=dict(arrowstyle="->", color='r', linewidth=2))
+                     arrowprops=dict(arrowstyle="->", color='r', linewidth=1))
 
         plt.setp(axb.get_yticklabels(), visible=False)
         axb.grid(b=False)
@@ -579,9 +586,11 @@ def best_of_all(feats, trust_observations, par=True):
 
 
 def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None,
-                           plot_internal=False, par_ctx=None, node_palette=None):
+                           plot_internal=False, par_ctx=None, node_palette=None,
+                           texcol=_texcol):
     # alt_ indicates using a (presumably) non malicious node as the target of trust assessment.
     weights = {}
+    trust_perspectives = {}
     time_meaned_plots = {}
     alt_time_meaned_plots = {}
     instantaneous_meaned_plots = {}
@@ -608,6 +617,7 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None,
             par=False)
 
         weights[(subset_str, target_str)] = np.asarray(best[1])
+
         fig_filename = "best_{0}_run_time_{1}".format(subset_str, target_str) if plot_internal else None
         time_meaned_plots[(subset_str, target_str)] = plot_trust_line_graph(trust_perspective \
                                                                             .xs(best[0],
@@ -617,7 +627,7 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None,
                                                                             spans=6,
                                                                             box='complete',
                                                                             means='time',
-                                                                            _texcol=_texcol,
+                                                                            _texcol=texcol,
                                                                             _texfac=_texfac,
                                                                             plot_filename=fig_filename,
                                                                             palette=node_palette
@@ -633,7 +643,7 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None,
                                                                                      spans=6,
                                                                                      box='complete',
                                                                                      means='instantaneous',
-                                                                                     _texcol=_texcol,
+                                                                                     _texcol=texcol,
                                                                                      _texfac=_texfac,
                                                                                      plot_filename=fig_filename,
                                                                                      palette=node_palette
@@ -654,8 +664,9 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None,
                                                                                 spans=6,
                                                                                 box='complete',
                                                                                 means='time',
-                                                                                _texcol=_texcol,
+                                                                                _texcol=texcol,
                                                                                 _texfac=_texfac,
+                                                                                plot_filename=fig_filename,
                                                                                 palette=node_palette
                                                                                 )
 
@@ -671,20 +682,22 @@ def metric_subset_analysis(trust_observations, key, subset_str, weights_d=None,
                                                                                          spans=6,
                                                                                          box='complete',
                                                                                          means='instantaneous',
-                                                                                         _texcol=_texcol,
+                                                                                         _texcol=texcol,
                                                                                          _texfac=_texfac,
+                                                                                         plot_filename=fig_filename,
                                                                                          palette=node_palette
                                                                                          )
 
         plt.close('all')
+        trust_perspectives[(subset_str,target_str)] = trust_perspective.copy()
 
     if plot_internal:
         return dict(weights=weights,
-                    trust_perspective=trust_perspective
+                    trust_perspectives=trust_perspectives
         )
     else:
         return dict(
-            trust_perspective=trust_perspective,
+            trust_perspectives=trust_perspectives,
             time_meaned_plots=time_meaned_plots,
             alt_time_meaned_plots=alt_time_meaned_plots,
             instantaneous_meaned_plots=instantaneous_meaned_plots,

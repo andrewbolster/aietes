@@ -24,10 +24,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from functools import partial
+
 from matplotlib.ticker import MultipleLocator
 from scipy.spatial.distance import pdist, squareform
 
 import bounos
+from aietes.Tools import merge_dicts
 
 _boxplot_kwargs = {
     # 'showmeans': False,
@@ -38,6 +41,10 @@ _boxplot_kwargs = {
     "whis": 1
 }
 
+_texcol = 0.5
+_texcolhalf = 1.0
+_texcolthird = 1.3
+_texfac = 1.0
 
 def unique_cm_dict_from_list(items, cmap='gist_rainbow'):
     cm = plt.get_cmap(cmap)
@@ -603,9 +610,10 @@ def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), 
     :param figsize:
     :return:
     """
+    _txh=0.95
     df = trust_group.dropna()
     if dropnet:
-        df = df.drop("$T_{Net}$", 1)
+        df = df.drop("$T_{0,1}^{Net}$", 1)
     f, ax = plt.subplots(1, 1, figsize=(figsize[0], figsize[1] * 1), sharey=True)
     # plt.subplots_adjust(hspace=0.2, wspace=0.05, top=0.951)
     ax = sns.boxplot(df, ax=ax, **_boxplot_kwargs)
@@ -618,15 +626,16 @@ def trust_network_wrt_observers(trust_group, var, title=False, figsize=(16, 2), 
     ax.xaxis.set_ticks_position('none')
     ax.yaxis.set_ticks_position('none')
 
-    ax.axvline(5.5, ls="--", color="k", alpha=0.5)
-    [ax.axvline(x, ls=":", color="k", alpha=0.5) for x in [1.5, 3.5]]
-    ax.annotate("D", xy=(1, 0.9), xycoords='data', horizontalalignment='centre')
-    ax.annotate("R", xy=(2.5, 0.9), xycoords='data', horizontalalignment='centre')
-    ax.annotate("I", xy=(4.5, 0.9), xycoords='data', horizontalalignment='centre')
+    #[ax.axvline(x, ls=":", color="k", alpha=0.5) for x in [1.5, 3.5]]
+    #ax.annotate("D", xy=(.5, _txh), xycoords='data', horizontalalignment='centre')
+    #ax.annotate("R", xy=(2, _txh), xycoords='data', horizontalalignment='centre')
+    #ax.annotate("I", xy=(4, _txh), xycoords='data', horizontalalignment='centre')
+
+    ax.axvline(4.5, ls="--", color="k", alpha=0.5)
     if dropnet:
-        ax.annotate("Agg.", xy=(6, 0.9), xycoords='data', horizontalalignment='centre')
+        ax.annotate("Agg.", xy=(5, _txh), xycoords='data', horizontalalignment='centre')
     else:
-        ax.annotate("Agg.", xy=(6.5, 0.9), xycoords='data', horizontalalignment='centre')
+        ax.annotate("Agg.", xy=(5.5, _txh), xycoords='data', horizontalalignment='centre')
 
     if xlabel:
         ax.set_xlabel("Assessment Type")
@@ -799,6 +808,22 @@ def plot_positions(d, bounds=None, show_title=False):
 # LATEXIFY from http://nipunbatra.github.io/2014/08/latexify/
 # Extended based on http://damon-is-a-geek.com/publication-ready-the-first-time-beautiful-reproducible-plots-with-matplotlib.html
 #####
+_latexify_rcparams = {
+        'axes.labelsize': 8,  # fontsize for x and y labels (was 10)
+        'axes.titlesize': 8,
+        'backend': 'ps',
+        'font.family': 'serif',
+        'font.size': 8,  # was 10/8
+        'legend.borderpad': 0,
+        'legend.fontsize': 8,  # was 10,
+        'legend.labelspacing': 0.2,
+        'text.latex.preamble': ['\usepackage{gensymb}'],
+        'text.usetex': True,
+        'xtick.labelsize': 8,
+        'ytick.labelsize': 8,
+        'xtick.major.pad': 3.0,
+        'ytick.major.pad': 2.0,
+    }
 
 def latexify(columns=1, factor=0.45):
     """Set up matplotlib's RC params for LaTeX plotting.
@@ -828,31 +853,19 @@ def latexify(columns=1, factor=0.45):
               "so will reduce to" + max_height_inches + "inches.")
         fig_height_in = max_height_inches
 
-    params = {
-        'axes.labelsize': 8,  # fontsize for x and y labels (was 10)
-        'axes.titlesize': 8,
-        'backend': 'ps',
-        'figure.figsize': [fig_width_in, fig_height_in],
-        'font.family': 'serif',
-        'font.size': 8,  # was 10/8
-        'legend.borderpad': 0,
-        'legend.fontsize': 8,  # was 10,
-        'legend.labelspacing': 0.2,
-        'text.latex.preamble': ['\usepackage{gensymb}'],
-        'text.usetex': True,
-        'xtick.labelsize': 8,
-        'ytick.labelsize': 8,
-    }
+    variable_rcparams = {'figure.figsize': [fig_width_in, fig_height_in]}
 
-    mpl.rcParams.update(params)
+    mpl.rcParams.update(merge_dicts(_latexify_rcparams,variable_rcparams))
     return fig_width_in, fig_height_in
 
 
-def format_axes(ax, spine_color='gray'):
-    if isinstance(ax, list):
-        ax = map(format_axes, ax)
+def format_axes(ax, spine_color='lightgray', alpha=0.3, show_grid=True):
+    if isinstance(ax, (list, np.ndarray)):
+        _partial_format = partial(format_axes, spine_color=spine_color, show_grid=show_grid, alpha=alpha)
+        ax = map(_partial_format, ax)
     else:
-        ax.grid(True, color=spine_color, alpha=0.5)
+        ax.grid(show_grid, color=spine_color, alpha=alpha)
+        ax.set_axis_bgcolor('white')
         for spine in ['top', 'right']:
             ax.spines[spine].set_visible(False)
         for spine in ['bottom', 'left']:
@@ -881,7 +894,7 @@ def plot_nodes(node_positions, node_links=None, radius=1.0, scalefree=False, squ
         for node, links in node_links.items():
             for link in links:
                 x, y = zip(node_positions.values()[node][0:2], node_positions.values()[link][0:2])
-                ax.plot(x, y, color='k', lw=1, alpha=0.4, linestyle='--')
+                ax.plot(x, y, color='k', lw=1, alpha=1.0, linestyle=':')
 
     if square:
         ax.set_aspect('equal', adjustable='datalim')

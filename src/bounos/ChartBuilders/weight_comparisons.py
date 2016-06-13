@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
 
 import aietes.Tools as Tools
 from aietes.Tools import map_levels
@@ -63,17 +64,18 @@ def per_scenario_gd_mal_trusts(gd_file, mal_file):
 
 
 def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, keyword=None,
-                    figsize=None, labels=None, prefix="img/", extension="pdf"):
+                    figsize=None, labels=None, prefix="img/", extension="pdf", show_grid=True):
     if labels is None:
         labels = ["Fair", "Selfish"]
 
     tex_safe_s = scenario_map[s]
 
     fig, ax = plt.subplots(1, 1, figsize=figsize, sharey=True)
+    ax.grid(show_grid)
 
     x = df1.index.levels[df1.index.names.index('t')]
 
-    ax.plot(x, df1, label=labels[0], linestyle="--")
+    ax.plot(x, df1, label=labels[0])
     ax.plot(x, df2, label=labels[1])
 
     top = df1.mean() + df1.std()
@@ -81,7 +83,7 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
     bottom = df1.mean() - df1.std()
 
     for line in [top, middle, bottom]:
-        ax.axhline(line, linestyle=':', alpha=0.5)
+        ax.axhline(line, linestyle=':', alpha=0.2)
 
     ax.fill_between(x, df2, bottom, where=df2 < bottom, interpolate=True, facecolor='green', alpha=0.25)
     ax.fill_between(x, df2, top, where=df2 > top, interpolate=True, facecolor='green', alpha=0.25)
@@ -94,10 +96,10 @@ def plot_comparison(df1, df2, s, trust="grey_", metric=None, show_title=True, ke
     else:
         ax.legend(loc='upper left', ncol=2)
 
-    ax.axhline(0.5, linestyle=":")
     ax.set_ylabel('{0}Trust Value'.format(trust.replace("_", " ").title()))
-    ax.set_xlabel('Observation')
-    ax = format_axes(ax)
+    ax.set_xlabel('Mission Time (mins)')
+    ax.xaxis.set_major_formatter(plticker.FuncFormatter(lambda x,pos: int(x*10)))
+    ax = format_axes(ax, show_grid=show_grid)
     fig.tight_layout(pad=0.1)
     fig.savefig("{0}trust_{1}_{2}{3}.{4}".format(
         prefix,
@@ -136,7 +138,7 @@ def plot_weight_comparisons(gd_file, mal_file,
 
         plot_comparison(gd_mtfm, mal_mtfm, s=s,
                         show_title=show_title, keyword=malicious_behaviour,
-                        figsize=figsize, labels=labels, prefix=prefix, extension=extension)
+                        figsize=figsize, labels=labels, prefix=prefix, extension=extension, show_grid=False)
         for i, mi in enumerate(trust_metrics):
             if mi not in excluded:
                 gd_tp, mal_tp = per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, s=s,
@@ -144,9 +146,9 @@ def plot_weight_comparisons(gd_file, mal_file,
 
                 gd_mtfm = Trust.generate_mtfm(gd_tp, *mtfm_args).sum(axis=1)
                 mal_mtfm = Trust.generate_mtfm(mal_tp, *mtfm_args).sum(axis=1)
-
                 plot_comparison(gd_mtfm, mal_mtfm, s, metric=mi, show_title=show_title, prefix=prefix,
-                                keyword=malicious_behaviour, figsize=figsize, labels=labels, extension=extension)
+                                keyword=malicious_behaviour, figsize=figsize, labels=labels,
+                                extension=extension, show_grid=False)
 
 
 def per_scenario_gd_mal_trust_perspective(gd_trust, mal_trust, weight_vector=None, s=None,

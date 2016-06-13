@@ -32,26 +32,23 @@ import matplotlib as mpl
 import matplotlib.pylab as plt
 from matplotlib import rc_context
 import matplotlib.ticker as plticker
+import seaborn as sns
 
 loc_25 = plticker.MultipleLocator(base=0.25)  # this locator puts ticks at regular intervals
+fmt_obs_to_mins = plticker.FuncFormatter(lambda x,pos: int(x*10))
 
 import aietes
 import aietes.Tools as Tools
 
 import bounos.ChartBuilders as cb
 import bounos.Analyses.Trust as Trust
-from bounos.ChartBuilders import weight_comparisons, radar, format_axes
-
-# pylab.rcParams['figure.figsize'] = 16, 12
+from bounos.ChartBuilders import weight_comparisons, radar, format_axes, _texcol, _texcolhalf, _texcolthird, _texfac
 
 ##################
 # USING TEMP DIR #
 ##################
 use_temp_dir = False
 
-_texcol = 0.5
-_texcolhalf = 1.0
-_texfac = 1.0
 
 hatching = False
 img_extn = 'pdf'
@@ -125,7 +122,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        cb.latexify(columns=_texcol, factor=_texfac)
+        figsize = cb.latexify(columns=_texcol, factor=_texfac)
 
         base_config = aietes.Simulation.populate_config(
             aietes.Tools.get_config('bella_static.conf'),
@@ -136,10 +133,10 @@ class ThesisLazyDiagrams(unittest.TestCase):
                           base_config['Node']['Nodes'].items() if 'initial_position' in v}
         node_links = {0: [1, 2, 3], 1: [0, 1, 2, 3, 4, 5], 2: [0, 1, 5], 3: [0, 1, 4], 4: [1, 3, 5], 5: [1, 2, 4]}
 
-        fig = cb.plot_nodes(node_positions, figsize=(4, 1.6), node_links=node_links, radius=3, scalefree=True,
-                            square=False)
+        fig = cb.plot_nodes(node_positions, figsize=figsize, node_links=node_links, radius=0, scalefree=True,
+                            square=True)
         fig.tight_layout(pad=0.3)
-        fig.savefig("s1_layout." + img_extn, transparent=True)
+        savefig(fig,"s1_layout", transparent=True)
         plt.close(fig)
 
         for f in required_files:
@@ -171,9 +168,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
             ax.set_xlabel("Packet Emission Rate (pps)")
             ax.set_ylabel("Avg. Throughput (bps)")
             fig.tight_layout()
-            fig.savefig("throughput_sep_lines_{0}.{1}".format(
-                mobility,
-                img_extn), transparent=True, facecolor='white')
+            savefig(fig,"throughput_sep_lines_{0}".format(
+                mobility), transparent=True, facecolor='white')
             plt.close(fig)
 
         for f in required_files:
@@ -196,7 +192,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
             except:
                 pass
 
-        figsize = cb.latexify(columns=_texcol, factor=_texfac)
+        figsize = cb.latexify(columns=_texcolhalf, factor=_texfac)
 
         weight_comparisons.plot_mtfm_boxplot(self.good, keyword="fair",
                                              s=selected_scenarios, figsize=figsize,
@@ -452,7 +448,7 @@ class ThesisLazyDiagrams(unittest.TestCase):
         for f in required_files:
             Tools.remove(f)
 
-        figsize = cb.latexify(columns=_texcol, factor=_texfac)
+        figsize = cb.latexify(columns=_texcolhalf, factor=_texfac)
 
         for s in selected_scenarios:
             try:
@@ -511,25 +507,25 @@ class ThesisLazyDiagrams(unittest.TestCase):
             otmf_vals = beta_trust.apply(lambda r: otmf_t(r['+'], r['-']), axis=1)
             return beta_vals, otmf_vals
 
-        def plot_beta_mtmf_comparison(beta_trust, mtfm, key, extension="pdf"):
+        def plot_beta_mtmf_comparison(beta_trust, mtfm, key):
 
             beta, otmf = beta_calcs(beta_trust)
             figsize = cb.latexify(columns=_texcolhalf, factor=_texfac)
             fig, ax = plt.subplots(1, 1, sharey=True, figsize=figsize)
-            ax.plot(beta.xs('n0', level='observer')['n1'].values, label="Hermes", linestyle='--')
-            ax.plot(otmf.xs('n0', level='observer')['n1'].values, label="OTMF", linestyle=':')
+            ax.plot(beta.xs('n0', level='observer')['n1'].values, label="Hermes")
+            ax.plot(otmf.xs('n0', level='observer')['n1'].values, label="OTMF")
             ax.plot(mtfm.values, label="MTFM")
             ax.set_ylim((0, 1))
             ax.set_ylabel("Trust Value".format(key))
-            ax.set_xlabel("Observation")
+            ax.set_xlabel("Mission Time (mins)")
             ax = format_axes(ax)
             ax.legend(loc='lower center', ncol=3)
-            ax.axhline(mtfm.mean(), color="r", linestyle='-.')
             ax.yaxis.set_major_locator(loc_25)
+            ax.xaxis.set_major_formatter(fmt_obs_to_mins)
             fig.tight_layout()
-            fig.savefig("trust_beta_otmf{0}.{1}".format(
+            savefig(fig,"trust_beta_otmf{0}".format(
                 "_" + key if key is not None else "",
-                extension), transparent=True)
+                ), transparent=True)
             plt.close(fig)
 
         gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file, [self.good, self.malicious, self.selfish])
@@ -558,16 +554,122 @@ class ThesisLazyDiagrams(unittest.TestCase):
         mal_mtfm = pd.stats.moments.ewma(mal_mtfm, span=mtfm_span)
         sel_mtfm = pd.stats.moments.ewma(sel_mtfm, span=mtfm_span)
 
-        plot_beta_mtmf_comparison(gd_beta_t, gd_mtfm, key="fair", extension=img_extn)
-        plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="malicious", extension=img_extn)
-        plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish", extension=img_extn)
+        plot_beta_mtmf_comparison(gd_beta_t, gd_mtfm, key="fair")
+        plot_beta_mtmf_comparison(mal_beta_t, mal_mtfm, key="malicious")
+        plot_beta_mtmf_comparison(sel_beta_t, sel_mtfm, key="selfish")
 
         for f in required_files:
             self.assertFileExists(f)
 
-    def test_OutlierGraphs(self):
+    def test_InvertedSummaryGraphsForMalGdScenarios(self):
+        # # Summary Graphs with malicious, selfish and fair scenarios
+        required_files = ["trust_beta_otmf_mtfm_boxes."+img_extn,]
+        for f in required_files:
+            try:
+                os.remove(f)
+            except:
+                pass
+
+        figsize = cb.latexify(columns=_texcol, factor=_texfac)
+
+        def beta_trusts(trust, length=4096):
+            # TODO This should be optimised to not use the same dataframe
+            trust['+'] = (trust.TXThroughput / length) * (1 - trust.PLR)
+            trust['-'] = (trust.TXThroughput / length) * trust.PLR
+            beta_trust = trust[['+', '-']].unstack(level='target')
+            trust.drop(['+', '-'], axis=1, inplace=True)
+            return beta_trust
+
+        def beta_calcs(beta_trust, observer='n0', target='n1'):
+            beta_trust = pd.stats.moments.ewma(beta_trust, span=2)
+            beta_t_confidence = lambda s, f: 1 - np.sqrt((12 * s * f) / ((s + f + 1) * (s + f) ** 2))
+            beta_t = lambda s, f: s / (s + f)
+            otmf_t = lambda s, f: 1 - np.sqrt(
+                ((((beta_t(s, f) - 1) ** 2) / 2) + (((beta_t_confidence(s, f) - 1) ** 2) / 9))) / np.sqrt(
+                (1 / 2) + (1 / 9))
+            beta_vals = beta_trust.apply(lambda r: beta_t(r['+'], r['-']), axis=1)
+            otmf_vals = beta_trust.apply(lambda r: otmf_t(r['+'], r['-']), axis=1)
+            if observer:
+                beta_vals = beta_vals.xs(observer, level='observer')
+                otmf_vals = otmf_vals.xs(observer, level='observer')
+            if target:
+                beta_vals = beta_vals[target]
+                otmf_vals = otmf_vals[target]
+            return beta_vals, otmf_vals
+
+        gd_trust, mal_trust, sel_trust = map(Trust.trust_from_file, [self.good, self.malicious, self.selfish])
+        mal_mobile = mal_trust.xs('All Mobile', level='var')
+        gd_mobile = gd_trust.xs('All Mobile', level='var')
+        sel_mobile = sel_trust.xs('All Mobile', level='var')
+        gd_beta_t = beta_trusts(gd_mobile)
+        mal_beta_t = beta_trusts(mal_mobile)
+        sel_beta_t = beta_trusts(sel_mobile)
+
+        np.random.seed(42)
+        mtfm_span = 2
+        gd_beta_t['-'] = gd_beta_t['-'].applymap(lambda _: int(2.0 * np.random.random() / 1.5))
+        sel_beta_t['-'] = sel_beta_t['-'].applymap(lambda _: int(2.0 * np.random.random() / 1.8))
+        mal_beta_t['-'] = mal_beta_t['-'].applymap(lambda _: int(2.0 * np.random.random() / 1.8))
+
+        gd_tp = Trust.generate_node_trust_perspective(gd_mobile)
+        mal_tp = Trust.generate_node_trust_perspective(mal_mobile, par=False)
+        sel_tp = Trust.generate_node_trust_perspective(sel_mobile)
+
+        gd_mtfm = Trust.generate_mtfm(gd_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
+        mal_mtfm = Trust.generate_mtfm(mal_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
+        sel_mtfm = Trust.generate_mtfm(sel_tp, 'n0', 'n1', ['n2', 'n3'], ['n4', 'n5']).sum(axis=1)
+
+        gd_mtfm = pd.stats.moments.ewma(gd_mtfm, span=mtfm_span)
+        mal_mtfm = pd.stats.moments.ewma(mal_mtfm, span=mtfm_span)
+        sel_mtfm = pd.stats.moments.ewma(sel_mtfm, span=mtfm_span)
+
+        # Fix MTFM inclusion of Var multiindex level
+        gd_mtfm.index = gd_mtfm.index.droplevel('var')
+        mal_mtfm.index = mal_mtfm.index.droplevel('var')
+        sel_mtfm.index = sel_mtfm.index.droplevel('var')
+
+        gd_beta,  gd_otmf  = beta_calcs(gd_beta_t)
+        mal_beta, mal_otmf = beta_calcs(mal_beta_t)
+        sel_beta, sel_otmf = beta_calcs(sel_beta_t)
+
+        intermediate = {
+            'Hermes':{
+                'Fair':gd_beta,
+                'MPC':mal_beta,
+                'STS':sel_beta
+            },
+            'OTMF':{
+                'Fair':gd_otmf,
+                'MPC':mal_otmf,
+                'STS':sel_otmf
+            },
+            'MTFM':{
+                'Fair':gd_mtfm,
+                'MPC':mal_mtfm,
+                'STS':sel_mtfm
+            }
+        }
+
+        df = pd.DataFrame.from_dict(Tools.tuplify_multi_dict(intermediate))
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        df.index = df.index.droplevel('run')
+
+        df = df.reindex_axis(['Hermes', 'OTMF', 'MTFM'], axis=1, level=0)
+        mdf = pd.melt(df)
+        mdf.columns = ['Trust Framework', 'Scenario', 'Trust Assessment']
+        with sns.axes_style(cb._latexify_rcparams):
+            sns.boxplot(data=mdf, x='Trust Framework', y='Trust Assessment', hue='Scenario', ax=ax,
+                        showfliers=False, whis=1)
+            ax.set_ylim(0, 1)
+            ax = format_axes(ax)
+            savefig(fig, "trust_beta_otmf_mtfm_boxes")
+        for f in required_files:
+            self.assertFileExists(f)
+
+    def test_CommsOutlierGraphs(self):
         # Plot relative importance of outlier metrics
-        required_files = ["MaliciousSelfishMetricFactorsRad.png", "MaliciousSelfishMetricFactors.png"]
+        required_files = ["MaliciousSelfishMetricFactorsRad."+img_extn,
+                          "MaliciousSelfishMetricFactors."+img_extn]
         for f in required_files:
             try:
                 os.remove(f)
@@ -585,6 +687,8 @@ class ThesisLazyDiagrams(unittest.TestCase):
             sfet = feature_extractor(dp_r, index)
             return sfet
 
+        key_order = Tools.key_order[0:-3]
+
         # Generate Outlier DataPackage
         with pd.get_store(Tools.in_results('outliers.h5')) as s:
             outliers = s.get('outliers')
@@ -597,9 +701,9 @@ class ThesisLazyDiagrams(unittest.TestCase):
                                             })
 
         # Perform Comparisons
-        gm = comparer(dp.good, dp.malicious)[Tools.key_order]
-        gs = comparer(dp.good, dp.selfish)[Tools.key_order]
-        ms = comparer(dp.malicious, dp.selfish)[Tools.key_order]
+        gm = comparer(dp.good, dp.malicious)[key_order]
+        gs = comparer(dp.good, dp.selfish)[key_order]
+        ms = comparer(dp.malicious, dp.selfish)[key_order]
 
         # Bar Chart
         figsize = cb.latexify(columns=_texcol, factor=_texfac)
@@ -621,24 +725,24 @@ class ThesisLazyDiagrams(unittest.TestCase):
         ax = format_axes(ax)
         fig.tight_layout()
         ax.grid(True, color='k', alpha=0.33, ls=':')
-        fig.savefig("MaliciousSelfishMetricFactors.png", transparent=True)
+        savefig(fig, "MaliciousSelfishMetricFactors", transparent=True)
 
         # Radar Base
         with rc_context(rc={'axes.labelsize': 8}):
             figsize = cb.latexify(columns=_texcol, factor=_texfac)
-            r = radar.radar_factory(len(Tools.key_order))
+            r = radar.radar_factory(len(key_order))
             fig = plt.figure(figsize=figsize)
             ax = fig.add_subplot(1, 1, 1, projection='radar')
             ax.plot(r, gm.values, ls='--', marker='x', label="F/M")
             ax.plot(r, gs.values, ls=':', marker='x', label="F/S")
             ax.plot(r, ms.values, ls='-.', marker='x', label="M/S")
             ax.grid(True, color='k', alpha=0.33, ls=':')
-            ax.set_varlabels([Tools.metric_rename_dict[k] for k in Tools.key_order])
+            ax.set_varlabels([Tools.metric_rename_dict[k] for k in key_order])
             ax.set_ylabel("Relative\nSignificance")
             ax.yaxis.labelpad = -80
             ax.tick_params(direction='out', pad=-100)
             ax.legend(loc=5, mode='expand', bbox_to_anchor=(1.05, 1))
-            fig.savefig("MaliciousSelfishMetricFactorsRad.png", transparent=True)
+            savefig(fig, "MaliciousSelfishMetricFactorsRad", transparent=True)
 
         for f in required_files:
             self.assertFileExists(f)

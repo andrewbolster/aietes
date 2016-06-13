@@ -43,6 +43,8 @@ from operator import itemgetter
 from shelve import DbfilenameShelf
 from tempfile import mkdtemp
 from time import time
+from contextlib import contextmanager
+from copy import deepcopy
 
 import numpy as np
 from SimPy import SimulationStep as Sim
@@ -80,6 +82,29 @@ log_hdl = logging.StreamHandler()
 log_hdl.setFormatter(log_fmt)
 log_hdl.addFilter(SimTimeFilter())
 
+@contextmanager
+def all_logging_disabled(highest_level=logging.CRITICAL):
+    """
+    A context manager that will prevent any logging messages
+    triggered during the body from being processed.
+    :param highest_level: the maximum logging level in use.
+      This would only need to be changed if a custom level greater than CRITICAL
+      is defined.
+    """
+    # two kind-of hacks here:
+    #    * can't get the highest logging level in effect => delegate to the user
+    #    * can't get the current module-level override => use an undocumented
+    #       (but non-private!) interface
+
+    previous_level = logging.root.manager.disable
+
+    logging.disable(highest_level)
+
+    try:
+        yield
+    finally:
+        logging.disable(previous_level)
+
 memoize = Memory(cachedir=mkdtemp(), verbose=0)
 
 DEBUG = False
@@ -115,6 +140,17 @@ metric_rename_dict = {
 }
 
 key_order = ['ADelay', 'ARXP', 'ATXP', 'RXThroughput', 'TXThroughput', 'PLR', 'INDD', 'INHD', 'Speed']
+
+def merge_dicts(*dict_args):
+    '''
+    Given any number of dicts, shallow copy and merge into a new dict,
+    precedence goes to key value pairs in latter dicts.
+    http://stackoverflow.com/questions/38987/how-can-i-merge-two-python-dictionaries-in-a-single-expression
+    '''
+    result = {}
+    for dictionary in dict_args:
+        result.update(dictionary)
+    return result
 
 
 def metric_key_inverter(desired_keys):
@@ -811,6 +847,18 @@ def invert_dict(d):
     """
     return dict((v, k) for k, v in d.iteritems())
 
+def tuplify_multi_dict(d):
+    """
+    Convert >2D Nested Dict into (ina,inb):val dict, suitable for multiindexing pandas dataframes
+    :param d:
+    :return:
+    """
+    return {
+        (outerKey, innerKey): values
+        for outerKey, innerDict in d.iteritems()
+        for innerKey, values in innerDict.iteritems()
+        }
+
 
 def list_functions(module):
     """
@@ -1209,6 +1257,14 @@ def categorise_dataframe(df):
             print("Couldn't categorise {0}".format(obj_key))
             pass
     return df
+
+def dict_levels(df):
+    """
+    Provide a dict of index values from a dataframe, eg {level:Index([idx,idy,idz])}
+    :param df:
+    :return: dict:
+    """
+    return dict(zip(df.index.names,df.index._get_levels()))
 
 
 def non_zero_rows(df):

@@ -8,12 +8,13 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 
 import matplotlib.pylab as plt
+from matplotlib.gridspec import GridSpec
 import pandas as pd
 import palettable.colorbrewer.qualitative as cmap_qual
+import palettable.colorbrewer.sequential as cmap_seq
 import sklearn.ensemble as ske
 from scipy.stats.stats import pearsonr
 import cartopy.crs as ccrs
-import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
 
 import cartopy.feature as cfeature
@@ -39,12 +40,13 @@ from bounos.Analyses.Trust import generate_node_trust_perspective
 from bounos.Analyses.Weight import target_weight_feature_extractor, \
     generate_weighted_trust_perspectives, build_outlier_weights, calc_correlations_from_weights, \
     drop_metrics_from_weights_by_key
-from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list
+from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list, plot_axes_views_from_positions_frame
+from bounos.ChartBuilders import _texcol, _texcolhalf, _texcolthird, _texfac
 from bounos.ChartBuilders.ssp import UUV_time_delay, ssp_function, SSPS
 
 from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, \
     n_metrics, results_path, \
-    fig_basedir, subset_renamer, metric_subset_analysis, format_features
+    fig_basedir, subset_renamer, metric_subset_analysis, format_features, savefig
 
 ###########
 # OPTIONS #
@@ -54,6 +56,7 @@ _texfac = 0.9
 use_temp_dir = False
 show_outputs = False
 recompute = False
+img_extn = 'pdf'
 _ = np.seterr(invalid='ignore')  # Pandas PITA Nan printing
 
 observer = 'Bravo'
@@ -86,6 +89,340 @@ else:
 
 assert os.path.isdir(fig_basedir)
 
+
+from bounos.Analyses.Dixon import  *
+
+
+
+class smart_dict(dict):
+    # Replaces missing lookups with the key
+    def __missing__(self, key):
+        return key
+
+def plot_behaviour_metric_graph(data, fig_path, observer = 'Bravo', target='Alfa', run = 0,
+                                force_ymin=None, title=None, y_label_map=None,
+                                save_fig=False, show_title=False):
+
+    _bevs = set(data.index.get_level_values('var'))
+    _metrics = list(data.columns)
+    fig = plt.figure(figsize=(8, 5), dpi=80)
+    base_ax = fig.add_axes([0, 0, 1, 1], )
+    base_ax.set_axis_off()
+    gs = GridSpec(len(_metrics), len(_bevs))
+    axes = [[None for _ in range(len(_metrics))] for _ in range(len(_bevs))]
+    lines = []
+
+    # Column Behaviours
+    for i, (behaviour, bev_df) in enumerate(data.groupby(level='var')):
+        # Highlight Target on misbehaviours, if no misbehaviour, highlight all
+        highlight_target = defaultdict(lambda: False)
+        highlight_target[target] = True if behaviour != 'Waypoint' else False
+        # Row Metrics
+        metrics_df = bev_df
+        if 'run' in bev_df.index.names:
+            metrics_df = metrics_df.xs(run, level='run', drop_level=True)
+        if 'observer' in bev_df.index.names:
+            metrics_df = metrics_df.xs(observer, level='observer')
+        for j, metric in enumerate(metrics_df):
+            ax = fig.add_subplot(gs[j, i])
+            for target_name, target_df in metrics_df[metric].groupby(level='target'):
+                index = target_df.index.get_level_values('t') # in Seconds
+                index = [ I/60.0 for I in index]# in minutes
+                line = ax.plot(index, target_df.values,
+                        label=target_name,
+                        lw=1,
+                        alpha=1.0 if highlight_target[target_name] else 0.8)
+
+                # First Metric Behaviour (Legend)
+                if j == 0:
+                    if i == 0:
+                        lines.append(line[0])
+                    else:
+                        pass
+
+                loc = mtick.MaxNLocator(nbins=7, integer=True)  # this locator puts ticks at regular intervals
+                ax.xaxis.set_major_locator(loc)
+            if j == 0:
+                ax.set_title(behaviour)
+            ax.grid(True, alpha=0.2)
+            ax.autoscale_view(scalex=False, tight=True)
+
+            # Metric label on left most graph
+            if i == 0:
+                if y_label_map is None:
+                    ax.set_ylabel(metric)
+                else:
+                    ax.set_ylabel(smart_dict(y_label_map)[metric])
+
+            # Last Metric Behaviour (Xlabel)
+            if j == len(_metrics) - 1:
+                ax.set_xlabel("Mission Time (min)")
+            else:
+                [l.set_visible(False) for l in ax.get_xticklabels()]
+            ax.grid(color='lightgray')
+            axes[i][j] = ax
+
+    # For each metric row
+    for j in range(len(_metrics)):
+        (m_ymin, m_ymax) = (float('inf'), float('-inf'))
+        (m_xmin, m_xmax) = (float('inf'), float('-inf'))
+        # Take the max limits across all behaviours
+        for i in range(len(_bevs)):
+            (ymin, ymax) = axes[i][j].get_ylim()
+            (xmin, xmax) = axes[i][j].get_xlim()
+            m_ymax = max(ymax, m_ymax)
+            m_ymin = min(ymin, m_ymin)
+            m_xmax = max(xmax, m_xmax)
+            m_xmin = min(xmin, m_xmin)
+
+        m_ymin = m_ymin if force_ymin is None else force_ymin
+        # Reset the rows limits
+        for i in range(len(_bevs)):
+            axes[i][j].set_ylim((m_ymin*0.9, m_ymax * 1.1))
+            axes[i][j].set_xlim((0, m_xmax))
+
+    fig.legend(lines, dict_levels(bev_df)['target'].tolist(), 'center right',
+               bbox_to_anchor=(1.0,0.5), ncol=1, labelspacing=2)
+    fig.subplots_adjust(
+            left=0.05, bottom=0.13, right=0.9, top=0.96, wspace=0.2, hspace=0.05)
+    if title is not None and show_title:
+        fig.suptitle(title, fontsize=12)
+    if save_fig:
+        savefig(fig, os.path.join(fig_path,title.replace(' ','_')), transparent=True, tight=False)
+    else:
+        fig.show()
+
+    return fig
+
+class SingleRunGraphing(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(SingleRunGraphing, cls).setUpClass()
+        #Grab results h5 file from set "good" results
+        cls.fig_path = fig_basedir
+        results_path_good_as_of_monday210416 = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2016-03-22-01-56-00"
+        results_path_multi_run = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2016-03-24-19-38-14"
+        cls.results_path = results_path_multi_run
+
+        cls.run_id = 0
+        cls.target = 'Alfa'
+        cls.observer = 'Bravo'
+        cls.trust_period = 10
+
+        with pd.get_store(cls.results_path + '.h5') as store:
+            cls.positions = store.positions
+            cls.trust_observations = store.trust.drop('Tail',level='var')
+            cls.trust_observations.columns.name = 'metric'
+            map_levels(cls.trust_observations, {'Waypoint': 'Control'})
+            # Convert Sample Times into proper stuff
+            cls.trust_observations.reset_index(inplace=True)
+            cls.trust_observations['t']*=cls.trust_period
+            cls.trust_observations.set_index(['var','run','observer','t','target'], inplace=True)
+
+        data = cls.trust_observations.xs(cls.observer, level='observer').xs(cls.run_id, level='run')
+
+        cls.deviance = pd.concat([gf - gf.mean() for g, gf in data.groupby(level=['var', 't'])])
+        cls.sigmas = pd.concat([(gf / (gf.std(axis=0))).abs() for g, gf in cls.deviance.groupby(level=['var', 't'])])
+
+    def test_position_track_plotting(self):
+        fig = plot_axes_views_from_positions_frame(self.positions.xs('Waypoint', level='var').xs(self.run_id,level='run'))
+        savefig(fig,os.path.join(self.fig_path, "Waypoint_Position_Track_Run_{0:d}".format(self.run_id)),
+                    transparent=True)
+
+    def test_raw_metric_value_graph(self):
+        fig = plot_behaviour_metric_graph(self.trust_observations, fig_path=self.fig_path, observer=self.observer,
+                                          run=self.run_id, y_label_map={'Speed': 'Speed ($ms^{-1})$'},
+                                          title="Metric Values", save_fig=True)
+    def test_first_order_deviance_graph(self):
+        fig = plot_behaviour_metric_graph(self.deviance, fig_path=self.fig_path, observer=self.observer,
+                                          run=self.run_id, y_label_map={'Speed': 'Speed ($ms^{-1})$'},
+                                          title="Metric Deviation", save_fig=True)
+    def test_sigma_deviance_graph(self):
+        fig = plot_behaviour_metric_graph(self.sigmas, fig_path=self.fig_path, observer=self.observer,
+                                          run=self.run_id, force_ymin=1.0,
+                                          y_label_map={'INDD': 'INDD ($\sigma$)',
+                                                       'INHD': 'INHD ($\sigma$)',
+                                                       'Speed': 'Speed ($\sigma$)'},
+                                          title="Metric Sigma Deviance", save_fig=True)
+    def test_per_metric_sigma_bars(self):
+        offset = self.sigmas.index.get_level_values('t').values.max() / self.trust_period
+        latexify(columns=_texcolhalf)
+        fig_all, axes_all = plt.subplots(nrows=1, ncols=3,figsize=(6, 2.2), dpi=80)
+        for i, metric in enumerate(self.sigmas.columns):
+            summed_sigmas = self.sigmas.unstack('target')[metric].groupby(level='var').sum()
+
+            summed_sigmas['Mean'] = summed_sigmas.mean(axis=1)
+            _ = (summed_sigmas / offset-1).plot(ax=axes_all[i], kind='bar', legend=False)
+            axes_all[i].grid(color='lightgray')
+            axes_all[i].set_xlabel(metric)
+            axes_all[i].set_ylabel('Overall $\sigma$', labelpad=-5)
+            for tick in axes_all[i].get_xticklabels():
+                tick.set_rotation(0)
+            axes_all[i].set_ylim([-1.0,1.0])
+
+        axes_all = format_axes(axes_all)
+
+        lines, labels = axes_all[-1].get_legend_handles_labels()
+
+        leg=fig_all.legend(lines, labels, 'center right',
+                       bbox_to_anchor=(1.0, 0.5), ncol=1,
+                       labelspacing=1, handleheight=0.2)
+
+
+        fig_all.subplots_adjust(
+            left=0.051, bottom=0.15, right=0.88, top=0.978, wspace=0.2, hspace=0.05)
+        savefig(fig_all, os.path.join(self.fig_path, "summedsigmabar"), tight=False, transparent=True)
+
+        for i, metric in enumerate(self.sigmas.columns):
+            summed_sigmas = self.sigmas.unstack('target')[metric].groupby(level='var').sum()
+            fig,ax = plt.subplots(1,1,figsize=latexify(columns=_texcolthird, factor=1.2))
+            summed_sigmas['Mean'] = summed_sigmas.mean(axis=1)
+            _ = (summed_sigmas / offset-1).plot(ax=ax, kind='bar', legend=False)
+            ax.set_xlabel('Behaviour')
+            ax.set_ylabel('Overall $\sigma$')
+            for tick in ax.get_xticklabels():
+                tick.set_rotation(0)
+            ax = format_axes(ax)
+            ax.set_ylim([-1.0,1.0])
+            if metric == self.sigmas.columns[-1]:
+                ax.legend(ncol=2)
+            savefig(fig, os.path.join(self.fig_path, "summedsigmabar_{0}".format(metric)), transparent=True)
+
+def group_dixon_test(g,gf):
+    acc = []
+    for k,v in gf.T.apply(dixon_test_95, axis=1).T.iteritems():
+        outlier = map(lambda x:x[-1],gf.loc[gf[k]==v].index.tolist())
+        if outlier:
+            acc.append((g[0],g[1],k,outlier[0]))
+        else:
+            acc.append((g[0],g[1],k,'None'))
+
+        if len(outlier)>1:
+            raise ValueError("Haven't written the case for multiple outliers yet")
+    return pd.DataFrame(acc, columns=['var','run','metric','target'])
+
+class MultiRunSigmaAndConfidenceGraphing(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(MultiRunSigmaAndConfidenceGraphing, cls).setUpClass()
+        #Grab results h5 file from set "good" results
+        results_path_multi_run = "/home/bolster/src/aietes/results/Malicious Behaviour Trust Comparison-2016-03-24-21-10-00"
+        cls.results_path = results_path_multi_run
+        cls.fig_path = fig_basedir
+
+        cls.target = 'Alfa'
+        cls.observer = 'Bravo'
+        cls.good_bev = 'Control'
+        cls.trust_period = 10
+
+        with pd.get_store(cls.results_path + '.h5') as store:
+            cls.trust_observations = store.trust.drop('Tail',level='var')
+            cls.trust_observations.columns.name = 'metric'
+            map_levels(cls.trust_observations, {'Waypoint': cls.good_bev})
+            # Convert Sample Times into proper stuff
+            cls.trust_observations.reset_index(inplace=True)
+            cls.trust_observations['t']*=cls.trust_period
+            cls.trust_observations.set_index(['var','run','observer','t','target'], inplace=True)
+
+        data = cls.trust_observations.xs(cls.observer, level='observer')
+        cls.deviance = pd.concat([gf - gf.mean() for g, gf in data.groupby(level=['var', 'run', 't'])])
+        cls.sigmas = pd.concat([(gf / (gf.std(axis=0))).abs() for g, gf in cls.deviance.groupby(level=['var', 'run', 't'])])
+        # Optimise the below; it's naaaaasty for long runs
+        cls.summed_sigmas = cls.sigmas.unstack('target').groupby(level=['var','run']).sum()
+        cls.dixon_df = pd.concat(
+            [(group_dixon_test(g, gf)) for g, gf in cls.summed_sigmas.stack('target').groupby(level=['var', 'run'])])
+        cls.dixon_df['correct'] = (cls.dixon_df['target'] == cls.target) != ((cls.dixon_df['var'] == cls.good_bev) & (cls.dixon_df['target'] == 'None'))
+
+    def test_overall_stats(self):
+        overall_stats = self.dixon_df.groupby('var').describe().unstack('var').correct.iloc[[1, 2]].T
+        overall_stats.columns = ['Mean', 'Std']
+        overall_stats.index.name = 'Behaviour'
+        with open(os.path.join(self.fig_path,"overall_stats.tex"), 'w') as f:
+            overall_stats.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+    def test_per_metric_stats(self):
+        per_metric_stats = self.dixon_df.groupby(['var', 'metric']).describe().unstack(['var', 'metric']).iloc[[1, 2]].stack(
+            'var').correct
+        per_metric_stats.columns.name = 'Metric'
+        per_metric_stats.index.names = ['', 'Behaviour']
+        with open(os.path.join(self.fig_path,"per_metric_stats.tex"), 'w') as f:
+            per_metric_stats.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+    def test_summed_sigma_confidence_table(self):
+        intergfs = []
+        for g, gf in self.summed_sigmas.stack('target').groupby(level=['var','run']):
+            _intergf = gf.unstack('target').stack('metric')
+            intergfs.append(_intergf[self.target] / _intergf.drop(self.target, axis=1).mean(axis=1))
+
+        confidences = pd.concat(intergfs).unstack('metric')
+        c_table = confidences.groupby(level='var').describe().unstack('var').iloc[[1, 2]].stack('var')
+        c_table.columns.name = 'Metric'
+        c_table.index.names = ['', 'Behaviour']
+        with open(os.path.join(self.fig_path,"confidence.tex"), 'w') as f:
+            c_table.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+    def test_classifer_minority_test(self):
+
+        def _classifier(gf):
+            return classifier(gf, minority=True, _dixon_test=dixon_test_95)
+
+        df = pd.DataFrame(self.summed_sigmas.stack('target').groupby(level=['var', 'run']).apply(_classifier))
+        df[['suspect', 'suspicion']] = df[0].apply(pd.Series)
+        df.reset_index(inplace=True)
+        df = df[['var', 'suspect', 'suspicion']]
+        correct = lambda r: r['var'] == r['suspicion']
+        df['correct'] = df.apply(correct, axis=1)
+        df=df.groupby('var').mean()
+        df.columns = ['Probability of Correct Blind Identification']
+        df.index.names = ['True Behaviour']
+        with open(os.path.join(self.fig_path, "classifier_minority.tex"), 'w') as f:
+            df.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+    def test_classifer_test(self):
+
+        def _classifier(gf):
+            return classifier(gf, minority=False, _dixon_test=dixon_test_95)
+
+        df = pd.DataFrame(self.summed_sigmas.stack('target').groupby(level=['var', 'run']).apply(_classifier))
+        df[['suspect', 'suspicion']] = df[0].apply(pd.Series)
+        df.reset_index(inplace=True)
+        df = df[['var', 'suspect', 'suspicion']]
+        correct = lambda r: r['var'] == r['suspicion']
+        df['correct'] = df.apply(correct, axis=1)
+        df=df.groupby('var').mean()
+        df.columns = ['Probability of Correct Blind Identification']
+        df.index.names = ['True Behaviour']
+        with open(os.path.join(self.fig_path, "classifier.tex"), 'w') as f:
+            df.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+def classifier(gf, minority=False, _dixon_test=dixon_test_95):
+    # Find ANY qtest activations
+    qtest = gf.T.apply(_dixon_test, axis=1)
+    n_outliers = len(filter(lambda l: l != [None], qtest))
+
+    if n_outliers > minority:
+        # Find the outlier
+        outliers = filter(lambda l: l != [],
+                          [map(lambda x: x[-1],
+                               gf.loc[gf[k] == v].index.tolist())
+                           for k, v in qtest.T.iteritems()]
+                          )
+        outlier = set([i[0] for i in outliers])
+        if len(outlier) > 1:
+            print("Sneaky Contradictions!{}".format(outlier))
+        outlier = outlier.pop()
+
+        # Apply this to groups of var/run of summed_sigma
+        _intergf = gf.unstack('target').stack('metric')
+        confidence = (_intergf[outlier] / _intergf.drop(outlier, axis=1).mean(axis=1)).unstack('metric')
+
+        if confidence['Speed'].values > 1.75:
+            return (outlier, "Shadow")
+        else:
+            return (outlier, "SlowCoach")
+    else:
+        return (None, "Control")
+
 class ThesisOneShotDiagrams(unittest.TestCase):
     def tearDown(self):
         plt.close("all")
@@ -93,12 +430,13 @@ class ThesisOneShotDiagrams(unittest.TestCase):
     def testSSPPlots(self):
         depth = 100
         for ssp in SSPS:
+            figsize=latexify(columns=0.5)
             r=UUV_time_delay(SSP=ssp, graph=1, depth=depth, dist_calc=False,
-                             pdf_plot={'filepath':os.path.join(fig_basedir,"ssp_{}".format(ssp))})
-
+                             pdf_plot={'filepath':os.path.join(fig_basedir,"ssp_{}".format(ssp)),
+                                       'figsize':figsize})
     def testTempSalGlobes(self):
         resolution = '0.25'
-        def make_map(cube, projection=ccrs.InterruptedGoodeHomolosine(), figsize=(12, 10),
+        def make_map(cube, projection=ccrs.InterruptedGoodeHomolosine(), figsize=None,
                      cmap=cm.avhrr, label='temperature'):
             fig, ax = plt.subplots(figsize=figsize,
                                    subplot_kw=dict(projection=projection))
@@ -129,16 +467,16 @@ class ThesisOneShotDiagrams(unittest.TestCase):
         cubes = woa_subset(**kw)
         cube = cubes[4]
         c = cube[0, 0, ...]
-        fig, ax = make_map(c)
-        fig.savefig(os.path.join(fig_basedir, 'temp_globe.pdf'), bbox_inches='tight')
+        fig, ax = make_map(c, figsize=latexify())
+        savefig(fig, os.path.join(fig_basedir, 'temp_globe'), bbox_inches='tight')
         # Salinity
         kw = dict(bbox=bbox, variable='salinity', clim_type='00',
                   resolution=resolution, full=True)#
         cubes = woa_subset(**kw)
         cube = cubes[5]
         c = cube[0, 0, ...]
-        fig, ax = make_map(c, label='salinity')
-        fig.savefig(os.path.join(fig_basedir, 'sal_globe.pdf'), bbox_inches='tight')
+        fig, ax = make_map(c, figsize=latexify(), label='salinity')
+        savefig(fig, os.path.join(fig_basedir, 'sal_globe'), bbox_inches='tight')
 
     def testTempSalProfiles(self):
         def _cube_decomposer(cube):
@@ -208,7 +546,7 @@ class ThesisOneShotDiagrams(unittest.TestCase):
         axS.legend(loc='upper center', bbox_to_anchor=(0.5, 1.5),
                    ncol=3)
 
-        fig.savefig(os.path.join(fig_basedir, 'temp_sal_profile.pdf'))
+        savefig(fig, os.path.join(fig_basedir, 'temp_sal_profile'))
 
 
     def testThreatSurfacePlot(self):
@@ -239,7 +577,7 @@ class ThesisOneShotDiagrams(unittest.TestCase):
 
         # Vector
         ax = axes[1]
-        ax.set_title("Single Vector")
+        ax.set_title("Multi Metric")
         ax.add_patch(plt.Rectangle((0.0, ys[0] - 0.1), 0.99, 0.2, alpha=0.2))
         for x in np.linspace(0.1, 0.9, 5):
             ax.add_patch(plt.Circle((x, ys[0]), radius=0.075, color='g', alpha=0.9))
@@ -274,17 +612,17 @@ class ThesisOneShotDiagrams(unittest.TestCase):
 
         axes = map(format_axes, axes)
         fig.delaxes(axes[3])
-        fig.savefig(fig_filename +'.pdf', transparent=False, type='pdf')
+        savefig(fig, fig_filename, transparent=False)
 
-        self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
+        self.assertTrue(os.path.isfile(fig_filename + '.' + img_extn))
 
         if show_outputs:
-            try_to_open(fig_filename + '.pdf')
+            try_to_open(fig_filename + '.' + img_extn)
 
 class ThesisDiagrams(unittest.TestCase):
     signed = True
     runtime_computed = False #CHANGE ME BACK
-    complete_subsets = True
+    complete_subsets = False
 
     @classmethod
     def setUpClass(self):
@@ -465,7 +803,7 @@ class ThesisDiagrams(unittest.TestCase):
             ax=ax, kind='bar', rot=0, width=0.9, figsize=fig_size,
             legend=False, colors=these_feature_colours
         )
-        ax.set_xlabel("Behaviour")
+        ax.set_xlabel("Behaviour", labelpad=-5)
         ax.set_ylabel("Est. Metric Significance")
         fig = ax.get_figure()
         bars = ax.patches
@@ -482,25 +820,24 @@ class ThesisDiagrams(unittest.TestCase):
             for _i, scenario_bars in scenario_bars_d.items():
                 if isinstance(annotate, int):
                     for bar in sorted(scenario_bars, key=lambda b: b.get_height(), reverse=True)[:annotate]:
-                        ax.text(bar.get_x() + bar.get_width() / 2, 1.05 * bar.get_height(),
+                        ax.text(bar.get_x() + bar.get_width() / 2, 0.005 + bar.get_height(),
                                 "{0:.2}".format(bar.get_height()), ha='center', va='bottom')
                 elif isinstance(annotate, float):
-                    for bar in filter(lambda b: b.get_height() > annotate,
+                    for bar in filter(lambda b: b.get_height() >= annotate,
                                       sorted(scenario_bars, key=lambda b: b.get_height(), reverse=True)):
-                        ax.text(bar.get_x() + bar.get_width() / 2, 1.05 * bar.get_height(),
-                                "{0:.2}".format(bar.get_height()), ha='center', va='bottom')
+                        ax.text(bar.get_x() + bar.get_width() / 2, 0.005 + bar.get_height(),
+                                "{0:.2}".format(bar.get_height()), ha='center', va='bottom',fontsize='small')
                 else:
                     raise NotImplementedError(
                         "Can't handle an annotation value of type {0}; try float or int".format(type(annotate)))
 
         ax.legend(loc='best', ncol=1)
-        format_axes(ax)
+        ax = format_axes(ax)
         ax.xaxis.grid(False)  # Disable vertical lines
-        fig.tight_layout()
-        fig.savefig(fig_filename, transparent=True)
-        self.assertTrue(os.path.isfile(fig_filename + '.png'))
+        savefig(fig, fig_filename, transparent=True)
+        self.assertTrue(os.path.isfile(fig_filename + '.' + img_extn))
         if show_outputs:
-            try_to_open(fig_filename + '.png')
+            try_to_open(fig_filename + '.' + img_extn)
 
 
 
@@ -509,7 +846,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         fair_feats = self.joined_feats.loc['Fair'].rename(columns=metric_rename_dict)
 
-        self.save_feature_plot(fair_feats, fig_filename, annotate=3)
+        self.save_feature_plot(fair_feats, fig_filename, annotate=0.2)
 
     def testCommsMetricTrustRelevance(self):
         fig_filename = 'comms_metric_trust_relevance'
@@ -523,7 +860,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         feats = self.phys_only_feats.loc['Fair'].rename(columns=metric_rename_dict)
 
-        self.save_feature_plot(feats, fig_filename, annotate=1)
+        self.save_feature_plot(feats, fig_filename, annotate=0.2)
 
     def testFullMetricCorrs(self):
         input_filename = 'input/full_metric_correlations'
@@ -638,19 +975,20 @@ class ThesisDiagrams(unittest.TestCase):
         alt_instantaneous_meaned_plots = {}
 
         results = uncpickle("/home/bolster/src/aietes/results/subset_analysis_raw.pkl")
-        if len(results) >= 385 and False:
+        if len(results) >= 385 and self.complete_subsets:
             print("Successfully recovered from pickle")
         else:
             with Parallel(n_jobs=-1, verbose=10) as par_ctx:
                 results = par_ctx(delayed(metric_subset_analysis)
                                                           (trust_observations, key, subset_str, weights_d=_weight_d,
-                                                            plot_internal=True, node_palette=self.node_colour_map
+                                                            plot_internal=True, node_palette=self.node_colour_map,
+                                                            texcol=_texcolhalf
                                                            )
                                                           for subset_str, key in _key_d.items()
                                                           )
 
-            mkcpickle("/home/bolster/src/aietes/results/subset_analysis_raw.pkl", results)
-        mkcpickle("/dev/shm/_key_d", _key_d)
+            if self.complete_subsets:
+                mkcpickle("/home/bolster/src/aietes/results/subset_analysis_raw.pkl", results)
 
         for result in results:
             #time_meaned_plots.update(result['time_meaned_plots'])
@@ -658,42 +996,44 @@ class ThesisDiagrams(unittest.TestCase):
             #instantaneous_meaned_plots.update(result['instantaneous_meaned_plots'])
             #alt_instantaneous_meaned_plots.update(result['alt_instantaneous_meaned_plots'])
             if result is not None:
-                perspectives.update(result['trust_perspective'])
+                perspectives.update(result['trust_perspectives'])
                 weights.update(result['weights'])
 
         inverted_results = defaultdict(list)
-
-        for (subset_str, target_str), (result) in perspectives.items():
-            inverted_results[subset_str].append((target_str, result))
+        try:
+            for (subset_str, target_str), (result) in perspectives.items():
+                inverted_results[subset_str].append((target_str, result))
+        except ValueError:
+            print(perspectives.items()[0])
+            raise
 
         # Time meaned plots and Result inversion
         for (subset_str, target_str), (_, _, result) in time_meaned_plots.items():
             fig_filename = "best_{0}_run_time_{1}".format(subset_str, target_str)
-            self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
+            self.assertTrue(os.path.isfile(fig_filename + img_extn))
             if show_outputs:
-                try_to_open(fig_filename + '.pdf')
+                try_to_open(fig_filename + img_extn)
 
         # instanteous plots
         for (subset_str, target_str), (_, _, result) in instantaneous_meaned_plots.items():
             fig_filename = "best_{0}_run_instantaneous_{1}".format(subset_str, target_str)
-            self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
+            self.assertTrue(os.path.isfile(fig_filename + img_extn))
             if show_outputs:
-                try_to_open(fig_filename + '.pdf')
+                try_to_open(fig_filename + img_extn)
 
         # ALTERNATE Time meaned plots and Result inversion
         for (subset_str, target_str), (_, _, result) in alt_time_meaned_plots.items():
             fig_filename = "best_{0}_run_alt_time_{1}".format(subset_str, target_str)
-            self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
+            self.assertTrue(os.path.isfile(fig_filename + img_extn))
             if show_outputs:
-                try_to_open(fig_filename + '.pdf')
-            inverted_results[subset_str].append((target_str, result))
+                try_to_open(fig_filename + img_extn)
 
         # ALTERNATE instanteous plots
         for (subset_str, target_str), (_, _, result) in alt_instantaneous_meaned_plots.items():
             fig_filename = "best_{0}_run_alt_instantaneous_{1}".format(subset_str, target_str)
-            self.assertTrue(os.path.isfile(fig_filename + '.pdf'))
+            self.assertTrue(os.path.isfile(fig_filename + img_extn))
             if show_outputs:
-                try_to_open(fig_filename + '.pdf')
+                try_to_open(fig_filename + img_extn)
 
         # Dump Best weights from best runs to a table
         w_df = pd.concat([pd.Series(weight, index=_key_d[subset.lower()])
@@ -740,6 +1080,7 @@ class ThesisDiagrams(unittest.TestCase):
 
         # mkcpickle("/dev/shm/weights", weights)
         mkcpickle("/dev/shm/inverted_results", inverted_results)
+        mkcpickle("/dev/shm/subset_reindex_keys", subset_reindex_keys)
 
         # Generate performance assessments for each weighted metric subset domain against tested behaviour
         self.true_positive_assessment_table(inverted_results, subset_reindex_keys)
@@ -762,14 +1103,14 @@ class ThesisDiagrams(unittest.TestCase):
                 target_str
             ))
             format_axes(ax)
-            fig.savefig(fig_filename, transparent=True)
-            self.assertTrue(os.path.isfile(fig_filename + '.png'))
+            savefig(fig, fig_filename, transparent=True)
+            self.assertTrue(os.path.isfile(fig_filename + '.' + img_extn))
             if show_outputs:
-                try_to_open(fig_filename + '.png')
+                try_to_open(fig_filename + '.' + img_extn)
 
 
-
-    def true_positive_assessment_table(self, inverted_results, subset_reindex_keys):
+    @classmethod
+    def true_positive_assessment_table(cls, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
         for subset_str, results in inverted_results.items():
             _rd = {k: v for k, v in results}
@@ -788,10 +1129,11 @@ class ThesisDiagrams(unittest.TestCase):
         tex.pop(3)  # second dimension header; overridden by the above replacement
         tex.insert(-4, '\hline')  # Hline before averages
         tex = '\n'.join(tex)
-        with open('input/domain_deltas.tex', 'w') as f:
+        with open('input/domain_deltas_{}.tex'.format(len(inverted_results.keys())), 'w') as f:
             f.write(tex)
 
-    def false_positive_assessment_table(self, inverted_results, subset_reindex_keys):
+    @classmethod
+    def false_positive_assessment_table(cls, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
         for subset_str, results in inverted_results.items():
             _rd = {k: v for k, v in results}
@@ -817,7 +1159,8 @@ class ThesisDiagrams(unittest.TestCase):
         with open('input/domain_deltas_minus.tex', 'w') as f:
             f.write(tex)
 
-    def true_positive_assessment_table_time_meaned(self, inverted_results, subset_reindex_keys):
+    @classmethod
+    def true_positive_assessment_table_time_meaned(cls, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
         for subset_str, results in inverted_results.items():
             _rd = {k: v for k, v in results}
@@ -836,10 +1179,11 @@ class ThesisDiagrams(unittest.TestCase):
         tex.pop(3)  # second dimension header; overridden by the above replacement
         tex.insert(-4, '\hline')  # Hline before averages
         tex = '\n'.join(tex)
-        with open('input/domain_time_deltas.tex', 'w') as f:
+        with open('input/domain_time_deltas_{}.tex'.format(len(inverted_results.keys())), 'w') as f:
             f.write(tex)
 
-    def false_positive_assessment_table_time_meaned(self, inverted_results, subset_reindex_keys):
+    @classmethod
+    def false_positive_assessment_table_time_meaned(cls, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
         for subset_str, results in inverted_results.items():
             _rd = {k: v for k, v in results}
@@ -862,7 +1206,7 @@ class ThesisDiagrams(unittest.TestCase):
         tex.pop(3)  # second dimension header; overridden by the above replacement
         tex.insert(-4, '\hline')  # Hline before averages
         tex = '\n'.join(tex)
-        with open('input/domain_time_deltas_minus.tex', 'w') as f:
+        with open('input/domain_time_deltas_minus_{}.tex'.format(len(inverted_results.keys())), 'w') as f:
             f.write(tex)
 
     def test(self):
@@ -901,13 +1245,13 @@ class ThesisDiagrams(unittest.TestCase):
                 target_str
             ))
             format_axes(ax)
-            fig.savefig(fig_filename, transparent=False)
-            self.assertTrue(os.path.isfile(fig_filename + '.png'))
+            savefig(fig, fig_filename, transparent=False)
+            self.assertTrue(os.path.isfile(fig_filename + '.' + img_extn))
             if show_outputs:
-                try_to_open(fig_filename + '.png')
+                try_to_open(fig_filename + '.' + img_extn)
         for fig, ax in fig_gen:
-            fig_filename = fig_filename_prefix + ax.get_title().lower().replace(' ', '_') + '.png'
-            fig.savefig(fig_filename)
+            fig_filename = fig_filename_prefix + ax.get_title().lower().replace(' ', '_') + '.' + img_extn
+            savefig(fig_filename)
             self.assertTrue(os.path.isfile(fig_filename))
 
 # if __name__ == '__main__':

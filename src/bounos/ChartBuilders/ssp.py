@@ -7,7 +7,7 @@ import sys
 
 import numpy as np
 from matplotlib import pylab as plt
-from matplotlib import colors as colors
+from matplotlib import colors
 from matplotlib import cm
 from matplotlib import gridspec
 from matplotlib.ticker import FixedLocator
@@ -21,8 +21,9 @@ def Raytrace_Step(SSP, depth, ds, dtheta_count, graph, r_t, theta_min, theta_max
     tim = np.empty_like(theta)
     t = np.abs(theta_max - theta_min)
     if graph:
-        norm = colors.LogNorm(vmin=1, vmax=180)
-        color = cm.jet(norm(t))
+        norm = colors.LogNorm(vmin=0.5, vmax=360)
+        print(t, norm(t))
+        color = cm.Blues_r(norm(t))
     else:
         color = None
 
@@ -64,15 +65,15 @@ def Interpolate_Candidates(index, tim, z_2, z_end):
     return delay
 
 
-def Raytrace_model(uuv_pos, depth, SSP, graph, n_stages=3, ax=None):
+def Raytrace_model(uuv_pos, depth, SSP, graph, n_stages=3, dtheta_count=30, cone=45, ax=None):
     """uuv_pos = structre containing x,y,z positions of 2 uuvs
      depth = depth of water column
      SSP = name of sound speed profile
      graph: 0 = no graphs, 1 = plot ray paths 2 = plot and destroy
+    :param dtheata_count: distance step in finite difference solution to ODE
+    :param cone:  search cone angle
     """
     ds = 1
-    # distance step in finite difference solution to ODE
-    dtheta_count = 30
     # spearation between rays in initial coarse search (eventually zooms in to dtheta/400)
     # calculate distances
     dist = np.sqrt(
@@ -82,9 +83,9 @@ def Raytrace_model(uuv_pos, depth, SSP, graph, n_stages=3, ax=None):
     z_1 = uuv_pos[0].z
     # Calculate angle between the two UUVs
     ang = (np.arctan((z_2 - z_1) / r_t) * 180) / np.pi
-    # Degin the search angle (60 degree cone centred on the direct look)
-    theta_min = np.max(np.array([- 89.99, ang - 30]).reshape(1, -1))
-    theta_max = np.min(np.array([89.99, ang + 30]).reshape(1, -1))
+    # Degin the search angle (cone centred on the direct look)
+    theta_min = np.max(np.array([- 89.99, ang - cone/2]).reshape(1, -1))
+    theta_max = np.min(np.array([89.99, ang + cone/2]).reshape(1, -1))
     # Some error checking
     # if dist is very small
     if dist < np.dot(2, ds):
@@ -164,7 +165,7 @@ def compute_ray(SSP, theta_0, z_1, depth, r_t, z_2, dss, ax, color='-k'):
         if r_t - r[count] < (ds * 2):
             ds = np.max(np.array([0.001, ds / 2]))
 
-    ax.plot(r[0:count], z[0:count], color=color)
+    ax.plot(r[0:count], z[0:count], color=color, lw=0.5)
     t_t = t[count]
     z_2 = z[count]
     return z_2, t_t
@@ -245,7 +246,7 @@ def Distance_Estimates(SSP, c, clock_error, delay, uuv_pos):
     return guess_dist1, guess_dist2, guess_dist3
 
 
-def UUV_time_delay(uuv1=(10, 10, 15), uuv2=(250, 500, 20), SSP='linear_increasing', graph=0, depth=30, clock_error=0,
+def UUV_time_delay(uuv1=(0, 0, 15), uuv2=(0, 500, 40), SSP='linear_increasing', graph=0, depth=30, clock_error=0,
                    dist_calc=False, tikz_plot=False, pdf_plot=False):
     """
 
@@ -264,7 +265,10 @@ def UUV_time_delay(uuv1=(10, 10, 15), uuv2=(250, 500, 20), SSP='linear_increasin
     c = map(ssp_getter, z)
     # plot graph of sound speed profile vs depth
     if graph:
-        fig = plt.figure()
+        if pdf_plot is not None and 'figsize' in pdf_plot:
+            fig = plt.figure(figsize=pdf_plot['figsize'])
+        else:
+            fig = plt.figure()
         gs = gridspec.GridSpec(1,5)
         gs.update(wspace=0.05, hspace=0.05)  # set the spacing between axes.
 
@@ -274,6 +278,8 @@ def UUV_time_delay(uuv1=(10, 10, 15), uuv2=(250, 500, 20), SSP='linear_increasin
         sspax.set_xlim(1400,1560)
         sspax.invert_yaxis()
         sspax.xaxis.set_major_locator(FixedLocator([1400,1480,1560]))
+        plt.setp(sspax.xaxis.get_majorticklabels(), rotation=30)
+
         tofax = plt.subplot(gs[:,0:4], sharey=sspax)
         plt.setp(sspax.get_yticklabels(),visible=False)
         tofax.set_ylabel("Depth $(m)$")
@@ -308,7 +314,8 @@ def UUV_time_delay(uuv1=(10, 10, 15), uuv2=(250, 500, 20), SSP='linear_increasin
         matplotlib2tikz.save(**tikz_plot)
 
     if pdf_plot and all(map(lambda v:v in pdf_plot, ['filepath',])):
-        fig.savefig(pdf_plot['filepath']+'.pdf', format='pdf')
+        fig.savefig(pdf_plot['filepath']+'.pdf', format='pdf', bbox_inches='tight')
+
 
     return response
 

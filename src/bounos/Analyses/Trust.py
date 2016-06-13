@@ -549,14 +549,14 @@ def network_trust_dict(trust_run, observer='n0', recommendation_nodes=None, targ
     # If I screw up the data structure later; pandas will not forgive me.
 
     _d = pd.DataFrame.from_dict(OrderedDict((
-        ("$T_{0}$", trust_run.xs(observer, level='observer')[target]),
-        ("$T_{2}$", trust_run.xs('n2', level='observer')[target]),
-        ("$T_{3}$", trust_run.xs('n3', level='observer')[target]),
-        ("$T_{4}$", trust_run.xs('n4', level='observer')[target]),
-        ("$T_{5}$", trust_run.xs('n5', level='observer')[target]),
-        ("$T_{Net}$", t_total.sum(axis=1)),  # Eq 4.7 guo; Takes relationships into account
-        ("$T_{MTFM}$", pd.Series(t_network)),  # Eq 4.8 guo: Blind Whitenised Trust
-        ("$T_{Avg}$", pd.Series(t_avg))  # Simple Average
+        ("$T_{0,1}$", trust_run.xs(observer, level='observer')[target]),
+        ("$T_{2,1}$", trust_run.xs('n2', level='observer')[target]),
+        ("$T_{3,1}$", trust_run.xs('n3', level='observer')[target]),
+        ("$T_{4,1}$", trust_run.xs('n4', level='observer')[target]),
+        ("$T_{5,1}$", trust_run.xs('n5', level='observer')[target]),
+        ("$T_{0,1}^{Net}$", t_total.sum(axis=1)),  # Eq 4.7 guo; Takes relationships into account
+        ("$T_{0,1}^{MTFM}$", pd.Series(t_network)),  # Eq 4.8 guo: Blind Whitenised Trust
+        ("$T_{N,1}^{Avg}$", pd.Series(t_avg))  # Simple Average
     )))
 
     # On combining assessments, Nans are added where different nodes have (no) information at a particular timeframe about
