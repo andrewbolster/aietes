@@ -101,7 +101,7 @@ class smart_dict(dict):
 
 def plot_behaviour_metric_graph(data, fig_path, observer = 'Bravo', target='Alfa', run = 0,
                                 force_ymin=None, title=None, y_label_map=None,
-                                save_fig=False, show_title=False):
+                                save_fig=False, show_title=False, suffix=""):
 
     _bevs = set(data.index.get_level_values('var'))
     _metrics = list(data.columns)
@@ -188,7 +188,7 @@ def plot_behaviour_metric_graph(data, fig_path, observer = 'Bravo', target='Alfa
     if title is not None and show_title:
         fig.suptitle(title, fontsize=12)
     if save_fig:
-        savefig(fig, os.path.join(fig_path,title.replace(' ','_')), transparent=True, tight=False)
+        savefig(fig, os.path.join(fig_path,title.replace(' ','_')+suffix), transparent=True, tight=False)
     else:
         fig.show()
 
@@ -213,7 +213,7 @@ class SingleRunGraphing(unittest.TestCase):
             cls.positions = store.positions
             cls.trust_observations = store.trust.drop('Tail',level='var')
             cls.trust_observations.columns.name = 'metric'
-            map_levels(cls.trust_observations, {'Waypoint': 'Control'})
+            map_levels(cls.trust_observations, var_rename_dict)
             # Convert Sample Times into proper stuff
             cls.trust_observations.reset_index(inplace=True)
             cls.trust_observations['t']*=cls.trust_period
@@ -364,7 +364,7 @@ class MultiRunSigmaAndConfidenceGraphing(unittest.TestCase):
     def test_classifer_minority_test(self):
 
         def _classifier(gf):
-            return classifier(gf, minority=True, _dixon_test=dixon_test_95)
+            return classifier_phys(gf, minority=True, _dixon_test=dixon_test_95)
 
         df = pd.DataFrame(self.summed_sigmas.stack('target').groupby(level=['var', 'run']).apply(_classifier))
         df[['suspect', 'suspicion']] = df[0].apply(pd.Series)
@@ -381,7 +381,7 @@ class MultiRunSigmaAndConfidenceGraphing(unittest.TestCase):
     def test_classifer_test(self):
 
         def _classifier(gf):
-            return classifier(gf, minority=False, _dixon_test=dixon_test_95)
+            return classifier_phys(gf, minority=False, _dixon_test=dixon_test_95)
 
         df = pd.DataFrame(self.summed_sigmas.stack('target').groupby(level=['var', 'run']).apply(_classifier))
         df[['suspect', 'suspicion']] = df[0].apply(pd.Series)
@@ -395,7 +395,7 @@ class MultiRunSigmaAndConfidenceGraphing(unittest.TestCase):
         with open(os.path.join(self.fig_path, "classifier.tex"), 'w') as f:
             df.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
 
-def classifier(gf, minority=False, _dixon_test=dixon_test_95):
+def classifier_phys(gf, minority=False, _dixon_test=dixon_test_95):
     # Find ANY qtest activations
     qtest = gf.T.apply(_dixon_test, axis=1)
     n_outliers = len(filter(lambda l: l != [None], qtest))
@@ -422,6 +422,127 @@ def classifier(gf, minority=False, _dixon_test=dixon_test_95):
             return (outlier, "SlowCoach")
     else:
         return (None, "Control")
+
+class MultiRunSigmaAndConfidenceGraphing_Multi(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(MultiRunSigmaAndConfidenceGraphing_Multi, cls).setUpClass()
+        #Grab results h5 file from set "good" results
+        cls.results_path = results_path
+        cls.fig_path = fig_basedir
+
+        cls.target = 'Alfa'
+        cls.observer = 'Bravo'
+        cls.good_bev = 'Fair'
+        cls.trust_period = 10
+
+        with pd.get_store(cls.results_path + '.h5') as store:
+            cls.trust_observations.columns.name = 'metric'
+            map_levels(cls.trust_observations, {'Waypoint': cls.good_bev})
+            # Convert Sample Times into proper stuff
+            cls.trust_observations.reset_index(inplace=True)
+            cls.trust_observations['t']*=cls.trust_period
+            cls.trust_observations.set_index(['var','run','observer','t','target'], inplace=True)
+
+        data = cls.trust_observations.xs(cls.observer, level='observer')
+        cls.deviance = pd.concat([gf - gf.mean() for g, gf in data.groupby(level=['var', 'run', 't'])])
+        cls.sigmas = pd.concat([(gf / (gf.std(axis=0))).abs() for g, gf in cls.deviance.groupby(level=['var', 'run', 't'])])
+        # Optimise the below; it's naaaaasty for long runs
+        cls.summed_sigmas = cls.sigmas.unstack('target').groupby(level=['var','run']).sum()
+        cls.dixon_df = pd.concat(
+            [(group_dixon_test(g, gf)) for g, gf in cls.summed_sigmas.stack('target').groupby(level=['var', 'run'])])
+        cls.dixon_df['correct'] = (cls.dixon_df['target'] == cls.target) != ((cls.dixon_df['var'] == cls.good_bev) & (cls.dixon_df['target'] == 'None'))
+
+    def test_overall_stats(self):
+        overall_stats = self.dixon_df.groupby('var').describe().unstack('var').correct.iloc[[1, 2]].T
+        overall_stats.columns = ['Mean', 'Std']
+        overall_stats.index.name = 'Behaviour'
+        with open(os.path.join(self.fig_path,"overall_stats_multi.tex"), 'w') as f:
+            overall_stats.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+    def test_per_metric_stats(self):
+        per_metric_stats = self.dixon_df.groupby(['var', 'metric']).describe().unstack(['var', 'metric']).iloc[[1, 2]].stack(
+            'var').correct
+        per_metric_stats.columns.name = 'Metric'
+        per_metric_stats.index.names = ['', 'Behaviour']
+        with open(os.path.join(self.fig_path,"per_metric_stats_multi.tex"), 'w') as f:
+            per_metric_stats.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+    def test_summed_sigma_confidence_table(self):
+        intergfs = []
+        for g, gf in self.summed_sigmas.stack('target').groupby(level=['var','run']):
+            _intergf = gf.unstack('target').stack('metric')
+            intergfs.append(_intergf[self.target] / _intergf.drop(self.target, axis=1).mean(axis=1))
+
+        confidences = pd.concat(intergfs).unstack('metric')
+        c_table = confidences.groupby(level='var').describe().unstack('var').iloc[[1, 2]].stack('var')
+        c_table.columns.name = 'Metric'
+        c_table.index.names = ['', 'Behaviour']
+        with open(os.path.join(self.fig_path,"confidence_multi.tex"), 'w') as f:
+            c_table.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+    def test_classifer_minority_test(self):
+
+        def _classifier(gf):
+            return classifier_multi(gf, minority=True, _dixon_test=dixon_test_95)
+
+        df = pd.DataFrame(self.summed_sigmas.stack('target').groupby(level=['var', 'run']).apply(_classifier))
+        df[['suspect', 'suspicion']] = df[0].apply(pd.Series)
+        df.reset_index(inplace=True)
+        df = df[['var', 'suspect', 'suspicion']]
+        correct = lambda r: r['var'] == r['suspicion']
+        df['correct'] = df.apply(correct, axis=1)
+        df=df.groupby('var').mean()
+        df.columns = ['Probability of Correct Blind Identification']
+        df.index.names = ['True Behaviour']
+        with open(os.path.join(self.fig_path, "classifier_minority_multi.tex"), 'w') as f:
+            df.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+    def test_classifer_test(self):
+
+        def _classifier(gf):
+            return classifier_multi(gf, minority=False, _dixon_test=dixon_test_95)
+
+        df = pd.DataFrame(self.summed_sigmas.stack('target').groupby(level=['var', 'run']).apply(_classifier))
+        df[['suspect', 'suspicion']] = df[0].apply(pd.Series)
+        df.reset_index(inplace=True)
+        df = df[['var', 'suspect', 'suspicion']]
+        correct = lambda r: r['var'] == r['suspicion']
+        df['correct'] = df.apply(correct, axis=1)
+        df=df.groupby('var').mean()
+        df.columns = ['Probability of Correct Blind Identification']
+        df.index.names = ['True Behaviour']
+        with open(os.path.join(self.fig_path, "classifier_multi.tex"), 'w') as f:
+            df.to_latex(buf=f, float_format=lambda f: "{0:1.3f}".format(f))
+
+
+def classifier_multi(gf, minority=False, _dixon_test=dixon_test_95):
+    # Find ANY qtest activations
+    qtest = gf.T.apply(_dixon_test, axis=1)
+    n_outliers = len(filter(lambda l: l != [None], qtest))
+
+    if n_outliers > minority:
+        # Find the outlier
+        outliers = filter(lambda l: l != [],
+                          [map(lambda x: x[-1],
+                               gf.loc[gf[k] == v].index.tolist())
+                           for k, v in qtest.T.iteritems()]
+                          )
+        outlier = set([i[0] for i in outliers])
+        if len(outlier) > 1:
+            print("Sneaky Contradictions!{}".format(outlier))
+        outlier = outlier.pop()
+
+        # Apply this to groups of var/run of summed_sigma
+        _intergf = gf.unstack('target').stack('metric')
+        confidence = (_intergf[outlier] / _intergf.drop(outlier, axis=1).mean(axis=1)).unstack('metric')
+
+        if confidence['Speed'].values > 1.75:
+            return (outlier, "Shadow")
+        else:
+            return (outlier, "SlowCoach")
+    else:
+        return (None, "TEST")
 
 class ThesisOneShotDiagrams(unittest.TestCase):
     def tearDown(self):
