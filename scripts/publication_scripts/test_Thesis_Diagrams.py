@@ -646,7 +646,6 @@ class ThesisOneShotDiagrams(unittest.TestCase):
         plot_profile(axS,tempe_s, label='Temperate')
         plot_profile(axS,equat_s, label='Equatorial')
         axS.invert_yaxis()
-        axS.legend()
         axS.set_xlabel(r"Salinity $(ppt)$")
         _ = axS.set_ylim(200,0)
         axS.xaxis.set_major_locator(mtick.MaxNLocator(5))
@@ -663,11 +662,14 @@ class ThesisOneShotDiagrams(unittest.TestCase):
         _ = axV.set_ylim(200, 0)
         _ = axV.set_xlim(1500, 1550)
         axV.xaxis.set_major_locator(mtick.MaxNLocator(3))
+        lines, labels = axV.get_legend_handles_labels()
 
-        axS.legend(loc='upper center', bbox_to_anchor=(0.5, 1.5),
-                   ncol=3)
+        fig.subplots_adjust(
+            left=0.05, bottom=0.06, right=0.98, top=0.965, wspace=0.2, hspace=0.05)
 
-        savefig(fig, os.path.join(fig_basedir, 'temp_sal_profile'))
+        fig.legend(lines, labels,'upper center',
+                   bbox_to_anchor=(0.5, 1), ncol=3)
+        savefig(fig, os.path.join(fig_basedir, 'temp_sal_profile'), tight=False)
 
 
     def testThreatSurfacePlot(self):
