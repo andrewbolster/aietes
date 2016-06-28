@@ -2,6 +2,7 @@
 
 from __future__ import division, print_function
 
+import io
 import tempfile
 import unittest
 from tqdm import tqdm
@@ -16,6 +17,7 @@ import sklearn.ensemble as ske
 from scipy.stats.stats import pearsonr
 import cartopy.crs as ccrs
 import matplotlib.ticker as mtick
+import seaborn as sns
 
 import cartopy.feature as cfeature
 
@@ -40,7 +42,7 @@ from bounos.Analyses.Trust import generate_node_trust_perspective
 from bounos.Analyses.Weight import target_weight_feature_extractor, \
     generate_weighted_trust_perspectives, build_outlier_weights, calc_correlations_from_weights, \
     drop_metrics_from_weights_by_key
-from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list, plot_axes_views_from_positions_frame
+from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list, plot_axes_views_from_positions_frame, _latexify_rcparams
 from bounos.ChartBuilders import _texcol, _texcolhalf, _texcolthird, _texfac
 from bounos.ChartBuilders.ssp import UUV_time_delay, ssp_function, SSPS
 
@@ -93,6 +95,23 @@ assert os.path.isdir(fig_basedir)
 from bounos.Analyses.Dixon import  *
 
 
+
+def lower_dict_keys(d):
+    return {str.lower(k):v for k,v in d.items()}
+
+lowered_metric_rename = lower_dict_keys(metric_rename_dict)
+lowered_metric_keys = map(str.lower, key_order)
+
+def subset_renamer(index_key):
+    metrics = index_key.split('_')[0:-3]
+    return pd.Series([k in metrics for k in lowered_metric_keys],
+                     index=map(lowered_metric_rename.get, lowered_metric_keys))
+
+def ticks(x):
+    if isinstance(x,(bool,np.bool_)):
+        return '\checkmark' if x else ''
+    else:
+        return x
 
 class smart_dict(dict):
     # Replaces missing lookups with the key
@@ -745,7 +764,7 @@ class ThesisOneShotDiagrams(unittest.TestCase):
 class ThesisDiagrams(unittest.TestCase):
     signed = True
     runtime_computed = False #CHANGE ME BACK
-    complete_subsets = False
+    complete_subsets = True
 
     @classmethod
     def setUpClass(self):
@@ -1170,7 +1189,7 @@ class ThesisDiagrams(unittest.TestCase):
         elif len(w_df.index.levels[0]) == 5:
             subset_reindex_keys = ['full', 'comms', 'phys', 'comms_alt', 'phys_alt']
         else:
-            subset_reindex_keys = []
+            subset_reindex_keys = None
             #raise ValueError("Incorrect number of subsets included; {0}".format(w_df.index.levels[0]))
 
         if subset_reindex_keys:
@@ -1212,40 +1231,115 @@ class ThesisDiagrams(unittest.TestCase):
         # FALSE POSITIVE ASSESSMENT (dT^-)
         self.false_positive_assessment_table(inverted_results, subset_reindex_keys)
 
-        for subset_str, results in inverted_results.items():
-            fig_size = latexify(columns=_texcol, factor=_texfac)
-            fig = plt.figure(figsize=fig_size)
-            ax = fig.add_subplot(1, 1, 1)
+        # Generate "Top 10% Performing" subsets boxplot for with respect to each behaviour and the Mean
+        if self.complete_subsets:
+            bevs = np.append(w_df.index.get_level_values('target').unique(), None)
+            for bev in bevs:
+                self._dt_subset_boxes(inverted_results, subset_reindex_keys, bev=bev)
 
-            #        _ = _f(trust.unstack('var')[target].xs(observer, level='observer')).boxplot(ax=ax)
+        # Once the above is done, should be able to make averages across target behaviours
+        def _detick(x):
+            if isinstance(x, (float, np.float)):
+                return x
+            elif x == '\checkmark':
+                return 1.0
+            else:
+                return 0.0
 
-            # results.boxplot(ax=ax)
-            fig_filename = "box_{0}_run_{1}".format(subset_str, target_str)
-            ax.set_title("Example {0} Metric Weighted Assessment for {1}".format(
-                subset_renamer(subset_str),
-                target_str
-            ))
-            format_axes(ax)
-            savefig(fig, fig_filename, transparent=True)
-            self.assertTrue(os.path.isfile(fig_filename + '.' + img_extn))
-            if show_outputs:
-                try_to_open(fig_filename + '.' + img_extn)
+        with pd.get_store('/dev/shm/top_dt.h5') as s:
+            df = pd.concat([s.get(k) for k in s.keys()], keys=[k[1:] for k in s.keys()], names=['Response Behaviour', ''])
+        df = df.applymap(_detick).groupby(level='Response Behaviour').head(20).groupby(level='Response Behaviour').mean()
+        _t = df.ix['Mean']
+        df = df.drop('Mean', axis=0).append(_t)
+        tex = df \
+            .to_latex(float_format=lambda x: "{0:1.2f}".format(x), escape=False,
+                      index=False, column_format="|*{{{}}}{{c|}}|*{{{}}}{{c|}}".format(len(bevs), len(key_order)))\
+            .split('\n')
+        tex[2] = "\multicolumn{{{}}}{{|c||}}{{Behaviour $\Delta T_{{ix}}$}} & \multicolumn{{{}}}{{c|}}{{Metrics in Synthetic Domain}}\\\\".format(
+            len(bevs), len(key_order)
+        )
+        tex = '\n'.join(tex)
+        with io.open('input/top_targeted_dt.tex'.format(bev), 'w', encoding='utf-8') as f:
+            f.write(tex)
+
+        figsize = latexify(columns=_texcol, factor=_texfac)
+        f,ax = plt.subplots(1,1, figsize = figsize)
+        focuses = ((df['Response Behaviour'] / df['Response Behaviour'].ix['Mean']) - 1).drop('Mean', axis=0).drop('Mean',
+                                                                                                                   axis=1)
+        focuses.T.plot(kind='bar', ax=ax)
+        ax.set_ylabel("Targeted $\Delta T_{ix}$ Ratio to Mean $\Delta T$ response")
+        ax.set_xlabel("Behaviour under test")
+        ax = format_axes(ax)
+        savefig(f, "focus_ratio")
+
+
+    @classmethod
+    def _dt_subset_boxes(cls, inverted_results, subset_reindex_keys, bev=None):
+        """
+        Produce Box Plots of the top 10% performing subsets
+        :param inverted_results:
+        :param subset_reindex_keys:
+        :param bev: Targeted Behaviour to sort of, otherwise Mean
+        :return: None
+        """
+        if cls.complete_subsets is not True:
+            raise ValueError("Shouldn't run this on non-compete subsets!")
+        bevs = ['MPC', 'STS', 'Shadow', 'SlowCoach', 'Mean']
+        true_positive = cls._true_positive(inverted_results, subset_reindex_keys)
+        true_positive['Mean'] = true_positive.mean(axis=1)
+        bev = 'Mean' if bev is None else bev
+        top_mean_df = true_positive.sort(bev, ascending=False)
+        _df = pd.DataFrame.from_records(top_mean_df.index.map(subset_renamer))  # .applymap(ticks)
+        for c in top_mean_df:
+            _df[c] = top_mean_df[c].values
+        top_mean_df = _df
+        try:
+            _df, retbins = pd.cut(top_mean_df[bev], 10, retbins=True)
+        except:
+            print(bev)
+            raise
+        _df = top_mean_df.groupby(_df).mean()
+        _df.drop(bevs, axis=1, inplace=True)
+
+        df = top_mean_df[top_mean_df[bev] > retbins[-2]][bevs]
+
+        figsize = latexify(columns=_texcol, factor=_texfac)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        with sns.axes_style(_latexify_rcparams):
+            sns.boxplot(data=df, ax=ax,
+                        showfliers=False, whis=1)
+            ax.set_xlabel('Response Behaviour')
+            ax.set_ylabel('$\Delta T_{ix}$')
+            ax.set_ylim(0, 1)
+            ax = format_axes(ax)
+            savefig(fig, "top_{}_dt_box".format(bev.lower()))
+
+        # While were here, also do the "top 5" tables
+        bev_df = top_mean_df[bevs]
+        m_df = top_mean_df[[metric_rename_dict[k] for k in key_order]]
+        top_mean_df = pd.concat((bev_df.T, m_df.T), keys=['Response Behaviour', 'Metrics in Synthetic Domain']).T
+
+        top_mean_df.to_hdf('/dev/shm/top_dt.h5',bev)
+
+        top_mean_df = top_mean_df.applymap(ticks)
+
+        tex = top_mean_df.head() \
+            .to_latex(float_format=lambda x: "{0:1.2f}".format(x), escape=False,
+                      index=False, column_format="|*{{{}}}{{c|}}|*{{{}}}{{c|}}".format(len(bevs), len(key_order))) \
+            .split('\n')
+        tex[2] = "\multicolumn{{{}}}{{|c||}}{{Behaviour $\Delta T_{{ix}}$}} & \multicolumn{{{}}}{{c|}}{{Metrics in Synthetic Domain}}\\\\".format(
+            len(bevs), len(key_order)
+        )
+        tex = '\n'.join(tex)
+
+        with io.open('input/top_{}_dt.tex'.format(bev), 'w', encoding='utf-8') as f:
+            f.write(tex)
 
 
     @classmethod
     def true_positive_assessment_table(cls, inverted_results, subset_reindex_keys):
-        perfd = defaultdict()
-        for subset_str, results in inverted_results.items():
-            _rd = {k: v for k, v in results}
-            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev', 'var', 't'])
-            df_mean = _df.groupby(level='bev').agg(np.nanmean)
-            # Take the mean of mean trust values from all other nodes and subtract suspicious node
-            perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
-        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
-            .unstack('bev').reindex(subset_reindex_keys)
-        perf_df['Avg.'] = perf_df.mean(axis=1)
-        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
-        perf_df = perf_df.rename(subset_renamer)
+        perf_df = cls._true_positive(inverted_results, subset_reindex_keys)
         tex = perf_df.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=True, column_format="|l|*{4}{c}|r|") \
             .replace('bev', '\diagbox{Domain}{Behaviour}') \
             .split('\n')
@@ -1256,46 +1350,42 @@ class ThesisDiagrams(unittest.TestCase):
             f.write(tex)
 
     @classmethod
-    def false_positive_assessment_table(cls, inverted_results, subset_reindex_keys):
+    def _true_positive(cls, inverted_results, subset_reindex_keys):
         perfd = defaultdict()
         for subset_str, results in inverted_results.items():
             _rd = {k: v for k, v in results}
-            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev', 'var', 't'])
-            df_mean = _df.groupby(level='bev').agg(np.nanmean)
+            try:
+                df_mean = cls._inverted_result_subset_mean(_rd)
+            except ValueError:
+                print("Failed on {}, continuing".format(subset_str))
+                continue
             # Take the mean of mean trust values from all other nodes and subtract suspicious node
-            perfd[subset_str] = pd.DataFrame(
-                [df_mean.drop(x, axis=1).apply(np.nanmean, axis=1) - df_mean[x]
-                 for x in df_mean.columns
-                 if x != target]) \
-                .mean(axis=0)
-        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
-            .unstack('bev').reindex(subset_reindex_keys)
-        perf_df['Avg.'] = perf_df.mean(axis=1)
-        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
-        perf_df = perf_df.rename(subset_renamer)
+            perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
+        perf_df = cls._perf_df_concat_and_prettify(perfd, subset_reindex_keys)
+        return perf_df
+
+    @classmethod
+    def _inverted_result_subset_mean(cls, _rd):
+        _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(),
+                        names=['bev', 'var', 'run', 'observer', 't'])
+        df_mean = _df.groupby(level='bev').agg(np.nanmean)
+        return df_mean
+
+    @classmethod
+    def false_positive_assessment_table(cls, inverted_results, subset_reindex_keys):
+        perf_df = cls._false_positive(inverted_results, subset_reindex_keys)
         tex = perf_df.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=True, column_format="|l|*{4}{c}|r|") \
             .replace('bev', '\diagbox{Domain}{Behaviour}') \
             .split('\n')
         tex.pop(3)  # second dimension header; overridden by the above replacement
         tex.insert(-4, '\hline')  # Hline before averages
         tex = '\n'.join(tex)
-        with open('input/domain_deltas_minus.tex', 'w') as f:
+        with open('input/domain_deltas_minus_{}.tex'.format(len(inverted_results.keys())), 'w') as f:
             f.write(tex)
 
     @classmethod
     def true_positive_assessment_table_time_meaned(cls, inverted_results, subset_reindex_keys):
-        perfd = defaultdict()
-        for subset_str, results in inverted_results.items():
-            _rd = {k: v for k, v in results}
-            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev', 'var', 't'])
-            df_mean = _df.groupby(level='bev').agg(np.nanmean)
-            # Take the mean of mean trust values from all other nodes and subtract suspicious node
-            perfd[subset_str] = df_mean.drop(target, axis=1).apply(np.nanmean, axis=1) - df_mean[target]
-        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
-            .unstack('bev').reindex(subset_reindex_keys)
-        perf_df['Avg.'] = perf_df.mean(axis=1)
-        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
-        perf_df = perf_df.rename(subset_renamer)
+        perf_df = cls._true_positive(inverted_results, subset_reindex_keys)
         tex = perf_df.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=True, column_format="|l|*{4}{c}|r|") \
             .replace('bev', '\diagbox{Domain}{Behaviour}') \
             .split('\n')
@@ -1307,22 +1397,7 @@ class ThesisDiagrams(unittest.TestCase):
 
     @classmethod
     def false_positive_assessment_table_time_meaned(cls, inverted_results, subset_reindex_keys):
-        perfd = defaultdict()
-        for subset_str, results in inverted_results.items():
-            _rd = {k: v for k, v in results}
-            _df = pd.concat([v for _, v in _rd.items()], keys=_rd.keys(), names=['bev', 'var', 't'])
-            df_mean = _df.groupby(level='bev').agg(np.nanmean)
-            # Take the mean of mean trust values from all other nodes and subtract suspicious node
-            perfd[subset_str] = pd.DataFrame(
-                [df_mean.drop(x, axis=1).apply(np.nanmean, axis=1) - df_mean[x]
-                 for x in df_mean.columns
-                 if x != target]) \
-                .mean(axis=0)
-        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
-            .unstack('bev').reindex(subset_reindex_keys)
-        perf_df['Avg.'] = perf_df.mean(axis=1)
-        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
-        perf_df = perf_df.rename(subset_renamer)
+        perf_df = cls._false_positive(inverted_results, subset_reindex_keys)
         tex = perf_df.to_latex(float_format=lambda x: "{0:1.2f}".format(x), index=True, column_format="|l|*{4}{c}|r|") \
             .replace('bev', '\diagbox{Domain}{Behaviour}') \
             .split('\n')
@@ -1331,6 +1406,36 @@ class ThesisDiagrams(unittest.TestCase):
         tex = '\n'.join(tex)
         with open('input/domain_time_deltas_minus_{}.tex'.format(len(inverted_results.keys())), 'w') as f:
             f.write(tex)
+
+    @classmethod
+    def _false_positive(cls, inverted_results, subset_reindex_keys):
+        perfd = defaultdict()
+        for subset_str, results in inverted_results.items():
+            _rd = {k: v for k, v in results}
+            try:
+                df_mean = cls._inverted_result_subset_mean(_rd)
+            except ValueError:
+                print("Failed on {}, continuing".format(subset_str))
+                continue
+            # Take the mean of mean trust values from all other nodes and subtract suspicious node
+            perfd[subset_str] = pd.DataFrame(
+                [df_mean.drop(x, axis=1).apply(np.nanmean, axis=1) - df_mean[x]
+                 for x in df_mean.columns
+                 if x != target]) \
+                .mean(axis=0)
+        perf_df = cls._perf_df_concat_and_prettify(perfd, subset_reindex_keys)
+        return perf_df
+
+    @classmethod
+    def _perf_df_concat_and_prettify(cls, perfd, subset_reindex_keys, rename_subsets=False):
+        perf_df = pd.concat([v for _, v in perfd.items()], keys=perfd.keys(), names=['subset', 'bev']) \
+            .unstack('bev')
+        perf_df['Avg.'] = perf_df.mean(axis=1)
+        perf_df = perf_df.append(pd.Series(perf_df.mean(axis=0), name='Avg.'))
+        perf_df = perf_df.reindex(subset_reindex_keys)
+        if rename_subsets:
+            perf_df =  perf_df.rename(subset_renamer)
+        return perf_df
 
     def test(self):
         input_filename = 'input/phys_metric_correlations'

@@ -305,6 +305,7 @@ def savefig(fig, name, extn="pdf", tight=True, ax=None, **kwargs):
         mpl2tkz.save("{0}.tex".format(name), fig, show_info=False)
     except:
         warnings.warn("Couldn't tkzify {0}, skipping".format(name))
+    plt.close(fig)
 
 
 def saveinput(text, name, extn='tex'):
