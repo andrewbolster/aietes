@@ -24,7 +24,7 @@ def redirected(stdout):
 
 def setup_exp():
     e = ExpMan(node_count=6,
-               title="Malicious Behaviour Trust Control",
+               title="Global Final Control",
                parallel=True,
                base_config_file="combined.conf"
                )
@@ -39,7 +39,7 @@ def setup_exp():
 def run(e):
     e.run(title="8-bev-mal",
           runcount=4,
-          runtime=18000,
+          runtime=7200,
           retain_data=True,
           queue=True)
     return e
@@ -48,36 +48,14 @@ def run(e):
 def set_run():
     return run(setup_exp())
 
-
-def generate_outliers(path, runs=4):
-
-    for run in range(runs):
-        with pd.get_store(path + '.h5') as store:
-            #sub_frame = pd.concat([
-            #    store.trust.xs('Alfa', level='observer', drop_level=False),
-            #    store.trust.xs('Bravo', level='observer', drop_level=False),
-            #    store.trust.xs('Charlie', level='observer', drop_level=False)
-            #])
-            sub_frame = store.trust
-            sub_frame = sub_frame.xs(run, level='run', drop_level=False)
-
-        outliers = Weight.perform_weight_factor_run_comparative_outlier_analysis_on_trust_frame(sub_frame, "CombinedTrust", extra=run,
-                                                                                                min_emphasis=0, max_emphasis=2,
-                                                                                                max_sum=1, verbose=False, par=True)
-        outliers.to_hdf(os.path.join(path, "outliers.h5"), "CombinedTrust_{}_{}".format(run, runs))
-
 if __name__ == "__main__":
     exp = setup_exp()
     exp = run(exp)
     logpath = "{path}/{title}.log".format(path=exp.exp_path, title=exp.title.replace(' ', '_'))
-    #exp.dump_analysis()
-
-    print("Saved detection stats to {0}".format(logpath))
     path = exp.exp_path
     print("Saved detection stats to {0}".format(exp.exp_path))
     try:
         dump_trust_logs_and_stats_from_exp_paths([path], title=exp.title)
-        generate_outliers(path, runs=4)
-    except Exception as e:
-        print("Crashed in trust logging, moving on: {0}".format(traceback.format_exc()))
+    except:
+        print("Crashed in trust logging, moving on")
 

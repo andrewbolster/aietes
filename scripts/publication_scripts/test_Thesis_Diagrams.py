@@ -109,7 +109,7 @@ def subset_renamer(index_key):
 
 def ticks(x):
     if isinstance(x,(bool,np.bool_)):
-        return '\checkmark' if x else ''
+        return '\OK' if x else ''
     else:
         return x
 
@@ -1241,25 +1241,25 @@ class ThesisDiagrams(unittest.TestCase):
         def _detick(x):
             if isinstance(x, (float, np.float)):
                 return x
-            elif x == '\checkmark':
+            elif x.startswith('\\'  ):
                 return 1.0
             else:
                 return 0.0
 
         with pd.get_store('/dev/shm/top_dt.h5') as s:
-            df = pd.concat([s.get(k) for k in s.keys()], keys=[k[1:] for k in s.keys()], names=['Response Behaviour', ''])
-        df = df.applymap(_detick).groupby(level='Response Behaviour').head(20).groupby(level='Response Behaviour').mean()
+            df = pd.concat([s.get(k) for k in s.keys()], keys=[k[1:] for k in s.keys()], names=['Target Behaviour', ''])
+        df = df.applymap(_detick).groupby(level='Target Behaviour').head(20).groupby(level='Target Behaviour').mean()
         _t = df.ix['Mean']
         df = df.drop('Mean', axis=0).append(_t)
         tex = df \
             .to_latex(float_format=lambda x: "{0:1.2f}".format(x), escape=False,
-                      index=False, column_format="|*{{{}}}{{c|}}|*{{{}}}{{c|}}".format(len(bevs), len(key_order)))\
+                      index=True, column_format="|*{{{}}}{{c|}}|*{{{}}}{{c|}}".format(len(bevs), len(key_order)))\
             .split('\n')
         tex[2] = "\multicolumn{{{}}}{{|c||}}{{Behaviour $\Delta T_{{ix}}$}} & \multicolumn{{{}}}{{c|}}{{Metrics in Synthetic Domain}}\\\\".format(
             len(bevs), len(key_order)
         )
         tex = '\n'.join(tex)
-        with io.open('input/top_targeted_dt.tex'.format(bev), 'w', encoding='utf-8') as f:
+        with io.open('input/top_targeted_dt.tex', 'w', encoding='utf-8') as f:
             f.write(tex)
 
         figsize = latexify(columns=_texcol, factor=_texfac)
@@ -1271,6 +1271,32 @@ class ThesisDiagrams(unittest.TestCase):
         ax.set_xlabel("Behaviour under test")
         ax = format_axes(ax)
         savefig(f, "focus_ratio")
+
+        _diag = lambda df: pd.Series(np.diag(df), index=[df.index])
+
+        #df['Targeted Response'] = _diag(df['Response Behaviour'])
+
+        figsize = latexify(columns=_texcol, factor=_texfac)
+
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        with sns.axes_style(_latexify_rcparams):
+            sns.heatmap(data=df['Metrics in Synthetic Domain'], ax=ax, annot=True, square=True)
+            ax.set_xlabel('Metric')
+            ax.set_ylabel('Targeted Misbehaviour')
+            ax = format_axes(ax)
+            pmid = 0.83
+            cmid = 0.34
+            bh = -0.15
+            th = -0.18
+            ax.annotate('Physical', xy=(pmid, bh), xytext=(pmid, th), xycoords='axes fraction',
+                        ha='center', va='bottom',
+                        bbox=dict(boxstyle='square', fc='white'),
+                        arrowprops=dict(arrowstyle='-[, widthB=6, lengthB=0.5', lw=2.0))
+            ax.annotate('Communications', xy=(cmid, bh), xytext=(cmid, th), xycoords='axes fraction',
+                        ha='center', va='bottom',
+                        bbox=dict(boxstyle='square', fc='white'),
+                        arrowprops=dict(arrowstyle='-[, widthB=11.5, lengthB=0.5', lw=2.0))
+            savefig(fig, "top_targeted_dt_heatmap")
 
 
     @classmethod
@@ -1301,28 +1327,36 @@ class ThesisDiagrams(unittest.TestCase):
         _df = top_mean_df.groupby(_df).mean()
         _df.drop(bevs, axis=1, inplace=True)
 
-        df = top_mean_df[top_mean_df[bev] > retbins[-2]][bevs]
+        df = top_mean_df[top_mean_df[bev] > retbins[-2]]
 
-        figsize = latexify(columns=_texcol, factor=_texfac)
+        figsize = latexify(columns=_texcolhalf, factor=_texfac)
 
         fig, ax = plt.subplots(1, 1, figsize=figsize)
         with sns.axes_style(_latexify_rcparams):
-            sns.boxplot(data=df, ax=ax,
+            sns.boxplot(data=df[bevs], ax=ax,
                         showfliers=False, whis=1)
-            ax.set_xlabel('Response Behaviour')
+            ax.set_xlabel('Behaviour under test')
             ax.set_ylabel('$\Delta T_{ix}$')
             ax.set_ylim(0, 1)
             ax = format_axes(ax)
             savefig(fig, "top_{}_dt_box".format(bev.lower()))
 
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        with sns.axes_style(_latexify_rcparams):
+            sns.boxplot(data=df[[metric_rename_dict[k] for k in key_order]], ax=ax,
+                        showfliers=False, whis=1)
+            ax.set_xlabel('Behaviour under test')
+            ax.set_ylabel('Ratio of metric appearance in\n top 10\% synthetic domains')
+            ax.set_ylim(0, 1)
+            ax = format_axes(ax)
+            savefig(fig, "top_{}_metric_box".format(bev.lower()))
+
         # While were here, also do the "top 5" tables
         bev_df = top_mean_df[bevs]
-        m_df = top_mean_df[[metric_rename_dict[k] for k in key_order]]
+        m_df = top_mean_df[[metric_rename_dict[k] for k in key_order]].applymap(ticks)
         top_mean_df = pd.concat((bev_df.T, m_df.T), keys=['Response Behaviour', 'Metrics in Synthetic Domain']).T
 
         top_mean_df.to_hdf('/dev/shm/top_dt.h5',bev)
-
-        top_mean_df = top_mean_df.applymap(ticks)
 
         tex = top_mean_df.head() \
             .to_latex(float_format=lambda x: "{0:1.2f}".format(x), escape=False,
@@ -1443,6 +1477,44 @@ class ThesisDiagrams(unittest.TestCase):
         with open(input_filename + '.tex', 'w') as f:
             f.write(corrs.loc['Fair'].apply(lambda v: np.round(v, decimals=3)).to_latex(escape=False))
         self.assertTrue(os.path.isfile(input_filename + '.tex'))
+
+    def testWeightRunDetector(self):
+        def _detick(x):
+            if isinstance(x, (float, np.float)):
+                return x
+            elif x.startswith('\\'):
+                return True
+            else:
+                return False
+
+        with pd.get_store(os.path.join(results_path, 'w_df.h5')) as s:
+            w_df = s.get('weights')
+
+        with pd.get_store('/dev/shm/top_dt.h5') as s:
+            df = pd.concat([s.get(k) for k in s.keys()], keys=[k[1:] for k in s.keys()], names=['Target Behaviour', ''])
+        df = df.applymap(_detick).groupby(level='Target Behaviour').head(1).groupby(level='Target Behaviour').mean()
+        _t = df.ix['Mean']
+        df = df.drop('Mean', axis=0).append(_t)
+
+        synth_weights = pd.concat([g.reset_index('subset', drop=True)
+                                   for my_domain, my_domain_subset in df['Metrics in Synthetic Domain'].iterrows()
+                                   for k, g in w_df.groupby(level='subset')
+                                   if my_domain_subset.equals(k.T)
+                                   ],
+                                  keys=df['Metrics in Synthetic Domain'].index,
+                                  names=['Target', 'Subject'])
+        synth_weights.rename(columns=invert_dict(metric_rename_dict), inplace=True)
+
+        with pd.get_store(results_path + '.h5') as store:
+            trust_observations = store.trust.dropna()
+            map_levels(trust_observations, var_rename_dict)
+            trust_observations
+        trust_observations.head()
+        #trust = generate_node_trust_perspective(trust_observations)
+        w = synth_weights.xs(('MPC', 'MPC'))
+        w_trust = generate_node_trust_perspective(trust_observations, metric_weights=w, par=False)
+        self.assertFalse(w_trust.dropna(how='all', axis=0).empty)
+
 
     @unittest.skip("GAH")
     def testValidationBoxPlots(self):

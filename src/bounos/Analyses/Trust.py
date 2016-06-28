@@ -339,7 +339,7 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
 
     try:
 
-        exec_args = {'metric_weights': metric_weights,
+        exec_args = {'metric_weights': metric_weights.fillna(0) if metric_weights is not None else None,
                      'flip_metrics': flip_metrics,
                      'rho': rho,
                      'as_matrix': as_matrix}

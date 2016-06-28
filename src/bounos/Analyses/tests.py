@@ -100,4 +100,44 @@ class TestTrustGenerationEquality(TestCase):
                                                     as_matrix=False)
         assert_frame_equal(tpp, tpp_as_matrix)
         assert_frame_equal(tp, tpp)
+        print(sample_weight)
+        print(self.sample.shape)
+
+
+    def testWeightedWithZero(self):
+        sample_weight = pd.Series(np.random.randn(len(self.sample.keys())), index=self.sample.keys())
+        sample_weight.PLR = 0.0
+        print(sample_weight)
+
+        tp_as_matrix = Trust.generate_node_trust_perspective(self.sample, metric_weights=sample_weight, par=False,
+                                                             as_matrix=True)
+        tp = Trust.generate_node_trust_perspective(self.sample, metric_weights=sample_weight, par=False,
+                                                   as_matrix=False)
+        assert_frame_equal(tp, tp_as_matrix)
+        tpp_as_matrix = Trust.generate_node_trust_perspective(self.sample, metric_weights=sample_weight, par=True,
+                                                              as_matrix=True)
+        assert_frame_equal(tpp_as_matrix, tp_as_matrix)
+        tpp = Trust.generate_node_trust_perspective(self.sample, metric_weights=sample_weight, par=True,
+                                                    as_matrix=False)
+        assert_frame_equal(tpp, tpp_as_matrix)
+        assert_frame_equal(tp, tpp)
+        print(self.sample.shape)
+
+    def testWeightedWithNAN(self):
+        sample_weight = pd.Series(np.random.randn(len(self.sample.keys())), index=self.sample.keys())
+        sample_weight.PLR = np.NaN
+        print(sample_weight)
+
+        tp_as_matrix = Trust.generate_node_trust_perspective(self.sample, metric_weights=sample_weight, par=False,
+                                                             as_matrix=True)
+        tp = Trust.generate_node_trust_perspective(self.sample, metric_weights=sample_weight, par=False,
+                                                   as_matrix=False)
+        assert_frame_equal(tp, tp_as_matrix)
+        tpp_as_matrix = Trust.generate_node_trust_perspective(self.sample, metric_weights=sample_weight, par=True,
+                                                              as_matrix=True)
+        assert_frame_equal(tpp_as_matrix, tp_as_matrix)
+        tpp = Trust.generate_node_trust_perspective(self.sample, metric_weights=sample_weight, par=True,
+                                                    as_matrix=False)
+        assert_frame_equal(tpp, tpp_as_matrix)
+        assert_frame_equal(tp, tpp)
         print(self.sample.shape)

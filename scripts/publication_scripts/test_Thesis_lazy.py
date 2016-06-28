@@ -746,3 +746,4 @@ class ThesisLazyDiagrams(unittest.TestCase):
 
         for f in required_files:
             self.assertFileExists(f)
+
