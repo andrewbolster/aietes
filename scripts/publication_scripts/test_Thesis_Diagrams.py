@@ -5,33 +5,25 @@ from __future__ import division, print_function
 import io
 import tempfile
 import unittest
-from tqdm import tqdm
-from joblib import Parallel, delayed
 
-import matplotlib.pylab as plt
-from matplotlib.gridspec import GridSpec
-import pandas as pd
-import palettable.colorbrewer.qualitative as cmap_qual
-import palettable.colorbrewer.sequential as cmap_seq
-import sklearn.ensemble as ske
-from scipy.stats.stats import pearsonr
 import cartopy.crs as ccrs
-import matplotlib.ticker as mtick
-import seaborn as sns
-
 import cartopy.feature as cfeature
-
-
-import matplotlib.pyplot as plt
-from oceans.colormaps import cm
 import iris.plot as iplt
-
-from oceans.ff_tools import wrap_lon180
-
-from oceans.datasets import woa_subset, woa_profile
-import os
+import matplotlib.pylab as plt
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
+import palettable.colorbrewer.qualitative as cmap_qual
+import pandas as pd
+import seaborn as sns
+import sklearn.ensemble as ske
 from cartopy.mpl.gridliner import (LONGITUDE_FORMATTER,
                                    LATITUDE_FORMATTER)
+from joblib import Parallel, delayed
+from matplotlib.gridspec import GridSpec
+from oceans.colormaps import cm
+from oceans.datasets import woa_subset, woa_profile
+from scipy.stats.stats import pearsonr
+from tqdm import tqdm
 
 LAND = cfeature.NaturalEarthFeature('physical', 'land', '50m',
                                     edgecolor='face',
@@ -44,11 +36,11 @@ from bounos.Analyses.Weight import target_weight_feature_extractor, \
     drop_metrics_from_weights_by_key
 from bounos.ChartBuilders import format_axes, latexify, unique_cm_dict_from_list, plot_axes_views_from_positions_frame, _latexify_rcparams
 from bounos.ChartBuilders import _texcol, _texcolhalf, _texcolthird, _texfac
-from bounos.ChartBuilders.ssp import UUV_time_delay, ssp_function, SSPS
+from bounos.ChartBuilders.ssp import UUV_time_delay, SSPS
 
 from scripts.publication_scripts import phys_keys, comm_keys, phys_keys_alt, comm_keys_alt, key_order, observer, target, \
     n_metrics, results_path, \
-    fig_basedir, subset_renamer, metric_subset_analysis, format_features, savefig
+    fig_basedir, subset_renamer, metric_subset_analysis, format_features, savefig, group_dixon_test
 
 ###########
 # OPTIONS #
@@ -102,7 +94,7 @@ def lower_dict_keys(d):
 lowered_metric_rename = lower_dict_keys(metric_rename_dict)
 lowered_metric_keys = map(str.lower, key_order)
 
-def subset_renamer(index_key):
+def synthetic_subset_renamer(index_key):
     metrics = index_key.split('_')[0:-3]
     return pd.Series([k in metrics for k in lowered_metric_keys],
                      index=map(lowered_metric_rename.get, lowered_metric_keys))
@@ -307,18 +299,6 @@ class SingleRunGraphing(unittest.TestCase):
                 ax.legend(ncol=2)
             savefig(fig, os.path.join(self.fig_path, "summedsigmabar_{0}".format(metric)), transparent=True)
 
-def group_dixon_test(g,gf):
-    acc = []
-    for k,v in gf.T.apply(dixon_test_95, axis=1).T.iteritems():
-        outlier = map(lambda x:x[-1],gf.loc[gf[k]==v].index.tolist())
-        if outlier:
-            acc.append((g[0],g[1],k,outlier[0]))
-        else:
-            acc.append((g[0],g[1],k,'None'))
-
-        if len(outlier)>1:
-            raise ValueError("Haven't written the case for multiple outliers yet")
-    return pd.DataFrame(acc, columns=['var','run','metric','target'])
 
 class MultiRunSigmaAndConfidenceGraphing(unittest.TestCase):
     @classmethod
@@ -1196,9 +1176,13 @@ class ThesisDiagrams(unittest.TestCase):
             w_df = w_df.reindex(subset_reindex_keys, level='subset')
 
         w_df = w_df[key_order].rename(columns=metric_rename_dict)
-        w_df = w_df.unstack('target').rename(subset_renamer).stack('target')
+        if self.complete_subsets:
+            w_df = w_df.unstack('target').rename(synthetic_subset_renamer).stack('target')
+        else:
+            w_df = w_df.unstack('target').rename(subset_renamer).stack('target')
 
         w_df.to_hdf(os.path.join(results_path,'w_df.h5'), 'weights')
+        w_df.to_hdf(os.path.join(results_path,'w_df.h5'), 'weights_{}'.format(len(w_df.index.levels[0])))
 
         tex = w_df.to_latex(float_format=lambda x: "{0:1.3f}".format(x), index=True, escape=False,
                             column_format="|l|l|*{{{0}}}{{c|}}".format(len(key_order))) \
@@ -1237,66 +1221,66 @@ class ThesisDiagrams(unittest.TestCase):
             for bev in bevs:
                 self._dt_subset_boxes(inverted_results, subset_reindex_keys, bev=bev)
 
-        # Once the above is done, should be able to make averages across target behaviours
-        def _detick(x):
-            if isinstance(x, (float, np.float)):
-                return x
-            elif x.startswith('\\'  ):
-                return 1.0
-            else:
-                return 0.0
+            # Once the above is done, should be able to make averages across target behaviours
+            def _detick(x):
+                if isinstance(x, (float, np.float)):
+                    return x
+                elif x.startswith('\\'  ):
+                    return 1.0
+                else:
+                    return 0.0
 
-        with pd.get_store('/dev/shm/top_dt.h5') as s:
-            df = pd.concat([s.get(k) for k in s.keys()], keys=[k[1:] for k in s.keys()], names=['Target Behaviour', ''])
-        df = df.applymap(_detick).groupby(level='Target Behaviour').head(20).groupby(level='Target Behaviour').mean()
-        _t = df.ix['Mean']
-        df = df.drop('Mean', axis=0).append(_t)
-        tex = df \
-            .to_latex(float_format=lambda x: "{0:1.2f}".format(x), escape=False,
-                      index=True, column_format="|*{{{}}}{{c|}}|*{{{}}}{{c|}}".format(len(bevs), len(key_order)))\
-            .split('\n')
-        tex[2] = "\multicolumn{{{}}}{{|c||}}{{Behaviour $\Delta T_{{ix}}$}} & \multicolumn{{{}}}{{c|}}{{Metrics in Synthetic Domain}}\\\\".format(
-            len(bevs), len(key_order)
-        )
-        tex = '\n'.join(tex)
-        with io.open('input/top_targeted_dt.tex', 'w', encoding='utf-8') as f:
-            f.write(tex)
+            with pd.get_store('/dev/shm/top_dt.h5') as s:
+                df = pd.concat([s.get(k) for k in s.keys()], keys=[k[1:] for k in s.keys()], names=['Target Behaviour', ''])
+            df = df.applymap(_detick).groupby(level='Target Behaviour').head(20).groupby(level='Target Behaviour').mean()
+            _t = df.ix['Mean']
+            df = df.drop('Mean', axis=0).append(_t)
+            tex = df \
+                .to_latex(float_format=lambda x: "{0:1.2f}".format(x), escape=False,
+                          index=True, column_format="|*{{{}}}{{c|}}|*{{{}}}{{c|}}".format(len(bevs), len(key_order)))\
+                .split('\n')
+            tex[2] = "\multicolumn{{{}}}{{|c||}}{{Behaviour $\Delta T_{{ix}}$}} & \multicolumn{{{}}}{{c|}}{{Metrics in Synthetic Domain}}\\\\".format(
+                len(bevs), len(key_order)
+            )
+            tex = '\n'.join(tex)
+            with io.open('input/top_targeted_dt.tex', 'w', encoding='utf-8') as f:
+                f.write(tex)
 
-        figsize = latexify(columns=_texcol, factor=_texfac)
-        f,ax = plt.subplots(1,1, figsize = figsize)
-        focuses = ((df['Response Behaviour'] / df['Response Behaviour'].ix['Mean']) - 1).drop('Mean', axis=0).drop('Mean',
-                                                                                                                   axis=1)
-        focuses.T.plot(kind='bar', ax=ax)
-        ax.set_ylabel("Targeted $\Delta T_{ix}$ Ratio to Mean $\Delta T$ response")
-        ax.set_xlabel("Behaviour under test")
-        ax = format_axes(ax)
-        savefig(f, "focus_ratio")
-
-        _diag = lambda df: pd.Series(np.diag(df), index=[df.index])
-
-        #df['Targeted Response'] = _diag(df['Response Behaviour'])
-
-        figsize = latexify(columns=_texcol, factor=_texfac)
-
-        fig, ax = plt.subplots(1, 1, figsize=figsize)
-        with sns.axes_style(_latexify_rcparams):
-            sns.heatmap(data=df['Metrics in Synthetic Domain'], ax=ax, annot=True, square=True)
-            ax.set_xlabel('Metric')
-            ax.set_ylabel('Targeted Misbehaviour')
+            figsize = latexify(columns=_texcol, factor=_texfac)
+            f,ax = plt.subplots(1,1, figsize = figsize)
+            focuses = ((df['Response Behaviour'] / df['Response Behaviour'].ix['Mean']) - 1).drop('Mean', axis=0).drop('Mean',
+                                                                                                                       axis=1)
+            focuses.T.plot(kind='bar', ax=ax)
+            ax.set_ylabel("Targeted $\Delta T_{ix}$ Ratio to Mean $\Delta T$ response")
+            ax.set_xlabel("Behaviour under test")
             ax = format_axes(ax)
-            pmid = 0.83
-            cmid = 0.34
-            bh = -0.15
-            th = -0.18
-            ax.annotate('Physical', xy=(pmid, bh), xytext=(pmid, th), xycoords='axes fraction',
-                        ha='center', va='bottom',
-                        bbox=dict(boxstyle='square', fc='white'),
-                        arrowprops=dict(arrowstyle='-[, widthB=6, lengthB=0.5', lw=2.0))
-            ax.annotate('Communications', xy=(cmid, bh), xytext=(cmid, th), xycoords='axes fraction',
-                        ha='center', va='bottom',
-                        bbox=dict(boxstyle='square', fc='white'),
-                        arrowprops=dict(arrowstyle='-[, widthB=11.5, lengthB=0.5', lw=2.0))
-            savefig(fig, "top_targeted_dt_heatmap")
+            savefig(f, "focus_ratio")
+
+            _diag = lambda df: pd.Series(np.diag(df), index=[df.index])
+
+            #df['Targeted Response'] = _diag(df['Response Behaviour'])
+
+            figsize = latexify(columns=_texcol, factor=_texfac)
+
+            fig, ax = plt.subplots(1, 1, figsize=figsize)
+            with sns.axes_style(_latexify_rcparams):
+                sns.heatmap(data=df['Metrics in Synthetic Domain'], ax=ax, annot=True, square=True)
+                ax.set_xlabel('Metric')
+                ax.set_ylabel('Targeted Misbehaviour')
+                ax = format_axes(ax)
+                pmid = 0.83
+                cmid = 0.34
+                bh = -0.15
+                th = -0.18
+                ax.annotate('Physical', xy=(pmid, bh), xytext=(pmid, th), xycoords='axes fraction',
+                            ha='center', va='bottom',
+                            bbox=dict(boxstyle='square', fc='white'),
+                            arrowprops=dict(arrowstyle='-[, widthB=6, lengthB=0.5', lw=2.0))
+                ax.annotate('Communications', xy=(cmid, bh), xytext=(cmid, th), xycoords='axes fraction',
+                            ha='center', va='bottom',
+                            bbox=dict(boxstyle='square', fc='white'),
+                            arrowprops=dict(arrowstyle='-[, widthB=11.5, lengthB=0.5', lw=2.0))
+                savefig(fig, "top_targeted_dt_heatmap")
 
 
     @classmethod
@@ -1315,7 +1299,7 @@ class ThesisDiagrams(unittest.TestCase):
         true_positive['Mean'] = true_positive.mean(axis=1)
         bev = 'Mean' if bev is None else bev
         top_mean_df = true_positive.sort(bev, ascending=False)
-        _df = pd.DataFrame.from_records(top_mean_df.index.map(subset_renamer))  # .applymap(ticks)
+        _df = pd.DataFrame.from_records(top_mean_df.index.map(synthetic_subset_renamer))  # .applymap(ticks)
         for c in top_mean_df:
             _df[c] = top_mean_df[c].values
         top_mean_df = _df

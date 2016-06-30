@@ -375,6 +375,8 @@ def generate_node_trust_perspective(tf, var='var', metric_weights=None, flip_met
         else:
             tf = tf.unstack('target')
 
+        tf.columns.name  = 'metric'
+
     except FloatingPointError:
         if metric_weights is not None and not metric_weights.any():
             # Have been given zero weight

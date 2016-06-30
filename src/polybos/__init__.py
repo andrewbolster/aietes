@@ -747,7 +747,6 @@ class ExperimentManager(object):
             print("Experimental results stored in {0!s}".format(self.exp_path))
         self.runtime = time.time() - start
         msg = "Runtime:{0}".format(seconds_to_str(self.runtime))
-        notify_desktop(msg)
         print(msg)
 
     def generate_simulation_stats(self):
