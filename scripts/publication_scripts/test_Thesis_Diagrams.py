@@ -587,7 +587,7 @@ class ThesisOneShotDiagrams(unittest.TestCase):
         cubes = woa_subset(**kw)
         cube = cubes[4]
         c = cube[0, 0, ...]
-        fig, ax = make_map(c, figsize=latexify())
+        fig, ax = make_map(c, figsize=latexify(columns=_texcolhalf, factor=_texfac))
         savefig(fig, os.path.join(fig_basedir, 'temp_globe'), bbox_inches='tight')
         # Salinity
         kw = dict(bbox=bbox, variable='salinity', clim_type='00',
@@ -595,7 +595,7 @@ class ThesisOneShotDiagrams(unittest.TestCase):
         cubes = woa_subset(**kw)
         cube = cubes[5]
         c = cube[0, 0, ...]
-        fig, ax = make_map(c, figsize=latexify(), label='salinity')
+        fig, ax = make_map(c, figsize=latexify(columns=_texcolhalf, factor=_texfac), label='salinity')
         savefig(fig, os.path.join(fig_basedir, 'sal_globe'), bbox_inches='tight')
 
     def testTempSalProfiles(self):

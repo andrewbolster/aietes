@@ -377,8 +377,8 @@ def performance_summary_for_var(stats, title=None, var='Packet Rates', rename_la
     grp.index = grp.index.astype(np.float64)
 
     # TODO Fix the colour cycle on these
-    for k, v in grp.iteritems():
-        ax.plot(v, label=k)
+    for i,(k, v) in enumerate(grp.iteritems()):
+        ax.plot(v, label=k, ls=['solid', 'dashed', 'dashdot', 'dotted'][i%3], c=['red','green','blue'][i//3])
 
     # Can't remember what this does but it's broken anyway
     # axes=f.get_axes()

@@ -114,6 +114,7 @@ _ROOT = os.path.abspath(os.path.dirname(__file__) + '/../')
 
 _config_spec = '{0!s}/configs/default.conf'.format(_ROOT)
 _results_dir = '/home/bolster/src/aietes/results/'
+_results_dir = '/mnt/results/'
 _config_dir = "{0!s}/configs/".format(_ROOT)
 
 _proc_status = '/proc/{0:d}/status'.format(os.getpid())
